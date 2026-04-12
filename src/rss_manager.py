@@ -1,3 +1,4 @@
+import html
 import os
 import time
 import uuid
@@ -10,13 +11,22 @@ import threading
 from voicecraft.audio_export import save_audio_bytes
 from voicecraft.speech_synthesizer import synthesizer_factory
 from podcast_gen.generator import ScriptGenerator
+from config import config
 
-# 設定 (実際にはconfig.pyなどから読み込む)
 BASE_DIR = Path("./public").absolute()
 AUDIO_DIR = (BASE_DIR / "audio").absolute()
 INBOX_DIR = Path("./inbox").absolute()
 SCRIPTS_DIR = Path("./scripts").absolute()
-BASE_URL = "http://100.113.194.47:8080"  # TailscaleのIPを動的に取得するか固定
+
+_vc = config.voicecraft
+VOICECRAFT_CONFIG = {
+    "multi_speaker": True,
+    "speakers": [
+        {"name": _vc.host.name, "voice_name": _vc.host.voice_name, "description": _vc.host.description},
+        {"name": _vc.cohost.name, "voice_name": _vc.cohost.voice_name, "description": _vc.cohost.description},
+    ],
+    "response_format": _vc.response_format,
+}
 
 
 class PodcastServer(socketserver.TCPServer):
@@ -70,59 +80,37 @@ def update_rss(episodes):
     for ep in episodes:
         items += f"""
         <item>
-            <title>{ep['title']}</title>
-            <description>{ep['description']}</description>
+            <title>{html.escape(ep['title'])}</title>
+            <description>{html.escape(ep['description'])}</description>
             <pubDate>{ep['pub_date']}</pubDate>
             <enclosure url="{ep['url']}" length="0" type="{_mime_type(ep['url'])}" />
             <guid>{ep['url']}</guid>
         </item>
         """
 
+    _base = config.server.base_url
+    _cover_url = f"{_base}/{config.podcast.cover_image}"
+    _title = html.escape(config.podcast.title)
+    _desc = html.escape(config.podcast.description)
+
     rss_content = f"""<?xml version="1.0" encoding="UTF-8"?>
     <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
         <channel>
-            <title>The AI,MATH &amp; Physics Podcast〜探求と学びの垂れ流し〜</title>
-            <link>{BASE_URL}</link>
-            <description>AI・数学（モジュラー曲線・群論・整数論など）・物理・ソフトウェア開発ツールなどの話題を垂れ流すポッドキャスト。VoiceCraft (https://github.com/hskksk/voicecraft) で自動生成。</description>
+            <title>{_title}</title>
+            <link>{_base}</link>
+            <description>{_desc}</description>
             <image>
-                <url>{BASE_URL}/cover.png</url>
-                <title>The AI,MATH &amp; Physics Podcast〜探求と学びの垂れ流し〜</title>
-                <link>{BASE_URL}</link>
+                <url>{_cover_url}</url>
+                <title>{_title}</title>
+                <link>{_base}</link>
             </image>
-            <itunes:image href="{BASE_URL}/cover.png" />
+            <itunes:image href="{_cover_url}" />
             {items}
         </channel>
     </rss>
     """
     with open(BASE_DIR / "feed.xml", "w", encoding="utf-8") as f:
         f.write(rss_content)
-
-
-VOICECRAFT_MODEL = "gemini/gemini-2.5-flash-preview-tts"
-# Speaker names used in script text (format: "Host: ...\nCoHost: ...")
-SPEAKER_HOST = "Host"
-SPEAKER_COHOST = "CoHost"
-VOICECRAFT_CONFIG = {
-    "multi_speaker": True,
-    "speakers": [
-        {
-            "name": SPEAKER_HOST,
-            "voice_name": "Charon",  # Informative — suits the lead/narrator role
-            "description": "ポッドキャストの進行役。テーマをわかりやすく解説し、会話をリードする。",
-        },
-        {
-            "name": SPEAKER_COHOST,
-            "voice_name": "Achird",  # Friendly — suits the curious listener role
-            "description": "コ・ホスト。聴衆の代わりに質問し、ホストの話に興味深く反応する。",
-        },
-    ],
-    "response_format": "wav",
-}
-VOICECRAFT_INSTRUCTIONS = (
-    "これは2人のスピーカーによるポッドキャストの会話です。"
-    "自然な会話のトーンで、スピーカーの切り替わりに適切な間を置いて話してください。"
-    "Hostが議論をリードし、CoHostは質問をしながら興味深く反応します。"
-)
 
 
 def run_voicecraft(script, basename=None):
@@ -133,8 +121,8 @@ def run_voicecraft(script, basename=None):
     text = script if isinstance(script, str) else "\n".join(script)
     print(f"Executing VoiceCraft for {len(text)} chars...")
 
-    synthesizer = synthesizer_factory(VOICECRAFT_MODEL, VOICECRAFT_CONFIG)
-    audio_data = synthesizer.synthesize(text, VOICECRAFT_INSTRUCTIONS)
+    synthesizer = synthesizer_factory(config.voicecraft.model, VOICECRAFT_CONFIG)
+    audio_data = synthesizer.synthesize(text, config.voicecraft.instructions)
     save_audio_bytes(
         audio_data,
         filepath,
@@ -160,7 +148,9 @@ def process_new_content(content_path):
 
     # 2. 台本を保存
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_title = "".join(c if c.isalnum() or c in "-_ " else "_" for c in result.title).strip()
+    safe_title = "".join(
+        c if c.isalnum() or c in "-_ " else "_" for c in result.title
+    ).strip()
     basename = f"{timestamp}_{safe_title}"
     script_path = SCRIPTS_DIR / f"{basename}.txt"
     script_path.write_text(
@@ -172,13 +162,13 @@ def process_new_content(content_path):
     # 3. 音声生成 (VoiceCraft)
     audio_file = run_voicecraft(result.script, basename=basename)
 
-    # 3. RSS更新 (既存のエピソードに追記)
+    # 4. RSS更新 (既存のエピソードに追記)
     _episodes.append(
         {
             "title": result.title,
             "description": result.description,
             "pub_date": datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0000"),
-            "url": f"{BASE_URL}/audio/{audio_file}",
+            "url": f"{config.server.base_url}/audio/{audio_file}",
         }
     )
     update_rss(_episodes)
@@ -193,15 +183,15 @@ def watch_inbox():
             if file.is_file():
                 process_new_content(file)
                 file.unlink()  # 処理後に削除
-        time.sleep(10)
+        time.sleep(config.server.watch_interval)
 
 
 def start_server():
     """HTTPサーバーを別スレッドで起動"""
     os.chdir(BASE_DIR)
     handler = SimpleHTTPRequestHandler
-    with PodcastServer(("", 8080), handler) as httpd:
-        print("Serving at port 8080")
+    with PodcastServer(("", config.server.port), handler) as httpd:
+        print(f"Serving at port {config.server.port}")
         httpd.serve_forever()
 
 

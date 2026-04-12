@@ -1,0 +1,31 @@
+[server]
+base_url = "http://YOUR_IP:8080"
+port = 8080
+watch_interval = 10
+
+[podcast]
+title = "My Podcast"
+description = "My podcast description."
+cover_image = "cover.png"
+
+[voicecraft]
+model = "gemini/gemini-2.5-flash-preview-tts"
+response_format = "wav"
+instructions = "これは2人のスピーカーによるポッドキャストの会話です。自然な会話のトーンで、スピーカーの切り替わりに適切な間を置いて話してください。Hostが議論をリードし、CoHostは質問をしながら興味深く反応します。"
+
+[voicecraft.speakers.host]
+name = "Host"
+voice_name = "Charon"
+description = "ポッドキャストの進行役。テーマをわかりやすく解説し、会話をリードする。"
+
+[voicecraft.speakers.cohost]
+name = "CoHost"
+voice_name = "Achird"
+description = "コ・ホスト。聴衆の代わりに質問し、ホストの話に興味深く反応する。"
+
+[generator]
+model = "openai/gpt-5-mini"
+# system_instruction と prompt_template はオプション。
+# 未設定の場合はコード内の DEFAULT_SYSTEM_INSTRUCTION / DEFAULT_PROMPT_TEMPLATE を使用。
+# system_instruction = """..."""
+# prompt_template = """..."""

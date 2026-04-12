@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# local config (contains personal IP etc.)
+config.toml
+
 # contents
 public/feed.xml
 public/audio/*

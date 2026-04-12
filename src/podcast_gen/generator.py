@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 
 from litellm import completion
+from config import config as _app_config
 
 DEFAULT_SYSTEM_INSTRUCTION = """\
 あなたは一流のテック系ポッドキャスト・プロデューサーです。
@@ -60,31 +61,42 @@ class ScriptResult:
 class ScriptGenerator:
     """Generate a podcast script from article content using litellm."""
 
-    def __init__(self, model: str = "openai/gpt-5-mini") -> None:
-        self.model = model
+    def __init__(self, model: str | None = None) -> None:
+        self.model = model or _app_config.generator.model
 
     def generate(
         self,
         content: str,
-        system_instruction: str = DEFAULT_SYSTEM_INSTRUCTION,
-        prompt: str = DEFAULT_PROMPT_TEMPLATE,
+        system_instruction: str | None = None,
+        prompt: str | None = None,
     ) -> ScriptResult:
         """Generate a podcast script with title and description from article content.
 
         Args:
             content: Source article text.
-            system_instruction: System message defining the model's persona and rules.
-            prompt: User message template. Use ``{content}`` as a placeholder.
+            system_instruction: System message. Falls back to config.toml, then DEFAULT_SYSTEM_INSTRUCTION.
+            prompt: User message template with ``{content}`` placeholder.
+                    Falls back to config.toml, then DEFAULT_PROMPT_TEMPLATE.
 
         Returns:
             ScriptResult with title, description, and script text.
         """
-        user_message = prompt.format(content=content)
+        effective_instruction = (
+            system_instruction
+            or _app_config.generator.system_instruction
+            or DEFAULT_SYSTEM_INSTRUCTION
+        )
+        effective_prompt = (
+            prompt
+            or _app_config.generator.prompt_template
+            or DEFAULT_PROMPT_TEMPLATE
+        )
+        user_message = effective_prompt.format(content=content)
 
         response = completion(
             model=self.model,
             messages=[
-                {"role": "system", "content": system_instruction},
+                {"role": "system", "content": effective_instruction},
                 {"role": "user", "content": user_message},
             ],
             response_format={"type": "json_object"},
