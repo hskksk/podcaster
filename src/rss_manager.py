@@ -1,15 +1,13 @@
 import html
 import os
 import time
-import uuid
 import datetime
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler
 import socketserver
 import threading
-from voicecraft.audio_export import save_audio_bytes
-from voicecraft.speech_synthesizer import synthesizer_factory
+from podcast_gen.audio_generator import AudioGenerator
 from podcast_gen.generator import ScriptGenerator
 from config import config
 
@@ -17,16 +15,6 @@ BASE_DIR = Path("./public").absolute()
 AUDIO_DIR = (BASE_DIR / "audio").absolute()
 INBOX_DIR = Path("./inbox").absolute()
 SCRIPTS_DIR = Path("./scripts").absolute()
-
-_vc = config.voicecraft
-VOICECRAFT_CONFIG = {
-    "multi_speaker": True,
-    "speakers": [
-        {"name": _vc.host.name, "voice_name": _vc.host.voice_name, "description": _vc.host.description},
-        {"name": _vc.cohost.name, "voice_name": _vc.cohost.voice_name, "description": _vc.cohost.description},
-    ],
-    "response_format": _vc.response_format,
-}
 
 
 class PodcastServer(socketserver.TCPServer):
@@ -113,26 +101,7 @@ def update_rss(episodes):
         f.write(rss_content)
 
 
-def run_voicecraft(script, basename=None):
-    """Run VoiceCraft synthesizer to generate an M4A file from script text."""
-    filename = f"{basename}.m4a" if basename else f"episode_{uuid.uuid4().hex[:8]}.m4a"
-    filepath = AUDIO_DIR / filename
-
-    text = script if isinstance(script, str) else "\n".join(script)
-    print(f"Executing VoiceCraft for {len(text)} chars...")
-
-    synthesizer = synthesizer_factory(config.voicecraft.model, VOICECRAFT_CONFIG)
-    audio_data = synthesizer.synthesize(text, config.voicecraft.instructions)
-    save_audio_bytes(
-        audio_data,
-        filepath,
-        output_format="m4a",
-        response_format=VOICECRAFT_CONFIG["response_format"],
-    )
-
-    return filename
-
-
+_audio_generator = AudioGenerator(AUDIO_DIR)
 _episodes = []
 
 
@@ -160,7 +129,7 @@ def process_new_content(content_path):
     print(f"Script saved to: {script_path}")
 
     # 3. 音声生成 (VoiceCraft)
-    audio_file = run_voicecraft(result.script, basename=basename)
+    audio_file = _audio_generator.generate(result.script, basename=basename)
 
     # 4. RSS更新 (既存のエピソードに追記)
     _episodes.append(
