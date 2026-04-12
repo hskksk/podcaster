@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# contents
+public/feed.xml
+public/audio/*
+inbox/*
+scripts/*
+draft/*
+
+# claude
+.claude/settings.local.json
