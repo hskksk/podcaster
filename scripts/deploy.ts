@@ -42,7 +42,26 @@ run(
   "supabase functions deploy ingest generate-script generate-audio update-rss --no-verify-jwt",
 );
 
+// 6. Upload cover.png and seed podcast_config
+// seed-config.ts reads SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY from env
+const supabaseApiUrl = `https://${projectRef}.supabase.co`;
+const supabaseServiceKey = process.env.APP_SERVICE_KEY;
+if (supabaseServiceKey) {
+  run("npx tsx scripts/seed-config.ts", {
+    env: {
+      SUPABASE_URL: supabaseApiUrl,
+      SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey,
+      // No PODCAST_PUBLIC_URL needed — in production SUPABASE_URL is already the public URL
+    },
+  });
+} else {
+  console.warn("APP_SERVICE_KEY not set — skipping seed-config (cover.png upload).");
+}
+
 console.log("\nDeploy complete.");
 console.log(
-  `Ingest URL: ${functionsUrl ?? "https://<ref>.supabase.co/functions/v1"}/ingest`,
+  `Ingest URL: ${functionsUrl ?? `${supabaseApiUrl}/functions/v1`}/ingest`,
+);
+console.log(
+  `RSS feed:   https://${projectRef}.supabase.co/storage/v1/object/public/podcast/feed.xml`,
 );
