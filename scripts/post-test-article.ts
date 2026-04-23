@@ -4,34 +4,17 @@ import crypto from "node:crypto";
 const INGEST_URL =
   process.env.INGEST_URL ?? "http://127.0.0.1:54331/functions/v1/ingest";
 const WEBHOOK_SECRET = process.env.INGEST_WEBHOOK_SECRET ?? "";
+const MEM_NOTE_ID = process.env.MEM_NOTE_ID;
+
+if (!MEM_NOTE_ID) {
+  console.error("Error: MEM_NOTE_ID environment variable is required");
+  console.error("Usage: MEM_NOTE_ID=<uuid> pnpm tsx scripts/post-test-article.ts");
+  process.exit(1);
+}
 
 const article = {
   title: "テスト記事: AI生成ポッドキャストの仕組み",
-  content: `
-AI生成ポッドキャストとは、大規模言語モデル（LLM）とテキスト音声変換（TTS）技術を組み合わせて、
-テキスト記事から自動的に音声形式のポッドキャストエピソードを生成するシステムのことです。
-
-## 仕組み
-
-1. **記事の取り込み**: ユーザーが記事テキストをシステムに送信します。
-2. **台本生成**: LLM（例: Gemini, Claude）が記事をもとに、ホストとコ・ホストの対話形式の台本を作成します。
-3. **音声合成**: TTSエンジン（例: Gemini TTS）が台本を読み上げ、複数話者の音声を生成します。
-4. **配信**: 生成した音声ファイルをPodcast RSSフィードに追加し、各種Podcastアプリで聴けるようにします。
-
-## 利点
-
-- 記事を手軽に「聴ける」コンテンツに変換できる
-- 複数話者による対話形式でわかりやすい解説が可能
-- 全工程が自動化されているため、コンテンツ生産の効率が大幅に向上する
-
-## 技術スタック
-
-- **バックエンド**: Supabase Edge Functions (Deno/TypeScript)
-- **データベース**: PostgreSQL + pgmq (メッセージキュー)
-- **ストレージ**: Supabase Storage (グローバルCDN付き)
-- **LLM**: Google Gemini 2.5 Flash
-- **TTS**: Google Gemini 2.5 Flash TTS (多話者対応)
-  `.trim(),
+  mem_note_id: MEM_NOTE_ID,
 };
 
 const body = JSON.stringify(article);
