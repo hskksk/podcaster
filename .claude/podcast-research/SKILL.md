@@ -88,19 +88,27 @@ metadata:
 （調査に使用したURL一覧）
 ```
 
-### ステップ 4: 保存と inbox への自動配置
+### ステップ 4: ingest エンドポイントへ POST
 
 ユーザーの確認は不要。以下を順に実行する。
 
-1. `./draft/YYYYMMDD_HHMMSS_<テーマ>.md` に保存する
-2. `./inbox/<ファイル名>.md` にコピーする（Bash の `cp` コマンドを使用）
-3. `./scripts/<ファイル名>.md` にコピーする（Bash の `cp` コマンドを使用）
-4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
-5. 「inbox と scripts に配置しました。ポッドキャスト生成が自動的に開始されます。」と報告する
+1. `./draft/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する
+2. 環境変数 `INGEST_URL`（デフォルト: `http://127.0.0.1:54321/functions/v1/ingest`）に POST する:
+   ```bash
+   INGEST_URL="${INGEST_URL:-http://127.0.0.1:54321/functions/v1/ingest}"
+   BODY=$(jq -n --arg title "<テーマ>" --arg content "$(cat ./draft/<ファイル名>)" \
+     '{title: $title, content: $content}')
+   curl -s -X POST "$INGEST_URL" \
+     -H "Content-Type: application/json" \
+     -d "$BODY"
+   ```
+3. レポートの概要（見出し一覧と文字数）をユーザーに提示する
+4. POST 結果（article_id）を報告し、「ポッドキャスト生成パイプラインに投入しました。」と伝える
 
 ### 注意事項
 
-- draft ディレクトリと inbox ディレクトリは存在しない場合は作成する
+- draft ディレクトリは存在しない場合は作成する
 - ファイル名のテーマ部分はファイルシステムで安全な文字のみ使用する（スペースはアンダースコアに）
 - リサーチ中は進捗を都度報告する（「〇〇について調査中...」など）
 - 情報の信頼性が低い場合はその旨を明記する
+- `INGEST_WEBHOOK_SECRET` が設定されている場合は HMAC 署名ヘッダーを付与すること

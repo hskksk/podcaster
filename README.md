@@ -1,74 +1,142 @@
-# podcaster
+# Podcaster
 
-記事テキスト（Markdown など）を入力として、**対話形式のポッドキャスト台本を LLM で生成**し、**VoiceCraft で音声化**して RSS を更新するためのツールです。HTTP サーバーで `feed.xml` と音声ファイルを配信します。
+AI が記事を自動でポッドキャストエピソードに変換するシステム。
 
-## できること
+**スタック**: TypeScript · Supabase (Edge Functions / Storage / Postgres) · Gemini API (LLM + TTS)
 
-- **台本生成**（`src/podcast_gen/generator.py`）: LiteLLM 経由で、Host / CoHost の 2 人掛け合いの日本語台本（タイトル・説明・本文）を JSON で受け取る
-- **音声合成**（`src/rss_manager.py`）: [VoiceCraft](https://github.com/hskksk/voicecraft) のマルチスピーカー合成で M4A を出力
-- **配信**: `public/` をルートに静的配信（ポート 8080）、`feed.xml` を生成・更新
-- **入力の監視**: `inbox/` に置いたファイルを一定間隔で検知し、処理後に削除
+## アーキテクチャ
 
-Claude Code 用のスキル [`.claude/podcast-research/SKILL.md`](.claude/podcast-research/SKILL.md) では、テーマ調査レポートを `draft/` に書き、`inbox/` にコピーしてこのパイプラインに渡す流れを定義しています。
-
-## 要件
-
-- Python **3.12 以上**
-- [uv](https://docs.astral.sh/uv/)（推奨）または同等の仮想環境
-- **API キー**（コード内のモデル設定に依存）
-  - 台本: 既定は `openai/gpt-5-mini`（LiteLLM の [環境変数](https://docs.litellm.ai/docs/providers/openai) 例: `OPENAI_API_KEY`）
-  - 音声: 既定は `gemini/gemini-2.5-flash-preview-tts`（Gemini 向けのキー設定が必要）
-
-## セットアップ
-
-リポジトリのルートで:
-
-```bash
-uv sync
+```
+POST /functions/v1/ingest
+         │
+         ▼
+   [ingest] → articles テーブル + script-queue
+         │
+         ▼  (pg_cron 毎分 / 手動)
+   [generate-script] → Gemini 2.5 Flash で台本生成 → episodes テーブル + audio-queue
+         │
+         ▼
+   [generate-audio] → Gemini TTS (Host/CoHost 多話者) → Storage/audio/*.wav + rss-queue
+         │
+         ▼
+   [update-rss] → episodes から feed.xml を生成 → Storage/feed.xml (公開 CDN)
 ```
 
-依存の `voicecraft` は `pyproject.toml` から Git 参照で取り込みます。
+## ローカル開発
+
+### 前提条件
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (起動済み)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) (`brew install supabase/tap/supabase`)
+- [pnpm](https://pnpm.io/installation)
+- Gemini API キー (`GEMINI_API_KEY`)
+
+### セットアップ
+
+```bash
+# 1. 依存関係インストール
+pnpm install
+
+# 2. 環境変数の設定
+cp .env.example .env.local
+# .env.local に GEMINI_API_KEY を記入
+
+# 3. Supabase ローカルスタック起動 (Docker が必要)
+supabase start
+
+# 4. migrations + seed を適用
+supabase db reset
+
+# 5. Edge Functions をローカルで起動
+pnpm functions:serve
+```
+
+### テスト記事の送信
+
+別ターミナルで:
+
+```bash
+export $(grep -v '^#' .env.local | xargs)
+pnpm test:post
+```
+
+Supabase Studio (http://localhost:54323) で `articles` / `episodes` のレコードと、
+`podcast` バケット内の `audio/*.wav` と `feed.xml` を確認できます。
+
+### キューワーカーの手動実行
+
+pg_cron は本番環境のみ有効です。ローカルでは各 Function を直接 POST で起動します。
+
+```bash
+SERVICE_KEY=$(supabase status | grep 'service_role key' | awk '{print $3}')
+
+# 台本生成
+curl -i http://localhost:54321/functions/v1/generate-script \
+  -H "Authorization: Bearer $SERVICE_KEY"
+
+# 音声生成
+curl -i http://localhost:54321/functions/v1/generate-audio \
+  -H "Authorization: Bearer $SERVICE_KEY"
+
+# RSS 更新
+curl -i http://localhost:54321/functions/v1/update-rss \
+  -H "Authorization: Bearer $SERVICE_KEY"
+```
+
+## デプロイ (Supabase クラウド)
+
+### 初回設定
+
+1. [Supabase ダッシュボード](https://supabase.com/dashboard)でプロジェクト作成
+2. `.env.production` を作成:
+   ```
+   SUPABASE_PROJECT_REF=<your-ref>
+   GEMINI_API_KEY=<your-key>
+   INGEST_WEBHOOK_SECRET=<random-secret>
+   APP_FUNCTIONS_URL=https://<ref>.supabase.co/functions/v1
+   APP_SERVICE_KEY=<service-role-key>
+   ```
+3. ワンコマンドデプロイ:
+   ```bash
+   pnpm deploy
+   ```
+
+### RSS フィード
+
+デプロイ後の公開 URL:
+```
+https://<ref>.supabase.co/storage/v1/object/public/podcast/feed.xml
+```
+
+この URL を Apple Podcasts / Overcast 等に登録して購読できます。
+
+### 記事の投入 (本番)
+
+```bash
+BODY='{"title":"記事タイトル","content":"記事本文..."}'
+SIG="sha256=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$INGEST_WEBHOOK_SECRET" | awk '{print $2}')"
+curl -X POST https://<ref>.supabase.co/functions/v1/ingest \
+  -H "Content-Type: application/json" \
+  -H "x-signature: $SIG" \
+  -d "$BODY"
+```
 
 ## 設定
 
-`src/rss_manager.py` 内の定数で挙動が決まります。
+ポッドキャスト設定は `podcast_config` テーブルで管理されます。
+Supabase Studio → Table Editor → `podcast_config` から変更可能。
 
-| 項目 | 内容 |
-|------|------|
-| `BASE_URL` | RSS の `<enclosure>` や `<image>` に使う公開 URL（既定はプレースホルダ的な値のため、**運用環境に合わせて変更**してください） |
-| `ScriptGenerator` の `model` | 台本生成に使う LiteLLM モデル名 |
-| `VOICECRAFT_MODEL` / `VOICECRAFT_CONFIG` | VoiceCraft のモデルとスピーカー（Charon / Achird など） |
+| key | デフォルト値 | 説明 |
+|-----|------------|------|
+| `podcast.title` | `My AI Podcast` | ポッドキャスト名 |
+| `podcast.description` | `AI が生成するテック系ポッドキャスト` | 説明 |
+| `podcast.cover_url` | Storage URL | カバー画像 URL |
+| `tts.model` | `gemini-2.5-flash-preview-tts` | TTS モデル |
+| `tts.host.voice` | `Charon` | ホストの声 |
+| `tts.cohost.voice` | `Achird` | コホストの声 |
+| `generator.model` | `gemini-2.5-flash` | 台本生成 LLM |
 
-チャンネル名や説明文は `update_rss()` 内の RSS テンプレートにあります。
+## Claude Code スキル
 
-## 使い方
-
-1. 必要な環境変数で API キーを設定する
-2. サーバーを起動する
-
-```bash
-uv run python src/rss_manager.py
-```
-
-3. 記事本文のテキストファイルを **`inbox/`** に置く（拡張子は問わず、ファイル単位で処理）
-4. 処理が終わると台本は `scripts/`、音声は `public/audio/`、フィードは `public/feed.xml` に出力されます（`.gitignore` によりリポジトリには含めない想定）
-
-起動時に既存の `public/feed.xml` があれば読み込み、エピソード一覧を引き継ぎます。
-
-## ディレクトリ
-
-| パス | 役割 |
-|------|------|
-| `inbox/` | 入力待ちテキスト（処理後に削除） |
-| `scripts/` | 生成された台本（Markdown 風のテキスト） |
-| `public/` | HTTP 配信ルート（`feed.xml`、`audio/`、`cover.png` など） |
-| `draft/` | スキル利用時の調査ドラフト置き場 |
-
-## 開発メモ
-
-- エントリーポイントとして動かすのは主に **`src/rss_manager.py`** です。ルートの `main.py` はサンプルのままです。
-- パッケージ名は `pyproject.toml` の `podcaster` ですが、インポートは `src/` 上の `podcast_gen` を `rss_manager.py` から参照する構成です。
-
-## ライセンス
-
-リポジトリに LICENSE ファイルが無い場合は、利用条件をリポジトリオーナーに確認してください。
+`.claude/podcast-research/SKILL.md` でテーマ調査レポートを生成し、
+`ingest` エンドポイントに POST して自動的にポッドキャスト化できます。
