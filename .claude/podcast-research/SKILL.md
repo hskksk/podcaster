@@ -88,22 +88,29 @@ metadata:
 （調査に使用したURL一覧）
 ```
 
-### ステップ 4: ingest エンドポイントへ POST
+### ステップ 4: mem.ai に登録して ingest エンドポイントへ POST
 
 ユーザーの確認は不要。以下を順に実行する。
 
 1. `./draft/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する
-2. 環境変数 `INGEST_URL`（デフォルト: `http://127.0.0.1:54321/functions/v1/ingest`）に POST する:
+2. `mem-ai` CLI でレポートを mem.ai に登録し、note ID を取得する:
+   ```bash
+   NOTE_ID=$(mem-ai --json note create \
+     --file ./draft/<ファイル名> \
+     --collection-title "Podcast Research" \
+     | jq -r '.id')
+   ```
+3. 環境変数 `INGEST_URL`（デフォルト: `http://127.0.0.1:54321/functions/v1/ingest`）に `{title, mem_note_id}` を POST する:
    ```bash
    INGEST_URL="${INGEST_URL:-http://127.0.0.1:54321/functions/v1/ingest}"
-   BODY=$(jq -n --arg title "<テーマ>" --arg content "$(cat ./draft/<ファイル名>)" \
-     '{title: $title, content: $content}')
+   BODY=$(jq -n --arg title "<テーマ>" --arg mem_note_id "$NOTE_ID" \
+     '{title: $title, mem_note_id: $mem_note_id}')
    curl -s -X POST "$INGEST_URL" \
      -H "Content-Type: application/json" \
      -d "$BODY"
    ```
-3. レポートの概要（見出し一覧と文字数）をユーザーに提示する
-4. POST 結果（article_id）を報告し、「ポッドキャスト生成パイプラインに投入しました。」と伝える
+4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
+5. POST 結果（article_id）を報告し、「mem.ai にレポートを登録し、ポッドキャスト生成パイプラインに投入しました。」と伝える
 
 ### 注意事項
 
@@ -112,3 +119,4 @@ metadata:
 - リサーチ中は進捗を都度報告する（「〇〇について調査中...」など）
 - 情報の信頼性が低い場合はその旨を明記する
 - `INGEST_WEBHOOK_SECRET` が設定されている場合は HMAC 署名ヘッダーを付与すること
+- mem.ai のコンテンツ上限は 200,000 文字（UTF-8）。レポートが超える場合は冒頭に警告コメントを追記して truncate する
