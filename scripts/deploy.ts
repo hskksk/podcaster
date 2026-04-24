@@ -1,6 +1,11 @@
 #!/usr/bin/env tsx
+import dotenv from "dotenv";
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
+
+const envFile = existsSync(".env.production") ? ".env.production" : ".env.local";
+dotenv.config({ path: envFile });
+console.log(`Using env file: ${envFile}`);
 
 function run(cmd: string, opts?: { env?: Record<string, string> }) {
   console.log(`\n$ ${cmd}`);
@@ -72,9 +77,6 @@ function detectServiceKey(projectRef: string): string {
 
 const projectRef = detectProjectRef();
 const serviceKey = detectServiceKey(projectRef);
-
-const envFile = existsSync(".env.production") ? ".env.production" : ".env.local";
-console.log(`Using env file: ${envFile}`);
 
 // 1. Link project (idempotent)
 run(`supabase link --project-ref ${projectRef}`);

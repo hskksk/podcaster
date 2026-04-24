@@ -1,6 +1,14 @@
 #!/usr/bin/env tsx
-import { execSync } from "node:child_process";
 
+import { execSync } from "node:child_process";
+import dotenv from "dotenv";
+import crypto from "node:crypto";
+
+dotenv.config({ path: ".env.local" });
+
+const INGEST_URL =
+  process.env.INGEST_URL ?? "http://127.0.0.1:54331/functions/v1/ingest";
+const WEBHOOK_SECRET = process.env.INGEST_WEBHOOK_SECRET ?? "";
 const MEM_NOTE_ID = process.env.MEM_NOTE_ID;
 
 if (!MEM_NOTE_ID) {

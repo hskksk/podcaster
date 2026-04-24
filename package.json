@@ -19,7 +19,8 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.0"
+    "@supabase/supabase-js": "^2.49.0",
+    "dotenv": "^16.4.0"
   },
   "packageManager": "pnpm@9.14.0"
 }

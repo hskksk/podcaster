@@ -5,10 +5,9 @@ const MEM_API_KEY = Deno.env.get("MEM_API_KEY");
 
 async function fetchMemContent(noteId: string): Promise<string> {
   if (!MEM_API_KEY) throw new Error("MEM_API_KEY is not configured");
-  const res = await fetch(`https://api.mem.ai/v2/mems/${noteId}`, {
+  const res = await fetch(`https://api.mem.ai/v2/notes/${noteId}`, {
     headers: {
-      Authorization: `ApiAccessToken ${MEM_API_KEY}`,
-      "Content-Type": "application/json",
+      Authorization: `Bearer ${MEM_API_KEY}`,
     },
   });
   if (res.status === 404) throw Object.assign(new Error("mem note not found"), { status: 404 });

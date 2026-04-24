@@ -133,6 +133,7 @@ pnpm functions:serve
 
 ```bash
 MEM_NOTE_ID=<your-mem-note-id> pnpm test:post
+pnpm test:post
 ```
 
 （`SUPABASE_SERVICE_ROLE_KEY` は `supabase status` から自動取得）

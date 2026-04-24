@@ -1,5 +1,8 @@
 #!/usr/bin/env tsx
+import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+
+dotenv.config({ path: ".env.local" });
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { execSync } from "node:child_process";
