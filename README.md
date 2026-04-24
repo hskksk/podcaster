@@ -18,7 +18,7 @@
          │ POST /functions/v1/ingest  {title, content}
          ▼
 ┌─────────────────────┐
-│      ingest         │  HMAC 署名検証 → articles テーブルに保存
+│      ingest         │  mem_note_id 検証 → articles テーブルに保存
 └────────┬────────────┘
          │ pgmq: script-queue
          ▼
@@ -63,9 +63,10 @@ podcaster/
 │   ├── migrations/
 │   │   ├── 20260423000001_initial.sql        # articles / episodes / Storage バケット
 │   │   ├── 20260423000002_queues.sql         # pgmq キュー作成
-│   │   ├── 20260423000003_cron.sql           # pg_cron ジョブ
+│   │   ├── 20260423000003_cron.sql           # pg_cron / pg_net 有効化
 │   │   ├── 20260423000004_seed_config.sql    # podcast_config デフォルト値
-│   │   └── 20260423000005_queue_helpers.sql  # JS クライアント向け RPC ラッパー
+│   │   ├── 20260423000005_queue_helpers.sql  # JS クライアント向け RPC ラッパー
+│   │   └── 20260424000001_cron_upgrade.sql   # 旧 cron ジョブ削除（deploy.ts が再作成）
 │   └── functions/
 │       ├── _shared/
 │       │   ├── db.ts       # Supabase クライアント
@@ -100,9 +101,9 @@ podcaster/
 # 1. 依存関係インストール
 pnpm install
 
-# 2. 環境変数ファイルを作成し GEMINI_API_KEY を記入
+# 2. 環境変数ファイルを作成し API キーを記入
 cp .env.example .env.local
-# → GEMINI_API_KEY=<your-key> を設定
+# → GEMINI_API_KEY と MEM_API_KEY を設定
 
 # 3. Supabase ローカルスタックを起動（Docker が必要）
 supabase start
@@ -111,7 +112,7 @@ supabase start
 supabase db reset
 
 # 5. カバー画像をアップロードし podcast_config を初期化
-export $(grep -v '^#' .env.local | xargs)
+#    （supabase status から接続情報を自動取得）
 pnpm seed:config
 
 # 6. Edge Functions をローカルで起動
@@ -131,9 +132,10 @@ pnpm functions:serve
 別ターミナルで:
 
 ```bash
-export $(grep -v '^#' .env.local | xargs)
-pnpm test:post
+MEM_NOTE_ID=<your-mem-note-id> pnpm test:post
 ```
+
+（`SUPABASE_SERVICE_ROLE_KEY` は `supabase status` から自動取得）
 
 202 が返ったら成功。その後ワーカーを順番に呼び出す（後述）。
 
@@ -143,7 +145,7 @@ pnpm test:post
 
 ```bash
 # service_role key を取得
-KEY=$(supabase status --output json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
+KEY=$(supabase status --json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
 
 # 台本生成（ingest 後に実行）
 curl -s http://localhost:54331/functions/v1/generate-script \
@@ -175,29 +177,35 @@ pnpm functions:serve
 ### 初回準備
 
 1. [Supabase ダッシュボード](https://supabase.com/dashboard) でプロジェクトを作成
-2. `.env.production` を作成:
+2. Supabase CLI にログイン:
 
 ```bash
-SUPABASE_PROJECT_REF=<ダッシュボードの Project Reference>
-GEMINI_API_KEY=<your-gemini-api-key>
-INGEST_WEBHOOK_SECRET=<任意のランダム文字列>
-APP_FUNCTIONS_URL=https://<ref>.supabase.co/functions/v1
-APP_SERVICE_KEY=<service_role key（ダッシュボード → Settings → API）>
+supabase login
 ```
 
-3. ワンコマンドでデプロイ:
+3. `.env.production` を作成（AI API キーのみ）:
 
 ```bash
-export $(grep -v '^#' .env.production | xargs)
+GEMINI_API_KEY=<your-gemini-api-key>
+MEM_API_KEY=<your-mem-api-key>
+```
+
+4. ワンコマンドでデプロイ:
+
+```bash
 pnpm deploy
 ```
 
 デプロイの内容:
-1. `supabase link` でプロジェクトに接続
-2. `supabase secrets set` で環境変数を本番に反映
-3. `supabase db push` でマイグレーションを適用
-4. `supabase functions deploy` で 4 つの Edge Function をデプロイ
-5. `seed-config.ts` で `cover.png` をアップロードし `podcast_config` を初期化
+1. `supabase projects list` でプロジェクト自動検出（複数ある場合は `SUPABASE_PROJECT_REF` を env に設定）
+2. `supabase projects api-keys` でサービスロールキー自動取得
+3. `supabase link` でプロジェクトに接続
+4. `supabase secrets set` で AI API キーを Edge Function に反映
+5. `supabase db push` でマイグレーションを適用
+6. サービスキーを Supabase Vault に保存（pg_cron が安全に参照）
+7. pg_cron ジョブを作成（毎分 Edge Function を自動実行）
+8. `supabase functions deploy` で 4 つの Edge Function をデプロイ
+9. `seed-config.ts` で `cover.png` をアップロードし `podcast_config` を初期化
 
 ### 本番 RSS フィード URL
 
@@ -210,13 +218,9 @@ Apple Podcasts / Overcast / Pocket Casts 等にこの URL を登録して購読�
 ### 記事の投入（本番）
 
 ```bash
-BODY=$(jq -n --arg title "タイトル" --arg content "本文..." '{title: $title, content: $content}')
-SIG="sha256=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$INGEST_WEBHOOK_SECRET" | awk '{print $2}')"
-
 curl -X POST https://<ref>.supabase.co/functions/v1/ingest \
   -H "Content-Type: application/json" \
-  -H "x-signature: $SIG" \
-  -d "$BODY"
+  -d '{"title": "タイトル", "mem_note_id": "<your-mem-note-id>"}'
 ```
 
 本番では pg_cron が 1 分以内に各ワーカーを自動起動します。
@@ -283,5 +287,6 @@ Gemini Flash が稀にフォーマットを外れた応答をすることがあ�
 
 **本番で pg_cron が動かない**
 
-`APP_FUNCTIONS_URL` と `APP_SERVICE_KEY` を `deploy.ts` で DB に設定する必要があります。
-デプロイ後に Studio → Database → Extensions で `pg_cron` が有効になっているか確認してください。
+`pnpm deploy` を再実行すると Vault と cron ジョブが再作成されます。
+Studio → Database → Cron Jobs で 3 つのジョブが登録されているか、
+Studio → Database → Vault で `service_key` が保存されているか確認してください。
