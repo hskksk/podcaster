@@ -228,6 +228,34 @@ curl -X POST https://<ref>.supabase.co/functions/v1/ingest \
 
 ---
 
+## GitHub Actions による自動デプロイ
+
+`main` ブランチへの push で Supabase クラウドへ自動デプロイされます。
+
+### 必要な GitHub Secrets
+
+GitHub リポジトリの **Settings → Secrets and variables → Actions** で以下を登録してください。
+
+| Secret | 取得方法 |
+|--------|---------|
+| `SUPABASE_ACCESS_TOKEN` | https://supabase.com/dashboard/account/tokens でトークン発行 |
+| `SUPABASE_DB_PASSWORD` | プロジェクト作成時に設定したDBパスワード |
+| `SUPABASE_PROJECT_REF` | `supabase projects list` で確認（以下の自動登録スクリプトで設定可） |
+| `GEMINI_API_KEY` | `.env` の値（以下の自動登録スクリプトで設定可） |
+| `MEM_API_KEY` | `.env` の値（以下の自動登録スクリプトで設定可） |
+
+### Secrets の一括登録（オプション）
+
+`SUPABASE_PROJECT_REF` / `GEMINI_API_KEY` / `MEM_API_KEY` の 3 つは以下で自動登録できます（[GitHub CLI](https://cli.github.com/) が必要）:
+
+```bash
+pnpm setup:gh-secrets
+```
+
+`SUPABASE_ACCESS_TOKEN` と `SUPABASE_DB_PASSWORD` は GitHub Settings から手動登録してください。
+
+---
+
 ## 設定
 
 ポッドキャストの設定は `podcast_config` テーブル（キー/値形式）で管理します。
