@@ -24,12 +24,17 @@ export function detectProjectRef(): string {
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],
     });
-    const projects: Array<{ id: string; name: string }> = JSON.parse(out);
+    const projects: Array<{ id: string; name: string; linked?: boolean }> = JSON.parse(out);
     if (projects.length === 1) {
       console.log(`Auto-detected project: ${projects[0].name} (${projects[0].id})`);
       return projects[0].id;
     }
     if (projects.length > 1) {
+      const linked = projects.find((p) => p.linked);
+      if (linked) {
+        console.log(`Auto-detected linked project: ${linked.name} (${linked.id})`);
+        return linked.id;
+      }
       console.error(
         "複数のプロジェクトが見つかりました。SUPABASE_PROJECT_REF に対象プロジェクトの ID を設定してください:\n" +
           projects.map((p) => `  ${p.id}  ${p.name}`).join("\n"),
