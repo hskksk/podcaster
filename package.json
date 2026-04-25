@@ -15,6 +15,7 @@
         "deploy": "npx tsx scripts/deploy.ts",
         "deploy:local": "TARGET=local npx tsx scripts/deploy.ts",
         "deploy:remote": "npx tsx scripts/deploy.ts",
+        "setup:gh-secrets": "npx tsx scripts/setup-gh-secrets.ts",
         "typecheck": "tsc --noEmit"
     },
     "devDependencies": {

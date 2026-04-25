@@ -129,7 +129,10 @@ $$;
   const serviceKey = detectServiceKey(projectRef);
 
   // 1. Link project (idempotent)
-  run(`supabase link --project-ref ${projectRef}`);
+  const passwordFlag = process.env.SUPABASE_DB_PASSWORD
+    ? ` --password ${process.env.SUPABASE_DB_PASSWORD}`
+    : "";
+  run(`supabase link --project-ref ${projectRef}${passwordFlag}`);
 
   // 2. Push secrets (edge function env vars)
   run("supabase secrets set --env-file .env");
