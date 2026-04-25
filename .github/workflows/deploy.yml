@@ -22,14 +22,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install
 
       - run: pnpm typecheck
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v2
 
       - name: Create .env
         run: |
