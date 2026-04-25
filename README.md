@@ -116,7 +116,7 @@ supabase db reset
 pnpm seed:config
 
 # 6. Edge Functions をローカルで起動
-pnpm functions:serve
+pnpm functions:serve &
 ```
 
 起動後のアクセス先:

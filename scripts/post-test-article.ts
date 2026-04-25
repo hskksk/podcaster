@@ -1,14 +1,12 @@
 #!/usr/bin/env tsx
 
-import { execSync } from "node:child_process";
 import dotenv from "dotenv";
-import crypto from "node:crypto";
+import { execSync } from "node:child_process";
+import { detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
 
-dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
+console.log("Using env file: .env");
 
-const INGEST_URL =
-  process.env.INGEST_URL ?? "http://127.0.0.1:54331/functions/v1/ingest";
-const WEBHOOK_SECRET = process.env.INGEST_WEBHOOK_SECRET ?? "";
 const MEM_NOTE_ID = process.env.MEM_NOTE_ID;
 
 if (!MEM_NOTE_ID) {
@@ -17,26 +15,34 @@ if (!MEM_NOTE_ID) {
   process.exit(1);
 }
 
-function getSupabaseStatus(): Record<string, string> {
-  try {
-    return JSON.parse(
-      execSync("supabase status --json", {
-        encoding: "utf8",
-        stdio: ["pipe", "pipe", "pipe"],
-      }),
-    );
-  } catch {
-    return {};
+const target = process.env.TARGET ?? "local";
+
+let authKey: string;
+let ingestUrl: string;
+
+if (target === "remote") {
+  dotenv.config({ path: ".env" });
+  const projectRef = detectProjectRef();
+  authKey = detectServiceKey(projectRef);
+  ingestUrl = `https://${projectRef}.supabase.co/functions/v1/ingest`;
+} else {
+  function getSupabaseStatus(): Record<string, string> {
+    try {
+      return JSON.parse(
+        execSync("supabase status --json", {
+          encoding: "utf8",
+          stdio: ["pipe", "pipe", "pipe"],
+        }),
+      );
+    } catch {
+      return {};
+    }
   }
-}
 
-let authKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
-let ingestUrl = process.env.INGEST_URL;
-
-if (!authKey || !ingestUrl) {
   const status = getSupabaseStatus();
-  authKey ??= status["SERVICE_ROLE_KEY"] ?? status["ANON_KEY"] ?? "";
-  ingestUrl ??= status["API_URL"]
+  authKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY
+    ?? status["SERVICE_ROLE_KEY"] ?? status["ANON_KEY"] ?? "";
+  ingestUrl = status["API_URL"]
     ? `${status["API_URL"]}/functions/v1/ingest`
     : "http://127.0.0.1:54331/functions/v1/ingest";
 }
