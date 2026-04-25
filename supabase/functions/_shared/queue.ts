@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { QueueMessage } from "./types.ts";
 
-const VISIBILITY_TIMEOUT_SEC = 300; // 5 minutes
+const VISIBILITY_TIMEOUT_SEC = 1800; // 30 minutes — long enough for TTS generation to complete
 
 export async function queueRead(
   db: SupabaseClient,
