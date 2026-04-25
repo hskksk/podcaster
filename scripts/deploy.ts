@@ -111,12 +111,7 @@ $$;
   );
 
   // 3. Upload cover.png and seed podcast_config
-  run("npx tsx scripts/seed-config.ts", {
-    env: {
-      SUPABASE_URL: apiUrl,
-      SUPABASE_SERVICE_ROLE_KEY: serviceKey,
-    },
-  });
+  run("npx tsx scripts/seed-config.ts", { env: { TARGET: "local" } });
 
   console.log("\nLocal deploy complete.");
   console.log(`Ingest URL:  ${functionsBase}/ingest`);
@@ -225,13 +220,7 @@ $$;
   );
 
   // 7. Upload cover.png and seed podcast_config
-  const supabaseApiUrl = `https://${projectRef}.supabase.co`;
-  run("npx tsx scripts/seed-config.ts", {
-    env: {
-      SUPABASE_URL: supabaseApiUrl,
-      SUPABASE_SERVICE_ROLE_KEY: serviceKey,
-    },
-  });
+  run("npx tsx scripts/seed-config.ts");
 
   console.log("\nDeploy complete.");
   console.log(`Ingest URL:  ${functionsBase}/ingest`);

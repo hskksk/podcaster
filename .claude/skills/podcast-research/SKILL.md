@@ -1,6 +1,6 @@
 ---
 name: podcast-research
-description: Research a topic deeply and place a detailed markdown report in the podcaster inbox
+description: Research a topic deeply, save a markdown report to draft/, register to mem.ai, and trigger the podcast ingest pipeline
 license: MIT
 compatibility: claude-code
 metadata:
@@ -19,7 +19,7 @@ metadata:
 
 1. **多角的なリサーチ**: 概要・背景・詳細・最新動向・具体例・関連トピックを複数回のWeb検索で収集
 2. **レポート保存**: `./draft/` に Markdown として保存する
-3. **inbox への自動配置**: そのまま `./inbox/` へコピーしてポッドキャスト生成パイプラインに渡す
+3. **mem.ai 登録 → ingest 投入**: mem.ai に登録して note ID を取得し、ingest エンドポイントへ POST する
 
 ## When to use me
 
@@ -53,7 +53,7 @@ metadata:
 
 収集した情報を以下の構成で Markdown にまとめる。
 
-**目標文字数: 5万〜10万字**（ポッドキャスト台本生成の素材として十分な情報量を確保する）
+**目標文字数: 約1万字**（長すぎると生成音声が長くなりコスト増・品質劣化の原因となるため）
 
 ```markdown
 # <テーマタイトル>
@@ -100,14 +100,9 @@ metadata:
      --collection-title "Podcast Research" \
      | jq -r '.id')
    ```
-3. 環境変数 `INGEST_URL`（デフォルト: `http://127.0.0.1:54321/functions/v1/ingest`）に `{title, mem_note_id}` を POST する:
+3. `scripts/ingest.ts` で ingest エンドポイントへ POST する（URL とサービスキーは supabase CLI から自動取得）:
    ```bash
-   INGEST_URL="${INGEST_URL:-http://127.0.0.1:54321/functions/v1/ingest}"
-   BODY=$(jq -n --arg title "<テーマ>" --arg mem_note_id "$NOTE_ID" \
-     '{title: $title, mem_note_id: $mem_note_id}')
-   curl -s -X POST "$INGEST_URL" \
-     -H "Content-Type: application/json" \
-     -d "$BODY"
+   pnpm tsx scripts/ingest.ts "$NOTE_ID"
    ```
 4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
 5. POST 結果（article_id）を報告し、「mem.ai にレポートを登録し、ポッドキャスト生成パイプラインに投入しました。」と伝える
@@ -118,5 +113,4 @@ metadata:
 - ファイル名のテーマ部分はファイルシステムで安全な文字のみ使用する（スペースはアンダースコアに）
 - リサーチ中は進捗を都度報告する（「〇〇について調査中...」など）
 - 情報の信頼性が低い場合はその旨を明記する
-- `INGEST_WEBHOOK_SECRET` が設定されている場合は HMAC 署名ヘッダーを付与すること
 - mem.ai のコンテンツ上限は 200,000 文字（UTF-8）。レポートが超える場合は冒頭に警告コメントを追記して truncate する

@@ -2,72 +2,83 @@
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
-dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { execSync } from "node:child_process";
+import { parse as parseToml } from "smol-toml";
+import {
+  detectLocalStatus,
+  detectProjectRef,
+  detectServiceKey,
+} from "./lib/supabase-detect.ts";
 
-function getSupabaseStatus(): Record<string, string> {
-  try {
-    return JSON.parse(
-      execSync("supabase status --json", {
-        encoding: "utf8",
-        stdio: ["pipe", "pipe", "pipe"],
-      }),
-    );
-  } catch {
-    return {};
-  }
+const target = process.env.TARGET ?? "remote";
+
+let supabaseUrl: string;
+let serviceKey: string;
+
+if (target === "local") {
+  const local = detectLocalStatus();
+  supabaseUrl = local.apiUrl;
+  serviceKey = local.serviceKey;
+} else {
+  const projectRef = detectProjectRef();
+  serviceKey = detectServiceKey(projectRef);
+  supabaseUrl = `https://${projectRef}.supabase.co`;
 }
 
-const status =
-  !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY
-    ? getSupabaseStatus()
-    : {};
-
-const supabaseUrl = process.env.SUPABASE_URL ?? status["API_URL"];
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? status["SERVICE_ROLE_KEY"];
 const publicUrl = process.env.PODCAST_PUBLIC_URL ?? supabaseUrl;
-
-if (!supabaseUrl || !serviceKey) {
-  console.error(
-    "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未設定かつ supabase status からも取得できませんでした。",
-  );
-  process.exit(1);
-}
-
 const supabase = createClient(supabaseUrl, serviceKey);
 
-// Upload cover.png to Storage if it exists
-const coverPath = resolve("public/cover.png");
+// Load config.toml
+const configPath = resolve("config.toml");
+if (!existsSync(configPath)) {
+  console.error("config.toml not found.");
+  process.exit(1);
+}
+const config = parseToml(readFileSync(configPath, "utf8")) as {
+  podcast: { title: string; description: string; cover_image?: string };
+  tts: {
+    model: string;
+    instructions: string;
+    speakers: {
+      host: { name: string; voice_name: string };
+      cohost: { name: string; voice_name: string };
+    };
+  };
+  generator: { model: string };
+};
+
+// Upload cover image to Storage
+const coverImage = config.podcast.cover_image ?? "cover.png";
+const coverPath = resolve("public", coverImage);
 if (existsSync(coverPath)) {
   const coverBytes = readFileSync(coverPath);
   const { error: uploadErr } = await supabase.storage
     .from("podcast")
-    .upload("cover.png", coverBytes, { contentType: "image/png", upsert: true });
+    .upload(coverImage, coverBytes, { contentType: "image/png", upsert: true });
   if (uploadErr) {
-    console.error("Failed to upload cover.png:", uploadErr.message);
+    console.error("Failed to upload cover image:", uploadErr.message);
   } else {
-    console.log("Uploaded: public/cover.png → storage/podcast/cover.png");
+    console.log(`Uploaded: public/${coverImage} → storage/podcast/${coverImage}`);
   }
 } else {
-  console.warn("public/cover.png not found, skipping cover upload.");
+  console.warn(`public/${coverImage} not found, skipping cover upload.`);
 }
 
-const coverUrl = `${publicUrl}/storage/v1/object/public/podcast/cover.png`;
+const coverUrl = `${publicUrl}/storage/v1/object/public/podcast/${coverImage}`;
 
 const defaults: Record<string, unknown> = {
-  "podcast.title": "My AI Podcast",
-  "podcast.description": "AI が生成するテック系ポッドキャスト",
+  "podcast.title": config.podcast.title,
+  "podcast.description": config.podcast.description,
   "podcast.cover_url": coverUrl,
-  "tts.model": "gemini-2.5-flash-preview-tts",
-  "tts.instructions":
-    "これは2人のスピーカーによるポッドキャストの会話です。自然な会話のトーンで、スピーカーの切り替わりに適切な間を置いて話してください。Hostが議論をリードし、CoHostは質問をしながら興味深く反応します。",
-  "tts.host.name": "Host",
-  "tts.host.voice": "Charon",
-  "tts.cohost.name": "CoHost",
-  "tts.cohost.voice": "Achird",
-  "generator.model": "gemini-2.5-flash",
+  "tts.model": config.tts.model,
+  "tts.instructions": config.tts.instructions,
+  "tts.host.name": config.tts.speakers.host.name,
+  "tts.host.voice": config.tts.speakers.host.voice_name,
+  "tts.cohost.name": config.tts.speakers.cohost.name,
+  "tts.cohost.voice": config.tts.speakers.cohost.voice_name,
+  "generator.model": config.generator.model,
 };
 
 for (const [key, value] of Object.entries(defaults)) {
