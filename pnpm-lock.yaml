@@ -11,6 +11,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.49.0
         version: 2.104.0
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -213,6 +216,10 @@ packages:
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
+  dotenv@16.6.1:
+    resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
+    engines: {node: '>=12'}
+
   esbuild@0.27.7:
     resolution: {integrity: sha512-IxpibTjyVnmrIQo5aqNpCgoACA/dTKLTlhMHihVHhdkxKyPO1uBBthumT0rdHmcsk9uMonIWS0m4FljWzILh3w==}
     engines: {node: '>=18'}
@@ -388,6 +395,8 @@ snapshots:
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 22.19.17
+
+  dotenv@16.6.1: {}
 
   esbuild@0.27.7:
     optionalDependencies:

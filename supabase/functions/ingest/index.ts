@@ -1,38 +1,13 @@
 import { createSupabaseClient } from "../_shared/db.ts";
 import { queueSend } from "../_shared/queue.ts";
 
-const WEBHOOK_SECRET = Deno.env.get("INGEST_WEBHOOK_SECRET");
 const MEM_API_KEY = Deno.env.get("MEM_API_KEY");
-
-async function verifySignature(req: Request): Promise<boolean> {
-  if (!WEBHOOK_SECRET) return true; // dev mode: skip verification
-
-  const sig = req.headers.get("x-signature");
-  if (!sig) return false;
-
-  const body = await req.text();
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(WEBHOOK_SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const mac = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-  const expected = Array.from(new Uint8Array(mac))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-
-  return sig === `sha256=${expected}`;
-}
 
 async function fetchMemContent(noteId: string): Promise<string> {
   if (!MEM_API_KEY) throw new Error("MEM_API_KEY is not configured");
-  const res = await fetch(`https://api.mem.ai/v2/mems/${noteId}`, {
+  const res = await fetch(`https://api.mem.ai/v2/notes/${noteId}`, {
     headers: {
-      Authorization: `ApiAccessToken ${MEM_API_KEY}`,
-      "Content-Type": "application/json",
+      Authorization: `Bearer ${MEM_API_KEY}`,
     },
   });
   if (res.status === 404) throw Object.assign(new Error("mem note not found"), { status: 404 });
@@ -51,11 +26,6 @@ async function fetchMemContent(noteId: string): Promise<string> {
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
-  }
-
-  const isValid = await verifySignature(req.clone());
-  if (!isValid) {
-    return new Response("Unauthorized", { status: 401 });
   }
 
   let body: { title?: string; mem_note_id?: string; source_url?: string };

@@ -1,15 +1,50 @@
 #!/usr/bin/env tsx
-import crypto from "node:crypto";
 
-const INGEST_URL =
-  process.env.INGEST_URL ?? "http://127.0.0.1:54331/functions/v1/ingest";
-const WEBHOOK_SECRET = process.env.INGEST_WEBHOOK_SECRET ?? "";
+import dotenv from "dotenv";
+import { execSync } from "node:child_process";
+import { detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
+
+dotenv.config({ path: ".env" });
+console.log("Using env file: .env");
+
 const MEM_NOTE_ID = process.env.MEM_NOTE_ID;
 
 if (!MEM_NOTE_ID) {
   console.error("Error: MEM_NOTE_ID environment variable is required");
   console.error("Usage: MEM_NOTE_ID=<uuid> pnpm tsx scripts/post-test-article.ts");
   process.exit(1);
+}
+
+const target = process.env.TARGET ?? "local";
+
+let authKey: string;
+let ingestUrl: string;
+
+if (target === "remote") {
+  dotenv.config({ path: ".env" });
+  const projectRef = detectProjectRef();
+  authKey = detectServiceKey(projectRef);
+  ingestUrl = `https://${projectRef}.supabase.co/functions/v1/ingest`;
+} else {
+  function getSupabaseStatus(): Record<string, string> {
+    try {
+      return JSON.parse(
+        execSync("supabase status --json", {
+          encoding: "utf8",
+          stdio: ["pipe", "pipe", "pipe"],
+        }),
+      );
+    } catch {
+      return {};
+    }
+  }
+
+  const status = getSupabaseStatus();
+  authKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY
+    ?? status["SERVICE_ROLE_KEY"] ?? status["ANON_KEY"] ?? "";
+  ingestUrl = status["API_URL"]
+    ? `${status["API_URL"]}/functions/v1/ingest`
+    : "http://127.0.0.1:54331/functions/v1/ingest";
 }
 
 const article = {
@@ -19,20 +54,12 @@ const article = {
 
 const body = JSON.stringify(article);
 
-// Include service role key as Bearer token for local dev (supabase functions serve enforces JWT)
-const authKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
-
 const headers: Record<string, string> = {
   "Content-Type": "application/json",
   ...(authKey ? { Authorization: `Bearer ${authKey}` } : {}),
 };
 
-if (WEBHOOK_SECRET) {
-  const mac = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex");
-  headers["x-signature"] = `sha256=${mac}`;
-}
-
-console.log(`POST ${INGEST_URL}`);
-const res = await fetch(INGEST_URL, { method: "POST", headers, body });
+console.log(`POST ${ingestUrl}`);
+const res = await fetch(ingestUrl, { method: "POST", headers, body });
 const json = await res.json();
 console.log(`Status: ${res.status}`, json);

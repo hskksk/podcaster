@@ -1,12 +1,40 @@
 #!/usr/bin/env tsx
+import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+
+dotenv.config({ path: ".env.local" });
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { execSync } from "node:child_process";
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-// Use PODCAST_PUBLIC_URL for local dev where SUPABASE_URL is internal (http://kong:8000)
+function getSupabaseStatus(): Record<string, string> {
+  try {
+    return JSON.parse(
+      execSync("supabase status --json", {
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+      }),
+    );
+  } catch {
+    return {};
+  }
+}
+
+const status =
+  !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? getSupabaseStatus()
+    : {};
+
+const supabaseUrl = process.env.SUPABASE_URL ?? status["API_URL"];
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? status["SERVICE_ROLE_KEY"];
 const publicUrl = process.env.PODCAST_PUBLIC_URL ?? supabaseUrl;
+
+if (!supabaseUrl || !serviceKey) {
+  console.error(
+    "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未設定かつ supabase status からも取得できませんでした。",
+  );
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, serviceKey);
 

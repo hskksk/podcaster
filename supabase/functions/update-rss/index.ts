@@ -26,7 +26,7 @@ async function processQueue(): Promise<void> {
     if (fetchErr) throw new Error(`Episodes fetch failed: ${fetchErr.message}`);
 
     // PODCAST_PUBLIC_URL overrides the internal Docker URL in local dev
-    const supabaseUrl = Deno.env.get("PODCAST_PUBLIC_URL") ?? Deno.env.get("SUPABASE_URL")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const storageUrl = `${supabaseUrl}/storage/v1/object/public/podcast`;
     const xml = buildRssFeed(episodes as Episode[], cfg, storageUrl);
 
