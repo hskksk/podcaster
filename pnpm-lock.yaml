@@ -18,6 +18,9 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1
     devDependencies:
+      '@hskksk/mem-ai-cli':
+        specifier: latest
+        version: 0.2.0
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.17
@@ -186,6 +189,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@hskksk/mem-ai-cli@0.2.0':
+    resolution: {integrity: sha512-IFK3YrEvy3T3qmK2Er/CNw7XgbW3nARN17GsaJSjf1aCedGvPXLI0bv9h9grtkUxfyy3tAss2G0rYPN4JcRLwQ==}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
+
   '@supabase/auth-js@2.104.0':
     resolution: {integrity: sha512-Vs0ndL+s5an7rOmXtS/nbYnGXL8m+KXlCSrPIcw9bR96ma6qyLYILnE6syuM+rpDnf+Tg4PVNxNB2+oDwoy6mA==}
     engines: {node: '>=20.0.0'}
@@ -218,6 +226,10 @@ packages:
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
+  commander@12.1.0:
+    resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
+    engines: {node: '>=18'}
 
   dotenv@16.6.1:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
@@ -355,6 +367,10 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
+  '@hskksk/mem-ai-cli@0.2.0':
+    dependencies:
+      commander: 12.1.0
+
   '@supabase/auth-js@2.104.0':
     dependencies:
       tslib: 2.8.1
@@ -402,6 +418,8 @@ snapshots:
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 22.19.17
+
+  commander@12.1.0: {}
 
   dotenv@16.6.1: {}
 
