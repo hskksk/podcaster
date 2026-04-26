@@ -1,13 +1,22 @@
 import { createSupabaseClient } from "../_shared/db.ts";
 import { queueDelete, queueRead } from "../_shared/queue.ts";
 import { loadConfig } from "../_shared/config.ts";
-import type { Episode } from "../_shared/types.ts";
 import { writeLog } from "../_shared/logger.ts";
 
 Deno.serve(async (_req) => {
   EdgeRuntime.waitUntil(processQueue());
   return Response.json({ ok: true });
 });
+
+type EpisodeForRss = {
+  id: string;
+  title: string;
+  description: string;
+  mem_note_id: string | null;
+  created_at: string;
+  published_at: string | null;
+  audio_files: Array<{ storage_path: string; mime_type: string }>;
+};
 
 async function processQueue(): Promise<void> {
   const db = createSupabaseClient();
@@ -19,26 +28,22 @@ async function processQueue(): Promise<void> {
   let memNoteId: string | null = null;
 
   try {
-    const { data: ep } = await db
-      .from("episodes")
-      .select("articles(mem_note_id)")
-      .eq("id", episodeId)
-      .single();
-    memNoteId = (ep?.articles as { mem_note_id?: string } | null)?.mem_note_id ?? null;
-
     const cfg = await loadConfig();
 
     const { data: episodes, error: fetchErr } = await db
       .from("episodes")
-      .select("id, title, description, audio_path, created_at, published_at")
+      .select("id, title, description, mem_note_id, created_at, published_at, audio_files(storage_path, mime_type)")
       .in("status", ["audio_ready", "published"])
       .order("created_at", { ascending: false });
     if (fetchErr) throw new Error(`Episodes fetch failed: ${fetchErr.message}`);
 
+    const currentEp = (episodes as EpisodeForRss[]).find((ep) => ep.id === episodeId);
+    memNoteId = currentEp?.mem_note_id ?? null;
+
     // PODCAST_PUBLIC_URL overrides the internal Docker URL in local dev
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const storageUrl = `${supabaseUrl}/storage/v1/object/public/podcast`;
-    const xml = buildRssFeed(episodes as Episode[], cfg, storageUrl);
+    const xml = buildRssFeed(episodes as EpisodeForRss[], cfg, storageUrl);
 
     const encoder = new TextEncoder();
     const xmlBytes = encoder.encode(xml);
@@ -95,7 +100,7 @@ function toRfc2822(iso: string): string {
 }
 
 function buildRssFeed(
-  episodes: Episode[],
+  episodes: EpisodeForRss[],
   cfg: Record<string, string>,
   storageUrl: string,
 ): string {
@@ -105,18 +110,15 @@ function buildRssFeed(
   const feedUrl = `${storageUrl}/feed.xml`;
 
   const items = episodes
-    .filter((ep) => ep.audio_path)
+    .filter((ep) => ep.audio_files?.[0]?.storage_path)
     .map((ep) => {
-      const audioUrl = `${storageUrl}/${ep.audio_path}`;
-      const ext = ep.audio_path!.split(".").pop()?.toLowerCase();
-      const mimeType = ext === "m4a" ? "audio/mp4"
-        : ext === "mp3" ? "audio/mpeg"
-        : "audio/wav";
+      const af = ep.audio_files[0];
+      const audioUrl = `${storageUrl}/${af.storage_path}`;
       return `    <item>
       <title>${escapeXml(ep.title)}</title>
       <description>${escapeXml(ep.description)}</description>
       <pubDate>${toRfc2822(ep.published_at || ep.created_at)}</pubDate>
-      <enclosure url="${escapeXml(audioUrl)}" length="0" type="${mimeType}" />
+      <enclosure url="${escapeXml(audioUrl)}" length="0" type="${af.mime_type}" />
       <guid isPermaLink="false">${escapeXml(ep.id)}</guid>
     </item>`;
     })

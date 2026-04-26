@@ -113,14 +113,20 @@ async function processQueue(): Promise<void> {
       .from("episodes")
       .insert({
         article_id: articleId,
+        mem_note_id: memNoteId,
         title: String(data.title).slice(0, 20),
         description: String(data.description).slice(0, 100),
-        script: String(data.script),
         status: "script_ready",
       })
       .select("id")
       .single();
     if (insertErr) throw new Error(`Episode insert failed: ${insertErr.message}`);
+
+    await db.from("scripts").insert({
+      episode_id: episode.id,
+      content: String(data.script),
+      status: "ready",
+    });
 
     await queueSend(db, "audio-queue", { episode_id: episode.id });
     await queueDelete(db, "script-queue", msg.msg_id);
@@ -136,14 +142,25 @@ async function processQueue(): Promise<void> {
     console.log(`Script generated for article ${articleId}, episode ${episode.id}`);
   } catch (err) {
     console.error(`generate-script failed for article ${articleId}:`, err);
-    await db.from("episodes").insert({
-      article_id: articleId,
-      title: "Error",
-      description: "",
-      script: "",
-      status: "failed",
-      error: String(err),
-    });
+    const { data: failedEpisode } = await db
+      .from("episodes")
+      .insert({
+        article_id: articleId,
+        mem_note_id: memNoteId,
+        title: "Error",
+        description: "",
+        status: "failed",
+      })
+      .select("id")
+      .single();
+    if (failedEpisode) {
+      await db.from("scripts").insert({
+        episode_id: failedEpisode.id,
+        content: "",
+        status: "failed",
+        error: String(err),
+      });
+    }
     await queueDelete(db, "script-queue", msg.msg_id);
     await writeLog(db, {
       queue_name: "script-queue",
