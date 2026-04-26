@@ -106,52 +106,33 @@ async function listArticles(limit: number): Promise<void> {
 }
 
 async function listAudio(limit: number): Promise<void> {
-  // Requires audio_files table (scripts/audio_files table split migration)
   const { data, error } = await db
     .from("audio_files")
-    .select("id, episode_id, storage_path, status, created_at")
+    .select("id, episode_id, storage_path, mime_type, status, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) {
-    if (error.code === "42P01") {
-      console.log(
-        "audio_files table not yet available — depends on the scripts/audio_files table split migration."
-      );
-      return;
-    }
-    console.error("Error:", error.message);
-    process.exit(1);
-  }
+  if (error) { console.error("Error:", error.message); process.exit(1); }
 
   const rows = (data ?? []).map((r) => [
     shortId(r.id),
     shortId(r.episode_id ?? ""),
     r.storage_path ?? "",
+    r.mime_type ?? "",
     r.status ?? "",
     fmtDate(r.created_at),
   ]);
-  printTable(["ID", "Episode", "Storage Path", "Status", "Created At"], rows);
+  printTable(["ID", "Episode", "Storage Path", "MIME", "Status", "Created At"], rows);
 }
 
 async function downloadAudio(id: string): Promise<void> {
-  // Requires audio_files table (scripts/audio_files table split migration)
   const { data: row, error: lookupErr } = await db
     .from("audio_files")
-    .select("id, episode_id, storage_path")
+    .select("id, episode_id, storage_path, mime_type")
     .or(`id.eq.${id},episode_id.eq.${id}`)
     .maybeSingle();
 
-  if (lookupErr) {
-    if (lookupErr.code === "42P01") {
-      console.log(
-        "audio_files table not yet available — depends on the scripts/audio_files table split migration."
-      );
-      return;
-    }
-    console.error("Error:", lookupErr.message);
-    process.exit(1);
-  }
+  if (lookupErr) { console.error("Error:", lookupErr.message); process.exit(1); }
 
   if (!row) {
     console.error(`No audio file found for id: ${id}`);
@@ -198,7 +179,7 @@ async function pipelineStatus(articleId: string): Promise<void> {
   // Episode
   const { data: episodes, error: epErr } = await db
     .from("episodes")
-    .select("id, title, status, error, created_at")
+    .select("id, title, status, created_at")
     .eq("article_id", articleId)
     .order("created_at", { ascending: false });
 
@@ -208,25 +189,68 @@ async function pipelineStatus(articleId: string): Promise<void> {
   console.log("-------");
   if (!episodes || episodes.length === 0) {
     console.log("(no episode yet)");
+    return;
+  }
+
+  printTable(
+    ["ID", "Title", "Status", "Created At"],
+    episodes.map((e) => [shortId(e.id), truncate(e.title ?? ""), e.status ?? "", fmtDate(e.created_at)])
+  );
+
+  const episodeIds = episodes.map((e) => e.id);
+
+  // Scripts
+  const { data: scripts, error: scErr } = await db
+    .from("scripts")
+    .select("id, episode_id, status, error, created_at")
+    .in("episode_id", episodeIds)
+    .order("created_at", { ascending: false });
+
+  if (scErr) { console.error("Error:", scErr.message); process.exit(1); }
+
+  console.log("\nScript");
+  console.log("------");
+  if (!scripts || scripts.length === 0) {
+    console.log("(no script yet)");
   } else {
     printTable(
-      ["ID", "Title", "Status", "Created At"],
-      episodes.map((e) => [shortId(e.id), truncate(e.title ?? ""), e.status ?? "", fmtDate(e.created_at)])
+      ["ID", "Episode", "Status", "Created At"],
+      scripts.map((s) => [shortId(s.id), shortId(s.episode_id), s.status ?? "", fmtDate(s.created_at)])
     );
-    for (const e of episodes) {
-      if (e.error) console.log(`  error: ${e.error}`);
+    for (const s of scripts) {
+      if (s.error) console.log(`  error: ${s.error}`);
     }
   }
 
-  // Script — future (depends on scripts table split)
-  console.log("\nScript");
-  console.log("------");
-  console.log("(not yet tracked — depends on scripts table split migration)");
+  // Audio files
+  const { data: audioFiles, error: afErr } = await db
+    .from("audio_files")
+    .select("id, episode_id, storage_path, mime_type, status, error, created_at")
+    .in("episode_id", episodeIds)
+    .order("created_at", { ascending: false });
 
-  // Audio — future (depends on audio_files table split)
+  if (afErr) { console.error("Error:", afErr.message); process.exit(1); }
+
   console.log("\nAudio");
   console.log("-----");
-  console.log("(not yet tracked — depends on audio_files table split migration)");
+  if (!audioFiles || audioFiles.length === 0) {
+    console.log("(no audio file yet)");
+  } else {
+    printTable(
+      ["ID", "Episode", "Storage Path", "MIME", "Status", "Created At"],
+      audioFiles.map((a) => [
+        shortId(a.id),
+        shortId(a.episode_id),
+        a.storage_path ?? "",
+        a.mime_type ?? "",
+        a.status ?? "",
+        fmtDate(a.created_at),
+      ])
+    );
+    for (const a of audioFiles) {
+      if (a.error) console.log(`  error: ${a.error}`);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
