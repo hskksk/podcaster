@@ -2,6 +2,7 @@ import { GoogleGenAI } from "npm:@google/genai";
 import { createSupabaseClient } from "../_shared/db.ts";
 import { queueDelete, queueRead, queueSend } from "../_shared/queue.ts";
 import { loadConfig } from "../_shared/config.ts";
+import { writeLog } from "../_shared/logger.ts";
 
 Deno.serve(async (_req) => {
   EdgeRuntime.waitUntil(processQueue());
@@ -45,14 +46,20 @@ async function processQueue(): Promise<void> {
   if (!msg) return;
 
   const episodeId = msg.message.episode_id as string;
+  const startMs = Date.now();
+  let memNoteId: string | null = null;
+  let script: { id: string; content: string } | null = null;
 
   try {
-    const { data: episode, error: fetchErr } = await db
-      .from("episodes")
-      .select("script")
-      .eq("id", episodeId)
+    const { data: scriptRow, error: scriptErr } = await db
+      .from("scripts")
+      .select("id, content, episodes(mem_note_id)")
+      .eq("episode_id", episodeId)
+      .eq("status", "ready")
       .single();
-    if (fetchErr || !episode) throw new Error(`Episode not found: ${episodeId}`);
+    if (scriptErr || !scriptRow) throw new Error(`Script not found for episode: ${episodeId}`);
+    script = { id: scriptRow.id, content: scriptRow.content };
+    memNoteId = (scriptRow.episodes as { mem_note_id?: string } | null)?.mem_note_id ?? null;
 
     const cfg = await loadConfig();
     const gemini = new GoogleGenAI({ apiKey: Deno.env.get("GEMINI_API_KEY")! });
@@ -65,8 +72,8 @@ async function processQueue(): Promise<void> {
     const instructions = cfg["tts.instructions"];
 
     const scriptWithInstructions = instructions
-      ? `${instructions}\n\n${episode.script}`
-      : episode.script;
+      ? `${instructions}\n\n${script.content}`
+      : script.content;
 
     const response = await gemini.models.generateContent({
       model: ttsModel,
@@ -135,20 +142,46 @@ async function processQueue(): Promise<void> {
       });
     if (uploadErr) throw new Error(`Storage upload failed: ${uploadErr.message}`);
 
-    await db
-      .from("episodes")
-      .update({ audio_path: audioPath, status: "audio_ready" })
-      .eq("id", episodeId);
+    await db.from("audio_files").insert({
+      episode_id: episodeId,
+      script_id: script.id,
+      storage_path: audioPath,
+      mime_type: uploadMime,
+      status: "ready",
+    });
+    await db.from("episodes").update({ status: "audio_ready" }).eq("id", episodeId);
 
     await queueSend(db, "rss-queue", { episode_id: episodeId });
     await queueDelete(db, "audio-queue", msg.msg_id);
+    await writeLog(db, {
+      queue_name: "audio-queue",
+      message_id: msg.msg_id,
+      episode_id: episodeId,
+      mem_note_id: memNoteId,
+      status: "success",
+      duration_ms: Date.now() - startMs,
+    });
     console.log(`Audio generated for episode ${episodeId}: ${audioPath}`);
   } catch (err) {
     console.error(`generate-audio failed for episode ${episodeId}:`, err);
-    await db
-      .from("episodes")
-      .update({ status: "failed", error: String(err) })
-      .eq("id", episodeId);
+    await db.from("audio_files").insert({
+      episode_id: episodeId,
+      script_id: script?.id ?? null,
+      storage_path: "",
+      mime_type: "",
+      status: "failed",
+      error: String(err),
+    });
+    await db.from("episodes").update({ status: "failed" }).eq("id", episodeId);
     await queueDelete(db, "audio-queue", msg.msg_id);
+    await writeLog(db, {
+      queue_name: "audio-queue",
+      message_id: msg.msg_id,
+      episode_id: episodeId,
+      mem_note_id: memNoteId,
+      status: "failure",
+      error_message: String(err),
+      duration_ms: Date.now() - startMs,
+    });
   }
 }

@@ -2,6 +2,7 @@ import { GoogleGenAI } from "npm:@google/genai";
 import { createSupabaseClient } from "../_shared/db.ts";
 import { queueDelete, queueRead, queueSend } from "../_shared/queue.ts";
 import { loadConfig } from "../_shared/config.ts";
+import { writeLog } from "../_shared/logger.ts";
 
 const SYSTEM_INSTRUCTION = `\
 あなたは一流のテック系ポッドキャスト・プロデューサーです。
@@ -53,14 +54,17 @@ async function processQueue(): Promise<void> {
   if (!msg) return;
 
   const articleId = msg.message.article_id as string;
+  const startMs = Date.now();
+  let memNoteId: string | null = null;
 
   try {
     const { data: article, error: fetchErr } = await db
       .from("articles")
-      .select("content")
+      .select("content, mem_note_id")
       .eq("id", articleId)
       .single();
     if (fetchErr || !article) throw new Error(`Article not found: ${articleId}`);
+    memNoteId = article.mem_note_id ?? null;
 
     const cfg = await loadConfig();
     const gemini = new GoogleGenAI({ apiKey: Deno.env.get("GEMINI_API_KEY")! });
@@ -109,28 +113,63 @@ async function processQueue(): Promise<void> {
       .from("episodes")
       .insert({
         article_id: articleId,
+        mem_note_id: memNoteId,
         title: String(data.title).slice(0, 20),
         description: String(data.description).slice(0, 100),
-        script: String(data.script),
         status: "script_ready",
       })
       .select("id")
       .single();
     if (insertErr) throw new Error(`Episode insert failed: ${insertErr.message}`);
 
+    await db.from("scripts").insert({
+      episode_id: episode.id,
+      content: String(data.script),
+      status: "ready",
+    });
+
     await queueSend(db, "audio-queue", { episode_id: episode.id });
     await queueDelete(db, "script-queue", msg.msg_id);
+    await writeLog(db, {
+      queue_name: "script-queue",
+      message_id: msg.msg_id,
+      article_id: articleId,
+      episode_id: episode.id,
+      mem_note_id: memNoteId,
+      status: "success",
+      duration_ms: Date.now() - startMs,
+    });
     console.log(`Script generated for article ${articleId}, episode ${episode.id}`);
   } catch (err) {
     console.error(`generate-script failed for article ${articleId}:`, err);
-    await db.from("episodes").insert({
-      article_id: articleId,
-      title: "Error",
-      description: "",
-      script: "",
-      status: "failed",
-      error: String(err),
-    });
+    const { data: failedEpisode } = await db
+      .from("episodes")
+      .insert({
+        article_id: articleId,
+        mem_note_id: memNoteId,
+        title: "Error",
+        description: "",
+        status: "failed",
+      })
+      .select("id")
+      .single();
+    if (failedEpisode) {
+      await db.from("scripts").insert({
+        episode_id: failedEpisode.id,
+        content: "",
+        status: "failed",
+        error: String(err),
+      });
+    }
     await queueDelete(db, "script-queue", msg.msg_id);
+    await writeLog(db, {
+      queue_name: "script-queue",
+      message_id: msg.msg_id,
+      article_id: articleId,
+      mem_note_id: memNoteId,
+      status: "failure",
+      error_message: String(err),
+      duration_ms: Date.now() - startMs,
+    });
   }
 }
