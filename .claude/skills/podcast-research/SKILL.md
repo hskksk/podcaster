@@ -3,14 +3,24 @@ name: podcast-research
 description: Research a topic deeply, save a markdown report to draft/, register to mem.ai, and trigger the podcast ingest pipeline
 license: MIT
 compatibility: claude-code
+allowed-tools:
+  - WebSearch
+  - WebFetch
+  - Write
+  - Read
+  - Bash(which mem-ai*)
+  - Bash(which supabase*)
+  - Bash(mem-ai --json note create*)
+  - Bash(pnpm tsx scripts/ingest.ts*)
+  - Bash(pnpm exec mem-ai*)
+  - Bash(git checkout -b article/*)
+  - Bash(git add articles/*)
+  - Bash(git commit -m*)
+  - Bash(git push -u origin article/*)
+  - Bash(gh pr create*)
+  - Bash(jq -r*)
 metadata:
   audience: podcast producers
-  tools:
-    - WebSearch
-    - WebFetch
-    - Write
-    - Read
-    - Bash
 ---
 
 ## What I do
@@ -88,9 +98,21 @@ metadata:
 （調査に使用したURL一覧）
 ```
 
-### ステップ 4: mem.ai に登録して ingest エンドポイントへ POST
+### ステップ 4: 環境を確認して mem.ai 登録 or articles/ に保存
 
 ユーザーの確認は不要。以下を順に実行する。
+
+#### 4-A: 環境チェック
+
+```bash
+MEM_AI_OK=$(which mem-ai 2>/dev/null && [ -n "$MEM_API_KEY" ] && echo "yes" || echo "no")
+SUPABASE_OK=$(which supabase 2>/dev/null && echo "yes" || echo "no")
+```
+
+- `MEM_AI_OK` と `SUPABASE_OK` がともに `"yes"` → **4-B（直接 ingest フロー）**へ
+- どちらか `"no"` → **4-C（articles/ + PR フロー）**へ
+
+#### 4-B: 直接 ingest フロー（ツールが使える場合）
 
 1. `./draft/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する
 2. `mem-ai` CLI でレポートを mem.ai に登録し、note ID を取得する:
@@ -106,6 +128,30 @@ metadata:
    ```
 4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
 5. POST 結果（article_id）を報告し、「mem.ai にレポートを登録し、ポッドキャスト生成パイプラインに投入しました。」と伝える
+
+#### 4-C: articles/ + PR フロー（ツールが使えない場合）
+
+1. `./articles/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する（draft/ ではなく articles/）
+2. origin/main ベースの新しいブランチを作成してコミット:
+   ```bash
+   FILENAME="YYYYMMDD_HHMMSS_<topic-slug>.md"
+   BRANCH="article/YYYYMMDD_HHMMSS_<topic-slug>"
+   git checkout -b "$BRANCH" origin/main
+   git add "articles/$FILENAME"
+   git commit -m "Add podcast research article: <テーマ>"
+   git push -u origin "$BRANCH"
+   ```
+3. PR を作成する:
+   - `gh` CLI が使える場合:
+     ```bash
+     gh pr create \
+       --base main \
+       --title "Podcast Research: <テーマ>" \
+       --body "## 概要\n\n記事を main にマージすると CI/CD が自動で mem.ai 登録 → ingest を実行します。\n\n- ファイル: articles/$FILENAME\n- テーマ: <テーマ>"
+     ```
+   - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
+4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
+5. 「`articles/` に保存して PR を作成しました。main にマージされると CI/CD が自動で mem.ai 登録 → ingest を実行します。」と伝える
 
 ### 注意事項
 
