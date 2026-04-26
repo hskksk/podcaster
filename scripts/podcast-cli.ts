@@ -6,11 +6,15 @@
 //   pnpm cli download audio <id>
 //   pnpm cli status <article_id>
 //   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
+//   pnpm cli requeue script <article_id>  [--yes]
+//   pnpm cli requeue audio  <episode_id>  [--yes]
+//   pnpm cli requeue rss    <episode_id>  [--yes]
 
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
 import {
   detectLocalStatus,
   detectProjectRef,
@@ -38,6 +42,10 @@ function flagStr(name: string): string | undefined {
   return undefined;
 }
 
+function flagBool(name: string): boolean {
+  return args.includes(name);
+}
+
 const [cmd, sub, param] = args.filter((a) => !a.startsWith("--") && !/^\d+$/.test(a));
 
 function usage(): never {
@@ -47,7 +55,10 @@ function usage(): never {
   pnpm cli list audio    [--limit N]
   pnpm cli download audio <id>
   pnpm cli status <article_id>
-  pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]`);
+  pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
+  pnpm cli requeue script <article_id>  [--yes]
+  pnpm cli requeue audio  <episode_id>  [--yes]
+  pnpm cli requeue rss    <episode_id>  [--yes]`);
   process.exit(1);
 }
 
@@ -291,6 +302,55 @@ async function listLogs(opts: {
   printTable(["Timestamp", "Queue", "Status", "Episode", "Duration", "Error"], rows);
 }
 
+async function confirm(message: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(`${message} [y/N] `, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === "y");
+    });
+  });
+}
+
+async function requeueRecord(
+  queueName: string,
+  message: Record<string, unknown>,
+  yes: boolean,
+): Promise<void> {
+  if (!yes) {
+    const ok = await confirm(`Re-enqueue ${JSON.stringify(message)} → ${queueName}?`);
+    if (!ok) { console.log("Aborted."); process.exit(0); }
+  }
+  const { error } = await db.rpc("pgmq_send", { queue_name: queueName, msg: message });
+  if (error) { console.error("Error:", error.message); process.exit(1); }
+  console.log(`Enqueued to ${queueName}: ${JSON.stringify(message)}`);
+}
+
+async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> {
+  if (sub === "script") {
+    const { data, error } = await db.from("articles").select("id, title").eq("id", id).maybeSingle();
+    if (error) { console.error("Error:", error.message); process.exit(1); }
+    if (!data) { console.error(`Article not found: ${id}`); process.exit(1); }
+    console.log(`Article: ${data.title} (${shortId(data.id)})`);
+    await requeueRecord("script-queue", { article_id: id }, yes);
+  } else if (sub === "audio") {
+    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    if (error) { console.error("Error:", error.message); process.exit(1); }
+    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
+    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
+    await requeueRecord("audio-queue", { episode_id: id }, yes);
+  } else if (sub === "rss") {
+    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    if (error) { console.error("Error:", error.message); process.exit(1); }
+    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
+    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
+    await requeueRecord("rss-queue", { episode_id: id }, yes);
+  } else {
+    console.error("Usage: pnpm cli requeue script|audio|rss <id> [--yes]");
+    process.exit(1);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Dispatch
 // ---------------------------------------------------------------------------
@@ -319,6 +379,12 @@ if (cmd === "list") {
     status: flagStr("--status"),
     episodeId: flagStr("--episode"),
   });
+} else if (cmd === "requeue") {
+  if (!sub || !param) {
+    console.error("Usage: pnpm cli requeue script|audio|rss <id> [--yes]");
+    process.exit(1);
+  }
+  await requeueCmd(sub, param, flagBool("--yes"));
 } else {
   usage();
 }
