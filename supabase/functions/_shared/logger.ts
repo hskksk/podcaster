@@ -5,6 +5,7 @@ export interface LogEntry {
   message_id?: bigint | null;
   episode_id?: string | null;
   article_id?: string | null;
+  mem_note_id?: string | null;
   status: "success" | "failure";
   error_message?: string | null;
   duration_ms?: number | null;

@@ -55,14 +55,16 @@ async function processQueue(): Promise<void> {
 
   const articleId = msg.message.article_id as string;
   const startMs = Date.now();
+  let memNoteId: string | null = null;
 
   try {
     const { data: article, error: fetchErr } = await db
       .from("articles")
-      .select("content")
+      .select("content, mem_note_id")
       .eq("id", articleId)
       .single();
     if (fetchErr || !article) throw new Error(`Article not found: ${articleId}`);
+    memNoteId = article.mem_note_id ?? null;
 
     const cfg = await loadConfig();
     const gemini = new GoogleGenAI({ apiKey: Deno.env.get("GEMINI_API_KEY")! });
@@ -127,6 +129,7 @@ async function processQueue(): Promise<void> {
       message_id: msg.msg_id,
       article_id: articleId,
       episode_id: episode.id,
+      mem_note_id: memNoteId,
       status: "success",
       duration_ms: Date.now() - startMs,
     });
@@ -146,6 +149,7 @@ async function processQueue(): Promise<void> {
       queue_name: "script-queue",
       message_id: msg.msg_id,
       article_id: articleId,
+      mem_note_id: memNoteId,
       status: "failure",
       error_message: String(err),
       duration_ms: Date.now() - startMs,
