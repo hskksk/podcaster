@@ -5,6 +5,7 @@
 //   pnpm cli list audio    [--limit N]
 //   pnpm cli download audio <id>
 //   pnpm cli status <article_id>
+//   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
 
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
@@ -31,6 +32,12 @@ function flag(name: string, defaultVal: number): number {
   return defaultVal;
 }
 
+function flagStr(name: string): string | undefined {
+  const i = args.indexOf(name);
+  if (i !== -1 && args[i + 1] && !args[i + 1].startsWith("--")) return args[i + 1];
+  return undefined;
+}
+
 const [cmd, sub, param] = args.filter((a) => !a.startsWith("--") && !/^\d+$/.test(a));
 
 function usage(): never {
@@ -39,7 +46,8 @@ function usage(): never {
   pnpm cli list articles [--limit N]
   pnpm cli list audio    [--limit N]
   pnpm cli download audio <id>
-  pnpm cli status <article_id>`);
+  pnpm cli status <article_id>
+  pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]`);
   process.exit(1);
 }
 
@@ -253,6 +261,36 @@ async function pipelineStatus(articleId: string): Promise<void> {
   }
 }
 
+async function listLogs(opts: {
+  limit: number;
+  queue?: string;
+  status?: string;
+  episodeId?: string;
+}): Promise<void> {
+  let query = db
+    .from("processing_logs")
+    .select("processed_at, queue_name, status, episode_id, duration_ms, error_message")
+    .order("processed_at", { ascending: false })
+    .limit(opts.limit);
+
+  if (opts.queue)     query = query.eq("queue_name", opts.queue);
+  if (opts.status)    query = query.eq("status", opts.status);
+  if (opts.episodeId) query = query.eq("episode_id", opts.episodeId);
+
+  const { data, error } = await query;
+  if (error) { console.error("Error:", error.message); process.exit(1); }
+
+  const rows = (data ?? []).map((r) => [
+    fmtDate(r.processed_at),
+    r.queue_name ?? "",
+    r.status ?? "",
+    shortId(r.episode_id ?? ""),
+    r.duration_ms != null ? `${r.duration_ms} ms` : "",
+    truncate(r.error_message ?? "", 40),
+  ]);
+  printTable(["Timestamp", "Queue", "Status", "Episode", "Duration", "Error"], rows);
+}
+
 // ---------------------------------------------------------------------------
 // Dispatch
 // ---------------------------------------------------------------------------
@@ -274,6 +312,13 @@ if (cmd === "list") {
 } else if (cmd === "status") {
   if (!sub) { console.error("Usage: pnpm cli status <article_id>"); process.exit(1); }
   await pipelineStatus(sub);
+} else if (cmd === "logs") {
+  await listLogs({
+    limit: flag("--limit", 20),
+    queue: flagStr("--queue"),
+    status: flagStr("--status"),
+    episodeId: flagStr("--episode"),
+  });
 } else {
   usage();
 }
