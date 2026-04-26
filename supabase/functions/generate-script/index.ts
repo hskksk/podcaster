@@ -2,6 +2,7 @@ import { GoogleGenAI } from "npm:@google/genai";
 import { createSupabaseClient } from "../_shared/db.ts";
 import { queueDelete, queueRead, queueSend } from "../_shared/queue.ts";
 import { loadConfig } from "../_shared/config.ts";
+import { writeLog } from "../_shared/logger.ts";
 
 const SYSTEM_INSTRUCTION = `\
 あなたは一流のテック系ポッドキャスト・プロデューサーです。
@@ -53,6 +54,7 @@ async function processQueue(): Promise<void> {
   if (!msg) return;
 
   const articleId = msg.message.article_id as string;
+  const startMs = Date.now();
 
   try {
     const { data: article, error: fetchErr } = await db
@@ -120,6 +122,14 @@ async function processQueue(): Promise<void> {
 
     await queueSend(db, "audio-queue", { episode_id: episode.id });
     await queueDelete(db, "script-queue", msg.msg_id);
+    await writeLog(db, {
+      queue_name: "script-queue",
+      message_id: msg.msg_id,
+      article_id: articleId,
+      episode_id: episode.id,
+      status: "success",
+      duration_ms: Date.now() - startMs,
+    });
     console.log(`Script generated for article ${articleId}, episode ${episode.id}`);
   } catch (err) {
     console.error(`generate-script failed for article ${articleId}:`, err);
@@ -132,5 +142,13 @@ async function processQueue(): Promise<void> {
       error: String(err),
     });
     await queueDelete(db, "script-queue", msg.msg_id);
+    await writeLog(db, {
+      queue_name: "script-queue",
+      message_id: msg.msg_id,
+      article_id: articleId,
+      status: "failure",
+      error_message: String(err),
+      duration_ms: Date.now() - startMs,
+    });
   }
 }
