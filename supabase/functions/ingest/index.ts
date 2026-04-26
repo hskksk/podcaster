@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
       content: content.trim(),
       source_url: body.source_url,
       source: "webhook",
+      mem_note_id: body.mem_note_id.trim(),
     })
     .select("id")
     .single();

@@ -4,6 +4,7 @@ export interface Article {
   content: string;
   source_url?: string;
   source?: string;
+  mem_note_id?: string;
   created_at: string;
 }
 
