@@ -53,6 +53,7 @@ async function processQueue(): Promise<void> {
   if (!msg) return;
 
   const articleId = msg.message.article_id as string;
+  const memNoteId = msg.message.mem_note_id as string | undefined;
 
   try {
     const { data: article, error: fetchErr } = await db
@@ -109,6 +110,7 @@ async function processQueue(): Promise<void> {
       .from("episodes")
       .insert({
         article_id: articleId,
+        mem_note_id: memNoteId,
         title: String(data.title).slice(0, 20),
         description: String(data.description).slice(0, 100),
         script: String(data.script),

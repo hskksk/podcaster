@@ -10,6 +10,7 @@ export interface Article {
 export interface Episode {
   id: string;
   article_id?: string;
+  mem_note_id?: string;
   title: string;
   description: string;
   script: string;
