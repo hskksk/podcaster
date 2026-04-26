@@ -272,6 +272,46 @@ ID        Episode   Storage Path              MIME       Status  Created At
 d4e5f6a7  b2c3d4e5  audio/b2c3d4e5.wav        audio/wav  ready   2026-04-26 12:10:00
 ```
 
+#### `logs`
+
+処理ログ（`processing_logs` テーブル）を新しい順に一覧表示します。キュー名・ステータス・エピソード ID でフィルタできます。
+
+```bash
+pnpm cli logs                          # 最新 20 件
+pnpm cli logs --limit 50               # 最新 50 件
+pnpm cli logs --queue script-queue     # 特定のキューのみ
+pnpm cli logs --status failure         # 失敗ログのみ
+pnpm cli logs --episode b2c3d4e5-...   # 特定エピソードのみ
+```
+
+#### `requeue script|audio|rss <id>`
+
+パイプラインの特定ステージを再実行します。ジョブが失敗したときや再処理が必要な場合に使います。
+実行前にレコードの存在確認を行い、確認プロンプトを表示します（`--yes` で省略可）。
+
+| サブコマンド | 対象テーブル | 送信先キュー | メッセージ |
+|------------|-----------|------------|----------|
+| `script` | `articles` | `script-queue` | `{ article_id }` |
+| `audio` | `episodes` | `audio-queue` | `{ episode_id }` |
+| `rss` | `episodes` | `rss-queue` | `{ episode_id }` |
+
+```bash
+# 台本生成からやり直す（記事 ID を指定）
+pnpm cli requeue script a1b2c3d4-e5f6-...
+
+# 音声生成からやり直す（エピソード ID を指定）
+pnpm cli requeue audio b2c3d4e5-f6a7-...
+
+# RSS 更新だけ再実行する（確認プロンプトをスキップ）
+pnpm cli requeue rss b2c3d4e5-f6a7-... --yes
+```
+
+```
+Article: Supabase の pgmq でバックグラウンドジョブを実装する方法 (a1b2c3d4)
+Re-enqueue {"article_id":"a1b2c3d4-..."} → script-queue? [y/N] y
+Enqueued to script-queue: {"article_id":"a1b2c3d4-..."}
+```
+
 ---
 
 ## 本番デプロイ（Supabase クラウド）
