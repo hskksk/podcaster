@@ -55,7 +55,12 @@ podcaster/
 ├── public/
 │   └── cover.png                   # ポッドキャストカバー画像
 ├── scripts/
+│   ├── lib/
+│   │   ├── supabase-detect.ts      # ローカル / リモート Supabase 接続情報の自動検出
+│   │   └── table.ts                # CLI 用テーブル表示ヘルパー
 │   ├── deploy.ts                   # pnpm deploy の実体
+│   ├── ingest.ts                   # mem note ID を指定して記事を投入
+│   ├── podcast-cli.ts              # パイプライン状態確認 CLI
 │   ├── post-test-article.ts        # ローカル動作確認用テスト記事投入
 │   └── seed-config.ts              # cover.png アップロード + podcast_config 初期化
 ├── supabase/
@@ -169,6 +174,102 @@ Storage の `podcast` バケットで確認できます。
 ```bash
 supabase start
 pnpm functions:serve
+```
+
+---
+
+## CLI ツール
+
+`pnpm cli` でパイプラインの状態をローカルから確認できます。
+
+```bash
+# ローカル Supabase に接続（supabase start が必要）
+TARGET=local pnpm cli <command>
+
+# 本番に接続（デフォルト）
+pnpm cli <command>
+```
+
+接続情報は `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 環境変数か、
+Supabase CLI (`supabase status` / `supabase projects api-keys`) から自動取得します。
+
+### コマンド一覧
+
+#### `list episodes`
+
+最新 N 件のエピソードを一覧表示します。
+
+```bash
+pnpm cli list episodes           # 最新 10 件
+pnpm cli list episodes --limit 5 # 最新 5 件
+```
+
+```
+ID        Title                                               Status        Created At
+--------  --------------------------------------------------  ------------  -------------------
+a1b2c3d4  Supabase の pgmq でバックグラウンドジョブを実装…  audio_ready   2026-04-26 12:34:56
+```
+
+#### `list articles`
+
+最新 N 件の記事を一覧表示します。
+
+```bash
+pnpm cli list articles
+pnpm cli list articles --limit 20
+```
+
+#### `list audio`
+
+`audio_files` テーブルの最新 N 件を一覧表示します（ストレージパス・MIME タイプ・ステータス）。
+
+```bash
+pnpm cli list audio
+pnpm cli list audio --limit 5
+```
+
+#### `download audio <id>`
+
+音声ファイルを Storage バケット `podcast` からダウンロードし、`./downloads/` に保存します。
+`<id>` は `audio_files.id` または `audio_files.episode_id` のどちらでも指定できます。
+
+```bash
+pnpm cli download audio a1b2c3d4-...
+# → downloads/audio/<episode_id>.wav に保存
+```
+
+#### `status <article_id>`
+
+1 つの記事に対するパイプライン全体の状態を表示します。
+
+```bash
+pnpm cli status a1b2c3d4-e5f6-...
+```
+
+```
+Article
+-------
+ID        Title                    Source  Created At
+--------  -----------------------  ------  -------------------
+a1b2c3d4  Supabase の pgmq で…   mem     2026-04-26 12:00:00
+
+Episode
+-------
+ID        Title                    Status       Created At
+--------  -----------------------  -----------  -------------------
+b2c3d4e5  第42回：キューイングを…  audio_ready  2026-04-26 12:05:00
+
+Script
+------
+ID        Episode   Status  Created At
+--------  --------  ------  -------------------
+c3d4e5f6  b2c3d4e5  ready   2026-04-26 12:06:00
+
+Audio
+-----
+ID        Episode   Storage Path              MIME       Status  Created At
+--------  --------  ------------------------  ---------  ------  -------------------
+d4e5f6a7  b2c3d4e5  audio/b2c3d4e5.wav        audio/wav  ready   2026-04-26 12:10:00
 ```
 
 ---
