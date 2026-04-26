@@ -1,0 +1,71 @@
+name: Ingest Articles from articles/
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'articles/*.md'
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get added article files
+        id: get-articles
+        run: |
+          FILES=$(git diff --name-only --diff-filter=A HEAD~1 HEAD -- 'articles/' | grep '\.md$' || true)
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$FILES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "Found new articles: ${FILES:-none}"
+
+      - uses: pnpm/action-setup@v4
+        if: steps.get-articles.outputs.files != ''
+        with:
+          version: 9.14.0
+
+      - uses: actions/setup-node@v4
+        if: steps.get-articles.outputs.files != ''
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.get-articles.outputs.files != ''
+        run: pnpm install
+
+      - uses: supabase/setup-cli@v2
+        if: steps.get-articles.outputs.files != ''
+
+      - name: Create .env
+        if: steps.get-articles.outputs.files != ''
+        run: echo "MEM_API_KEY=${{ secrets.MEM_API_KEY }}" > .env
+
+      - name: Register to mem.ai and ingest
+        if: steps.get-articles.outputs.files != ''
+        env:
+          MEM_API_KEY: ${{ secrets.MEM_API_KEY }}
+        run: |
+          while IFS= read -r FILE; do
+            [ -z "$FILE" ] && continue
+            echo "=== Processing: $FILE ==="
+            NOTE_ID=$(pnpm exec mem-ai --json note create \
+              --file "./$FILE" \
+              --collection-title "Podcast Research" \
+              | jq -r '.id')
+            if [ -z "$NOTE_ID" ] || [ "$NOTE_ID" = "null" ]; then
+              echo "ERROR: Failed to register $FILE to mem.ai"
+              exit 1
+            fi
+            echo "Registered note: $NOTE_ID"
+            pnpm tsx scripts/ingest.ts "$NOTE_ID"
+          done <<< "${{ steps.get-articles.outputs.files }}"
