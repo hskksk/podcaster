@@ -2,6 +2,7 @@ import { createSupabaseClient } from "../_shared/db.ts";
 import { queueDelete, queueRead } from "../_shared/queue.ts";
 import { loadConfig } from "../_shared/config.ts";
 import type { Episode } from "../_shared/types.ts";
+import { writeLog } from "../_shared/logger.ts";
 
 Deno.serve(async (_req) => {
   EdgeRuntime.waitUntil(processQueue());
@@ -14,6 +15,7 @@ async function processQueue(): Promise<void> {
   if (!msg) return;
 
   const episodeId = msg.message.episode_id as string;
+  const startMs = Date.now();
 
   try {
     const cfg = await loadConfig();
@@ -48,10 +50,25 @@ async function processQueue(): Promise<void> {
       .in("status", ["audio_ready"]);
 
     await queueDelete(db, "rss-queue", msg.msg_id);
+    await writeLog(db, {
+      queue_name: "rss-queue",
+      message_id: msg.msg_id,
+      episode_id: episodeId,
+      status: "success",
+      duration_ms: Date.now() - startMs,
+    });
     console.log(`RSS updated, episode ${episodeId} published`);
   } catch (err) {
     console.error(`update-rss failed for episode ${episodeId}:`, err);
     await queueDelete(db, "rss-queue", msg.msg_id);
+    await writeLog(db, {
+      queue_name: "rss-queue",
+      message_id: msg.msg_id,
+      episode_id: episodeId,
+      status: "failure",
+      error_message: String(err),
+      duration_ms: Date.now() - startMs,
+    });
   }
 }
 
