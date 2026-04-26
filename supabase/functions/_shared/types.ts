@@ -4,13 +4,13 @@ export interface Article {
   content: string;
   source_url?: string;
   source?: string;
+  mem_note_id?: string;
   created_at: string;
 }
 
 export interface Episode {
   id: string;
   article_id?: string;
-  mem_note_id?: string;
   title: string;
   description: string;
   script: string;
