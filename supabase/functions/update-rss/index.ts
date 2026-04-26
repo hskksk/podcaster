@@ -16,8 +16,16 @@ async function processQueue(): Promise<void> {
 
   const episodeId = msg.message.episode_id as string;
   const startMs = Date.now();
+  let memNoteId: string | null = null;
 
   try {
+    const { data: ep } = await db
+      .from("episodes")
+      .select("articles(mem_note_id)")
+      .eq("id", episodeId)
+      .single();
+    memNoteId = (ep?.articles as { mem_note_id?: string } | null)?.mem_note_id ?? null;
+
     const cfg = await loadConfig();
 
     const { data: episodes, error: fetchErr } = await db
@@ -54,6 +62,7 @@ async function processQueue(): Promise<void> {
       queue_name: "rss-queue",
       message_id: msg.msg_id,
       episode_id: episodeId,
+      mem_note_id: memNoteId,
       status: "success",
       duration_ms: Date.now() - startMs,
     });
@@ -65,6 +74,7 @@ async function processQueue(): Promise<void> {
       queue_name: "rss-queue",
       message_id: msg.msg_id,
       episode_id: episodeId,
+      mem_note_id: memNoteId,
       status: "failure",
       error_message: String(err),
       duration_ms: Date.now() - startMs,

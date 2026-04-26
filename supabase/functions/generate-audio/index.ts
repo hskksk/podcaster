@@ -47,14 +47,16 @@ async function processQueue(): Promise<void> {
 
   const episodeId = msg.message.episode_id as string;
   const startMs = Date.now();
+  let memNoteId: string | null = null;
 
   try {
     const { data: episode, error: fetchErr } = await db
       .from("episodes")
-      .select("script")
+      .select("script, articles(mem_note_id)")
       .eq("id", episodeId)
       .single();
     if (fetchErr || !episode) throw new Error(`Episode not found: ${episodeId}`);
+    memNoteId = (episode.articles as { mem_note_id?: string } | null)?.mem_note_id ?? null;
 
     const cfg = await loadConfig();
     const gemini = new GoogleGenAI({ apiKey: Deno.env.get("GEMINI_API_KEY")! });
@@ -148,6 +150,7 @@ async function processQueue(): Promise<void> {
       queue_name: "audio-queue",
       message_id: msg.msg_id,
       episode_id: episodeId,
+      mem_note_id: memNoteId,
       status: "success",
       duration_ms: Date.now() - startMs,
     });
@@ -163,6 +166,7 @@ async function processQueue(): Promise<void> {
       queue_name: "audio-queue",
       message_id: msg.msg_id,
       episode_id: episodeId,
+      mem_note_id: memNoteId,
       status: "failure",
       error_message: String(err),
       duration_ms: Date.now() - startMs,
