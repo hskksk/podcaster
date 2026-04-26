@@ -20,7 +20,7 @@ import {
   detectProjectRef,
   detectServiceKey,
 } from "./lib/supabase-detect.ts";
-import { printTable, shortId, truncate, fmtDate } from "./lib/table.ts";
+import { printTable, printLong, shortId, truncate, fmtDate } from "./lib/table.ts";
 
 dotenv.config({ path: ".env" });
 
@@ -38,7 +38,7 @@ function flag(name: string, defaultVal: number): number {
 
 function flagStr(name: string): string | undefined {
   const i = args.indexOf(name);
-  if (i !== -1 && args[i + 1] && !args[i + 1].startsWith("--")) return args[i + 1];
+  if (i !== -1 && args[i + 1] && !args[i + 1].startsWith("-")) return args[i + 1];
   return undefined;
 }
 
@@ -46,13 +46,13 @@ function flagBool(name: string): boolean {
   return args.includes(name);
 }
 
-const [cmd, sub, param] = args.filter((a) => !a.startsWith("--") && !/^\d+$/.test(a));
+const [cmd, sub, param] = args.filter((a) => !a.startsWith("-") && !/^\d+$/.test(a));
 
 function usage(): never {
   console.error(`Usage:
-  pnpm cli list episodes [--limit N]
-  pnpm cli list articles [--limit N]
-  pnpm cli list audio    [--limit N]
+  pnpm cli list episodes [--limit N] [-o|--output short|wide|long|json]
+  pnpm cli list articles [--limit N] [-o|--output short|wide|long|json]
+  pnpm cli list audio    [--limit N] [-o|--output short|wide|long|json]
   pnpm cli download audio <id>
   pnpm cli status <article_id>
   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
@@ -88,43 +88,72 @@ const db = createClient(supabaseUrl, serviceKey);
 // Commands
 // ---------------------------------------------------------------------------
 
-async function listEpisodes(limit: number): Promise<void> {
+type OutputFormat = "long" | "short" | "wide" | "json";
+
+async function listEpisodes(limit: number, fmt: OutputFormat): Promise<void> {
   const { data, error } = await db
     .from("episodes")
-    .select("id, title, status, created_at")
+    .select("id, article_id, mem_note_id, title, status, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) { console.error("Error:", error.message); process.exit(1); }
+  const rows = data ?? [];
 
-  const rows = (data ?? []).map((r) => [
-    shortId(r.id),
-    truncate(r.title ?? ""),
-    r.status ?? "",
-    fmtDate(r.created_at),
-  ]);
-  printTable(["ID", "Title", "Status", "Created At"], rows);
+  if (fmt === "short") {
+    printTable(["ID", "Title", "Status", "Created At"], rows.map((r) => [
+      shortId(r.id), truncate(r.title ?? ""), r.status ?? "", fmtDate(r.created_at),
+    ]));
+  } else if (fmt === "wide") {
+    printTable(["ID", "Article ID", "Mem Note ID", "Title", "Status", "Created At"], rows.map((r) => [
+      r.id, r.article_id ?? "", r.mem_note_id ?? "", r.title ?? "", r.status ?? "", fmtDate(r.created_at),
+    ]));
+  } else if (fmt === "long") {
+    printLong(rows.map((r) => ({
+      "ID": r.id,
+      "Article ID": r.article_id ?? "",
+      "Mem Note ID": r.mem_note_id ?? "",
+      "Title": r.title ?? "",
+      "Status": r.status ?? "",
+      "Created At": fmtDate(r.created_at),
+    })));
+  } else {
+    console.log(JSON.stringify(rows, null, 2));
+  }
 }
 
-async function listArticles(limit: number): Promise<void> {
+async function listArticles(limit: number, fmt: OutputFormat): Promise<void> {
   const { data, error } = await db
     .from("articles")
-    .select("id, title, source, created_at")
+    .select("id, mem_note_id, title, source, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) { console.error("Error:", error.message); process.exit(1); }
+  const rows = data ?? [];
 
-  const rows = (data ?? []).map((r) => [
-    shortId(r.id),
-    truncate(r.title ?? ""),
-    r.source ?? "",
-    fmtDate(r.created_at),
-  ]);
-  printTable(["ID", "Title", "Source", "Created At"], rows);
+  if (fmt === "short") {
+    printTable(["ID", "Title", "Source", "Created At"], rows.map((r) => [
+      shortId(r.id), truncate(r.title ?? ""), r.source ?? "", fmtDate(r.created_at),
+    ]));
+  } else if (fmt === "wide") {
+    printTable(["ID", "Mem Note ID", "Title", "Source", "Created At"], rows.map((r) => [
+      r.id, r.mem_note_id ?? "", r.title ?? "", r.source ?? "", fmtDate(r.created_at),
+    ]));
+  } else if (fmt === "long") {
+    printLong(rows.map((r) => ({
+      "ID": r.id,
+      "Mem Note ID": r.mem_note_id ?? "",
+      "Title": r.title ?? "",
+      "Source": r.source ?? "",
+      "Created At": fmtDate(r.created_at),
+    })));
+  } else {
+    console.log(JSON.stringify(rows, null, 2));
+  }
 }
 
-async function listAudio(limit: number): Promise<void> {
+async function listAudio(limit: number, fmt: OutputFormat): Promise<void> {
   const { data, error } = await db
     .from("audio_files")
     .select("id, episode_id, storage_path, mime_type, status, created_at")
@@ -132,16 +161,28 @@ async function listAudio(limit: number): Promise<void> {
     .limit(limit);
 
   if (error) { console.error("Error:", error.message); process.exit(1); }
+  const rows = data ?? [];
 
-  const rows = (data ?? []).map((r) => [
-    shortId(r.id),
-    shortId(r.episode_id ?? ""),
-    r.storage_path ?? "",
-    r.mime_type ?? "",
-    r.status ?? "",
-    fmtDate(r.created_at),
-  ]);
-  printTable(["ID", "Episode", "Storage Path", "MIME", "Status", "Created At"], rows);
+  if (fmt === "short") {
+    printTable(["ID", "Episode", "Storage Path", "MIME", "Status", "Created At"], rows.map((r) => [
+      shortId(r.id), shortId(r.episode_id ?? ""), r.storage_path ?? "", r.mime_type ?? "", r.status ?? "", fmtDate(r.created_at),
+    ]));
+  } else if (fmt === "wide") {
+    printTable(["ID", "Episode ID", "Storage Path", "MIME", "Status", "Created At"], rows.map((r) => [
+      r.id, r.episode_id ?? "", r.storage_path ?? "", r.mime_type ?? "", r.status ?? "", fmtDate(r.created_at),
+    ]));
+  } else if (fmt === "long") {
+    printLong(rows.map((r) => ({
+      "ID": r.id,
+      "Episode ID": r.episode_id ?? "",
+      "Storage Path": r.storage_path ?? "",
+      "MIME": r.mime_type ?? "",
+      "Status": r.status ?? "",
+      "Created At": fmtDate(r.created_at),
+    })));
+  } else {
+    console.log(JSON.stringify(rows, null, 2));
+  }
 }
 
 async function downloadAudio(id: string): Promise<void> {
@@ -356,11 +397,12 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
 // ---------------------------------------------------------------------------
 
 const limit = flag("--limit", 10);
+const outputFormat = (flagStr("--output") ?? flagStr("-o") ?? "long") as OutputFormat;
 
 if (cmd === "list") {
-  if (sub === "episodes") await listEpisodes(limit);
-  else if (sub === "articles") await listArticles(limit);
-  else if (sub === "audio") await listAudio(limit);
+  if (sub === "episodes") await listEpisodes(limit, outputFormat);
+  else if (sub === "articles") await listArticles(limit, outputFormat);
+  else if (sub === "audio") await listAudio(limit, outputFormat);
   else usage();
 } else if (cmd === "download") {
   if (sub === "audio") {
