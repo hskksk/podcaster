@@ -110,9 +110,9 @@ function buildRssFeed(
   const feedUrl = `${storageUrl}/feed.xml`;
 
   const items = episodes
-    .filter((ep) => ep.audio_files?.[0]?.storage_path)
+    .filter((ep) => ep.audio_files?.some((af) => af.storage_path))
     .map((ep) => {
-      const af = ep.audio_files[0];
+      const af = ep.audio_files.find((af) => af.storage_path)!;
       const audioUrl = `${storageUrl}/${af.storage_path}`;
       return `    <item>
       <title>${escapeXml(ep.title)}</title>
