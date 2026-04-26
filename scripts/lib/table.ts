@@ -24,3 +24,15 @@ export function truncate(s: string, max = 50): string {
 export function fmtDate(iso: string): string {
   return new Date(iso).toISOString().replace("T", " ").slice(0, 19);
 }
+
+export function printLong(records: Array<Record<string, string>>): void {
+  if (records.length === 0) { console.log("(no results)"); return; }
+  const keyWidth = Math.max(...records.flatMap((r) => Object.keys(r).map((k) => k.length)));
+  const sep = "─".repeat(keyWidth + 2 + 40);
+  for (const [i, rec] of records.entries()) {
+    if (i > 0) console.log(sep);
+    for (const [k, v] of Object.entries(rec)) {
+      console.log(`${(k + ":").padEnd(keyWidth + 1)}  ${v}`);
+    }
+  }
+}
