@@ -74,7 +74,7 @@ jobs:
             echo "=== Processing: $FILE ==="
             NOTE_ID=$(pnpm exec mem-ai --json note create \
               --file "$FILE" \
-              --collection-title "Podcast Research" \
+              --collection-id "49a2791a-7f51-4d58-80df-7256c6cee2fd" \
               | jq -r '.id')
             if [ -z "$NOTE_ID" ] || [ "$NOTE_ID" = "null" ]; then
               echo "ERROR: Failed to register $FILE to mem.ai"

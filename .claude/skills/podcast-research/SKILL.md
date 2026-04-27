@@ -119,7 +119,7 @@ SUPABASE_OK=$(which supabase 2>/dev/null && echo "yes" || echo "no")
    ```bash
    NOTE_ID=$(mem-ai --json note create \
      --file ./draft/<ファイル名> \
-     --collection-title "Podcast Research" \
+     --collection-id "49a2791a-7f51-4d58-80df-7256c6cee2fd" \
      | jq -r '.id')
    ```
 3. `scripts/ingest.ts` で ingest エンドポイントへ POST する（URL とサービスキーは supabase CLI から自動取得）:
