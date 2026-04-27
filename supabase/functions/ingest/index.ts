@@ -3,7 +3,7 @@ import { queueSend } from "../_shared/queue.ts";
 
 const MEM_API_KEY = Deno.env.get("MEM_API_KEY");
 
-async function fetchMemContent(noteId: string): Promise<string> {
+async function fetchMemContent(noteId: string): Promise<{ content: string; title?: string }> {
   if (!MEM_API_KEY) throw new Error("MEM_API_KEY is not configured");
   const res = await fetch(`https://api.mem.ai/v2/notes/${noteId}`, {
     headers: {
@@ -20,7 +20,10 @@ async function fetchMemContent(noteId: string): Promise<string> {
   }
   const data = await res.json();
   if (!data.content) throw Object.assign(new Error("mem.ai response has no content field"), { status: 502 });
-  return data.content as string;
+  return {
+    content: data.content as string,
+    title: data.title as string | undefined,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -39,14 +42,16 @@ Deno.serve(async (req) => {
     return new Response("Missing mem_note_id", { status: 400 });
   }
 
-  let content: string;
+  let memData: { content: string; title?: string };
   try {
-    content = await fetchMemContent(body.mem_note_id.trim());
+    memData = await fetchMemContent(body.mem_note_id.trim());
   } catch (err) {
     const status = (err as { status?: number }).status ?? 500;
     console.error("fetchMemContent failed:", err);
     return new Response((err as Error).message, { status });
   }
+
+  const { content, title: memTitle } = memData;
 
   if (!content.trim()) {
     return new Response("Missing content", { status: 400 });
@@ -56,7 +61,7 @@ Deno.serve(async (req) => {
   const { data: article, error } = await db
     .from("articles")
     .insert({
-      title: body.title || "Untitled",
+      title: memTitle || body.title || "Untitled",
       content: content.trim(),
       source_url: body.source_url,
       source: "webhook",
