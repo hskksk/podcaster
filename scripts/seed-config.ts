@@ -46,7 +46,11 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
       cohost: { name: string; voice_name: string };
     };
   };
-  generator: { model: string };
+  generator: {
+    model: string;
+    system_instruction?: string;
+    prompt_template?: string;
+  };
 };
 
 // Upload cover image to Storage
@@ -80,6 +84,13 @@ const defaults: Record<string, unknown> = {
   "tts.cohost.voice": config.tts.speakers.cohost.voice_name,
   "generator.model": config.generator.model,
 };
+
+if (config.generator.system_instruction) {
+  defaults["generator.system_instruction"] = config.generator.system_instruction;
+}
+if (config.generator.prompt_template) {
+  defaults["generator.prompt_template"] = config.generator.prompt_template;
+}
 
 for (const [key, value] of Object.entries(defaults)) {
   const { error } = await supabase
