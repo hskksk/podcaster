@@ -69,10 +69,13 @@ async function processQueue(): Promise<void> {
     const cfg = await loadConfig();
     const gemini = new GoogleGenAI({ apiKey: Deno.env.get("GEMINI_API_KEY")! });
 
-    const prompt = USER_PROMPT_TEMPLATE.replace("{content}", article.content);
+    const systemInstruction = cfg["generator.system_instruction"] as string || SYSTEM_INSTRUCTION;
+    const promptTemplate = cfg["generator.prompt_template"] as string || USER_PROMPT_TEMPLATE;
+
+    const prompt = promptTemplate.replace("{content}", article.content);
     const response = await gemini.models.generateContent({
       model: cfg["generator.model"] || "gemini-2.5-flash",
-      systemInstruction: SYSTEM_INSTRUCTION,
+      systemInstruction,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
