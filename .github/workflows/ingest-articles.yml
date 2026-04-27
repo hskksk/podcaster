@@ -26,7 +26,7 @@ jobs:
           if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
             BEFORE=$(git rev-list --max-parents=0 HEAD)
           fi
-          FILES=$(git diff --name-only --diff-filter=A "$BEFORE" "${{ github.sha }}" -- 'articles/' | grep '\.md' || true)
+          FILES=$(git -c core.quotepath=false diff --name-only --diff-filter=A "$BEFORE" "${{ github.sha }}" -- 'articles/' | grep '\.md' || true)
           echo "files<<EOF" >> "$GITHUB_OUTPUT"
           echo "$FILES" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
