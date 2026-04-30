@@ -3,20 +3,42 @@ import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
 import { Article } from '../data/types.js';
 import { MarkdownRenderer } from '../components/markdown-renderer.js';
+import { matchesTextFilter } from '../utils/text-filter.js';
 
 interface Props {
   articles: Article[];
   focus: 'sidebar' | 'list' | 'detail';
   rows: number;
   columns: number;
+  filterQuery: string;
+  keyboardEnabled: boolean;
 }
 
-export const ArticlesView: React.FC<Props> = ({ articles, focus, rows, columns }) => {
+export const ArticlesView: React.FC<Props> = ({
+  articles,
+  focus,
+  rows,
+  columns,
+  filterQuery,
+  keyboardEnabled
+}) => {
+  const filteredArticles = useMemo(() => {
+    return articles.filter(a =>
+      matchesTextFilter(filterQuery, [a.title, a.source, a.id, a.mem_note_id])
+    );
+  }, [articles, filterQuery]);
+
   const [selectedId, setSelectedId] = useState<string | null>(articles[0]?.id || null);
   const [scrollOffset, setScrollOffset] = useState(0);
   const [renderedLineCount, setRenderedLineCount] = useState(0);
 
-  const selectedArticle = articles.find(a => a.id === selectedId);
+  useEffect(() => {
+    if (filteredArticles.some(a => a.id === selectedId)) return;
+    setSelectedId(filteredArticles[0]?.id ?? null);
+    setScrollOffset(0);
+  }, [filteredArticles, selectedId]);
+
+  const selectedArticle = filteredArticles.find(a => a.id === selectedId);
   const previewWidth = useMemo(() => {
     const sidebarWidth = 22;
     const listPaneRatio = 0.3;
@@ -35,7 +57,7 @@ export const ArticlesView: React.FC<Props> = ({ articles, focus, rows, columns }
   }, [renderedLineCount, limit]);
 
   useInput((input, key) => {
-    if (focus !== 'detail') return;
+    if (!keyboardEnabled || focus !== 'detail') return;
 
     if (key.downArrow || input === 'j') {
       setScrollOffset(prev => Math.min(prev + 1, Math.max(0, renderedLineCount - limit)));
@@ -45,7 +67,7 @@ export const ArticlesView: React.FC<Props> = ({ articles, focus, rows, columns }
     }
   });
 
-  const items = articles.map(a => ({
+  const items = filteredArticles.map(a => ({
     label: `${(a.source || 'mem').padEnd(8)} │ ${a.title}`,
     value: a.id
   }));
@@ -63,24 +85,38 @@ export const ArticlesView: React.FC<Props> = ({ articles, focus, rows, columns }
     <Box flexDirection="row" height="100%" width="100%" flexGrow={1} minWidth={0}>
       <Box width="30%" borderStyle="single" flexDirection="column" borderColor={focus === 'list' ? "cyan" : "gray"} flexShrink={0}>
         <Box borderStyle="single" justifyContent="center" flexShrink={0} borderColor={focus === 'list' ? "cyan" : "gray"}>
-          <Text bold color={focus === 'list' ? "cyan" : "white"}>ARTICLES {focus === 'list' ? "●" : ""}</Text>
+          <Text bold color={focus === 'list' ? "cyan" : "white"}>
+            ARTICLES
+            {filterQuery.trim() ? (
+              <>
+                <Text color="gray"> │ </Text>
+                <Text dimColor>match: </Text>
+                <Text color="magenta">{filterQuery.trim()}</Text>
+              </>
+            ) : null}
+            {focus === 'list' ? ' ●' : ''}
+          </Text>
         </Box>
         <Box paddingX={1} flexGrow={1} overflowY="hidden">
-          {focus === 'list' ? (
-            <SelectInput
-              items={items}
-              limit={listLimit}
-              onHighlight={(item) => {
-                setSelectedId(item.value);
-                setScrollOffset(0);
-              }}
-              onSelect={(item) => {
-                setSelectedId(item.value);
-                setScrollOffset(0);
-              }}
-              indicatorComponent={() => null}
-              itemComponent={({ label, isSelected }) => renderItem({ label }, isSelected)}
-            />
+          {focus === 'list' && keyboardEnabled ? (
+            items.length > 0 ? (
+              <SelectInput
+                items={items}
+                limit={listLimit}
+                onHighlight={(item) => {
+                  setSelectedId(item.value);
+                  setScrollOffset(0);
+                }}
+                onSelect={(item) => {
+                  setSelectedId(item.value);
+                  setScrollOffset(0);
+                }}
+                indicatorComponent={() => null}
+                itemComponent={({ label, isSelected }) => renderItem({ label }, isSelected)}
+              />
+            ) : (
+              <Text color="gray">No articles match filter</Text>
+            )
           ) : (
             <Box flexDirection="column">
               {items.slice(0, listLimit).map(item => (

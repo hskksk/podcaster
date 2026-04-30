@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
 import { Episode, Script, PodcastConfig } from '../data/types.js';
 import { DataClient } from '../data/client.js';
+import { matchesTextFilter } from '../utils/text-filter.js';
 
 interface Props {
   episodes: Episode[];
@@ -12,9 +13,21 @@ interface Props {
   rows: number;
   selectedId: string | null;
   onSelectId: (id: string | null) => void;
+  keyboardEnabled: boolean;
+  filterQuery: string;
 }
 
-export const EpisodesView: React.FC<Props> = ({ episodes, config, focus, client, rows, selectedId, onSelectId }) => {
+export const EpisodesView: React.FC<Props> = ({
+  episodes,
+  config,
+  focus,
+  client,
+  rows,
+  selectedId,
+  onSelectId,
+  keyboardEnabled,
+  filterQuery
+}) => {
   const [script, setScript] = useState<Script | null>(null);
   const [scrollOffset, setScrollOffset] = useState(0);
 
@@ -22,6 +35,23 @@ export const EpisodesView: React.FC<Props> = ({ episodes, config, focus, client,
   const cohostName = config.find(c => c.key === 'tts.cohost.name')?.value || 'CoHost';
 
   const limit = Math.max(5, rows - 15);
+
+  const filteredEpisodes = useMemo(
+    () =>
+      episodes.filter(e =>
+        matchesTextFilter(filterQuery, [e.id, e.title, e.status, e.created_at, e.article_id, e.mem_note_id])
+      ),
+    [episodes, filterQuery]
+  );
+
+  useEffect(() => {
+    if (filteredEpisodes.length === 0) {
+      onSelectId(null);
+      return;
+    }
+    if (selectedId && filteredEpisodes.some(e => e.id === selectedId)) return;
+    onSelectId(filteredEpisodes[0].id);
+  }, [filteredEpisodes, selectedId, onSelectId]);
 
   useEffect(() => {
     if (selectedId) {
@@ -32,7 +62,7 @@ export const EpisodesView: React.FC<Props> = ({ episodes, config, focus, client,
   }, [selectedId]);
 
   useInput((input, key) => {
-    if (focus !== 'detail') return;
+    if (!keyboardEnabled || focus !== 'detail') return;
 
     if (key.downArrow || input === 'j') {
       setScrollOffset(prev => prev + 1);
@@ -42,12 +72,12 @@ export const EpisodesView: React.FC<Props> = ({ episodes, config, focus, client,
     }
   });
 
-  const items = episodes.map(e => ({
+  const items = filteredEpisodes.map(e => ({
     label: `${e.status.padEnd(9)} │ ${e.title}`,
     value: e.id
   }));
 
-  const selectedEpisode = episodes.find(e => e.id === selectedId);
+  const selectedEpisode = filteredEpisodes.find(e => e.id === selectedId);
   const scriptLines = script ? parseScript(script.content, hostName, cohostName) : [];
   const visibleScript = scriptLines.slice(scrollOffset, scrollOffset + limit);
 
@@ -61,19 +91,34 @@ export const EpisodesView: React.FC<Props> = ({ episodes, config, focus, client,
     <Box flexDirection="row" height="100%" width="100%" flexGrow={1} minWidth={0}>
       <Box width="35%" borderStyle="single" flexDirection="column" borderColor={focus === 'list' ? "cyan" : "gray"} flexShrink={0}>
         <Box borderStyle="single" justifyContent="center" flexShrink={0} borderColor={focus === 'list' ? "cyan" : "gray"}>
-          <Text bold color={focus === 'list' ? "cyan" : "white"}>EPISODES {focus === 'list' ? "●" : ""}</Text>
+          <Text bold color={focus === 'list' ? "cyan" : "white"}>
+            EPISODES
+            {filterQuery.trim() ? (
+              <>
+                <Text color="gray"> │ </Text>
+                <Text dimColor>match: </Text>
+                <Text color="magenta">{filterQuery.trim()}</Text>
+              </>
+            ) : null}
+            {focus === 'list' ? ' ●' : ''}
+          </Text>
         </Box>
         <Box paddingX={1} flexGrow={1} overflowY="hidden">
-          {focus === 'list' ? (
-            <SelectInput
-              items={items}
-              limit={Math.max(5, rows - 10)}
-              onHighlight={(item) => onSelectId(item.value)}
-              onSelect={(item) => onSelectId(item.value)}
-              initialIndex={episodes.findIndex(e => e.id === selectedId)}
-              indicatorComponent={() => null} // Hide default indicator
-              itemComponent={({ label, isSelected }) => renderItem({ label }, isSelected)}
-            />
+          {focus === 'list' && keyboardEnabled ? (
+            items.length > 0 ? (
+              <SelectInput
+                key={filterQuery}
+                items={items}
+                limit={Math.max(5, rows - 10)}
+                onHighlight={(item) => onSelectId(item.value)}
+                onSelect={(item) => onSelectId(item.value)}
+                initialIndex={Math.max(0, filteredEpisodes.findIndex(e => e.id === selectedId))}
+                indicatorComponent={() => null} // Hide default indicator
+                itemComponent={({ label, isSelected }) => renderItem({ label }, isSelected)}
+              />
+            ) : (
+              <Text color="gray">No episodes match filter</Text>
+            )
           ) : (
               <Box flexDirection="column">
                 {items.slice(0, limit).map(item => (

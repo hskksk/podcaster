@@ -26,3 +26,7 @@ scripts/*.txt
 
 # Claude Code local settings
 .claude/settings.local.json
+
+
+# temporary
+podcast-delivery-system-tui/

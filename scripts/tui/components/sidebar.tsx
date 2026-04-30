@@ -5,6 +5,7 @@ interface Props {
   currentView: string;
   onSelect: (view: string) => void;
   focus: boolean;
+  keyboardEnabled: boolean;
 }
 
 const VIEWS = [
@@ -18,11 +19,11 @@ const VIEWS = [
   { key: 'rss',      label: '8. RSS',      glyph: '⌘' },
 ];
 
-export const Sidebar: React.FC<Props> = ({ currentView, onSelect, focus }) => {
+export const Sidebar: React.FC<Props> = ({ currentView, onSelect, focus, keyboardEnabled }) => {
   const currentIndex = VIEWS.findIndex(v => v.key === currentView);
 
   useInput((input, key) => {
-    if (!focus) return;
+    if (!keyboardEnabled || !focus) return;
 
     if (key.downArrow || input === 'j') {
       const nextIndex = (currentIndex + 1) % VIEWS.length;
