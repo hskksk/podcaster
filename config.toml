@@ -58,3 +58,6 @@ system_instruction = """
 }
 """
 prompt_template = "以下の記事をもとに、5分程度の濃厚なポッドキャスト台本を作成してください。\\n\\n{content}"
+
+[tui.markdown]
+math_label = "ᵐ"
