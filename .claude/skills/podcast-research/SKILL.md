@@ -1,6 +1,6 @@
 ---
 name: podcast-research
-description: Research a topic deeply, save a markdown report to draft/, register to mem.ai, and trigger the podcast ingest pipeline
+description: Research a topic deeply, save a markdown report to articles/, register to mem.ai, and trigger the podcast ingest pipeline
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -28,7 +28,7 @@ metadata:
 指定されたテーマについて深く調査し、ポッドキャスト台本生成用の詳細な Markdown レポートを作成します。
 
 1. **多角的なリサーチ**: 概要・背景・詳細・最新動向・具体例・関連トピックを複数回のWeb検索で収集
-2. **レポート保存**: `./draft/` に Markdown として保存する
+2. **レポート保存**: `./articles/` に Markdown として保存する
 3. **mem.ai 登録 → ingest 投入**: mem.ai に登録して note ID を取得し、ingest エンドポイントへ POST する
 
 ## When to use me
@@ -114,11 +114,11 @@ SUPABASE_OK=$(which supabase 2>/dev/null && echo "yes" || echo "no")
 
 #### 4-B: 直接 ingest フロー（ツールが使える場合）
 
-1. `./draft/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する
+1. `./articles/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する
 2. `mem-ai` CLI でレポートを mem.ai に登録し、note ID を取得する:
    ```bash
    NOTE_ID=$(mem-ai --json note create \
-     --file ./draft/<ファイル名> \
+     --file ./articles/<ファイル名> \
      --collection-title "Podcast Drafts" \
      | jq -r '.id')
    ```
@@ -131,7 +131,7 @@ SUPABASE_OK=$(which supabase 2>/dev/null && echo "yes" || echo "no")
 
 #### 4-C: articles/ + PR フロー（ツールが使えない場合）
 
-1. `./articles/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する（draft/ ではなく articles/）
+1. `./articles/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する（articles/ ではなく inbox/）
 2. origin/main ベースの新しいブランチを作成してコミット:
    ```bash
    FILENAME="YYYYMMDD_HHMMSS_<topic-slug>.md"
@@ -147,7 +147,7 @@ SUPABASE_OK=$(which supabase 2>/dev/null && echo "yes" || echo "no")
      gh pr create \
        --base main \
        --title "Podcast Research: <テーマ>" \
-       --body "## 概要\n\n記事を main にマージすると CI/CD が自動で mem.ai 登録 → ingest を実行します。\n\n- ファイル: articles/$FILENAME\n- テーマ: <テーマ>"
+       --body "## 概要\n\n記事を main にマージすると CI/CD が自動で mem.ai 登録 → ingest を実行します。\n\n- ファイル: inbox/$FILENAME\n- テーマ: <テーマ>"
      ```
    - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
 4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
@@ -155,7 +155,7 @@ SUPABASE_OK=$(which supabase 2>/dev/null && echo "yes" || echo "no")
 
 ### 注意事項
 
-- draft ディレクトリは存在しない場合は作成する
+- inbox, articles ディレクトリは存在しない場合は作成する
 - ファイル名のテーマ部分はファイルシステムで安全な文字のみ使用する（スペースはアンダースコアに）
 - リサーチ中は進捗を都度報告する（「〇〇について調査中...」など）
 - 情報の信頼性が低い場合はその旨を明記する

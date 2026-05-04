@@ -1,10 +1,13 @@
-name: Ingest Articles from articles/
+name: Ingest Articles from inbox/
 
 on:
   push:
     branches: [main]
     paths:
-      - 'articles/*.md'
+      - 'inbox/*.md'
+
+permissions:
+  contents: write
 
 jobs:
   ingest:
@@ -19,57 +22,57 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get added article files
-        id: get-articles
+      - name: Get added inbox files
+        id: get-inbox
         run: |
           BEFORE="${{ github.event.before }}"
           if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
             BEFORE=$(git rev-list --max-parents=0 HEAD)
           fi
-          FILES=$(git -c core.quotepath=false diff --name-only --diff-filter=A "$BEFORE" "${{ github.sha }}" -- 'articles/' | grep '\.md' || true)
+          FILES=$(git -c core.quotepath=false diff --name-only --diff-filter=A "$BEFORE" "${{ github.sha }}" -- 'inbox/' | grep '\.md' || true)
           echo "files<<EOF" >> "$GITHUB_OUTPUT"
           echo "$FILES" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
           
           if [ -z "$FILES" ]; then
             echo "added_count=0" >> "$GITHUB_OUTPUT"
-            echo "Found new articles: none"
+            echo "Found new inbox files: none"
           else
             COUNT=$(echo "$FILES" | wc -l)
             echo "added_count=$COUNT" >> "$GITHUB_OUTPUT"
-            echo "Found new articles: $COUNT files"
+            echo "Found new inbox files: $COUNT files"
             echo "$FILES"
           fi
 
       - uses: pnpm/action-setup@v4
-        if: steps.get-articles.outputs.added_count != '0'
+        if: steps.get-inbox.outputs.added_count != '0'
         with:
           version: 9.14.0
 
       - uses: actions/setup-node@v4
-        if: steps.get-articles.outputs.added_count != '0'
+        if: steps.get-inbox.outputs.added_count != '0'
         with:
           node-version: 24
           cache: pnpm
 
       - name: Install dependencies
-        if: steps.get-articles.outputs.added_count != '0'
+        if: steps.get-inbox.outputs.added_count != '0'
         run: pnpm install
 
       - uses: supabase/setup-cli@v2
-        if: steps.get-articles.outputs.added_count != '0'
+        if: steps.get-inbox.outputs.added_count != '0'
 
       - name: Create .env
-        if: steps.get-articles.outputs.added_count != '0'
+        if: steps.get-inbox.outputs.added_count != '0'
         run: echo "MEM_API_KEY=${{ secrets.MEM_API_KEY }}" > .env
 
       - name: Register to mem.ai and ingest
-        if: steps.get-articles.outputs.added_count != '0'
+        if: steps.get-inbox.outputs.added_count != '0'
         env:
           MEM_API_KEY: ${{ secrets.MEM_API_KEY }}
-          ARTICLE_FILES: ${{ steps.get-articles.outputs.files }}
+          INBOX_FILES: ${{ steps.get-inbox.outputs.files }}
         run: |
-          echo "$ARTICLE_FILES" | while IFS= read -r FILE; do
+          echo "$INBOX_FILES" | while IFS= read -r FILE; do
             [ -z "$FILE" ] && continue
             echo "=== Processing: $FILE ==="
             NOTE_ID=$(pnpm exec mem-ai --json note create \
@@ -83,3 +86,34 @@ jobs:
             echo "Registered note: $NOTE_ID"
             pnpm tsx scripts/ingest.ts "$NOTE_ID"
           done
+
+      - name: Move processed files to articles
+        if: steps.get-inbox.outputs.added_count != '0'
+        env:
+          INBOX_FILES: ${{ steps.get-inbox.outputs.files }}
+        run: |
+          mkdir -p articles
+          echo "$INBOX_FILES" | while IFS= read -r FILE; do
+            [ -z "$FILE" ] && continue
+            TARGET="articles/${FILE#inbox/}"
+            TARGET_DIR=$(dirname "$TARGET")
+            mkdir -p "$TARGET_DIR"
+            if [ -e "$TARGET" ]; then
+              echo "ERROR: target already exists: $TARGET"
+              exit 1
+            fi
+            git mv "$FILE" "$TARGET"
+            echo "Moved $FILE -> $TARGET"
+          done
+
+      - name: Commit moved files
+        if: steps.get-inbox.outputs.added_count != '0'
+        run: |
+          if git diff --cached --quiet; then
+            echo "No staged changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: move ingested inbox articles to articles"
+          git push
