@@ -1,5 +1,8 @@
-import { readdir, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, stat, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { spawn, type ChildProcess } from "node:child_process";
+import { tmpdir } from "node:os";
 import dotenv from "dotenv";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -7,14 +10,26 @@ import {
   detectProjectRef,
   detectServiceKey,
 } from "../../lib/supabase-detect.js";
+import { createMemNoteFromFile } from "../../lib/create-mem-note-from-file.js";
 import * as Mock from "./mock.js";
 import { Article, Episode, AudioFile, ProcessingLog, PodcastConfig, Script } from "./types.js";
 
 dotenv.config({ path: ".env" });
 
+export type ClientActionResult = {
+  success: boolean;
+  /** Human-readable error or API body text */
+  error?: string;
+  /** Local path when download/play wrote a file */
+  path?: string;
+};
+
 export class DataClient {
   private db: SupabaseClient | null = null;
   private isMock: boolean;
+  private apiUrl: string | null = null;
+  private serviceKey: string | null = null;
+  private playProcess: ChildProcess | null = null;
 
   constructor(isMock: boolean = false) {
     this.isMock = isMock;
@@ -32,7 +47,17 @@ export class DataClient {
         serviceKey = detectServiceKey(ref);
         supabaseUrl = `https://${ref}.supabase.co`;
       }
+      this.apiUrl = supabaseUrl;
+      this.serviceKey = serviceKey;
       this.db = createClient(supabaseUrl, serviceKey);
+    }
+  }
+
+  /** Stop afplay / other player started by playAudio (no-op in mock). */
+  stopPlayback(): void {
+    if (this.playProcess) {
+      this.playProcess.kill("SIGTERM");
+      this.playProcess = null;
     }
   }
 
@@ -95,17 +120,137 @@ export class DataClient {
     return data as Script | null;
   }
 
-  async requeue(type: 'script' | 'audio' | 'rss', id: string) {
+  async requeue(type: "script" | "audio" | "rss", id: string): Promise<ClientActionResult> {
     if (this.isMock) {
       console.log(`Mock: Requeued ${type} for ${id}`);
       return { success: true };
     }
-    if (!this.db) return { success: false };
+    if (!this.db) return { success: false, error: "DB not initialized" };
 
-    const queueName = type === 'script' ? 'script-queue' : type === 'audio' ? 'audio-queue' : 'rss-queue';
-    const msg = type === 'script' ? { article_id: id } : { episode_id: id };
+    const queueName = type === "script" ? "script-queue" : type === "audio" ? "audio-queue" : "rss-queue";
+    const msg = type === "script" ? { article_id: id } : { episode_id: id };
 
     const { error } = await this.db.rpc("pgmq_send", { queue_name: queueName, msg });
-    return { success: !error, error };
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }
+
+  /** POST /functions/v1/ingest with mem_note_id (same contract as scripts/ingest.ts). */
+  async ingestMemNote(memNoteId: string): Promise<ClientActionResult> {
+    const trimmed = memNoteId.trim();
+    if (!trimmed) return { success: false, error: "mem_note_id is empty" };
+    if (this.isMock) {
+      console.log(`Mock: ingest ${trimmed}`);
+      return { success: true };
+    }
+    if (!this.apiUrl || !this.serviceKey) return { success: false, error: "API not configured" };
+    const ingestUrl = `${this.apiUrl}/functions/v1/ingest`;
+    const res = await fetch(ingestUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.serviceKey}`,
+      },
+      body: JSON.stringify({ mem_note_id: trimmed }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText);
+      return { success: false, error: text || `HTTP ${res.status}` };
+    }
+    return { success: true };
+  }
+
+  /**
+   * Inbox TUI shortcut: register `./inbox/<file>` or `./articles/<file>` in mem.ai (pnpm mem-ai),
+   * then POST ingest with the returned mem_note_id (same flow as scripts/ingest.ts file mode).
+   */
+  async ingestMarkdownFile(fileName: string, pane: "inbox" | "draft"): Promise<ClientActionResult> {
+    const subdir = pane === "inbox" ? "inbox" : "articles";
+    const resolved = join(process.cwd(), subdir, fileName);
+    if (this.isMock) {
+      console.log(`Mock: ingest markdown file ${resolved}`);
+      return { success: true };
+    }
+    if (!existsSync(resolved)) {
+      return { success: false, error: `File not found: ${resolved}` };
+    }
+    try {
+      const memNoteId = createMemNoteFromFile(resolved, []);
+      return await this.ingestMemNote(memNoteId);
+    } catch (e) {
+      return { success: false, error: (e as Error).message };
+    }
+  }
+
+  /** Download podcast audio to ./downloads (audio_files.id or episode_id). */
+  async downloadAudio(idOrEpisodeId: string): Promise<ClientActionResult> {
+    if (this.isMock) {
+      console.log(`Mock: download audio ${idOrEpisodeId}`);
+      return { success: true, path: join(process.cwd(), "downloads", "mock-audio.wav") };
+    }
+    const row = await this.lookupAudioRow(idOrEpisodeId);
+    if (!row) return { success: false, error: "No audio file for id/episode" };
+    if (!this.db) return { success: false, error: "DB not initialized" };
+
+    const storagePath = row.storage_path;
+    const filename = storagePath.split("/").pop() ?? `${row.id}.audio`;
+
+    const { data: blob, error: dlErr } = await this.db.storage.from("podcast").download(storagePath);
+    if (dlErr || !blob) {
+      return { success: false, error: dlErr?.message ?? "Download failed" };
+    }
+    const destDir = join(process.cwd(), "downloads");
+    await mkdir(destDir, { recursive: true });
+    const dest = join(destDir, filename);
+    await writeFile(dest, Buffer.from(await blob.arrayBuffer()));
+    return { success: true, path: dest };
+  }
+
+  /**
+   * Download to a temp file and play with afplay (macOS). Call stopPlayback() to stop.
+   * Mock: no playback, returns success.
+   */
+  async playAudio(idOrEpisodeId: string): Promise<ClientActionResult> {
+    if (this.isMock) {
+      console.log(`Mock: play audio ${idOrEpisodeId}`);
+      return { success: true };
+    }
+    if (process.platform !== "darwin") {
+      return { success: false, error: "playAudio is only supported on macOS (afplay)" };
+    }
+    const row = await this.lookupAudioRow(idOrEpisodeId);
+    if (!row) return { success: false, error: "No audio file for id/episode" };
+    if (!this.db) return { success: false, error: "DB not initialized" };
+
+    const { data: blob, error: dlErr } = await this.db.storage.from("podcast").download(row.storage_path);
+    if (dlErr || !blob) {
+      return { success: false, error: dlErr?.message ?? "Download failed" };
+    }
+    const dir = await mkdtemp(join(tmpdir(), "podcaster-audio-"));
+    const path = join(dir, "play.wav");
+    await writeFile(path, Buffer.from(await blob.arrayBuffer()));
+
+    this.stopPlayback();
+    this.playProcess = spawn("afplay", [path], { stdio: "ignore" });
+    this.playProcess.on("error", () => {
+      this.playProcess = null;
+    });
+    this.playProcess.on("close", () => {
+      this.playProcess = null;
+    });
+    return { success: true, path };
+  }
+
+  private async lookupAudioRow(
+    idOrEpisodeId: string
+  ): Promise<{ id: string; storage_path: string } | null> {
+    if (!this.db) return null;
+    const { data, error } = await this.db
+      .from("audio_files")
+      .select("id, storage_path")
+      .or(`id.eq.${idOrEpisodeId},episode_id.eq.${idOrEpisodeId}`)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as { id: string; storage_path: string };
   }
 }

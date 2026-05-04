@@ -1,16 +1,94 @@
 #!/usr/bin/env tsx
-// Usage: pnpm tsx scripts/ingest.ts <mem-note-id>
+// Usage:
+//   pnpm tsx scripts/ingest.ts <mem-note-id>
+//   pnpm tsx scripts/ingest.ts --file <path> [--collection-title <title>]...
+//   pnpm tsx scripts/ingest.ts <path-to-existing-file> [--collection-title <title>]...
+//   (file modes default to --collection-title "Podcast Drafts" when none given)
 
 import dotenv from "dotenv";
-import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { detectLocalStatus, detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
+import {
+  createMemNoteFromFile,
+  DEFAULT_MEM_COLLECTION_TITLE,
+} from "./lib/create-mem-note-from-file.js";
 
 dotenv.config({ path: ".env" });
 
-const memNoteId = process.argv[2];
-if (!memNoteId) {
-  console.error("Usage: pnpm tsx scripts/ingest.ts <mem-note-id>");
+type ParsedArgs =
+  | { mode: "id"; memNoteId: string }
+  | { mode: "file"; filePath: string; collectionTitles: string[] };
+
+function parseArgs(argv: string[]): ParsedArgs {
+  const collectionTitles: string[] = [];
+  let filePath: string | undefined;
+  let memNoteId: string | undefined;
+
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--file" || a === "-f") {
+      filePath = argv[++i];
+      if (!filePath) {
+        console.error("Missing value for --file");
+        process.exit(1);
+      }
+    } else if (a === "--collection-title") {
+      const v = argv[++i];
+      if (!v) {
+        console.error("Missing value for --collection-title");
+        process.exit(1);
+      }
+      collectionTitles.push(v);
+    } else if (a.startsWith("-")) {
+      console.error(`Unknown option: ${a}`);
+      process.exit(1);
+    } else if (memNoteId === undefined && filePath === undefined) {
+      memNoteId = a;
+    } else {
+      console.error(`Unexpected argument: ${a}`);
+      process.exit(1);
+    }
+  }
+
+  if (filePath && memNoteId) {
+    console.error("Use either --file <path> or <mem-note-id>, not both");
+    process.exit(1);
+  }
+
+  if (filePath) {
+    return { mode: "file", filePath, collectionTitles };
+  }
+
+  if (memNoteId) {
+    const maybeFile = path.resolve(memNoteId);
+    if (existsSync(maybeFile)) {
+      return { mode: "file", filePath: maybeFile, collectionTitles };
+    }
+    return { mode: "id", memNoteId };
+  }
+
+  console.error(`Usage:
+  pnpm tsx scripts/ingest.ts <mem-note-id>
+  pnpm tsx scripts/ingest.ts --file <path> [--collection-title <title>]...
+  pnpm tsx scripts/ingest.ts <path-to-existing-file> [--collection-title <title>]...
+  (default collection for file modes: ${DEFAULT_MEM_COLLECTION_TITLE})`);
   process.exit(1);
+}
+
+const parsed = parseArgs(process.argv.slice(2));
+let memNoteId: string;
+if (parsed.mode === "file") {
+  console.log(`Registering file in mem.ai: ${parsed.filePath}`);
+  try {
+    memNoteId = createMemNoteFromFile(parsed.filePath, parsed.collectionTitles);
+  } catch (e) {
+    console.error((e as Error).message);
+    process.exit(1);
+  }
+  console.log(`mem_note_id: ${memNoteId}`);
+} else {
+  memNoteId = parsed.memNoteId;
 }
 
 const target = process.env.TARGET ?? "remote";
