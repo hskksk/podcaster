@@ -20,7 +20,8 @@
         "setup:gh-secrets": "npx tsx scripts/setup-gh-secrets.ts",
         "cli": "tsx scripts/podcast-cli.ts",
         "tui": "tsx scripts/tui/index.tsx",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "web:build": "tsx scripts/build-web.ts"
     },
     "devDependencies": {
         "@hskksk/mem-ai-cli": "latest",
