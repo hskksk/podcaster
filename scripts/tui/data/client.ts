@@ -210,6 +210,23 @@ export class DataClient {
    * Download to a temp file and play with afplay (macOS). Call stopPlayback() to stop.
    * Mock: no playback, returns success.
    */
+  async fetchAudioDurationSeconds(idOrEpisodeId: string): Promise<number | null> {
+    if (this.isMock) return null;
+    if (process.platform !== "darwin") return null;
+
+    const row = await this.lookupAudioRow(idOrEpisodeId);
+    if (!row || !this.db) return null;
+
+    const { data: blob, error: dlErr } = await this.db.storage.from("podcast").download(row.storage_path);
+    if (dlErr || !blob) return null;
+
+    const dir = await mkdtemp(join(tmpdir(), "podcaster-audio-"));
+    const path = join(dir, "probe.audio");
+    await writeFile(path, Buffer.from(await blob.arrayBuffer()));
+
+    return await this.probeAudioDurationWithAfinfo(path);
+  }
+
   async playAudio(idOrEpisodeId: string): Promise<ClientActionResult> {
     if (this.isMock) {
       console.log(`Mock: play audio ${idOrEpisodeId}`);
@@ -239,6 +256,34 @@ export class DataClient {
       this.playProcess = null;
     });
     return { success: true, path };
+  }
+
+  private async probeAudioDurationWithAfinfo(path: string): Promise<number | null> {
+    return await new Promise(resolve => {
+      const p = spawn("afinfo", [path]);
+      let output = "";
+
+      p.stdout.on("data", chunk => {
+        output += String(chunk);
+      });
+      p.stderr.on("data", chunk => {
+        output += String(chunk);
+      });
+
+      p.on("error", () => resolve(null));
+      p.on("close", code => {
+        if (code !== 0) {
+          resolve(null);
+          return;
+        }
+        const match = output.match(/estimated duration:\s*([0-9]+(?:\.[0-9]+)?)\s*sec/i);
+        if (!match) {
+          resolve(null);
+          return;
+        }
+        resolve(Number.parseFloat(match[1]));
+      });
+    });
   }
 
   private async lookupAudioRow(

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
-import { AudioFile, Episode, Script, PodcastConfig } from '../data/types.js';
+import { Article, AudioFile, Episode, Script, PodcastConfig } from '../data/types.js';
 import { DataClient } from '../data/client.js';
 import { matchesTextFilter } from '../utils/text-filter.js';
 import type { OpenConfirmPayload } from '../confirm-types.js';
@@ -9,6 +9,7 @@ import type { ToastTone } from '../components/toast.js';
 
 interface Props {
   episodes: Episode[];
+  articles: Article[];
   audioFiles: AudioFile[];
   config: PodcastConfig[];
   focus: 'sidebar' | 'list' | 'detail';
@@ -25,6 +26,7 @@ interface Props {
 
 export const EpisodesView: React.FC<Props> = ({
   episodes,
+  articles,
   audioFiles,
   config,
   focus,
@@ -41,6 +43,8 @@ export const EpisodesView: React.FC<Props> = ({
   const [script, setScript] = useState<Script | null>(null);
   const [scriptLoading, setScriptLoading] = useState(false);
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [audioDurationSec, setAudioDurationSec] = useState<number | null>(null);
+  const [audioDurationLoading, setAudioDurationLoading] = useState(false);
 
   const hostName = config.find(c => c.key === 'tts.host.name')?.value || 'Host';
   const cohostName = config.find(c => c.key === 'tts.cohost.name')?.value || 'CoHost';
@@ -184,10 +188,35 @@ export const EpisodesView: React.FC<Props> = ({
   const selectedAudio = selectedEpisode
     ? audioFiles.find(af => af.episode_id === selectedEpisode.id)
     : undefined;
+  const selectedArticle = selectedEpisode?.article_id
+    ? articles.find(article => article.id === selectedEpisode.article_id)
+    : undefined;
   const scriptLines = script ? parseScript(script.content, hostName, cohostName) : [];
   const scriptSummary = scriptLoading ? 'Loading script...' : summarizeScript(scriptLines);
+  const articleSummary = summarizeArticle(selectedEpisode, selectedArticle);
   const pipelineNodes = selectedEpisode ? buildPipelineNodes(selectedEpisode.status) : [];
   const visibleScript = scriptLines.slice(scrollOffset, scrollOffset + limit);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedAudio) {
+      setAudioDurationSec(null);
+      setAudioDurationLoading(false);
+      return;
+    }
+
+    setAudioDurationLoading(true);
+    void client.fetchAudioDurationSeconds(selectedAudio.id).then(durationSec => {
+      if (cancelled) return;
+      setAudioDurationSec(durationSec);
+      setAudioDurationLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, selectedAudio?.id]);
 
   const renderItem = (item: any, isSelected: boolean) => (
     <Text color={isSelected ? "yellow" : "white"} wrap="truncate-end">
@@ -257,12 +286,17 @@ export const EpisodesView: React.FC<Props> = ({
               <Text color="gray" wrap="truncate-end">{scriptSummary}</Text>
             </Box>
             <Box marginTop={1} flexShrink={0} flexDirection="column">
+              <Text bold color="cyan">ARTICLE SUMMARY</Text>
+              <Text color="gray" wrap="truncate-end">{articleSummary}</Text>
+            </Box>
+            <Box marginTop={1} flexShrink={0} flexDirection="column">
               <Text bold color="cyan">AUDIO</Text>
               {selectedAudio ? (
                 <Box flexDirection="column">
                   <Text color="gray" wrap="truncate-end">Path: {selectedAudio.storage_path}</Text>
                   <Text color="gray" wrap="truncate-end">ID: {selectedAudio.id}</Text>
                   <Text color="gray" wrap="truncate-end">Type: {selectedAudio.mime_type} │ Status: {selectedAudio.status}</Text>
+                  <Text color="gray" wrap="truncate-end">Length: {formatAudioDuration(audioDurationSec, audioDurationLoading)}</Text>
                   <Text color="gray" wrap="truncate-end">Created: {new Date(selectedAudio.created_at).toLocaleString()}</Text>
                 </Box>
               ) : (
@@ -306,6 +340,8 @@ export const EpisodesView: React.FC<Props> = ({
               ) : (
                   <Text color="gray italic">{scriptLoading ? 'Loading script...' : 'No script yet'}</Text>
                 )}
+
+
             </Box>
           </Box>
         ) : (
@@ -321,11 +357,33 @@ export const EpisodesView: React.FC<Props> = ({
 function summarizeScript(lines: Array<{ speaker: string; text: string }>): string {
   if (lines.length === 0) return 'No script generated yet.';
   const speakers = Array.from(new Set(lines.map(line => line.speaker).filter(Boolean)));
+  const charCount = lines.reduce((sum, line) => sum + line.text.length, 0);
   const preview = lines
     .slice(0, 2)
     .map(line => `${line.speaker}: ${truncate(line.text.trim(), 44)}`)
     .join(' / ');
-  return `${lines.length} lines · ${speakers.length} speakers (${speakers.join(', ')}) · ${preview}`;
+  return `${lines.length} lines · ${charCount} chars · ${speakers.length} speakers (${speakers.join(', ')}) · ${preview}`;
+}
+
+function summarizeArticle(selectedEpisode?: Episode, selectedArticle?: Article): string {
+  if (!selectedEpisode?.article_id) return 'No linked article';
+  if (!selectedArticle) return `Linked article not found (${selectedEpisode.article_id})`;
+
+  const normalized = normalizeForTerminal(String(selectedArticle.content ?? ''));
+  const lineCount = normalized.length === 0 ? 0 : normalized.split('\n').length;
+  const charCount = normalized.length;
+
+  return `${lineCount} lines · ${charCount} chars`;
+}
+
+function formatAudioDuration(seconds: number | null, loading: boolean): string {
+  if (loading) return 'Loading...';
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '-';
+
+  const totalSeconds = Math.round(seconds);
+  const minutes = Math.floor(totalSeconds / 60);
+  const remaining = totalSeconds % 60;
+  return `${minutes}:${String(remaining).padStart(2, '0')} (${seconds.toFixed(1)}s)`;
 }
 
 function truncate(s: string, max: number): string {

@@ -408,6 +408,7 @@ export const App: React.FC<Props> = ({ isMock }) => {
             {view === 'episodes' && (
               <EpisodesView
                 episodes={data.episodes}
+                articles={data.articles}
                 audioFiles={data.audioFiles}
                 config={data.config}
                 focus={focus as any}
