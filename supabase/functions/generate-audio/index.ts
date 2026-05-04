@@ -9,6 +9,55 @@ Deno.serve(async (_req) => {
   return Response.json({ ok: true });
 });
 
+function toJsonObject(value: unknown): Record<string, unknown> {
+  try {
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  } catch {
+    return { serialization_error: true };
+  }
+}
+
+function extractTokenUsage(responseJson: Record<string, unknown>): Record<string, number | null> {
+  const usage = (responseJson.usageMetadata ?? {}) as Record<string, unknown>;
+  const readNumber = (key: string): number | null => {
+    const v = usage[key];
+    return typeof v === "number" ? v : null;
+  };
+
+  return {
+    prompt_tokens: readNumber("promptTokenCount") ?? readNumber("inputTokenCount"),
+    completion_tokens: readNumber("candidatesTokenCount") ?? readNumber("outputTokenCount"),
+    total_tokens: readNumber("totalTokenCount"),
+  };
+}
+
+function sanitizeAudioResponse(responseJson: Record<string, unknown>): Record<string, unknown> {
+  const sanitized = structuredClone(responseJson) as Record<string, unknown>;
+  const candidates = sanitized.candidates;
+  if (!Array.isArray(candidates)) return sanitized;
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const content = (candidate as Record<string, unknown>).content;
+    if (!content || typeof content !== "object") continue;
+    const parts = (content as Record<string, unknown>).parts;
+    if (!Array.isArray(parts)) continue;
+
+    for (const part of parts) {
+      if (!part || typeof part !== "object") continue;
+      const inlineData = (part as Record<string, unknown>).inlineData;
+      if (!inlineData || typeof inlineData !== "object") continue;
+      const inlineDataRecord = inlineData as Record<string, unknown>;
+      if (typeof inlineDataRecord.data === "string") {
+        inlineDataRecord.byte_length = inlineDataRecord.data.length;
+        delete inlineDataRecord.data;
+      }
+    }
+  }
+
+  return sanitized;
+}
+
 function pcmToWav(
   pcm: Uint8Array,
   sampleRate: number,
@@ -97,6 +146,10 @@ async function processQueue(): Promise<void> {
       },
     });
 
+    const responseJson = toJsonObject(response);
+    const tokenUsage = extractTokenUsage(responseJson);
+    const sanitizedResponse = sanitizeAudioResponse(responseJson);
+
     const audioPart = response.candidates?.[0]?.content?.parts?.[0];
     if (!audioPart?.inlineData?.data) {
       throw new Error("No audio data in Gemini TTS response");
@@ -148,6 +201,8 @@ async function processQueue(): Promise<void> {
       storage_path: audioPath,
       mime_type: uploadMime,
       status: "ready",
+      llm_usage: tokenUsage,
+      llm_response: sanitizedResponse,
     });
     await db.from("episodes").update({ status: "audio_ready" }).eq("id", episodeId);
 
@@ -171,6 +226,8 @@ async function processQueue(): Promise<void> {
       mime_type: "",
       status: "failed",
       error: String(err),
+      llm_usage: {},
+      llm_response: { error: String(err) },
     });
     await db.from("episodes").update({ status: "failed" }).eq("id", episodeId);
     await queueDelete(db, "audio-queue", msg.msg_id);

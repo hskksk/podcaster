@@ -43,6 +43,28 @@ const SYSTEM_INSTRUCTION = `\
 
 const USER_PROMPT_TEMPLATE = `以下の記事を元に台本を作成してください。\n\n{content}`;
 
+function toJsonObject(value: unknown): Record<string, unknown> {
+  try {
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  } catch {
+    return { serialization_error: true };
+  }
+}
+
+function extractTokenUsage(responseJson: Record<string, unknown>): Record<string, number | null> {
+  const usage = (responseJson.usageMetadata ?? {}) as Record<string, unknown>;
+  const readNumber = (key: string): number | null => {
+    const v = usage[key];
+    return typeof v === "number" ? v : null;
+  };
+
+  return {
+    prompt_tokens: readNumber("promptTokenCount") ?? readNumber("inputTokenCount"),
+    completion_tokens: readNumber("candidatesTokenCount") ?? readNumber("outputTokenCount"),
+    total_tokens: readNumber("totalTokenCount"),
+  };
+}
+
 Deno.serve(async (_req) => {
   EdgeRuntime.waitUntil(processQueue());
   return Response.json({ ok: true });
@@ -91,6 +113,9 @@ async function processQueue(): Promise<void> {
       },
     });
 
+    const responseJson = toJsonObject(response);
+    const tokenUsage = extractTokenUsage(responseJson);
+
     // Extract text — try text getter, then candidates path
     const parts = response?.candidates?.[0]?.content?.parts ?? [];
     const rawText = (response as unknown as { text?: string }).text
@@ -129,6 +154,8 @@ async function processQueue(): Promise<void> {
       episode_id: episode.id,
       content: String(data.script),
       status: "ready",
+      llm_usage: tokenUsage,
+      llm_response: responseJson,
     });
 
     await queueSend(db, "audio-queue", { episode_id: episode.id });
@@ -162,6 +189,8 @@ async function processQueue(): Promise<void> {
         content: "",
         status: "failed",
         error: String(err),
+        llm_usage: {},
+        llm_response: { error: String(err) },
       });
     }
     await queueDelete(db, "script-queue", msg.msg_id);
