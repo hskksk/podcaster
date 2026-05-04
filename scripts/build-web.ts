@@ -70,7 +70,11 @@ function unescapeXml(s: string): string {
     .replace(/&#39;/g, "'");
 }
 
-/** Returns a map of episode title → audio URL, parsed from the RSS feed. */
+/**
+ * Returns a map of article title → audio URL parsed from the RSS feed.
+ * Uses <podcaster:articleTitle> (original article H1) for exact matching.
+ * Falls back to episode <title> if the custom element is absent (older feed).
+ */
 async function fetchEpisodeMap(feedUrl: string): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   if (!feedUrl) return map;
@@ -82,10 +86,14 @@ async function fetchEpisodeMap(feedUrl: string): Promise<Map<string, string>> {
     }
     const xml = await res.text();
     for (const [, item] of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
-      const title = item.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/)?.[1];
       const audioUrl = item.match(/<enclosure[^>]+url="([^"]+)"/)?.[1];
-      if (title && audioUrl) {
-        map.set(unescapeXml(title).trim(), unescapeXml(audioUrl));
+      if (!audioUrl) continue;
+      // Prefer podcaster:articleTitle (original article H1); fall back to episode title
+      const articleTitleRaw =
+        item.match(/<podcaster:articleTitle>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/podcaster:articleTitle>/)?.[1] ??
+        item.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/)?.[1];
+      if (articleTitleRaw) {
+        map.set(unescapeXml(articleTitleRaw).trim(), unescapeXml(audioUrl));
       }
     }
     console.log(`  fetched ${map.size} episodes from RSS feed`);

@@ -16,6 +16,7 @@ type EpisodeForRss = {
   created_at: string;
   published_at: string | null;
   audio_files: Array<{ storage_path: string; mime_type: string }>;
+  articles: { title: string } | null;
 };
 
 async function processQueue(): Promise<void> {
@@ -32,7 +33,7 @@ async function processQueue(): Promise<void> {
 
     const { data: episodes, error: fetchErr } = await db
       .from("episodes")
-      .select("id, title, description, mem_note_id, created_at, published_at, audio_files(storage_path, mime_type)")
+      .select("id, title, description, mem_note_id, created_at, published_at, audio_files(storage_path, mime_type), articles(title)")
       .in("status", ["audio_ready", "published"])
       .order("created_at", { ascending: false });
     if (fetchErr) throw new Error(`Episodes fetch failed: ${fetchErr.message}`);
@@ -114,12 +115,14 @@ function buildRssFeed(
     .map((ep) => {
       const af = ep.audio_files.find((af) => af.storage_path)!;
       const audioUrl = `${storageUrl}/${af.storage_path}`;
+      const articleTitle = ep.articles?.title ?? "";
       return `    <item>
       <title>${escapeXml(ep.title)}</title>
       <description>${escapeXml(ep.description)}</description>
       <pubDate>${toRfc2822(ep.published_at || ep.created_at)}</pubDate>
       <enclosure url="${escapeXml(audioUrl)}" length="0" type="${af.mime_type}" />
       <guid isPermaLink="false">${escapeXml(ep.id)}</guid>
+      <podcaster:articleTitle><![CDATA[${articleTitle}]]></podcaster:articleTitle>
     </item>`;
     })
     .join("\n");
@@ -127,7 +130,8 @@ function buildRssFeed(
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
   xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
-  xmlns:atom="http://www.w3.org/2005/Atom">
+  xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:podcaster="https://github.com/hskksk/podcaster">
   <channel>
     <title>${title}</title>
     <link>${feedUrl}</link>
