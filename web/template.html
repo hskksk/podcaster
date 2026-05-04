@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{PAGE_TITLE}}</title>
+  {{RSS_FEED_TAG}}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '\\[', right: '\\]', display: true},
+        {left: '\\(', right: '\\)', display: false}
+      ]
+    });"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: "Noto Sans JP", sans-serif;
+      font-size: 16px;
+      line-height: 1.8;
+      color: #1a1a1a;
+      background: #fafafa;
+      margin: 0;
+      padding: 0 16px;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px 0 16px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .site-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1a1a1a;
+      text-decoration: none;
+    }
+    .rss-link {
+      font-size: 0.85rem;
+      color: #e07b00;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .rss-link:hover { text-decoration: underline; }
+
+    /* ── Main content ── */
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 0 64px;
+    }
+
+    /* ── Article index ── */
+    .article-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .article-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .article-list .date {
+      color: #888;
+      font-size: 0.82rem;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .article-list .article-link {
+      font-size: 1rem;
+      text-decoration: none;
+      color: #1a5fa8;
+      flex: 1;
+    }
+    .article-list .article-link:hover { text-decoration: underline; }
+    .play-badge {
+      font-size: 0.8rem;
+      color: #e07b00;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .play-badge:hover { text-decoration: underline; }
+
+    /* ── Article page ── */
+    .back-link { margin-bottom: 24px; font-size: 0.9rem; }
+    .article-meta { color: #888; font-size: 0.88rem; margin-bottom: 8px; }
+
+    .podcast-player {
+      background: #fff8f0;
+      border: 1px solid #f0d8b0;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 24px 0 32px;
+    }
+    .podcast-player p {
+      margin: 0 0 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #b85c00;
+    }
+    .podcast-player audio { width: 100%; }
+
+    /* ── Typography ── */
+    h1 { font-size: 1.6rem; line-height: 1.4; margin-bottom: 4px; }
+    h2 { font-size: 1.25rem; margin-top: 2em; }
+    h3 { font-size: 1.05rem; margin-top: 1.6em; }
+    a { color: #1a5fa8; }
+    code {
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 0.85em;
+      background: #f0f0f0;
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+    pre code { background: none; padding: 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #d0d0d0; padding: 8px 12px; text-align: left; }
+    th { background: #f0f0f0; font-weight: 600; }
+    blockquote {
+      border-left: 4px solid #d0d0d0;
+      margin: 0;
+      padding-left: 16px;
+      color: #555;
+    }
+    .math-display { overflow-x: auto; margin: 1.2em 0; }
+
+    @media (max-width: 600px) {
+      .article-list li { flex-direction: column; gap: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a href="{{ROOT_PATH}}index.html" class="site-title">{{SITE_TITLE}}</a>
+    {{RSS_HEADER_LINK}}
+  </header>
+  <main>
+    {{CONTENT}}
+  </main>
+</body>
+</html>

@@ -2,6 +2,9 @@
 title = "The AI,MATH & Physics Podcast〜探求と学びの垂れ流し〜"
 description = "AI・数学（モジュラー曲線・群論・整数論など）・物理・ソフトウェア開発ツールなどの話題を垂れ流すポッドキャスト。AIで自動生成。"
 cover_image = "cover.png"
+# GitHub Pages に公開される Web サイトのポッドキャスト RSS URL
+# 例: "https://your-project.supabase.co/storage/v1/object/public/podcast/feed.xml"
+feed_url = "https://fesoitebatgznmfnlotp.supabase.co/storage/v1/object/public/podcast/feed.xml"
 
 [tts]
 model = "gemini-2.5-flash-preview-tts"
