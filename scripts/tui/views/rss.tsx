@@ -16,6 +16,16 @@ function escapeXml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function normalizeForTerminal(s: string): string {
+  return s
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+}
+
+function normalizeXmlText(s: string): string {
+  return normalizeForTerminal(s).replace(/\s+/g, ' ').trim();
+}
+
 export const RssView: React.FC<Props> = ({
   episodes,
   config,
@@ -65,7 +75,7 @@ export const RssView: React.FC<Props> = ({
 
   const visible = filteredPublished.slice(offset, offset + itemLimit);
   const fq = filterQuery.trim();
-  const channelTitle = escapeXml(String(title));
+  const normalizedChannelTitle = escapeXml(normalizeXmlText(String(title)) || 'Podcast');
 
   const previewXmlLines: Array<{
     key: string;
@@ -76,7 +86,7 @@ export const RssView: React.FC<Props> = ({
     { key: 'rss-open', text: '<rss version="2.0">', color: 'gray' },
     { key: 'channel-open', text: '  <channel>', color: 'gray' },
     { key: 'channel-title-open', text: '    <title>', color: 'cyan' },
-    { key: 'channel-title-text', text: `      ${channelTitle}`, color: 'white' },
+    { key: 'channel-title-text', text: `      ${normalizedChannelTitle}`, color: 'white' },
     { key: 'channel-title-close', text: '    </title>', color: 'cyan' }
   ];
 
@@ -85,11 +95,11 @@ export const RssView: React.FC<Props> = ({
     const titleColor: 'white' = 'white';
 
     previewXmlLines.push({ key: `item-open-${episode.id}`, text: '    <item>', color: tagColor });
-    const escapedEpisodeTitle = escapeXml(episode.title);
+    const normalizedEpisodeTitle = escapeXml(normalizeXmlText(episode.title) || 'Untitled episode');
     previewXmlLines.push({ key: `item-title-open-${episode.id}`, text: '      <title>', color: titleColor });
     previewXmlLines.push({
       key: `item-title-text-${episode.id}`,
-      text: `        ${escapedEpisodeTitle}`,
+      text: `        ${normalizedEpisodeTitle}`,
       color: titleColor
     });
     previewXmlLines.push({ key: `item-title-close-${episode.id}`, text: '      </title>', color: titleColor });
