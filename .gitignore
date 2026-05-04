@@ -21,7 +21,6 @@ public/audio/
 
 # Draft / inbox content (local working files)
 draft/
-inbox/
 scripts/*.txt
 
 # Claude Code local settings
