@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
-import { Episode, Script, PodcastConfig } from '../data/types.js';
+import { AudioFile, Episode, Script, PodcastConfig } from '../data/types.js';
 import { DataClient } from '../data/client.js';
 import { matchesTextFilter } from '../utils/text-filter.js';
+import type { OpenConfirmPayload } from '../confirm-types.js';
+import type { ToastTone } from '../components/toast.js';
 
 interface Props {
   episodes: Episode[];
+  audioFiles: AudioFile[];
   config: PodcastConfig[];
   focus: 'sidebar' | 'list' | 'detail';
   client: DataClient;
@@ -15,10 +18,14 @@ interface Props {
   onSelectId: (id: string | null) => void;
   keyboardEnabled: boolean;
   filterQuery: string;
+  openConfirm: (p: OpenConfirmPayload) => void;
+  showToast: (message: string, tone: ToastTone) => void;
+  onRefresh: () => void | Promise<void>;
 }
 
 export const EpisodesView: React.FC<Props> = ({
   episodes,
+  audioFiles,
   config,
   focus,
   client,
@@ -26,15 +33,19 @@ export const EpisodesView: React.FC<Props> = ({
   selectedId,
   onSelectId,
   keyboardEnabled,
-  filterQuery
+  filterQuery,
+  openConfirm,
+  showToast,
+  onRefresh
 }) => {
   const [script, setScript] = useState<Script | null>(null);
+  const [scriptLoading, setScriptLoading] = useState(false);
   const [scrollOffset, setScrollOffset] = useState(0);
 
   const hostName = config.find(c => c.key === 'tts.host.name')?.value || 'Host';
   const cohostName = config.find(c => c.key === 'tts.cohost.name')?.value || 'CoHost';
 
-  const limit = Math.max(5, rows - 15);
+  const limit = Math.max(4, rows - 27);
 
   const filteredEpisodes = useMemo(
     () =>
@@ -56,13 +67,105 @@ export const EpisodesView: React.FC<Props> = ({
   useEffect(() => {
     if (selectedId) {
       setScript(null);
+      setScriptLoading(true);
       setScrollOffset(0);
-      client.fetchScript(selectedId).then(setScript);
+      client.fetchScript(selectedId).then(result => {
+        setScript(result);
+        setScriptLoading(false);
+      });
     }
-  }, [selectedId]);
+  }, [selectedId, client]);
 
   useInput((input, key) => {
     if (!keyboardEnabled || focus !== 'detail') return;
+
+    const ep = filteredEpisodes.find(e => e.id === selectedId);
+    if (ep && key.ctrl) {
+      if (input === 's') {
+        if (!ep.article_id) {
+          showToast('No article_id — cannot requeue script', 'error');
+          return;
+        }
+        openConfirm({
+          title: 'Requeue script',
+          message: `Send script-queue job?\n${ep.title}\narticle_id: ${ep.article_id}`,
+          onConfirm: async () => {
+            const r = await client.requeue('script', ep.article_id!);
+            if (!r.success) {
+              showToast(r.error ?? 'Requeue failed', 'error');
+              return;
+            }
+            showToast('Script job queued', 'success');
+            await onRefresh();
+          }
+        });
+        return;
+      }
+      if (input === 'a') {
+        openConfirm({
+          title: 'Requeue audio',
+          message: `Send audio-queue job?\n${ep.title}`,
+          onConfirm: async () => {
+            const r = await client.requeue('audio', ep.id);
+            if (!r.success) {
+              showToast(r.error ?? 'Requeue failed', 'error');
+              return;
+            }
+            showToast('Audio job queued', 'success');
+            await onRefresh();
+          }
+        });
+        return;
+      }
+      if (input === 'y') {
+        openConfirm({
+          title: 'Requeue RSS',
+          message: `Send rss-queue job?\n${ep.title}`,
+          onConfirm: async () => {
+            const r = await client.requeue('rss', ep.id);
+            if (!r.success) {
+              showToast(r.error ?? 'Requeue failed', 'error');
+              return;
+            }
+            showToast('RSS job queued', 'success');
+            await onRefresh();
+          }
+        });
+        return;
+      }
+      if (input === 'd') {
+        openConfirm({
+          title: 'Download audio',
+          message: `Download latest audio for episode to ./downloads\n${ep.title}`,
+          onConfirm: async () => {
+            const r = await client.downloadAudio(ep.id);
+            if (!r.success) {
+              showToast(r.error ?? 'Download failed', 'error');
+              return;
+            }
+            showToast(r.path ? `Saved: ${r.path}` : 'Downloaded', 'success');
+          }
+        });
+        return;
+      }
+    }
+
+    if (ep && input === 'p' && !key.ctrl && !key.meta) {
+      void client.playAudio(ep.id).then(r => {
+        if (!r.success) {
+          showToast(r.error ?? 'Play failed', 'error');
+          return;
+        }
+        showToast('Playback started (afplay)', 'success');
+      });
+      return;
+    }
+
+    if (input === 's' && !key.ctrl && !key.meta) {
+      client.stopPlayback();
+      showToast('Stopped playback', 'info');
+      return;
+    }
 
     if (key.downArrow || input === 'j') {
       setScrollOffset(prev => prev + 1);
@@ -78,7 +181,12 @@ export const EpisodesView: React.FC<Props> = ({
   }));
 
   const selectedEpisode = filteredEpisodes.find(e => e.id === selectedId);
+  const selectedAudio = selectedEpisode
+    ? audioFiles.find(af => af.episode_id === selectedEpisode.id)
+    : undefined;
   const scriptLines = script ? parseScript(script.content, hostName, cohostName) : [];
+  const scriptSummary = scriptLoading ? 'Loading script...' : summarizeScript(scriptLines);
+  const pipelineNodes = selectedEpisode ? buildPipelineNodes(selectedEpisode.status) : [];
   const visibleScript = scriptLines.slice(scrollOffset, scrollOffset + limit);
 
   const renderItem = (item: any, isSelected: boolean) => (
@@ -132,7 +240,9 @@ export const EpisodesView: React.FC<Props> = ({
       </Box>
       <Box flexGrow={1} minWidth={0} borderStyle="single" paddingX={1} flexDirection="column" borderColor={focus === 'detail' ? "cyan" : "gray"}>
         <Box borderStyle="single" justifyContent="center" flexShrink={0} borderColor={focus === 'detail' ? "cyan" : "gray"}>
-          <Text bold color={focus === 'detail' ? "cyan" : "white"}>DETAIL {focus === 'detail' ? "● (j/k scroll)" : ""}</Text>
+          <Text bold color={focus === 'detail' ? "cyan" : "white"}>
+            DETAIL {focus === 'detail' ? '● j/k │ p play / s stop │ Ctrl+S script / A audio / Y rss / D download' : ''}
+          </Text>
         </Box>
         {selectedEpisode ? (
           <Box flexDirection="column" marginTop={1} flexGrow={1} overflowY="hidden">
@@ -141,6 +251,34 @@ export const EpisodesView: React.FC<Props> = ({
             </Box>
             <Box flexShrink={0}>
               <Text color="gray">Status: {selectedEpisode.status} │ Created: {new Date(selectedEpisode.created_at).toLocaleDateString()}</Text>
+            </Box>
+            <Box marginTop={1} flexShrink={0} flexDirection="column">
+              <Text bold color="cyan">SCRIPT SUMMARY</Text>
+              <Text color="gray" wrap="truncate-end">{scriptSummary}</Text>
+            </Box>
+            <Box marginTop={1} flexShrink={0} flexDirection="column">
+              <Text bold color="cyan">AUDIO</Text>
+              {selectedAudio ? (
+                <Box flexDirection="column">
+                  <Text color="gray" wrap="truncate-end">Path: {selectedAudio.storage_path}</Text>
+                  <Text color="gray" wrap="truncate-end">ID: {selectedAudio.id}</Text>
+                  <Text color="gray" wrap="truncate-end">Type: {selectedAudio.mime_type} │ Status: {selectedAudio.status}</Text>
+                  <Text color="gray" wrap="truncate-end">Created: {new Date(selectedAudio.created_at).toLocaleString()}</Text>
+                </Box>
+              ) : (
+                <Text color="gray">No audio file for this episode</Text>
+              )}
+            </Box>
+            <Box marginTop={1} flexShrink={0} flexDirection="column">
+              <Text bold color="cyan">PIPELINE</Text>
+              <Box flexDirection="row" flexWrap="wrap">
+                {pipelineNodes.map((node, idx) => (
+                  <Text key={node.key} color={node.state === 'failed' ? 'red' : node.state === 'done' ? 'green' : 'gray'}>
+                    {node.state === 'failed' ? '✕' : node.state === 'done' ? '●' : '○'} {node.label}
+                    {idx < pipelineNodes.length - 1 ? <Text color="gray">  →  </Text> : ''}
+                  </Text>
+                ))}
+              </Box>
             </Box>
 
             <Box marginTop={1} flexDirection="column" flexGrow={1} minHeight={0} overflowY="hidden">
@@ -166,7 +304,7 @@ export const EpisodesView: React.FC<Props> = ({
                   )}
                 </Box>
               ) : (
-                  <Text color="gray italic">Loading script...</Text>
+                  <Text color="gray italic">{scriptLoading ? 'Loading script...' : 'No script yet'}</Text>
                 )}
             </Box>
           </Box>
@@ -179,6 +317,33 @@ export const EpisodesView: React.FC<Props> = ({
     </Box>
   );
 };
+
+function summarizeScript(lines: Array<{ speaker: string; text: string }>): string {
+  if (lines.length === 0) return 'No script generated yet.';
+  const speakers = Array.from(new Set(lines.map(line => line.speaker).filter(Boolean)));
+  const preview = lines
+    .slice(0, 2)
+    .map(line => `${line.speaker}: ${truncate(line.text.trim(), 44)}`)
+    .join(' / ');
+  return `${lines.length} lines · ${speakers.length} speakers (${speakers.join(', ')}) · ${preview}`;
+}
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return `${s.slice(0, Math.max(0, max - 1))}…`;
+}
+
+function buildPipelineNodes(status: string): Array<{ key: string; label: string; state: 'done' | 'pending' | 'failed' }> {
+  const scriptDone = status === 'script_ready' || status === 'audio_ready' || status === 'published';
+  const audioDone = status === 'audio_ready' || status === 'published';
+  const rssDone = status === 'published';
+  return [
+    { key: 'ingest', label: 'ingest', state: 'done' },
+    { key: 'script', label: 'generate-script', state: status === 'failed' && !scriptDone ? 'failed' : scriptDone ? 'done' : 'pending' },
+    { key: 'audio', label: 'generate-audio', state: status === 'failed' && scriptDone && !audioDone ? 'failed' : audioDone ? 'done' : 'pending' },
+    { key: 'rss', label: 'update-rss', state: status === 'failed' && audioDone && !rssDone ? 'failed' : rssDone ? 'done' : 'pending' }
+  ];
+}
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

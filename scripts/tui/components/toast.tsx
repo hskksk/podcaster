@@ -11,7 +11,7 @@ interface Props {
 export const Toast: React.FC<Props> = ({ message, tone }) => {
   const color = tone === 'success' ? 'green' : tone === 'error' ? 'red' : 'cyan';
   return (
-    <Box paddingX={1} flexShrink={0}>
+    <Box paddingX={1} flexShrink={0} backgroundColor="black" width="100%">
       <Text bold color={color}>{message}</Text>
     </Box>
   );

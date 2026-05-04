@@ -24,7 +24,14 @@ export const ArticlesView: React.FC<Props> = ({
 }) => {
   const filteredArticles = useMemo(() => {
     return articles.filter(a =>
-      matchesTextFilter(filterQuery, [a.title, a.source, a.id, a.mem_note_id])
+      matchesTextFilter(filterQuery, [
+        a.title,
+        a.source,
+        a.id,
+        a.mem_note_id,
+        a.created_at,
+        new Date(a.created_at).toLocaleString()
+      ])
     );
   }, [articles, filterQuery]);
 
@@ -101,8 +108,10 @@ export const ArticlesView: React.FC<Props> = ({
           {focus === 'list' && keyboardEnabled ? (
             items.length > 0 ? (
               <SelectInput
+                key={filterQuery}
                 items={items}
                 limit={listLimit}
+                initialIndex={Math.max(0, filteredArticles.findIndex(a => a.id === selectedId))}
                 onHighlight={(item) => {
                   setSelectedId(item.value);
                   setScrollOffset(0);
@@ -135,6 +144,20 @@ export const ArticlesView: React.FC<Props> = ({
         {selectedArticle ? (
           <Box flexDirection="column" marginTop={1} flexGrow={1} overflowY="hidden">
             <Text bold color="cyan" underline wrap="truncate-end">{selectedArticle.title}</Text>
+            <Box flexShrink={0} marginTop={1} flexDirection="column">
+              <Text color="gray" wrap="truncate-end">
+                Source: {selectedArticle.source ?? '—'}
+              </Text>
+              <Text color="gray" wrap="truncate-end">
+                Created: {new Date(selectedArticle.created_at).toLocaleString()}
+              </Text>
+              <Text color="gray" wrap="truncate-end">
+                ID: {selectedArticle.id}
+              </Text>
+              <Text color="gray" wrap="truncate-end">
+                mem_note_id: {selectedArticle.mem_note_id ?? '—'}
+              </Text>
+            </Box>
             <Box marginTop={1} flexDirection="column" flexGrow={1} overflowY="hidden">
               <MarkdownRenderer
                 markdown={selectedArticle.content}

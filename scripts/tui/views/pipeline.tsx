@@ -11,16 +11,26 @@ interface Props {
   onSelectEpisode: (episodeId: string) => void;
   keyboardEnabled: boolean;
   filterQuery: string;
+  /** Ctrl+A on a focused lane: requeue audio for the highlighted episode (confirm in App). */
+  onRequeueAudioRequest: (episodeId: string) => void;
 }
 
 const STAGES = [
-  { key: 'script_pending', label: 'INGESTED' },
-  { key: 'script_ready', label: 'SCRIPT READY' },
-  { key: 'audio_ready', label: 'AUDIO READY' },
-  { key: 'published', label: 'PUBLISHED' }
+  /** Backward-compatible: old rows used script_pending, newer rows use ingested. */
+  { key: 'ingested', label: 'INGESTED', statuses: ['ingested', 'script_pending'] },
+  { key: 'script_ready', label: 'SCRIPT READY', statuses: ['script_ready'] },
+  { key: 'audio_ready', label: 'AUDIO READY', statuses: ['audio_ready'] },
+  { key: 'published', label: 'PUBLISHED', statuses: ['published'] }
 ];
 
-export const PipelineView: React.FC<Props> = ({ data, focus, onSelectEpisode, keyboardEnabled, filterQuery }) => {
+export const PipelineView: React.FC<Props> = ({
+  data,
+  focus,
+  onSelectEpisode,
+  keyboardEnabled,
+  filterQuery,
+  onRequeueAudioRequest
+}) => {
   const { episodes } = data;
   const [offsets, setOffsets] = useState<number[]>([0, 0, 0, 0]);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([-1, -1, -1, -1]);
@@ -32,12 +42,13 @@ export const PipelineView: React.FC<Props> = ({ data, focus, onSelectEpisode, ke
     );
   }, [episodes, filterQuery]);
 
-  const getEpisodesByStatus = (status: string) => filteredEpisodes.filter(e => e.status === status);
+  const getEpisodesByStage = (stage: (typeof STAGES)[number]) =>
+    filteredEpisodes.filter(e => stage.statuses.includes(e.status));
 
   useEffect(() => {
     setSelectedIndices(prev =>
       STAGES.map((stage, laneIndex) => {
-        const lane = filteredEpisodes.filter(e => e.status === stage.key);
+        const lane = getEpisodesByStage(stage);
         if (lane.length === 0) return -1;
         const cur = prev[laneIndex];
         const next = cur < 0 ? 0 : Math.min(cur, lane.length - 1);
@@ -46,7 +57,7 @@ export const PipelineView: React.FC<Props> = ({ data, focus, onSelectEpisode, ke
     );
     setOffsets(prev =>
       prev.map((off, laneIndex) => {
-        const laneLen = filteredEpisodes.filter(e => e.status === STAGES[laneIndex].key).length;
+        const laneLen = getEpisodesByStage(STAGES[laneIndex]).length;
         return Math.min(off, Math.max(0, laneLen - limit));
       })
     );
@@ -55,7 +66,7 @@ export const PipelineView: React.FC<Props> = ({ data, focus, onSelectEpisode, ke
   useInput((input, key) => {
     if (!keyboardEnabled || !focus.startsWith('pipeline_')) return;
     const laneIndex = parseInt(focus.split('_')[1]);
-    const laneEpisodes = getEpisodesByStatus(STAGES[laneIndex].key);
+    const laneEpisodes = getEpisodesByStage(STAGES[laneIndex]);
 
     if (key.downArrow || input === 'j') {
       setSelectedIndices(prev => {
@@ -93,6 +104,13 @@ export const PipelineView: React.FC<Props> = ({ data, focus, onSelectEpisode, ke
         onSelectEpisode(selectedEpisode.id);
       }
     }
+
+    if (key.ctrl && input === 'a') {
+      const selectedEpisode = laneEpisodes[selectedIndices[laneIndex]];
+      if (selectedEpisode) {
+        onRequeueAudioRequest(selectedEpisode.id);
+      }
+    }
   });
 
   const fq = filterQuery.trim();
@@ -105,9 +123,14 @@ export const PipelineView: React.FC<Props> = ({ data, focus, onSelectEpisode, ke
           <Text color="magenta">{fq}</Text>
         </Box>
       ) : null}
+      {keyboardEnabled && (
+        <Box paddingX={1} flexShrink={0}>
+          <Text dimColor>Ctrl+A: requeue audio (selected card)</Text>
+        </Box>
+      )}
       <Box flexDirection="row" flexGrow={1} minHeight={0}>
         {STAGES.map((stage, index) => {
-          const stageEpisodes = getEpisodesByStatus(stage.key);
+          const stageEpisodes = getEpisodesByStage(stage);
           const isFocused = focus === `pipeline_${index}`;
           const offset = offsets[index];
           const selectedIndex = selectedIndices[index];

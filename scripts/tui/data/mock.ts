@@ -131,6 +131,7 @@ export const LOGS = [
     queue_name: 'rss-queue',
     status: 'success',
     episode_id: 'ep1',
+    article_id: null,
     duration_ms: 412,
     error_message: null,
   },
@@ -139,8 +140,18 @@ export const LOGS = [
     queue_name: 'audio-queue',
     status: 'failure',
     episode_id: 'ep3',
+    article_id: null,
     duration_ms: 90000,
     error_message: 'Timeout error from TTS API',
+  },
+  {
+    processed_at: minus(45),
+    queue_name: 'script-queue',
+    status: 'success',
+    episode_id: null,
+    article_id: ARTICLES[1].id,
+    duration_ms: 2100,
+    error_message: null,
   }
 ];
 
@@ -153,6 +164,7 @@ export const CONFIG = [
 
 export const INBOX = [
   { name: '20260428_NewTopic.md', size: 1234, mtime: minus(1) },
+  { name: 'queue_mem_KX91nA8.md', size: 500, mtime: minus(3) },
 ];
 
 export const DRAFT = [

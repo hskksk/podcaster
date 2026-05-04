@@ -13,19 +13,16 @@ import { EpisodesView } from './views/episodes.js';
 import { ArticlesView } from './views/articles.js';
 import { AudioView } from './views/audio.js';
 import { LogsView } from './views/logs.js';
-import { InboxView } from './views/inbox.js';
+import { InboxView, type InboxPane } from './views/inbox.js';
 import { ConfigView } from './views/config.js';
 import { RssView } from './views/rss.js';
 import { DataClient } from './data/client.js';
 import { filterPaletteCommands } from './commands/registry.js';
+import type { OpenConfirmPayload } from './confirm-types.js';
 
 type UiMode = 'normal' | 'help' | 'filter' | 'command' | 'confirm';
 
-interface ConfirmState {
-  title: string;
-  message: string;
-  onConfirm: () => void;
-}
+type ConfirmState = OpenConfirmPayload;
 
 interface Props {
   isMock: boolean;
@@ -51,9 +48,15 @@ export const App: React.FC<Props> = ({ isMock }) => {
   const filterBaselineRef = useRef('');
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+  /** Inbox split: which column is active when view === inbox && focus === list (h/l / arrows in App). */
+  const [inboxPane, setInboxPane] = useState<InboxPane>('inbox');
 
   const client = useMemo(() => new DataClient(isMock), [isMock]);
   const keyboardEnabled = uiMode === 'normal';
+
+  useEffect(() => {
+    if (view !== 'inbox') setInboxPane('inbox');
+  }, [view]);
 
   const inputContextRef = useRef({
     uiMode,
@@ -62,7 +65,8 @@ export const App: React.FC<Props> = ({ isMock }) => {
     view,
     focus,
     commandDraft,
-    commandSelectedIndex
+    commandSelectedIndex,
+    inboxPane
   });
   inputContextRef.current = {
     uiMode,
@@ -71,7 +75,8 @@ export const App: React.FC<Props> = ({ isMock }) => {
     view,
     focus,
     commandDraft,
-    commandSelectedIndex
+    commandSelectedIndex,
+    inboxPane
   };
 
   const fetchData = useCallback(async () => {
@@ -83,6 +88,15 @@ export const App: React.FC<Props> = ({ isMock }) => {
       setSelectedEpisodeId(d.episodes[0].id);
     }
   }, [client]);
+
+  const showToast = useCallback((message: string, tone: ToastTone) => {
+    setToast({ message, tone });
+  }, []);
+
+  const openConfirm = useCallback((payload: OpenConfirmPayload) => {
+    setConfirmState(payload);
+    setUiMode('confirm');
+  }, []);
 
   useEffect(() => {
     const onResize = () => {
@@ -99,6 +113,12 @@ export const App: React.FC<Props> = ({ isMock }) => {
       process.stdout.off('resize', onResize);
     };
   }, [fetchData]);
+
+  useEffect(() => {
+    return () => {
+      client.stopPlayback();
+    };
+  }, [client]);
 
   useEffect(() => {
     if (!toast) return;
@@ -134,7 +154,9 @@ export const App: React.FC<Props> = ({ isMock }) => {
         setConfirmState({
           title: 'Dummy confirm',
           message: 'Phase 1 placeholder. Proceed?',
-          onConfirm: () => setToast({ message: 'Confirmed', tone: 'success' })
+          onConfirm: () => {
+            setToast({ message: 'Confirmed', tone: 'success' });
+          }
         });
         setUiMode('confirm');
         return;
@@ -175,10 +197,17 @@ export const App: React.FC<Props> = ({ isMock }) => {
 
     if (ctx.uiMode === 'confirm' && ctx.confirmState) {
       if (key.return) {
+        if (ctx.confirmState.readOnly) {
+          setConfirmState(null);
+          setUiMode('normal');
+          return;
+        }
         const fn = ctx.confirmState.onConfirm;
         setConfirmState(null);
         setUiMode('normal');
-        fn();
+        void Promise.resolve(fn()).catch(err => {
+          setToast({ message: String(err), tone: 'error' });
+        });
       }
       return;
     }
@@ -244,19 +273,58 @@ export const App: React.FC<Props> = ({ isMock }) => {
       void fetchData();
       return;
     }
-    if (input === '1') setView('pipeline');
-    if (input === '2') setView('episodes');
-    if (input === '3') setView('articles');
-    if (input === '4') setView('audio');
-    if (input === '5') setView('logs');
-    if (input === '6') setView('inbox');
-    if (input === '7') setView('config');
-    if (input === '8') setView('rss');
+    if (input === '1') {
+      setView('pipeline');
+      setFocus('pipeline_0');
+      return;
+    }
+    if (input === '2') {
+      setView('episodes');
+      setFocus('list');
+      return;
+    }
+    if (input === '3') {
+      setView('articles');
+      setFocus('list');
+      return;
+    }
+    if (input === '4') {
+      setView('audio');
+      setFocus('list');
+      return;
+    }
+    if (input === '5') {
+      setView('logs');
+      setFocus('list');
+      return;
+    }
+    if (input === '6') {
+      setView('inbox');
+      setFocus('list');
+      setInboxPane('inbox');
+      return;
+    }
+    if (input === '7') {
+      setView('config');
+      setFocus('list');
+      return;
+    }
+    if (input === '8') {
+      setView('rss');
+      setFocus('list');
+      return;
+    }
 
     const { view: v, focus: f } = inputContextRef.current;
 
     if (key.leftArrow || input === 'h') {
-      if (v === 'pipeline') {
+      if (v === 'inbox' && f === 'list') {
+        if (ctx.inboxPane === 'draft') {
+          setInboxPane('inbox');
+        } else {
+          setFocus('sidebar');
+        }
+      } else if (v === 'pipeline') {
         if (f === 'pipeline_0') setFocus('sidebar');
         else if (f === 'pipeline_1') setFocus('pipeline_0');
         else if (f === 'pipeline_2') setFocus('pipeline_1');
@@ -268,7 +336,11 @@ export const App: React.FC<Props> = ({ isMock }) => {
       }
     }
     if (key.rightArrow || input === 'l') {
-      if (v === 'pipeline') {
+      if (v === 'inbox' && f === 'list') {
+        if (ctx.inboxPane === 'inbox') {
+          setInboxPane('draft');
+        }
+      } else if (v === 'pipeline') {
         if (f === 'sidebar') setFocus('pipeline_0');
         else if (f === 'pipeline_0') setFocus('pipeline_1');
         else if (f === 'pipeline_1') setFocus('pipeline_2');
@@ -315,11 +387,28 @@ export const App: React.FC<Props> = ({ isMock }) => {
                 onSelectEpisode={handleJumpToEpisode}
                 keyboardEnabled={keyboardEnabled}
                 filterQuery={globalFilter}
+                onRequeueAudioRequest={episodeId => {
+                  const ep = data.episodes.find((e: { id: string }) => e.id === episodeId);
+                  openConfirm({
+                    title: 'Requeue audio',
+                    message: `Send audio-queue job?\n${ep?.title ?? episodeId}`,
+                    onConfirm: async () => {
+                      const r = await client.requeue('audio', episodeId);
+                      if (!r.success) {
+                        showToast(r.error ?? 'Requeue failed', 'error');
+                        return;
+                      }
+                      showToast('Audio job queued', 'success');
+                      await fetchData();
+                    }
+                  });
+                }}
               />
             )}
             {view === 'episodes' && (
               <EpisodesView
                 episodes={data.episodes}
+                audioFiles={data.audioFiles}
                 config={data.config}
                 focus={focus as any}
                 client={client}
@@ -328,6 +417,9 @@ export const App: React.FC<Props> = ({ isMock }) => {
                 onSelectId={setSelectedEpisodeId}
                 keyboardEnabled={keyboardEnabled}
                 filterQuery={globalFilter}
+                openConfirm={openConfirm}
+                showToast={showToast}
+                onRefresh={fetchData}
               />
             )}
             {view === 'articles' && (
@@ -343,24 +435,66 @@ export const App: React.FC<Props> = ({ isMock }) => {
             {view === 'audio' && (
               <AudioView
                 audioFiles={data.audioFiles}
+                episodes={data.episodes}
                 isFocused={focus !== 'sidebar'}
                 columns={dimensions.columns}
                 keyboardEnabled={keyboardEnabled}
                 filterQuery={globalFilter}
+                client={client}
+                openConfirm={openConfirm}
+                showToast={showToast}
+                onRefresh={fetchData}
               />
             )}
             {view === 'logs' && (
-              <LogsView logs={data.logs} isFocused={focus !== 'sidebar'} rows={dimensions.rows} filterQuery={globalFilter} keyboardEnabled={keyboardEnabled} />
+              <LogsView
+                logs={data.logs}
+                episodes={data.episodes}
+                articles={data.articles}
+                columns={dimensions.columns}
+                isFocused={focus !== 'sidebar'}
+                rows={dimensions.rows}
+                filterQuery={globalFilter}
+                keyboardEnabled={keyboardEnabled}
+              />
             )}
-            {view === 'inbox' && <InboxView inbox={data.inbox} draft={data.draft} filterQuery={globalFilter} />}
+            {view === 'inbox' && (
+              <InboxView
+                inbox={data.inbox}
+                draft={data.draft}
+                filterQuery={globalFilter}
+                keyboardEnabled={keyboardEnabled}
+                pane={inboxPane}
+                setPane={setInboxPane}
+                client={client}
+                openConfirm={openConfirm}
+                showToast={showToast}
+                onRefresh={fetchData}
+              />
+            )}
             {view === 'config' && <ConfigView config={data.config} filterQuery={globalFilter} />}
-            {view === 'rss' && <RssView episodes={data.episodes} config={data.config} />}
+            {view === 'rss' && (
+              <RssView
+                episodes={data.episodes}
+                config={data.config}
+                filterQuery={globalFilter}
+                isFocused={focus !== 'sidebar'}
+                keyboardEnabled={keyboardEnabled}
+                rows={dimensions.rows}
+              />
+            )}
           </Box>
         </Box>
         {uiMode === 'help' && <HelpModal />}
         {uiMode === 'filter' && <FilterInput value={globalFilter} />}
         {uiMode === 'command' && <CommandPalette draft={commandDraft} selectedIndex={commandSelectedIndex} />}
-        {uiMode === 'confirm' && confirmState && <ConfirmModal title={confirmState.title} message={confirmState.message} />}
+        {uiMode === 'confirm' && confirmState && (
+          <ConfirmModal
+            title={confirmState.title}
+            message={confirmState.message}
+            readOnly={confirmState.readOnly}
+          />
+        )}
         {toast && <Toast message={toast.message} tone={toast.tone} />}
       </Box>
       <Footer />

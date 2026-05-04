@@ -40,6 +40,7 @@ export interface ProcessingLog {
   queue_name: string;
   status: string;
   episode_id: string | null;
+  article_id: string | null;
   duration_ms: number | null;
   error_message: string | null;
 }

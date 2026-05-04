@@ -14,7 +14,16 @@ export const CommandPalette: React.FC<Props> = ({ draft, selectedIndex }) => {
   const sel = filtered.length > 0 ? Math.min(selectedIndex, maxIdx) : 0;
 
   return (
-    <Box flexDirection="column" borderStyle="single" borderColor="blue" paddingX={1} marginTop={1} alignSelf="stretch">
+    <Box
+      flexDirection="column"
+      borderStyle="single"
+      borderColor="blue"
+      backgroundColor="black"
+      paddingX={1}
+      marginTop={1}
+      alignSelf="stretch"
+      width="100%"
+    >
       <Text bold color="blue">Command</Text>
       <Text color="white">:{draft}</Text>
       <Box marginTop={1} flexDirection="column">
