@@ -193,7 +193,9 @@ export const EpisodesView: React.FC<Props> = ({
     : undefined;
   const scriptLines = script ? parseScript(script.content, hostName, cohostName) : [];
   const scriptSummary = scriptLoading ? 'Loading script...' : summarizeScript(scriptLines);
+  const scriptTotalTokens = extractTotalTokens(script?.llm_usage);
   const articleSummary = summarizeArticle(selectedEpisode, selectedArticle);
+  const audioTotalTokens = extractTotalTokens(selectedAudio?.llm_usage);
   const pipelineNodes = selectedEpisode ? buildPipelineNodes(selectedEpisode.status) : [];
   const visibleScript = scriptLines.slice(scrollOffset, scrollOffset + limit);
 
@@ -284,6 +286,7 @@ export const EpisodesView: React.FC<Props> = ({
             <Box marginTop={1} flexShrink={0} flexDirection="column">
               <Text bold color="cyan">SCRIPT SUMMARY</Text>
               <Text color="gray" wrap="truncate-end">{scriptSummary}</Text>
+              <Text color="gray" wrap="truncate-end">Tokens: {formatTokenCount(scriptTotalTokens, scriptLoading)}</Text>
             </Box>
             <Box marginTop={1} flexShrink={0} flexDirection="column">
               <Text bold color="cyan">ARTICLE SUMMARY</Text>
@@ -296,6 +299,7 @@ export const EpisodesView: React.FC<Props> = ({
                   <Text color="gray" wrap="truncate-end">Path: {selectedAudio.storage_path}</Text>
                   <Text color="gray" wrap="truncate-end">ID: {selectedAudio.id}</Text>
                   <Text color="gray" wrap="truncate-end">Type: {selectedAudio.mime_type} │ Status: {selectedAudio.status}</Text>
+                  <Text color="gray" wrap="truncate-end">Tokens: {formatTokenCount(audioTotalTokens, false)}</Text>
                   <Text color="gray" wrap="truncate-end">Length: {formatAudioDuration(audioDurationSec, audioDurationLoading)}</Text>
                   <Text color="gray" wrap="truncate-end">Created: {new Date(selectedAudio.created_at).toLocaleString()}</Text>
                 </Box>
@@ -380,6 +384,28 @@ function formatAudioDuration(seconds: number | null, loading: boolean): string {
   const minutes = Math.floor(totalSeconds / 60);
   const remaining = totalSeconds % 60;
   return `${minutes}:${String(remaining).padStart(2, '0')} (${seconds.toFixed(1)}s)`;
+}
+
+function extractTotalTokens(usage: unknown): number | null {
+  if (!usage || typeof usage !== 'object') return null;
+  const usageRecord = usage as Record<string, unknown>;
+
+  const candidates = [
+    usageRecord.total_tokens,
+    usageRecord.totalTokenCount,
+    usageRecord.total_token_count
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+function formatTokenCount(totalTokens: number | null, loading: boolean): string {
+  if (loading) return 'Loading...';
+  if (totalTokens == null) return '-';
+  return `${totalTokens.toLocaleString()} total`;
 }
 
 function buildPipelineNodes(status: string): Array<{ key: string; label: string; state: 'done' | 'pending' | 'failed' }> {

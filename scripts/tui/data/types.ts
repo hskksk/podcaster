@@ -16,12 +16,21 @@ export interface Episode {
   created_at: string;
 }
 
+export interface LlmUsage {
+  prompt_tokens?: number | null;
+  completion_tokens?: number | null;
+  total_tokens?: number | null;
+  [key: string]: unknown;
+}
+
 export interface Script {
   id: string;
   episode_id: string;
   content: string;
   status: string;
   error: string | null;
+  llm_usage?: LlmUsage | null;
+  llm_response?: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -32,6 +41,8 @@ export interface AudioFile {
   mime_type: string;
   status: string;
   error: string | null;
+  llm_usage?: LlmUsage | null;
+  llm_response?: Record<string, unknown> | null;
   created_at: string;
 }
 
