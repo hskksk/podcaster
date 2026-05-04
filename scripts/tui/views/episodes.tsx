@@ -358,11 +358,7 @@ function summarizeScript(lines: Array<{ speaker: string; text: string }>): strin
   if (lines.length === 0) return 'No script generated yet.';
   const speakers = Array.from(new Set(lines.map(line => line.speaker).filter(Boolean)));
   const charCount = lines.reduce((sum, line) => sum + line.text.length, 0);
-  const preview = lines
-    .slice(0, 2)
-    .map(line => `${line.speaker}: ${truncate(line.text.trim(), 44)}`)
-    .join(' / ');
-  return `${lines.length} lines · ${charCount} chars · ${speakers.length} speakers (${speakers.join(', ')}) · ${preview}`;
+  return `${lines.length} lines · ${charCount} chars · ${speakers.length} speakers (${speakers.join(', ')})`;
 }
 
 function summarizeArticle(selectedEpisode?: Episode, selectedArticle?: Article): string {
@@ -384,11 +380,6 @@ function formatAudioDuration(seconds: number | null, loading: boolean): string {
   const minutes = Math.floor(totalSeconds / 60);
   const remaining = totalSeconds % 60;
   return `${minutes}:${String(remaining).padStart(2, '0')} (${seconds.toFixed(1)}s)`;
-}
-
-function truncate(s: string, max: number): string {
-  if (s.length <= max) return s;
-  return `${s.slice(0, Math.max(0, max - 1))}…`;
 }
 
 function buildPipelineNodes(status: string): Array<{ key: string; label: string; state: 'done' | 'pending' | 'failed' }> {
