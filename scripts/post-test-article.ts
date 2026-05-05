@@ -50,6 +50,8 @@ if (target === "remote") {
 const article = {
   title: "テスト記事: AI生成ポッドキャストの仕組み",
   mem_note_id: MEM_NOTE_ID,
+  ingest_route: "test",
+  ingest_meta: { target },
 };
 
 const body = JSON.stringify(article);

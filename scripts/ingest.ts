@@ -17,13 +17,15 @@ import {
 dotenv.config({ path: ".env" });
 
 type ParsedArgs =
-  | { mode: "id"; memNoteId: string }
-  | { mode: "file"; filePath: string; collectionTitles: string[] };
+  | { mode: "id"; memNoteId: string; route?: string; meta?: Record<string, unknown> }
+  | { mode: "file"; filePath: string; collectionTitles: string[]; route?: string; meta?: Record<string, unknown> };
 
 function parseArgs(argv: string[]): ParsedArgs {
   const collectionTitles: string[] = [];
   let filePath: string | undefined;
   let memNoteId: string | undefined;
+  let route: string | undefined;
+  let meta: Record<string, unknown> | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -40,6 +42,24 @@ function parseArgs(argv: string[]): ParsedArgs {
         process.exit(1);
       }
       collectionTitles.push(v);
+    } else if (a === "--route") {
+      route = argv[++i];
+      if (!route) {
+        console.error("Missing value for --route");
+        process.exit(1);
+      }
+    } else if (a === "--meta") {
+      const v = argv[++i];
+      if (!v) {
+        console.error("Missing value for --meta");
+        process.exit(1);
+      }
+      try {
+        meta = JSON.parse(v) as Record<string, unknown>;
+      } catch {
+        console.error(`--meta must be valid JSON: ${v}`);
+        process.exit(1);
+      }
     } else if (a.startsWith("-")) {
       console.error(`Unknown option: ${a}`);
       process.exit(1);
@@ -57,21 +77,21 @@ function parseArgs(argv: string[]): ParsedArgs {
   }
 
   if (filePath) {
-    return { mode: "file", filePath, collectionTitles };
+    return { mode: "file", filePath, collectionTitles, route, meta };
   }
 
   if (memNoteId) {
     const maybeFile = path.resolve(memNoteId);
     if (existsSync(maybeFile)) {
-      return { mode: "file", filePath: maybeFile, collectionTitles };
+      return { mode: "file", filePath: maybeFile, collectionTitles, route, meta };
     }
-    return { mode: "id", memNoteId };
+    return { mode: "id", memNoteId, route, meta };
   }
 
   console.error(`Usage:
-  pnpm tsx scripts/ingest.ts <mem-note-id>
-  pnpm tsx scripts/ingest.ts --file <path> [--collection-title <title>]...
-  pnpm tsx scripts/ingest.ts <path-to-existing-file> [--collection-title <title>]...
+  pnpm tsx scripts/ingest.ts <mem-note-id> [--route <route>] [--meta <json>]
+  pnpm tsx scripts/ingest.ts --file <path> [--collection-title <title>]... [--route <route>] [--meta <json>]
+  pnpm tsx scripts/ingest.ts <path-to-existing-file> [--route <route>] [--meta <json>]
   (default collection for file modes: ${DEFAULT_MEM_COLLECTION_TITLE})`);
   process.exit(1);
 }
@@ -115,7 +135,11 @@ console.log(`POST ${ingestUrl}`);
 const res = await fetch(ingestUrl, {
   method: "POST",
   headers,
-  body: JSON.stringify({ mem_note_id: memNoteId }),
+  body: JSON.stringify({
+    mem_note_id: memNoteId,
+    ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
+    ...(parsed.meta !== undefined ? { ingest_meta: parsed.meta } : {}),
+  }),
 });
 const json = await res.json();
 console.log(`Status: ${res.status}`, JSON.stringify(json));
