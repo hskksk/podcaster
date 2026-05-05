@@ -5,6 +5,8 @@ export interface Article {
   source_url?: string;
   source?: string;
   mem_note_id?: string;
+  ingest_route?: string;
+  ingest_meta?: Record<string, unknown>;
   created_at: string;
 }
 

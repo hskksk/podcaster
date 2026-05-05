@@ -31,7 +31,13 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  let body: { title?: string; mem_note_id?: string; source_url?: string };
+  let body: {
+    title?: string;
+    mem_note_id?: string;
+    source_url?: string;
+    ingest_route?: string;
+    ingest_meta?: Record<string, unknown>;
+  };
   try {
     body = await req.json();
   } catch {
@@ -66,6 +72,8 @@ Deno.serve(async (req) => {
       source_url: body.source_url,
       source: "webhook",
       mem_note_id: body.mem_note_id.trim(),
+      ingest_route: body.ingest_route ?? null,
+      ingest_meta: body.ingest_meta ?? null,
     })
     .select("id")
     .single();
