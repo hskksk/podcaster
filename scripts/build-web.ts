@@ -3,7 +3,6 @@ import path from "path";
 import { marked, type MarkedExtension } from "marked";
 import { parse as parseToml } from "smol-toml";
 import { createClient } from "@supabase/supabase-js";
-import { detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
 
 const ARTICLES_DIR = path.resolve("articles");
 const OUT_DIR = path.resolve("dist/web");
@@ -16,6 +15,8 @@ interface SiteConfig {
   siteTitle: string;
   siteDescription: string;
   feedUrl: string;
+  siteUrl: string;
+  coverImage: string;
 }
 
 function loadConfig(): SiteConfig {
@@ -25,6 +26,8 @@ function loadConfig(): SiteConfig {
     siteTitle: toml.podcast?.title ?? "Podcaster Articles",
     siteDescription: toml.podcast?.description ?? "",
     feedUrl: toml.podcast?.feed_url ?? "",
+    siteUrl: toml.podcast?.site_url ?? "",
+    coverImage: toml.podcast?.cover_image ?? "cover.png",
   };
 }
 
@@ -68,11 +71,15 @@ marked.use(mathExtension);
  * article title (= markdown H1) → public audio URL.
  * Falls back to an empty map if credentials are unavailable.
  */
-async function fetchArticleAudioMap(cfg: SiteConfig): Promise<Map<string, string>> {
+async function fetchArticleAudioMap(_cfg: SiteConfig): Promise<Map<string, string>> {
   const map = new Map<string, string>();
+  const projectRef = process.env.SUPABASE_PROJECT_REF;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!projectRef || !serviceKey) {
+    console.warn("  Supabase credentials not set, skipping podcast audio links.");
+    return map;
+  }
   try {
-    const projectRef = detectProjectRef();
-    const serviceKey = detectServiceKey(projectRef);
     const supabaseUrl = `https://${projectRef}.supabase.co`;
     const storageBase = `${supabaseUrl}/storage/v1/object/public/podcast`;
 
@@ -94,7 +101,7 @@ async function fetchArticleAudioMap(cfg: SiteConfig): Promise<Map<string, string
     }
     console.log(`  fetched ${map.size} episode audio URLs from Supabase`);
   } catch (err) {
-    console.warn(`Supabase unavailable, skipping podcast audio links: ${err}`);
+    console.warn(`  Supabase unavailable: ${err}`);
   }
   return map;
 }
@@ -158,6 +165,9 @@ interface TemplateVars {
   SITE_TITLE: string;
   RSS_FEED_TAG: string;
   RSS_HEADER_LINK: string;
+  OGP_META: string;
+  HERO_SECTION: string;
+  FOOTER_CONTENT: string;
   CONTENT: string;
 }
 
@@ -165,31 +175,148 @@ function renderTemplate(template: string, vars: TemplateVars): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key as keyof TemplateVars] ?? "");
 }
 
+// ── OGP meta tags ─────────────────────────────────────────────────────────────
+
+function buildOgpMeta(
+  title: string,
+  description: string,
+  imageUrl: string,
+  type = "website",
+): string {
+  const lines = [
+    `  <meta property="og:type" content="${escapeHtml(type)}">`,
+    `  <meta property="og:title" content="${escapeHtml(title)}">`,
+    `  <meta property="og:description" content="${escapeHtml(description)}">`,
+    `  <meta name="description" content="${escapeHtml(description)}">`,
+    `  <meta name="twitter:card" content="summary_large_image">`,
+    `  <meta name="twitter:title" content="${escapeHtml(title)}">`,
+    `  <meta name="twitter:description" content="${escapeHtml(description)}">`,
+  ];
+  if (imageUrl) {
+    lines.push(`  <meta property="og:image" content="${escapeHtml(imageUrl)}">`);
+    lines.push(`  <meta name="twitter:image" content="${escapeHtml(imageUrl)}">`);
+  }
+  return lines.join("\n");
+}
+
+// ── Hero section ──────────────────────────────────────────────────────────────
+
+function buildHeroSection(cfg: SiteConfig, rootPath: string): string {
+  if (!cfg.siteDescription) return "";
+  const coverSrc = `${rootPath}${escapeHtml(cfg.coverImage)}`;
+  const subscribeLine = cfg.feedUrl
+    ? `\n      <a class="hero-subscribe" href="${escapeHtml(cfg.feedUrl)}">📻 Podcastを購読する</a>`
+    : "";
+  return `<section class="hero">
+  <img class="hero-cover" src="${coverSrc}" alt="${escapeHtml(cfg.siteTitle)} cover">
+  <div class="hero-body">
+    <p class="hero-title">${escapeHtml(cfg.siteTitle)}</p>
+    <p class="hero-desc">${escapeHtml(cfg.siteDescription)}</p>${subscribeLine}
+  </div>
+</section>`;
+}
+
+// ── Featured section ──────────────────────────────────────────────────────────
+
+function buildFeaturedSection(
+  articles: ArticleMeta[],
+  episodeMap: Map<string, string>,
+): string {
+  const withAudio = articles.filter((a) => episodeMap.has(a.title));
+  const candidates = withAudio.length >= 3
+    ? withAudio.slice(0, 3)
+    : [...withAudio, ...articles.filter((a) => !episodeMap.has(a.title))].slice(0, 3);
+
+  if (candidates.length === 0) return "";
+
+  const cards = candidates
+    .map(({ slug, date, title }) => {
+      const audioUrl = episodeMap.get(title);
+      const audioLine = audioUrl
+        ? `\n      <a class="card-audio" href="${escapeHtml(audioUrl)}">🎧 このエピソードを聴く</a>`
+        : "";
+      return `    <div class="featured-card">
+      <span class="card-date">${date}</span>
+      <a class="card-title" href="articles/${encodeURIComponent(slug)}.html">${escapeHtml(title)}</a>${audioLine}
+    </div>`;
+    })
+    .join("\n");
+
+  return `<div class="featured-section">
+  <p class="section-title">🆕 最新エピソード</p>
+  <div class="featured-grid">
+${cards}
+  </div>
+</div>`;
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+
+function buildFooter(cfg: SiteConfig, articleCount: number): string {
+  const year = new Date().getFullYear();
+  const rssLink = cfg.feedUrl
+    ? `<a href="${escapeHtml(cfg.feedUrl)}">📻 RSS</a>`
+    : "";
+  const countPart = `${articleCount} articles`;
+  const copyright = `© ${year} ${escapeHtml(cfg.siteTitle)}`;
+  const parts = [rssLink, countPart, copyright].filter(Boolean).join(" · ");
+  return `<span>${parts}</span>`;
+}
+
 // ── Page builders ─────────────────────────────────────────────────────────────
 
 function buildIndexContent(
   articles: ArticleMeta[],
-  episodeMap: Map<string, string>
+  episodeMap: Map<string, string>,
 ): string {
-  const items = articles
+  const featuredHtml = buildFeaturedSection(articles, episodeMap);
+
+  const cards = articles
     .map(({ slug, date, title }) => {
       const audioUrl = episodeMap.get(title);
-      const playBadge = audioUrl
-        ? ` <a class="play-badge" href="${escapeHtml(audioUrl)}" title="ポッドキャストを聴く">🎧 聴く</a>`
+      const audioLine = audioUrl
+        ? `\n      <a class="card-audio" href="${escapeHtml(audioUrl)}">🎧 聴く</a>`
         : "";
-      return `    <li>
-      <span class="date">${date}</span>
-      <a class="article-link" href="articles/${encodeURIComponent(slug)}.html">${escapeHtml(title)}</a>${playBadge}
-    </li>`;
+      return `  <div class="article-card">
+    <span class="card-date">${date}</span>
+    <a class="card-title" href="articles/${encodeURIComponent(slug)}.html">${escapeHtml(title)}</a>${audioLine}
+  </div>`;
     })
     .join("\n");
 
-  return `<h1>Articles</h1>\n<ul class="article-list">\n${items}\n</ul>`;
+  const searchScript = `<script>
+(function() {
+  var input = document.getElementById('article-search');
+  var noResults = document.getElementById('no-results');
+  input.addEventListener('input', function() {
+    var q = input.value.toLowerCase();
+    var cards = document.querySelectorAll('#article-grid .article-card');
+    var found = 0;
+    cards.forEach(function(c) {
+      var title = c.querySelector('.card-title').textContent.toLowerCase();
+      var match = title.indexOf(q) !== -1;
+      c.style.display = match ? '' : 'none';
+      if (match) found++;
+    });
+    noResults.style.display = found === 0 && q.length > 0 ? 'block' : 'none';
+  });
+})();
+</script>`;
+
+  return `${featuredHtml}<p class="section-title">すべての記事 (${articles.length}件)</p>
+<div class="search-box">
+  <input type="search" id="article-search" placeholder="🔍 記事を検索..." autocomplete="off">
+</div>
+<div id="article-grid" class="article-grid">
+${cards}
+</div>
+<p class="no-results" id="no-results">該当する記事が見つかりませんでした。</p>
+${searchScript}`;
 }
 
 async function buildArticleContent(
   article: ArticleMeta,
-  episodeMap: Map<string, string>
+  episodeMap: Map<string, string>,
 ): Promise<string> {
   const html = await marked(article.content);
   const metaLine = article.date
@@ -222,6 +349,15 @@ async function build() {
   fs.mkdirSync(ARTICLES_OUT_DIR, { recursive: true });
   console.log(`Building ${articles.length} articles...`);
 
+  // Copy public/ assets to dist/web/
+  const publicDir = path.resolve("public");
+  if (fs.existsSync(publicDir)) {
+    for (const f of fs.readdirSync(publicDir)) {
+      fs.copyFileSync(path.join(publicDir, f), path.join(OUT_DIR, f));
+    }
+    console.log("  copied public/ assets");
+  }
+
   const rssHeaderLink = cfg.feedUrl
     ? `<a class="rss-link" href="${escapeHtml(cfg.feedUrl)}">📻 Podcast RSS</a>`
     : "";
@@ -229,7 +365,15 @@ async function build() {
     ? `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(cfg.siteTitle)}" href="${escapeHtml(cfg.feedUrl)}">`
     : "";
 
+  const coverImageUrl = cfg.siteUrl && cfg.coverImage
+    ? `${cfg.siteUrl}/${cfg.coverImage}`
+    : "";
+
+  const footerContent = buildFooter(cfg, articles.length);
+
   // Index page
+  const indexOgpMeta = buildOgpMeta(cfg.siteTitle, cfg.siteDescription, coverImageUrl);
+  const heroSection = buildHeroSection(cfg, "");
   const indexContent = buildIndexContent(articles, episodeMap);
   const indexHtml = renderTemplate(template, {
     PAGE_TITLE: cfg.siteTitle,
@@ -237,6 +381,9 @@ async function build() {
     SITE_TITLE: cfg.siteTitle,
     RSS_FEED_TAG: rssFeedTag,
     RSS_HEADER_LINK: rssHeaderLink,
+    OGP_META: indexOgpMeta,
+    HERO_SECTION: heroSection,
+    FOOTER_CONTENT: footerContent,
     CONTENT: indexContent,
   });
   fs.writeFileSync(path.join(OUT_DIR, "index.html"), indexHtml);
@@ -245,12 +392,27 @@ async function build() {
   // Individual article pages
   for (const article of articles) {
     const content = await buildArticleContent(article, episodeMap);
+    const articleDesc = article.content
+      .replace(/^#.*$/m, "")
+      .replace(/[#*`\[\]]/g, "")
+      .trim()
+      .slice(0, 120)
+      .replace(/\n+/g, " ");
+    const articleOgpMeta = buildOgpMeta(
+      `${article.title} | ${cfg.siteTitle}`,
+      articleDesc || cfg.siteDescription,
+      coverImageUrl,
+      "article",
+    );
     const html = renderTemplate(template, {
       PAGE_TITLE: `${article.title} | ${cfg.siteTitle}`,
       ROOT_PATH: "../",
       SITE_TITLE: cfg.siteTitle,
       RSS_FEED_TAG: "",
       RSS_HEADER_LINK: rssHeaderLink,
+      OGP_META: articleOgpMeta,
+      HERO_SECTION: "",
+      FOOTER_CONTENT: footerContent,
       CONTENT: content,
     });
     // Save with the raw Unicode filename; encodeURIComponent is used only in href links
