@@ -110,6 +110,9 @@ async function processQueue(): Promise<void> {
           },
           required: ["title", "description", "script"],
         },
+        maxOutputTokens: 16000,
+        temperature: 1.0,
+        thinkingConfig: { thinkingBudget: 0 },
       },
     });
 
