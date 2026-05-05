@@ -14,7 +14,6 @@ const WEB_DIR = path.resolve("web");
 interface SiteConfig {
   siteTitle: string;
   siteDescription: string;
-  feedUrl: string;
   siteUrl: string;
   coverImage: string;
 }
@@ -25,7 +24,6 @@ function loadConfig(): SiteConfig {
   return {
     siteTitle: toml.podcast?.title ?? "Podcaster Articles",
     siteDescription: toml.podcast?.description ?? "",
-    feedUrl: toml.podcast?.feed_url ?? "",
     siteUrl: toml.podcast?.site_url ?? "",
     coverImage: toml.podcast?.cover_image ?? "cover.png",
   };
@@ -71,7 +69,7 @@ marked.use(mathExtension);
  * article title (= markdown H1) → public audio URL.
  * Falls back to an empty map if credentials are unavailable.
  */
-async function fetchArticleAudioMap(_cfg: SiteConfig): Promise<Map<string, string>> {
+async function fetchArticleAudioMap(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   const projectRef = process.env.SUPABASE_PROJECT_REF;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -201,11 +199,11 @@ function buildOgpMeta(
 
 // ── Hero section ──────────────────────────────────────────────────────────────
 
-function buildHeroSection(cfg: SiteConfig, rootPath: string): string {
+function buildHeroSection(cfg: SiteConfig, rootPath: string, feedUrl: string): string {
   if (!cfg.siteDescription) return "";
   const coverSrc = `${rootPath}${escapeHtml(cfg.coverImage)}`;
-  const subscribeLine = cfg.feedUrl
-    ? `\n      <a class="hero-subscribe" href="${escapeHtml(cfg.feedUrl)}">📻 Podcastを購読する</a>`
+  const subscribeLine = feedUrl
+    ? `\n      <a class="hero-subscribe" href="${escapeHtml(feedUrl)}">📻 Podcastを購読する</a>`
     : "";
   return `<section class="hero">
   <img class="hero-cover" src="${coverSrc}" alt="${escapeHtml(cfg.siteTitle)} cover">
@@ -252,10 +250,10 @@ ${cards}
 
 // ── Footer ────────────────────────────────────────────────────────────────────
 
-function buildFooter(cfg: SiteConfig, articleCount: number): string {
+function buildFooter(cfg: SiteConfig, articleCount: number, feedUrl: string): string {
   const year = new Date().getFullYear();
-  const rssLink = cfg.feedUrl
-    ? `<a href="${escapeHtml(cfg.feedUrl)}">📻 RSS</a>`
+  const rssLink = feedUrl
+    ? `<a href="${escapeHtml(feedUrl)}">📻 RSS</a>`
     : "";
   const countPart = `${articleCount} articles`;
   const copyright = `© ${year} ${escapeHtml(cfg.siteTitle)}`;
@@ -343,7 +341,11 @@ async function build() {
   const cfg = loadConfig();
   const template = loadTemplate();
   const articles = loadArticles();
-  const episodeMap = await fetchArticleAudioMap(cfg);
+  const projectRef = process.env.SUPABASE_PROJECT_REF;
+  const feedUrl = projectRef
+    ? `https://${projectRef}.supabase.co/storage/v1/object/public/podcast/feed.xml`
+    : "";
+  const episodeMap = await fetchArticleAudioMap();
 
   fs.rmSync(OUT_DIR, { recursive: true, force: true });
   fs.mkdirSync(ARTICLES_OUT_DIR, { recursive: true });
@@ -358,22 +360,22 @@ async function build() {
     console.log("  copied public/ assets");
   }
 
-  const rssHeaderLink = cfg.feedUrl
-    ? `<a class="rss-link" href="${escapeHtml(cfg.feedUrl)}">📻 Podcast RSS</a>`
+  const rssHeaderLink = feedUrl
+    ? `<a class="rss-link" href="${escapeHtml(feedUrl)}">📻 Podcast RSS</a>`
     : "";
-  const rssFeedTag = cfg.feedUrl
-    ? `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(cfg.siteTitle)}" href="${escapeHtml(cfg.feedUrl)}">`
+  const rssFeedTag = feedUrl
+    ? `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(cfg.siteTitle)}" href="${escapeHtml(feedUrl)}">`
     : "";
 
   const coverImageUrl = cfg.siteUrl && cfg.coverImage
     ? `${cfg.siteUrl}/${cfg.coverImage}`
     : "";
 
-  const footerContent = buildFooter(cfg, articles.length);
+  const footerContent = buildFooter(cfg, articles.length, feedUrl);
 
   // Index page
   const indexOgpMeta = buildOgpMeta(cfg.siteTitle, cfg.siteDescription, coverImageUrl);
-  const heroSection = buildHeroSection(cfg, "");
+  const heroSection = buildHeroSection(cfg, "", feedUrl);
   const indexContent = buildIndexContent(articles, episodeMap);
   const indexHtml = renderTemplate(template, {
     PAGE_TITLE: cfg.siteTitle,
