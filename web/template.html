@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{PAGE_TITLE}}</title>
   {{RSS_FEED_TAG}}
+  {{OGP_META}}
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
@@ -25,7 +26,7 @@
       font-size: 16px;
       line-height: 1.8;
       color: #1a1a1a;
-      background: #fafafa;
+      background: #f7f8fc;
       margin: 0;
       padding: 0 16px;
     }
@@ -34,7 +35,7 @@
     .site-header {
       max-width: 800px;
       margin: 0 auto;
-      padding: 24px 0 16px;
+      padding: 20px 0 16px;
       border-bottom: 1px solid #e0e0e0;
       display: flex;
       align-items: center;
@@ -43,7 +44,7 @@
       gap: 8px;
     }
     .site-title {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 700;
       color: #1a1a1a;
       text-decoration: none;
@@ -58,47 +59,159 @@
     }
     .rss-link:hover { text-decoration: underline; }
 
+    /* ── Hero section ── */
+    .hero {
+      max-width: 800px;
+      margin: 32px auto 0;
+      padding: 0 0 32px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+    .hero-cover {
+      width: 120px;
+      height: 120px;
+      border-radius: 16px;
+      object-fit: cover;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      flex-shrink: 0;
+    }
+    .hero-body { flex: 1; min-width: 200px; }
+    .hero-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      line-height: 1.4;
+    }
+    .hero-desc {
+      font-size: 0.88rem;
+      color: #555;
+      margin: 0 0 16px;
+      line-height: 1.6;
+    }
+    .hero-subscribe {
+      display: inline-block;
+      background: #e07b00;
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .hero-subscribe:hover { background: #c96900; }
+
     /* ── Main content ── */
     main {
       max-width: 800px;
       margin: 0 auto;
-      padding: 32px 0 64px;
+      padding: 32px 0 48px;
     }
 
-    /* ── Article index ── */
-    .article-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .article-list li {
-      padding: 12px 0;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .article-list .date {
+    /* ── Section title ── */
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
       color: #888;
-      font-size: 0.82rem;
-      white-space: nowrap;
+      margin: 0 0 16px;
+    }
+
+    /* ── Featured section ── */
+    .featured-section { margin-bottom: 40px; }
+    .featured-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .featured-card {
+      background: linear-gradient(135deg, #fff8f0 0%, #fffcf8 100%);
+      border: 1px solid #f0d8b0;
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .featured-card:hover {
+      box-shadow: 0 4px 16px rgba(224,123,0,0.15);
+      transform: translateY(-2px);
+    }
+    .featured-card .card-date { font-size: 0.75rem; color: #b07000; }
+    .featured-card .card-title { color: #b85c00; }
+    .featured-card .card-audio { color: #e07b00; }
+
+    /* ── Search box ── */
+    .search-box { margin-bottom: 20px; }
+    .search-box input {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      border: 1px solid #d0d0d0;
+      border-radius: 8px;
+      font-family: inherit;
+      background: #fff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-box input:focus {
+      outline: none;
+      border-color: #1a5fa8;
+      box-shadow: 0 0 0 3px rgba(26,95,168,0.12);
+    }
+    .no-results {
+      color: #888;
+      padding: 16px 0;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    /* ── Article card grid ── */
+    .article-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .article-card {
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .article-card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .card-date {
+      font-size: 0.76rem;
+      color: #999;
       font-variant-numeric: tabular-nums;
     }
-    .article-list .article-link {
-      font-size: 1rem;
-      text-decoration: none;
+    .card-title {
+      font-size: 0.93rem;
       color: #1a5fa8;
+      text-decoration: none;
+      font-weight: 600;
+      line-height: 1.45;
       flex: 1;
     }
-    .article-list .article-link:hover { text-decoration: underline; }
-    .play-badge {
-      font-size: 0.8rem;
+    .card-title:hover { text-decoration: underline; }
+    .card-audio {
+      font-size: 0.78rem;
       color: #e07b00;
       text-decoration: none;
-      white-space: nowrap;
+      margin-top: auto;
     }
-    .play-badge:hover { text-decoration: underline; }
+    .card-audio:hover { text-decoration: underline; }
 
     /* ── Article page ── */
     .back-link { margin-bottom: 24px; font-size: 0.9rem; }
@@ -149,8 +262,77 @@
     }
     .math-display { overflow-x: auto; margin: 1.2em 0; }
 
+    /* ── Footer ── */
+    .site-footer {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px 0 40px;
+      border-top: 1px solid #e0e0e0;
+      color: #999;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .site-footer a { color: #999; text-decoration: none; }
+    .site-footer a:hover { text-decoration: underline; }
+
+    /* ── Responsive ── */
     @media (max-width: 600px) {
-      .article-list li { flex-direction: column; gap: 2px; }
+      .hero { gap: 16px; }
+      .hero-cover { width: 88px; height: 88px; }
+    }
+
+    /* ── Dark mode ── */
+    @media (prefers-color-scheme: dark) {
+      body { background: #111827; color: #e5e7eb; }
+      .site-title { color: #e5e7eb; }
+      .site-header { border-color: #374151; }
+      .hero { border-color: #374151; }
+      .hero-cover { box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+      .hero-desc { color: #9ca3af; }
+      .hero-subscribe { background: #d97706; }
+      .hero-subscribe:hover { background: #b45309; }
+
+      .section-title { color: #6b7280; }
+
+      .featured-card {
+        background: linear-gradient(135deg, #1c1408 0%, #1f2937 100%);
+        border-color: #4a3520;
+      }
+      .featured-card:hover { box-shadow: 0 4px 16px rgba(217,119,6,0.2); }
+      .featured-card .card-date { color: #d97706; }
+      .featured-card .card-title { color: #fbbf24; }
+      .featured-card .card-audio { color: #fbbf24; }
+
+      .search-box input { background: #1f2937; border-color: #374151; color: #e5e7eb; }
+      .search-box input:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(147,197,253,0.12); }
+      .no-results { color: #6b7280; }
+
+      .article-card { background: #1f2937; border-color: #374151; }
+      .article-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+      .card-date { color: #6b7280; }
+      .card-title { color: #93c5fd; }
+      .card-audio { color: #fbbf24; }
+
+      .podcast-player { background: #1c1408; border-color: #4a3520; }
+      .podcast-player p { color: #fbbf24; }
+
+      h1, h2, h3 { color: #f3f4f6; }
+      a { color: #93c5fd; }
+      code { background: #374151; color: #e5e7eb; }
+      pre { background: #1f2937; }
+      th { background: #374151; }
+      th, td { border-color: #4b5563; }
+      blockquote { border-color: #4b5563; color: #9ca3af; }
+
+      .article-meta { color: #6b7280; }
+      .back-link a { color: #93c5fd; }
+
+      .site-footer { border-color: #374151; color: #6b7280; }
+      .site-footer a { color: #6b7280; }
     }
   </style>
 </head>
@@ -159,8 +341,12 @@
     <a href="{{ROOT_PATH}}index.html" class="site-title">{{SITE_TITLE}}</a>
     {{RSS_HEADER_LINK}}
   </header>
+  {{HERO_SECTION}}
   <main>
     {{CONTENT}}
   </main>
+  <footer class="site-footer">
+    {{FOOTER_CONTENT}}
+  </footer>
 </body>
 </html>
