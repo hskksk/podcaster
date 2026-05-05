@@ -85,7 +85,7 @@ async function fetchArticleAudioMap(cfg: SiteConfig): Promise<Map<string, string
     if (error) throw new Error(error.message);
 
     for (const ep of data ?? []) {
-      const articleTitle = (ep.articles as { title: string } | null)?.title;
+      const articleTitle = (ep.articles as unknown as { title: string } | null)?.title;
       const audioFile = (ep.audio_files as Array<{ storage_path: string; status: string }> | null)
         ?.find((af) => af.status === "ready");
       if (articleTitle && audioFile) {
