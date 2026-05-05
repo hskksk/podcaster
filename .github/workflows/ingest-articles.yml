@@ -84,7 +84,10 @@ jobs:
               exit 1
             fi
             echo "Registered note: $NOTE_ID"
-            pnpm tsx scripts/ingest.ts "$NOTE_ID"
+            BASENAME="${FILE#inbox/}"
+            pnpm tsx scripts/ingest.ts "$NOTE_ID" \
+              --route inbox_ci \
+              --meta "{\"inbox_file\":\"$BASENAME\"}"
           done
 
       - name: Move processed files to articles
