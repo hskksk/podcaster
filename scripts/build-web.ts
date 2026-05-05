@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
+import { execSync } from "node:child_process";
 import { marked, type MarkedExtension } from "marked";
 import { parse as parseToml } from "smol-toml";
-import { createClient } from "@supabase/supabase-js";
+import { detectProjectRef } from "./lib/supabase-detect.ts";
 
 const ARTICLES_DIR = path.resolve("articles");
 const OUT_DIR = path.resolve("dist/web");
@@ -66,37 +67,39 @@ marked.use(mathExtension);
 
 /**
  * Queries Supabase for published episodes and returns a map of
- * article title (= markdown H1) → public audio URL.
+ * article filename (= inbox_file from ingest_meta) → public audio URL.
+ * Uses the Supabase CLI (SUPABASE_ACCESS_TOKEN + SUPABASE_PROJECT_REF).
  * Falls back to an empty map if credentials are unavailable.
  */
 async function fetchArticleAudioMap(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
-  const projectRef = process.env.SUPABASE_PROJECT_REF;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!projectRef || !serviceKey) {
-    console.warn("  Supabase credentials not set, skipping podcast audio links.");
-    return map;
-  }
+  const projectRef = detectProjectRef();
   try {
-    const supabaseUrl = `https://${projectRef}.supabase.co`;
-    const storageBase = `${supabaseUrl}/storage/v1/object/public/podcast`;
+    execSync(`supabase link --project-ref ${projectRef}`, {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
 
-    const supabase = createClient(supabaseUrl, serviceKey);
-    const { data, error } = await supabase
-      .from("episodes")
-      .select("articles(ingest_meta), audio_files(storage_path, status)")
-      .in("status", ["audio_ready", "published"]);
+    const sql = `
+SELECT a.ingest_meta->>'inbox_file' AS inbox_file, af.storage_path
+FROM episodes e
+JOIN articles a ON a.id = e.article_id
+JOIN audio_files af ON af.episode_id = e.id
+WHERE e.status IN ('audio_ready', 'published')
+  AND af.status = 'ready'
+  AND a.ingest_meta->>'inbox_file' IS NOT NULL;
+`;
 
-    if (error) throw new Error(error.message);
+    const raw = execSync(`supabase db query --linked -o json`, {
+      input: sql,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
 
-    for (const ep of data ?? []) {
-      const ingestMeta = (ep.articles as unknown as { ingest_meta: Record<string, string> | null } | null)
-        ?.ingest_meta;
-      const inboxFile = ingestMeta?.inbox_file;
-      const audioFile = (ep.audio_files as Array<{ storage_path: string; status: string }> | null)
-        ?.find((af) => af.status === "ready");
-      if (inboxFile && audioFile) {
-        map.set(inboxFile, `${storageBase}/${audioFile.storage_path}`);
+    const storageBase = `https://${projectRef}.supabase.co/storage/v1/object/public/podcast`;
+    const rows = (JSON.parse(raw) as Array<{ inbox_file: string; storage_path: string }>) ?? [];
+    for (const row of rows) {
+      if (row.inbox_file && row.storage_path) {
+        map.set(row.inbox_file, `${storageBase}/${row.storage_path}`);
       }
     }
     console.log(`  fetched ${map.size} episode audio URLs from Supabase`);
@@ -222,16 +225,16 @@ function buildFeaturedSection(
   articles: ArticleMeta[],
   episodeMap: Map<string, string>,
 ): string {
-  const withAudio = articles.filter((a) => episodeMap.has(a.filename));
+  const withAudio = articles.filter((a) => episodeMap.has(path.basename(a.filename)));
   const candidates = withAudio.length >= 3
     ? withAudio.slice(0, 3)
-    : [...withAudio, ...articles.filter((a) => !episodeMap.has(a.filename))].slice(0, 3);
+    : [...withAudio, ...articles.filter((a) => !episodeMap.has(path.basename(a.filename)))].slice(0, 3);
 
   if (candidates.length === 0) return "";
 
   const cards = candidates
     .map(({ slug, date, title, filename }) => {
-      const audioUrl = episodeMap.get(filename);
+      const audioUrl = episodeMap.get(path.basename(filename));
       const audioLine = audioUrl
         ? `\n      <a class="card-audio" href="${escapeHtml(audioUrl)}">🎧 このエピソードを聴く</a>`
         : "";
@@ -273,7 +276,7 @@ function buildIndexContent(
 
   const cards = articles
     .map(({ slug, date, title, filename }) => {
-      const audioUrl = episodeMap.get(filename);
+      const audioUrl = episodeMap.get(path.basename(filename));
       const audioLine = audioUrl
         ? `\n      <a class="card-audio" href="${escapeHtml(audioUrl)}">🎧 聴く</a>`
         : "";
@@ -323,7 +326,7 @@ async function buildArticleContent(
     ? `<p class="article-meta">${article.date}</p>`
     : "";
 
-  const audioUrl = episodeMap.get(article.filename);
+  const audioUrl = episodeMap.get(path.basename(article.filename));
   const playerHtml = audioUrl
     ? `<div class="podcast-player">
   <p>🎧 このエピソードを聴く</p>
