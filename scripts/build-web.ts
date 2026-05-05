@@ -84,17 +84,19 @@ async function fetchArticleAudioMap(): Promise<Map<string, string>> {
     const supabase = createClient(supabaseUrl, serviceKey);
     const { data, error } = await supabase
       .from("episodes")
-      .select("articles(title), audio_files(storage_path, status)")
+      .select("articles(ingest_meta), audio_files(storage_path, status)")
       .in("status", ["audio_ready", "published"]);
 
     if (error) throw new Error(error.message);
 
     for (const ep of data ?? []) {
-      const articleTitle = (ep.articles as unknown as { title: string } | null)?.title;
+      const ingestMeta = (ep.articles as unknown as { ingest_meta: Record<string, string> | null } | null)
+        ?.ingest_meta;
+      const inboxFile = ingestMeta?.inbox_file;
       const audioFile = (ep.audio_files as Array<{ storage_path: string; status: string }> | null)
         ?.find((af) => af.status === "ready");
-      if (articleTitle && audioFile) {
-        map.set(articleTitle.trim(), `${storageBase}/${audioFile.storage_path}`);
+      if (inboxFile && audioFile) {
+        map.set(inboxFile, `${storageBase}/${audioFile.storage_path}`);
       }
     }
     console.log(`  fetched ${map.size} episode audio URLs from Supabase`);
@@ -220,16 +222,16 @@ function buildFeaturedSection(
   articles: ArticleMeta[],
   episodeMap: Map<string, string>,
 ): string {
-  const withAudio = articles.filter((a) => episodeMap.has(a.title));
+  const withAudio = articles.filter((a) => episodeMap.has(a.filename));
   const candidates = withAudio.length >= 3
     ? withAudio.slice(0, 3)
-    : [...withAudio, ...articles.filter((a) => !episodeMap.has(a.title))].slice(0, 3);
+    : [...withAudio, ...articles.filter((a) => !episodeMap.has(a.filename))].slice(0, 3);
 
   if (candidates.length === 0) return "";
 
   const cards = candidates
-    .map(({ slug, date, title }) => {
-      const audioUrl = episodeMap.get(title);
+    .map(({ slug, date, title, filename }) => {
+      const audioUrl = episodeMap.get(filename);
       const audioLine = audioUrl
         ? `\n      <a class="card-audio" href="${escapeHtml(audioUrl)}">🎧 このエピソードを聴く</a>`
         : "";
@@ -270,8 +272,8 @@ function buildIndexContent(
   const featuredHtml = buildFeaturedSection(articles, episodeMap);
 
   const cards = articles
-    .map(({ slug, date, title }) => {
-      const audioUrl = episodeMap.get(title);
+    .map(({ slug, date, title, filename }) => {
+      const audioUrl = episodeMap.get(filename);
       const audioLine = audioUrl
         ? `\n      <a class="card-audio" href="${escapeHtml(audioUrl)}">🎧 聴く</a>`
         : "";
@@ -321,7 +323,7 @@ async function buildArticleContent(
     ? `<p class="article-meta">${article.date}</p>`
     : "";
 
-  const audioUrl = episodeMap.get(article.title);
+  const audioUrl = episodeMap.get(article.filename);
   const playerHtml = audioUrl
     ? `<div class="podcast-player">
   <p>🎧 このエピソードを聴く</p>
