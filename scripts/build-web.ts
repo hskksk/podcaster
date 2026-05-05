@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import { marked, type MarkedExtension } from "marked";
 import { parse as parseToml } from "smol-toml";
+import { createClient } from "@supabase/supabase-js";
+import { detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
 
 const ARTICLES_DIR = path.resolve("articles");
 const OUT_DIR = path.resolve("dist/web");
@@ -59,46 +61,40 @@ const mathExtension: MarkedExtension = {
 
 marked.use(mathExtension);
 
-// ── RSS feed parsing ─────────────────────────────────────────────────────────
-
-function unescapeXml(s: string): string {
-  return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
+// ── Supabase: article title → audio URL mapping ──────────────────────────────
 
 /**
- * Returns a map of article title → audio URL parsed from the RSS feed.
- * Uses <podcaster:articleTitle> (original article H1) for exact matching.
- * Falls back to episode <title> if the custom element is absent (older feed).
+ * Queries Supabase for published episodes and returns a map of
+ * article title (= markdown H1) → public audio URL.
+ * Falls back to an empty map if credentials are unavailable.
  */
-async function fetchEpisodeMap(feedUrl: string): Promise<Map<string, string>> {
+async function fetchArticleAudioMap(cfg: SiteConfig): Promise<Map<string, string>> {
   const map = new Map<string, string>();
-  if (!feedUrl) return map;
   try {
-    const res = await fetch(feedUrl, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) {
-      console.warn(`RSS fetch failed: HTTP ${res.status}`);
-      return map;
-    }
-    const xml = await res.text();
-    for (const [, item] of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
-      const audioUrl = item.match(/<enclosure[^>]+url="([^"]+)"/)?.[1];
-      if (!audioUrl) continue;
-      // Prefer podcaster:articleTitle (original article H1); fall back to episode title
-      const articleTitleRaw =
-        item.match(/<podcaster:articleTitle>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/podcaster:articleTitle>/)?.[1] ??
-        item.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/)?.[1];
-      if (articleTitleRaw) {
-        map.set(unescapeXml(articleTitleRaw).trim(), unescapeXml(audioUrl));
+    const projectRef = detectProjectRef();
+    const serviceKey = detectServiceKey(projectRef);
+    const supabaseUrl = `https://${projectRef}.supabase.co`;
+    const storageBase = `${supabaseUrl}/storage/v1/object/public/podcast`;
+
+    const supabase = createClient(supabaseUrl, serviceKey);
+    const { data, error } = await supabase
+      .from("episodes")
+      .select("articles(title), audio_files(storage_path, status)")
+      .in("status", ["audio_ready", "published"]);
+
+    if (error) throw new Error(error.message);
+
+    for (const ep of data ?? []) {
+      const articleTitle = (ep.articles as { title: string } | null)?.title;
+      const audioFile = (ep.audio_files as Array<{ storage_path: string; status: string }> | null)
+        ?.find((af) => af.status === "ready");
+      if (articleTitle && audioFile) {
+        map.set(articleTitle.trim(), `${storageBase}/${audioFile.storage_path}`);
       }
     }
-    console.log(`  fetched ${map.size} episodes from RSS feed`);
+    console.log(`  fetched ${map.size} episode audio URLs from Supabase`);
   } catch (err) {
-    console.warn(`RSS unavailable, skipping podcast links: ${err}`);
+    console.warn(`Supabase unavailable, skipping podcast audio links: ${err}`);
   }
   return map;
 }
@@ -220,8 +216,9 @@ async function build() {
   const cfg = loadConfig();
   const template = loadTemplate();
   const articles = loadArticles();
-  const episodeMap = await fetchEpisodeMap(cfg.feedUrl);
+  const episodeMap = await fetchArticleAudioMap(cfg);
 
+  fs.rmSync(OUT_DIR, { recursive: true, force: true });
   fs.mkdirSync(ARTICLES_OUT_DIR, { recursive: true });
   console.log(`Building ${articles.length} articles...`);
 
@@ -248,7 +245,6 @@ async function build() {
   // Individual article pages
   for (const article of articles) {
     const content = await buildArticleContent(article, episodeMap);
-    const slug = encodeURIComponent(article.slug);
     const html = renderTemplate(template, {
       PAGE_TITLE: `${article.title} | ${cfg.siteTitle}`,
       ROOT_PATH: "../",
@@ -257,8 +253,9 @@ async function build() {
       RSS_HEADER_LINK: rssHeaderLink,
       CONTENT: content,
     });
-    fs.writeFileSync(path.join(ARTICLES_OUT_DIR, `${slug}.html`), html);
-    console.log(`  wrote dist/web/articles/${slug}.html`);
+    // Save with the raw Unicode filename; encodeURIComponent is used only in href links
+    fs.writeFileSync(path.join(ARTICLES_OUT_DIR, `${article.slug}.html`), html);
+    console.log(`  wrote dist/web/articles/${article.slug}.html`);
   }
 
   console.log("Done. Output: dist/web/");
