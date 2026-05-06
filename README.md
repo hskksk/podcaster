@@ -284,7 +284,7 @@ pnpm cli logs --status failure         # 失敗ログのみ
 pnpm cli logs --episode b2c3d4e5-...   # 特定エピソードのみ
 ```
 
-#### `requeue script|audio|rss <id>`
+#### `requeue ... <id>`
 
 パイプラインの特定ステージを再実行します。ジョブが失敗したときや再処理が必要な場合に使います。
 実行前にレコードの存在確認を行い、確認プロンプトを表示します（`--yes` で省略可）。
@@ -294,6 +294,8 @@ pnpm cli logs --episode b2c3d4e5-...   # 特定エピソードのみ
 | `script` | `articles` | `script-queue` | `{ article_id }` |
 | `audio` | `episodes` | `audio-queue` | `{ episode_id }` |
 | `rss` | `episodes` | `rss-queue` | `{ episode_id }` |
+| `regenerate-script` | `episodes` | `script-queue` | `{ article_id, target_episode_id, regenerate: true }` |
+| `regenerate-audio` | `episodes` | `audio-queue` | `{ episode_id, regenerate: true }` |
 
 ```bash
 # 台本生成からやり直す（記事 ID を指定）
@@ -304,6 +306,12 @@ pnpm cli requeue audio b2c3d4e5-f6a7-...
 
 # RSS 更新だけ再実行する（確認プロンプトをスキップ）
 pnpm cli requeue rss b2c3d4e5-f6a7-... --yes
+
+# 既存 episode を維持したまま script→audio→rss を再生成する
+pnpm cli requeue regenerate-script b2c3d4e5-f6a7-...
+
+# 既存 episode を維持したまま audio→rss を再生成する
+pnpm cli requeue regenerate-audio b2c3d4e5-f6a7-...
 ```
 
 ```

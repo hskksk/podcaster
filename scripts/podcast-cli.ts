@@ -6,9 +6,11 @@
 //   pnpm cli download audio <id>
 //   pnpm cli status <article_id>
 //   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
-//   pnpm cli requeue script <article_id>  [--yes]
-//   pnpm cli requeue audio  <episode_id>  [--yes]
-//   pnpm cli requeue rss    <episode_id>  [--yes]
+//   pnpm cli requeue script            <article_id> [--yes]
+//   pnpm cli requeue audio             <episode_id> [--yes]
+//   pnpm cli requeue rss               <episode_id> [--yes]
+//   pnpm cli requeue regenerate-script <episode_id> [--yes]
+//   pnpm cli requeue regenerate-audio  <episode_id> [--yes]
 //   pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
 //   pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]
 
@@ -66,9 +68,11 @@ function usage(): never {
   pnpm cli download audio <id>
   pnpm cli status <article_id>
   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
-  pnpm cli requeue script <article_id>  [--yes]
-  pnpm cli requeue audio  <episode_id>  [--yes]
-  pnpm cli requeue rss    <episode_id>  [--yes]
+  pnpm cli requeue script            <article_id> [--yes]
+  pnpm cli requeue audio             <episode_id> [--yes]
+  pnpm cli requeue rss               <episode_id> [--yes]
+  pnpm cli requeue regenerate-script <episode_id> [--yes]
+  pnpm cli requeue regenerate-audio  <episode_id> [--yes]
   pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
   pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]`);
   process.exit(1);
@@ -509,8 +513,32 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
     await requeueRecord("rss-queue", { episode_id: id }, yes);
+  } else if (sub === "regenerate-script") {
+    const { data, error } = await db
+      .from("episodes")
+      .select("id, title, article_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) { console.error("Error:", error.message); process.exit(1); }
+    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
+    if (!data.article_id) {
+      console.error(`Episode has no article_id: ${id}`);
+      process.exit(1);
+    }
+    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
+    await requeueRecord(
+      "script-queue",
+      { article_id: data.article_id, target_episode_id: id, regenerate: true },
+      yes,
+    );
+  } else if (sub === "regenerate-audio") {
+    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    if (error) { console.error("Error:", error.message); process.exit(1); }
+    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
+    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
+    await requeueRecord("audio-queue", { episode_id: id, regenerate: true }, yes);
   } else {
-    console.error("Usage: pnpm cli requeue script|audio|rss <id> [--yes]");
+    console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio <id> [--yes]");
     process.exit(1);
   }
 }
@@ -546,7 +574,7 @@ if (cmd === "list") {
   });
 } else if (cmd === "requeue") {
   if (!sub || !param) {
-    console.error("Usage: pnpm cli requeue script|audio|rss <id> [--yes]");
+    console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio <id> [--yes]");
     process.exit(1);
   }
   await requeueCmd(sub, param, flagBool("--yes"));

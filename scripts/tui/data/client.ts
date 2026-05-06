@@ -24,6 +24,11 @@ export type ClientActionResult = {
   path?: string;
 };
 
+type RequeueOptions = {
+  regenerate?: boolean;
+  targetEpisodeId?: string;
+};
+
 export class DataClient {
   private db: SupabaseClient | null = null;
   private isMock: boolean;
@@ -120,7 +125,11 @@ export class DataClient {
     return data as Script | null;
   }
 
-  async requeue(type: "script" | "audio" | "rss", id: string): Promise<ClientActionResult> {
+  async requeue(
+    type: "script" | "audio" | "rss",
+    id: string,
+    options?: RequeueOptions,
+  ): Promise<ClientActionResult> {
     if (this.isMock) {
       console.log(`Mock: Requeued ${type} for ${id}`);
       return { success: true };
@@ -128,7 +137,15 @@ export class DataClient {
     if (!this.db) return { success: false, error: "DB not initialized" };
 
     const queueName = type === "script" ? "script-queue" : type === "audio" ? "audio-queue" : "rss-queue";
-    const msg = type === "script" ? { article_id: id } : { episode_id: id };
+    const msg: Record<string, unknown> = type === "script"
+      ? { article_id: id }
+      : { episode_id: id };
+    if (options?.regenerate) {
+      msg.regenerate = true;
+    }
+    if (type === "script" && options?.targetEpisodeId) {
+      msg.target_episode_id = options.targetEpisodeId;
+    }
 
     const { error } = await this.db.rpc("pgmq_send", { queue_name: queueName, msg });
     if (error) return { success: false, error: error.message };

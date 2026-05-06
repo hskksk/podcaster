@@ -137,6 +137,45 @@ export const EpisodesView: React.FC<Props> = ({
         });
         return;
       }
+      if (input === 'g') {
+        if (!ep.article_id) {
+          showToast('No article_id — cannot regenerate script', 'error');
+          return;
+        }
+        openConfirm({
+          title: 'Regenerate script (same episode)',
+          message: `Regenerate script and continue to audio/rss?\n${ep.title}\nepisode_id: ${ep.id}`,
+          onConfirm: async () => {
+            const r = await client.requeue('script', ep.article_id!, {
+              regenerate: true,
+              targetEpisodeId: ep.id
+            });
+            if (!r.success) {
+              showToast(r.error ?? 'Regenerate script failed', 'error');
+              return;
+            }
+            showToast('Script regeneration queued', 'success');
+            await onRefresh();
+          }
+        });
+        return;
+      }
+      if (input === 'r') {
+        openConfirm({
+          title: 'Regenerate audio (same episode)',
+          message: `Regenerate audio and update rss?\n${ep.title}\nepisode_id: ${ep.id}`,
+          onConfirm: async () => {
+            const r = await client.requeue('audio', ep.id, { regenerate: true });
+            if (!r.success) {
+              showToast(r.error ?? 'Regenerate audio failed', 'error');
+              return;
+            }
+            showToast('Audio regeneration queued', 'success');
+            await onRefresh();
+          }
+        });
+        return;
+      }
       if (input === 'd') {
         openConfirm({
           title: 'Download audio',
@@ -272,7 +311,7 @@ export const EpisodesView: React.FC<Props> = ({
       <Box flexGrow={1} minWidth={0} borderStyle="single" paddingX={1} flexDirection="column" borderColor={focus === 'detail' ? "cyan" : "gray"}>
         <Box borderStyle="single" justifyContent="center" flexShrink={0} borderColor={focus === 'detail' ? "cyan" : "gray"}>
           <Text bold color={focus === 'detail' ? "cyan" : "white"}>
-            DETAIL {focus === 'detail' ? '● j/k │ p play / s stop │ Ctrl+S script / A audio / Y rss / D download' : ''}
+            DETAIL {focus === 'detail' ? '● j/k │ p play / s stop │ Ctrl+S script / A audio / Y rss / G regen-script / R regen-audio / D download' : ''}
           </Text>
         </Box>
         {selectedEpisode ? (
