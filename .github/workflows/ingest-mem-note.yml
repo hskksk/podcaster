@@ -5,7 +5,11 @@ on:
     inputs:
       mem_note_id:
         description: 'mem.ai note ID to ingest'
-        required: true
+        required: false
+        type: string
+      mem_note_url:
+        description: 'mem.ai note URL to ingest (ID is extracted from /notes/<id>)'
+        required: false
         type: string
 
 jobs:
@@ -36,8 +40,35 @@ jobs:
       - name: Create .env
         run: echo "MEM_API_KEY=${{ secrets.MEM_API_KEY }}" > .env
 
+      - name: Resolve mem.ai note ID
+        id: resolve_note_id
+        run: |
+          set -euo pipefail
+
+          INPUT_ID="${{ inputs.mem_note_id }}"
+          INPUT_URL="${{ inputs.mem_note_url }}"
+
+          if [ -z "$INPUT_ID" ] && [ -z "$INPUT_URL" ]; then
+            echo "Either mem_note_id or mem_note_url must be provided." >&2
+            exit 1
+          fi
+
+          NOTE_ID="$INPUT_ID"
+          if [ -z "$NOTE_ID" ]; then
+            URL_NO_QUERY="${INPUT_URL%%\?*}"
+            NOTE_ID="${URL_NO_QUERY##*/}"
+          fi
+
+          if ! [[ "$NOTE_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+            echo "Resolved mem_note_id is invalid: $NOTE_ID" >&2
+            exit 1
+          fi
+
+          echo "Resolved mem_note_id=$NOTE_ID"
+          echo "mem_note_id=$NOTE_ID" >> "$GITHUB_OUTPUT"
+
       - name: Ingest mem.ai note
         run: |
-          pnpm tsx scripts/ingest.ts "${{ inputs.mem_note_id }}" \
+          pnpm tsx scripts/ingest.ts "${{ steps.resolve_note_id.outputs.mem_note_id }}" \
             --route mem_dispatch \
             --meta "{\"workflow_run_id\":\"${{ github.run_id }}\"}"
