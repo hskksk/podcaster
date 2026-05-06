@@ -1,6 +1,6 @@
 ---
 name: podcast-research
-description: Research a topic deeply, save a markdown report to articles/, register to mem.ai, and trigger the podcast ingest pipeline
+description: Research a topic deeply, save a markdown report to inbox/, and create a PR to trigger the podcast ingest pipeline
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -8,17 +8,11 @@ allowed-tools:
   - WebFetch
   - Write
   - Read
-  - Bash(which mem-ai*)
-  - Bash(which supabase*)
-  - Bash(mem-ai --json note create*)
-  - Bash(pnpm tsx scripts/ingest.ts*)
-  - Bash(pnpm exec mem-ai*)
   - Bash(git checkout -b article/*)
-  - Bash(git add articles/*)
+  - Bash(git add inbox/*)
   - Bash(git commit -m*)
   - Bash(git push -u origin article/*)
   - Bash(gh pr create*)
-  - Bash(jq -r*)
 metadata:
   audience: podcast producers
 ---
@@ -28,8 +22,8 @@ metadata:
 指定されたテーマについて深く調査し、ポッドキャスト台本生成用の詳細な Markdown レポートを作成します。
 
 1. **多角的なリサーチ**: 概要・背景・詳細・最新動向・具体例・関連トピックを複数回のWeb検索で収集
-2. **レポート保存**: `./articles/` に Markdown として保存する
-3. **mem.ai 登録 → ingest 投入**: mem.ai に登録して note ID を取得し、ingest エンドポイントへ POST する
+2. **レポート保存**: `./inbox/` に Markdown として保存する
+3. **PR 作成**: origin/main ベースのブランチを作成して PR を出す（マージされると CI が自動で ingest を実行）
 
 ## When to use me
 
@@ -98,46 +92,17 @@ metadata:
 （調査に使用したURL一覧）
 ```
 
-### ステップ 4: 環境を確認して mem.ai 登録 or articles/ に保存
+### ステップ 4: inbox/ に保存して PR を作成する
 
 ユーザーの確認は不要。以下を順に実行する。
 
-#### 4-A: 環境チェック
-
-```bash
-MEM_AI_OK=$(which mem-ai 2>/dev/null && [ -n "$MEM_API_KEY" ] && echo "yes" || echo "no")
-SUPABASE_OK=$(which supabase 2>/dev/null && echo "yes" || echo "no")
-```
-
-- `MEM_AI_OK` と `SUPABASE_OK` がともに `"yes"` → **4-B（直接 ingest フロー）**へ
-- どちらか `"no"` → **4-C（articles/ + PR フロー）**へ
-
-#### 4-B: 直接 ingest フロー（ツールが使える場合）
-
-1. `./articles/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する
-2. `mem-ai` CLI でレポートを mem.ai に登録し、note ID を取得する:
-   ```bash
-   NOTE_ID=$(mem-ai --json note create \
-     --file ./articles/<ファイル名> \
-     --collection-title "Podcast Drafts" \
-     | jq -r '.id')
-   ```
-3. `scripts/ingest.ts` で ingest エンドポイントへ POST する（URL とサービスキーは supabase CLI から自動取得）:
-   ```bash
-   pnpm tsx scripts/ingest.ts "$NOTE_ID"
-   ```
-4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
-5. POST 結果（article_id）を報告し、「mem.ai にレポートを登録し、ポッドキャスト生成パイプラインに投入しました。」と伝える
-
-#### 4-C: articles/ + PR フロー（ツールが使えない場合）
-
-1. `./articles/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する（articles/ ではなく inbox/）
+1. `./inbox/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する
 2. origin/main ベースの新しいブランチを作成してコミット:
    ```bash
    FILENAME="YYYYMMDD_HHMMSS_<topic-slug>.md"
    BRANCH="article/YYYYMMDD_HHMMSS_<topic-slug>"
    git checkout -b "$BRANCH" origin/main
-   git add "articles/$FILENAME"
+   git add "inbox/$FILENAME"
    git commit -m "Add podcast research article: <テーマ>"
    git push -u origin "$BRANCH"
    ```
@@ -147,16 +112,20 @@ SUPABASE_OK=$(which supabase 2>/dev/null && echo "yes" || echo "no")
      gh pr create \
        --base main \
        --title "Podcast Research: <テーマ>" \
-       --body "## 概要\n\n記事を main にマージすると CI/CD が自動で mem.ai 登録 → ingest を実行します。\n\n- ファイル: inbox/$FILENAME\n- テーマ: <テーマ>"
+       --body "## 概要
+
+記事を main にマージすると CI が自動で ingest を実行します。
+
+- ファイル: inbox/$FILENAME
+- テーマ: <テーマ>"
      ```
    - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
 4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
-5. 「`articles/` に保存して PR を作成しました。main にマージされると CI/CD が自動で mem.ai 登録 → ingest を実行します。」と伝える
+5. 「`inbox/` に保存して PR を作成しました。main にマージされると CI が自動で ingest を実行します。」と伝える
 
 ### 注意事項
 
-- inbox, articles ディレクトリは存在しない場合は作成する
+- inbox ディレクトリは存在しない場合は作成する
 - ファイル名のテーマ部分はファイルシステムで安全な文字のみ使用する（スペースはアンダースコアに）
 - リサーチ中は進捗を都度報告する（「〇〇について調査中...」など）
 - 情報の信頼性が低い場合はその旨を明記する
-- mem.ai のコンテンツ上限は 200,000 文字（UTF-8）。レポートが超える場合は冒頭に警告コメントを追記して truncate する

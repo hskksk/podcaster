@@ -1,27 +1,21 @@
 #!/usr/bin/env tsx
 // Usage:
 //   pnpm tsx scripts/ingest.ts <mem-note-id>
-//   pnpm tsx scripts/ingest.ts --file <path> [--collection-title <title>]...
-//   pnpm tsx scripts/ingest.ts <path-to-existing-file> [--collection-title <title>]...
-//   (file modes default to --collection-title "Podcast Drafts" when none given)
+//   pnpm tsx scripts/ingest.ts --file <path>
+//   pnpm tsx scripts/ingest.ts <path-to-existing-file>
 
 import dotenv from "dotenv";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { detectLocalStatus, detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
-import {
-  createMemNoteFromFile,
-  DEFAULT_MEM_COLLECTION_TITLE,
-} from "./lib/create-mem-note-from-file.js";
 
 dotenv.config({ path: ".env" });
 
 type ParsedArgs =
   | { mode: "id"; memNoteId: string; route?: string; meta?: Record<string, unknown> }
-  | { mode: "file"; filePath: string; collectionTitles: string[]; route?: string; meta?: Record<string, unknown> };
+  | { mode: "file"; filePath: string; route?: string; meta?: Record<string, unknown> };
 
 function parseArgs(argv: string[]): ParsedArgs {
-  const collectionTitles: string[] = [];
   let filePath: string | undefined;
   let memNoteId: string | undefined;
   let route: string | undefined;
@@ -35,13 +29,6 @@ function parseArgs(argv: string[]): ParsedArgs {
         console.error("Missing value for --file");
         process.exit(1);
       }
-    } else if (a === "--collection-title") {
-      const v = argv[++i];
-      if (!v) {
-        console.error("Missing value for --collection-title");
-        process.exit(1);
-      }
-      collectionTitles.push(v);
     } else if (a === "--route") {
       route = argv[++i];
       if (!route) {
@@ -77,39 +64,30 @@ function parseArgs(argv: string[]): ParsedArgs {
   }
 
   if (filePath) {
-    return { mode: "file", filePath, collectionTitles, route, meta };
+    return { mode: "file", filePath, route, meta };
   }
 
   if (memNoteId) {
     const maybeFile = path.resolve(memNoteId);
     if (existsSync(maybeFile)) {
-      return { mode: "file", filePath: maybeFile, collectionTitles, route, meta };
+      return { mode: "file", filePath: maybeFile, route, meta };
     }
     return { mode: "id", memNoteId, route, meta };
   }
 
   console.error(`Usage:
   pnpm tsx scripts/ingest.ts <mem-note-id> [--route <route>] [--meta <json>]
-  pnpm tsx scripts/ingest.ts --file <path> [--collection-title <title>]... [--route <route>] [--meta <json>]
-  pnpm tsx scripts/ingest.ts <path-to-existing-file> [--route <route>] [--meta <json>]
-  (default collection for file modes: ${DEFAULT_MEM_COLLECTION_TITLE})`);
+  pnpm tsx scripts/ingest.ts --file <path> [--route <route>] [--meta <json>]
+  pnpm tsx scripts/ingest.ts <path-to-existing-file> [--route <route>] [--meta <json>]`);
   process.exit(1);
 }
 
-const parsed = parseArgs(process.argv.slice(2));
-let memNoteId: string;
-if (parsed.mode === "file") {
-  console.log(`Registering file in mem.ai: ${parsed.filePath}`);
-  try {
-    memNoteId = createMemNoteFromFile(parsed.filePath, parsed.collectionTitles);
-  } catch (e) {
-    console.error((e as Error).message);
-    process.exit(1);
-  }
-  console.log(`mem_note_id: ${memNoteId}`);
-} else {
-  memNoteId = parsed.memNoteId;
+function extractTitle(content: string): string | undefined {
+  const match = content.match(/^#\s+(.+)$/m);
+  return match?.[1]?.trim();
 }
+
+const parsed = parseArgs(process.argv.slice(2));
 
 const target = process.env.TARGET ?? "remote";
 
@@ -131,15 +109,31 @@ const headers: Record<string, string> = {
   ...(authKey ? { Authorization: `Bearer ${authKey}` } : {}),
 };
 
+let postBody: Record<string, unknown>;
+
+if (parsed.mode === "file") {
+  console.log(`Ingesting file: ${parsed.filePath}`);
+  const content = readFileSync(parsed.filePath, "utf-8");
+  const title = extractTitle(content);
+  postBody = {
+    content,
+    ...(title !== undefined ? { title } : {}),
+    ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
+    ...(parsed.meta !== undefined ? { ingest_meta: parsed.meta } : {}),
+  };
+} else {
+  postBody = {
+    mem_note_id: parsed.memNoteId,
+    ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
+    ...(parsed.meta !== undefined ? { ingest_meta: parsed.meta } : {}),
+  };
+}
+
 console.log(`POST ${ingestUrl}`);
 const res = await fetch(ingestUrl, {
   method: "POST",
   headers,
-  body: JSON.stringify({
-    mem_note_id: memNoteId,
-    ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
-    ...(parsed.meta !== undefined ? { ingest_meta: parsed.meta } : {}),
-  }),
+  body: JSON.stringify(postBody),
 });
 const json = await res.json();
 console.log(`Status: ${res.status}`, JSON.stringify(json));

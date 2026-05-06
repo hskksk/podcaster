@@ -62,30 +62,16 @@ jobs:
       - uses: supabase/setup-cli@v2
         if: steps.get-inbox.outputs.added_count != '0'
 
-      - name: Create .env
-        if: steps.get-inbox.outputs.added_count != '0'
-        run: echo "MEM_API_KEY=${{ secrets.MEM_API_KEY }}" > .env
-
-      - name: Register to mem.ai and ingest
+      - name: Ingest files
         if: steps.get-inbox.outputs.added_count != '0'
         env:
-          MEM_API_KEY: ${{ secrets.MEM_API_KEY }}
           INBOX_FILES: ${{ steps.get-inbox.outputs.files }}
         run: |
           echo "$INBOX_FILES" | while IFS= read -r FILE; do
             [ -z "$FILE" ] && continue
             echo "=== Processing: $FILE ==="
-            NOTE_ID=$(pnpm exec mem-ai --json note create \
-              --file "$FILE" \
-              --collection-title "Podcast Drafts" \
-              | jq -r '.id')
-            if [ -z "$NOTE_ID" ] || [ "$NOTE_ID" = "null" ]; then
-              echo "ERROR: Failed to register $FILE to mem.ai"
-              exit 1
-            fi
-            echo "Registered note: $NOTE_ID"
             BASENAME="${FILE#inbox/}"
-            pnpm tsx scripts/ingest.ts "$NOTE_ID" \
+            pnpm tsx scripts/ingest.ts --file "$FILE" \
               --route inbox_ci \
               --meta "{\"inbox_file\":\"$BASENAME\"}"
           done
