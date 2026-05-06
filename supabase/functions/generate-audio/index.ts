@@ -136,6 +136,7 @@ async function processQueue(): Promise<void> {
   if (!msg) return;
 
   const episodeId = msg.message.episode_id as string;
+  const regenerate = msg.message.regenerate === true;
   const startMs = Date.now();
   let memNoteId: string | null = null;
   let script: { id: string; content: string } | null = null;
@@ -147,7 +148,9 @@ async function processQueue(): Promise<void> {
       .select("id, content, episodes(mem_note_id)")
       .eq("episode_id", episodeId)
       .eq("status", "ready")
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     if (scriptErr || !scriptRow) throw new Error(`Script not found for episode: ${episodeId}`);
     script = { id: scriptRow.id, content: scriptRow.content };
     memNoteId = (scriptRow.episodes as { mem_note_id?: string } | null)?.mem_note_id ?? null;
@@ -324,7 +327,9 @@ async function processQueue(): Promise<void> {
         tts_selection: ttsSelection,
       },
     });
-    await db.from("episodes").update({ status: "failed" }).eq("id", episodeId);
+    if (!regenerate) {
+      await db.from("episodes").update({ status: "failed" }).eq("id", episodeId);
+    }
     await queueDelete(db, "audio-queue", msg.msg_id);
     await writeLog(db, {
       queue_name: "audio-queue",
