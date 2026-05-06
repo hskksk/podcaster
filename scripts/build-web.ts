@@ -19,13 +19,27 @@ interface SiteConfig {
   coverImage: string;
 }
 
+function deriveGithubPagesUrl(): string {
+  try {
+    const result = execSync("gh repo view --json nameWithOwner", {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const { nameWithOwner } = JSON.parse(result) as { nameWithOwner: string };
+    const [owner, repo] = nameWithOwner.split("/");
+    return `https://${owner}.github.io/${repo}`;
+  } catch {
+    return "";
+  }
+}
+
 function loadConfig(): SiteConfig {
   const raw = fs.readFileSync(path.resolve("config.toml"), "utf8");
   const toml = parseToml(raw) as Record<string, Record<string, string>>;
   return {
     siteTitle: toml.podcast?.title ?? "Podcaster Articles",
     siteDescription: toml.podcast?.description ?? "",
-    siteUrl: toml.podcast?.site_url ?? "",
+    siteUrl: toml.podcast?.site_url || deriveGithubPagesUrl(),
     coverImage: toml.podcast?.cover_image ?? "cover.png",
   };
 }
