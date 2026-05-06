@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
 
   let body: {
     title?: string;
+    content?: string;
     mem_note_id?: string;
     source_url?: string;
     ingest_route?: string;
@@ -44,20 +45,28 @@ Deno.serve(async (req) => {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  if (!body.mem_note_id?.trim()) {
-    return new Response("Missing mem_note_id", { status: 400 });
+  if (!body.content?.trim() && !body.mem_note_id?.trim()) {
+    return new Response("Missing content or mem_note_id", { status: 400 });
   }
 
-  let memData: { content: string; title?: string };
-  try {
-    memData = await fetchMemContent(body.mem_note_id.trim());
-  } catch (err) {
-    const status = (err as { status?: number }).status ?? 500;
-    console.error("fetchMemContent failed:", err);
-    return new Response((err as Error).message, { status });
-  }
+  let content: string;
+  let resolvedTitle: string | undefined;
 
-  const { content, title: memTitle } = memData;
+  if (body.content?.trim()) {
+    content = body.content.trim();
+    resolvedTitle = body.title;
+  } else {
+    let memData: { content: string; title?: string };
+    try {
+      memData = await fetchMemContent(body.mem_note_id!.trim());
+    } catch (err) {
+      const status = (err as { status?: number }).status ?? 500;
+      console.error("fetchMemContent failed:", err);
+      return new Response((err as Error).message, { status });
+    }
+    content = memData.content;
+    resolvedTitle = memData.title || body.title;
+  }
 
   if (!content.trim()) {
     return new Response("Missing content", { status: 400 });
@@ -67,11 +76,11 @@ Deno.serve(async (req) => {
   const { data: article, error } = await db
     .from("articles")
     .insert({
-      title: memTitle || body.title || "Untitled",
+      title: resolvedTitle || "Untitled",
       content: content.trim(),
       source_url: body.source_url,
       source: "webhook",
-      mem_note_id: body.mem_note_id.trim(),
+      mem_note_id: body.mem_note_id?.trim() ?? null,
       ingest_route: body.ingest_route ?? null,
       ingest_meta: body.ingest_meta ?? null,
     })

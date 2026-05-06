@@ -6,13 +6,13 @@
 //   (file modes default to --collection-title "Podcast Drafts" when none given)
 
 import dotenv from "dotenv";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { detectLocalStatus, detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
 import {
   createMemNoteFromFile,
   DEFAULT_MEM_COLLECTION_TITLE,
-} from "./lib/create-mem-note-from-file.js";
+} from "./lib/create-mem-note-from-file.ts";
 
 dotenv.config({ path: ".env" });
 
@@ -96,20 +96,12 @@ function parseArgs(argv: string[]): ParsedArgs {
   process.exit(1);
 }
 
-const parsed = parseArgs(process.argv.slice(2));
-let memNoteId: string;
-if (parsed.mode === "file") {
-  console.log(`Registering file in mem.ai: ${parsed.filePath}`);
-  try {
-    memNoteId = createMemNoteFromFile(parsed.filePath, parsed.collectionTitles);
-  } catch (e) {
-    console.error((e as Error).message);
-    process.exit(1);
-  }
-  console.log(`mem_note_id: ${memNoteId}`);
-} else {
-  memNoteId = parsed.memNoteId;
+function extractTitle(content: string): string | undefined {
+  const match = content.match(/^#\s+(.+)$/m);
+  return match?.[1]?.trim();
 }
+
+const parsed = parseArgs(process.argv.slice(2));
 
 const target = process.env.TARGET ?? "remote";
 
@@ -131,15 +123,40 @@ const headers: Record<string, string> = {
   ...(authKey ? { Authorization: `Bearer ${authKey}` } : {}),
 };
 
+let postBody: Record<string, unknown>;
+
+if (parsed.mode === "file") {
+  console.log(`Registering file in mem.ai: ${parsed.filePath}`);
+  let memNoteId: string;
+  try {
+    memNoteId = createMemNoteFromFile(parsed.filePath, parsed.collectionTitles);
+  } catch (e) {
+    console.error((e as Error).message);
+    process.exit(1);
+  }
+  console.log(`mem_note_id: ${memNoteId}`);
+  const content = readFileSync(parsed.filePath, "utf-8");
+  const title = extractTitle(content);
+  postBody = {
+    content,
+    mem_note_id: memNoteId,
+    ...(title !== undefined ? { title } : {}),
+    ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
+    ...(parsed.meta !== undefined ? { ingest_meta: parsed.meta } : {}),
+  };
+} else {
+  postBody = {
+    mem_note_id: parsed.memNoteId,
+    ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
+    ...(parsed.meta !== undefined ? { ingest_meta: parsed.meta } : {}),
+  };
+}
+
 console.log(`POST ${ingestUrl}`);
 const res = await fetch(ingestUrl, {
   method: "POST",
   headers,
-  body: JSON.stringify({
-    mem_note_id: memNoteId,
-    ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
-    ...(parsed.meta !== undefined ? { ingest_meta: parsed.meta } : {}),
-  }),
+  body: JSON.stringify(postBody),
 });
 const json = await res.json();
 console.log(`Status: ${res.status}`, JSON.stringify(json));
