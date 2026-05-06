@@ -62,9 +62,14 @@ jobs:
       - uses: supabase/setup-cli@v2
         if: steps.get-inbox.outputs.added_count != '0'
 
+      - name: Create .env
+        if: steps.get-inbox.outputs.added_count != '0'
+        run: echo "MEM_API_KEY=${{ secrets.MEM_API_KEY }}" > .env
+
       - name: Ingest files
         if: steps.get-inbox.outputs.added_count != '0'
         env:
+          MEM_API_KEY: ${{ secrets.MEM_API_KEY }}
           INBOX_FILES: ${{ steps.get-inbox.outputs.files }}
         run: |
           echo "$INBOX_FILES" | while IFS= read -r FILE; do
@@ -72,6 +77,7 @@ jobs:
             echo "=== Processing: $FILE ==="
             BASENAME="${FILE#inbox/}"
             pnpm tsx scripts/ingest.ts --file "$FILE" \
+              --collection-title "Podcast Drafts" \
               --route inbox_ci \
               --meta "{\"inbox_file\":\"$BASENAME\"}"
           done
