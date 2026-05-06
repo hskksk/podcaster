@@ -9,18 +9,28 @@
 //   pnpm cli requeue script <article_id>  [--yes]
 //   pnpm cli requeue audio  <episode_id>  [--yes]
 //   pnpm cli requeue rss    <episode_id>  [--yes]
+//   pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
+//   pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]
 
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
-import { writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { writeFile, mkdir, readFile } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
+import { parse as parseToml } from "smol-toml";
 import {
   detectLocalStatus,
   detectProjectRef,
   detectServiceKey,
 } from "./lib/supabase-detect.ts";
 import { printTable, printLong, shortId, truncate, fmtDate } from "./lib/table.ts";
+import {
+  DEFAULT_SYSTEM_INSTRUCTION,
+  DEFAULT_USER_PROMPT_TEMPLATE,
+  generateScriptFromArticle,
+} from "../shared/script-generation.ts";
 
 dotenv.config({ path: ".env" });
 
@@ -58,11 +68,124 @@ function usage(): never {
   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
   pnpm cli requeue script <article_id>  [--yes]
   pnpm cli requeue audio  <episode_id>  [--yes]
-  pnpm cli requeue rss    <episode_id>  [--yes]`);
+  pnpm cli requeue rss    <episode_id>  [--yes]
+  pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
+  pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]`);
   process.exit(1);
 }
 
 if (!cmd) usage();
+
+type LocalGeneratorTomlConfig = {
+  generator?: {
+    model?: unknown;
+    system_instruction?: unknown;
+    prompt_template?: unknown;
+  };
+};
+
+function readGeneratorConfigFromToml(): {
+  model: string;
+  systemInstruction: string;
+  promptTemplate: string;
+} {
+  const configPath = resolve("config.toml");
+  if (!existsSync(configPath)) {
+    throw new Error("config.toml not found.");
+  }
+  const raw = parseToml(readFileSync(configPath, "utf8")) as LocalGeneratorTomlConfig;
+  const section = raw.generator ?? {};
+
+  const model = typeof section.model === "string" && section.model.trim()
+    ? section.model
+    : "gemini-2.5-flash";
+  const systemInstruction = typeof section.system_instruction === "string" && section.system_instruction.trim()
+    ? section.system_instruction
+    : DEFAULT_SYSTEM_INSTRUCTION;
+  const promptTemplate = typeof section.prompt_template === "string" && section.prompt_template.trim()
+    ? section.prompt_template
+    : DEFAULT_USER_PROMPT_TEMPLATE;
+
+  return { model, systemInstruction, promptTemplate };
+}
+
+async function generateScriptCli(
+  content: string,
+  includeThoughts: boolean,
+  verbose: boolean,
+): Promise<void> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error("GEMINI_API_KEY is required");
+    process.exit(1);
+  }
+  const generatorConfig = readGeneratorConfigFromToml();
+  const prompt = generatorConfig.promptTemplate.replace("{content}", content);
+
+  if (verbose) {
+    console.error("[generate-script] system_instruction:");
+    console.error(generatorConfig.systemInstruction);
+    console.error("[generate-script] prompt:");
+    console.error(prompt);
+  }
+
+  const gemini = new GoogleGenAI({ apiKey });
+  const generated = await generateScriptFromArticle({
+    articleContent: content,
+    model: generatorConfig.model,
+    systemInstruction: generatorConfig.systemInstruction,
+    promptTemplate: generatorConfig.promptTemplate,
+    thinkingLevel: ThinkingLevel.HIGH,
+    includeThoughts,
+    generateContent: (params) => gemini.models.generateContent(params),
+  });
+
+  const output: Record<string, unknown> = {
+    title: generated.title,
+    description: generated.description,
+    script: generated.script,
+    token_usage: generated.tokenUsage,
+  };
+  if (includeThoughts) {
+    output.thoughts = generated.thoughts;
+  }
+  console.log(JSON.stringify(output, null, 2));
+}
+
+if (cmd === "generate-script") {
+  const content = flagStr("--content");
+  const filePath = flagStr("--file");
+  const includeThoughts = flagBool("--with-thoughts");
+  const verbose = flagBool("--verbose");
+
+  if (!content && !filePath) {
+    console.error("Usage: pnpm cli generate-script --content \"<article>\" [--with-thoughts] [--verbose]");
+    console.error("   or: pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]");
+    process.exit(1);
+  }
+
+  if (content && filePath) {
+    console.error("Specify either --content or --file, not both.");
+    process.exit(1);
+  }
+
+  const articleContent = filePath
+    ? await readFile(filePath, "utf-8")
+    : content ?? "";
+
+  if (!articleContent.trim()) {
+    console.error("Article content is empty.");
+    process.exit(1);
+  }
+
+  try {
+    await generateScriptCli(articleContent, includeThoughts, verbose);
+  } catch (error) {
+    console.error("Failed to generate script:", error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+  process.exit(0);
+}
 
 // ---------------------------------------------------------------------------
 // Supabase client
