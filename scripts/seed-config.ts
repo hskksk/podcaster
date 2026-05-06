@@ -41,9 +41,22 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
   tts: {
     model: string;
     instructions: string;
+    selection_mode?: "fixed" | "random";
     speakers: {
-      host: { name: string; voice_name: string };
-      cohost: { name: string; voice_name: string };
+      host: {
+        name: string;
+        voice_name: string;
+        tone?: string;
+        voice_options?: string[];
+        tone_options?: string[];
+      };
+      cohost: {
+        name: string;
+        voice_name: string;
+        tone?: string;
+        voice_options?: string[];
+        tone_options?: string[];
+      };
     };
   };
   generator: {
@@ -78,10 +91,23 @@ const defaults: Record<string, unknown> = {
   "podcast.cover_url": coverUrl,
   "tts.model": config.tts.model,
   "tts.instructions": config.tts.instructions,
+  "tts.selection_mode": config.tts.selection_mode ?? "fixed",
   "tts.host.name": config.tts.speakers.host.name,
   "tts.host.voice": config.tts.speakers.host.voice_name,
+  "tts.host.tone": config.tts.speakers.host.tone ?? "落ち着いて信頼感のある進行",
+  "tts.host.voice_options": config.tts.speakers.host.voice_options ?? [config.tts.speakers.host.voice_name],
+  "tts.host.tone_options": config.tts.speakers.host.tone_options ?? [
+    config.tts.speakers.host.tone ?? "落ち着いて信頼感のある進行",
+  ],
   "tts.cohost.name": config.tts.speakers.cohost.name,
   "tts.cohost.voice": config.tts.speakers.cohost.voice_name,
+  "tts.cohost.tone": config.tts.speakers.cohost.tone ?? "親しみやすく好奇心のある受け答え",
+  "tts.cohost.voice_options": config.tts.speakers.cohost.voice_options ?? [
+    config.tts.speakers.cohost.voice_name,
+  ],
+  "tts.cohost.tone_options": config.tts.speakers.cohost.tone_options ?? [
+    config.tts.speakers.cohost.tone ?? "親しみやすく好奇心のある受け答え",
+  ],
   "generator.model": config.generator.model,
 };
 

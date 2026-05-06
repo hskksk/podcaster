@@ -8,16 +8,67 @@ site_url = "https://hskksk.github.io/podcaster"
 model = "gemini-2.5-flash-preview-tts"
 response_format = "wav"
 instructions = "これは2人のスピーカーによるポッドキャストの会話です。自然な会話のトーンで、スピーカーの切り替わりに適切な間を置いて話してください。Hostが議論をリードし、CoHostは質問をしながら興味深く反応します。"
+selection_mode = "fixed" # fixed | random
 
 [tts.speakers.host]
 name = "Host"
 voice_name = "Charon"
 description = "ポッドキャストの進行役。テーマをわかりやすく解説し、会話をリードする。"
+tone = "落ち着いて信頼感のある進行"
+voice_options = [
+  "Charon",
+  "Achird",
+  "Puck",
+  "Kore",
+  "Fenrir",
+  "Aoede",
+  "Leda",
+  "Orus",
+  "Zephyr",
+  "Callirrhoe",
+]
+tone_options = [
+  "とても楽しげで勢いのある進行",
+  "明るく元気でテンポの良い進行",
+  "落ち着いて信頼感のある進行",
+  "柔らかく丁寧で包み込む進行",
+  "若々しくフレッシュな進行",
+  "知的でクールな進行",
+  "熱量高めでワクワク感のある進行",
+  "深夜ラジオのようにしっとりした進行",
+  "親密で距離の近い進行",
+  "上品でゆったりした進行",
+]
 
 [tts.speakers.cohost]
 name = "CoHost"
 voice_name = "Achird"
 description = "コ・ホスト。聴衆の代わりに質問し、ホストの話に興味深く反応する。"
+tone = "親しみやすく好奇心のある受け答え"
+voice_options = [
+  "Achird",
+  "Charon",
+  "Puck",
+  "Kore",
+  "Fenrir",
+  "Aoede",
+  "Leda",
+  "Orus",
+  "Zephyr",
+  "Callirrhoe",
+]
+tone_options = [
+  "とても楽しげでリアクション豊かな受け答え",
+  "明るく元気で軽快な受け答え",
+  "落ち着いたトーンで的確な受け答え",
+  "柔らかく優しい受け答え",
+  "若々しくフレッシュな受け答え",
+  "知的でロジカルな受け答え",
+  "驚きや発見を素直に表す受け答え",
+  "深夜ラジオのように穏やかな受け答え",
+  "親密でフランクな受け答え",
+  "上品で聞き心地の良い受け答え",
+]
 
 [generator]
 model = "gemini-3-flash-preview"

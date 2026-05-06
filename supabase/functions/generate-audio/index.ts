@@ -58,6 +58,47 @@ function sanitizeAudioResponse(responseJson: Record<string, unknown>): Record<st
   return sanitized;
 }
 
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function normalizeSelectionMode(value: unknown): "fixed" | "random" {
+  return value === "random" ? "random" : "fixed";
+}
+
+function resolveSelectedValue(
+  mode: "fixed" | "random",
+  options: string[],
+  fixedValue: string,
+): string {
+  const normalizedFixed = fixedValue.trim();
+  if (mode === "fixed") {
+    return normalizedFixed || options[0] || "";
+  }
+  if (options.length === 0) {
+    return normalizedFixed;
+  }
+  const index = Math.floor(Math.random() * options.length);
+  return options[index];
+}
+
+function buildToneInstructions(
+  hostName: string,
+  hostTone: string,
+  cohostName: string,
+  cohostTone: string,
+): string {
+  return [
+    `話し方の追加指定:`,
+    `- ${hostName}: ${hostTone}`,
+    `- ${cohostName}: ${cohostTone}`,
+  ].join("\n");
+}
+
 function pcmToWav(
   pcm: Uint8Array,
   sampleRate: number,
@@ -98,6 +139,7 @@ async function processQueue(): Promise<void> {
   const startMs = Date.now();
   let memNoteId: string | null = null;
   let script: { id: string; content: string } | null = null;
+  let ttsSelection: Record<string, unknown> | null = null;
 
   try {
     const { data: scriptRow, error: scriptErr } = await db
@@ -114,14 +156,60 @@ async function processQueue(): Promise<void> {
     const gemini = new GoogleGenAI({ apiKey: Deno.env.get("GEMINI_API_KEY")! });
 
     const ttsModel = cfg["tts.model"] || "gemini-2.5-flash-preview-tts";
+    const selectionMode = normalizeSelectionMode(cfg["tts.selection_mode"]);
     const hostName = cfg["tts.host.name"] || "Host";
-    const hostVoice = cfg["tts.host.voice"] || "Charon";
     const cohostName = cfg["tts.cohost.name"] || "CoHost";
-    const cohostVoice = cfg["tts.cohost.voice"] || "Achird";
-    const instructions = cfg["tts.instructions"];
+    const hostVoiceOptions = normalizeStringArray(cfg["tts.host.voice_options"]);
+    const cohostVoiceOptions = normalizeStringArray(cfg["tts.cohost.voice_options"]);
+    const hostToneOptions = normalizeStringArray(cfg["tts.host.tone_options"]);
+    const cohostToneOptions = normalizeStringArray(cfg["tts.cohost.tone_options"]);
 
-    const scriptWithInstructions = instructions
-      ? `${instructions}\n\n${script.content}`
+    const hostVoice = resolveSelectedValue(
+      selectionMode,
+      hostVoiceOptions,
+      cfg["tts.host.voice"] || "Charon",
+    );
+    const cohostVoice = resolveSelectedValue(
+      selectionMode,
+      cohostVoiceOptions,
+      cfg["tts.cohost.voice"] || "Achird",
+    );
+    const hostTone = resolveSelectedValue(
+      selectionMode,
+      hostToneOptions,
+      cfg["tts.host.tone"] || "落ち着いて信頼感のある進行",
+    );
+    const cohostTone = resolveSelectedValue(
+      selectionMode,
+      cohostToneOptions,
+      cfg["tts.cohost.tone"] || "親しみやすく好奇心のある受け答え",
+    );
+    const instructions = cfg["tts.instructions"];
+    const toneInstructions = buildToneInstructions(
+      hostName,
+      hostTone,
+      cohostName,
+      cohostTone,
+    );
+    const mergedInstructions = [instructions, toneInstructions]
+      .filter((text): text is string => typeof text === "string" && text.trim().length > 0)
+      .join("\n\n");
+    ttsSelection = {
+      mode: selectionMode,
+      host: {
+        name: hostName,
+        voice: hostVoice,
+        tone: hostTone,
+      },
+      cohost: {
+        name: cohostName,
+        voice: cohostVoice,
+        tone: cohostTone,
+      },
+    };
+
+    const scriptWithInstructions = mergedInstructions
+      ? `${mergedInstructions}\n\n${script.content}`
       : script.content;
 
     const response = await gemini.models.generateContent({
@@ -149,6 +237,10 @@ async function processQueue(): Promise<void> {
     const responseJson = toJsonObject(response);
     const tokenUsage = extractTokenUsage(responseJson);
     const sanitizedResponse = sanitizeAudioResponse(responseJson);
+    const sanitizedResponseWithSelection = {
+      ...sanitizedResponse,
+      tts_selection: ttsSelection,
+    };
 
     const audioPart = response.candidates?.[0]?.content?.parts?.[0];
     if (!audioPart?.inlineData?.data) {
@@ -202,7 +294,7 @@ async function processQueue(): Promise<void> {
       mime_type: uploadMime,
       status: "ready",
       llm_usage: tokenUsage,
-      llm_response: sanitizedResponse,
+      llm_response: sanitizedResponseWithSelection,
     });
     await db.from("episodes").update({ status: "audio_ready" }).eq("id", episodeId);
 
@@ -227,7 +319,10 @@ async function processQueue(): Promise<void> {
       status: "failed",
       error: String(err),
       llm_usage: {},
-      llm_response: { error: String(err) },
+      llm_response: {
+        error: String(err),
+        tts_selection: ttsSelection,
+      },
     });
     await db.from("episodes").update({ status: "failed" }).eq("id", episodeId);
     await queueDelete(db, "audio-queue", msg.msg_id);

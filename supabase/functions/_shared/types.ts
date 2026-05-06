@@ -47,10 +47,17 @@ export interface PodcastConfigMap {
   "podcast.cover_url": string;
   "tts.model": string;
   "tts.instructions": string;
+  "tts.selection_mode": "fixed" | "random";
   "tts.host.name": string;
   "tts.host.voice": string;
+  "tts.host.tone": string;
+  "tts.host.voice_options": string[];
+  "tts.host.tone_options": string[];
   "tts.cohost.name": string;
   "tts.cohost.voice": string;
+  "tts.cohost.tone": string;
+  "tts.cohost.voice_options": string[];
+  "tts.cohost.tone_options": string[];
   "generator.model": string;
 }
 
