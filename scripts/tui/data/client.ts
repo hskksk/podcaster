@@ -26,7 +26,6 @@ export type ClientActionResult = {
 
 type RequeueOptions = {
   regenerate?: boolean;
-  targetEpisodeId?: string;
 };
 
 export class DataClient {
@@ -138,13 +137,10 @@ export class DataClient {
 
     const queueName = type === "script" ? "script-queue" : type === "audio" ? "audio-queue" : "rss-queue";
     const msg: Record<string, unknown> = type === "script"
-      ? { article_id: id }
+      ? { episode_id: id }
       : { episode_id: id };
     if (options?.regenerate) {
       msg.regenerate = true;
-    }
-    if (type === "script" && options?.targetEpisodeId) {
-      msg.target_episode_id = options.targetEpisodeId;
     }
 
     const { error } = await this.db.rpc("pgmq_send", { queue_name: queueName, msg });

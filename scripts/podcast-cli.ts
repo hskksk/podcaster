@@ -6,7 +6,7 @@
 //   pnpm cli download audio <id>
 //   pnpm cli status <article_id>
 //   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
-//   pnpm cli requeue script            <article_id> [--yes]
+//   pnpm cli requeue script            <episode_id> [--yes]
 //   pnpm cli requeue audio             <episode_id> [--yes]
 //   pnpm cli requeue rss               <episode_id> [--yes]
 //   pnpm cli requeue regenerate-script <episode_id> [--yes]
@@ -68,7 +68,7 @@ function usage(): never {
   pnpm cli download audio <id>
   pnpm cli status <article_id>
   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
-  pnpm cli requeue script            <article_id> [--yes]
+  pnpm cli requeue script            <episode_id> [--yes]
   pnpm cli requeue audio             <episode_id> [--yes]
   pnpm cli requeue rss               <episode_id> [--yes]
   pnpm cli requeue regenerate-script <episode_id> [--yes]
@@ -496,11 +496,11 @@ async function requeueRecord(
 
 async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> {
   if (sub === "script") {
-    const { data, error } = await db.from("articles").select("id, title").eq("id", id).maybeSingle();
+    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
-    if (!data) { console.error(`Article not found: ${id}`); process.exit(1); }
-    console.log(`Article: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord("script-queue", { article_id: id }, yes);
+    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
+    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
+    await requeueRecord("script-queue", { episode_id: id }, yes);
   } else if (sub === "audio") {
     const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
@@ -516,19 +516,15 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
   } else if (sub === "regenerate-script") {
     const { data, error } = await db
       .from("episodes")
-      .select("id, title, article_id")
+      .select("id, title")
       .eq("id", id)
       .maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
-    if (!data.article_id) {
-      console.error(`Episode has no article_id: ${id}`);
-      process.exit(1);
-    }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
     await requeueRecord(
       "script-queue",
-      { article_id: data.article_id, target_episode_id: id, regenerate: true },
+      { episode_id: id, regenerate: true },
       yes,
     );
   } else if (sub === "regenerate-audio") {
