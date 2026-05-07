@@ -34,7 +34,7 @@ async function processQueue(): Promise<void> {
     const { data: episodes, error: fetchErr } = await db
       .from("episodes")
       .select("id, title, description, mem_note_id, created_at, published_at, audio_files(storage_path, mime_type), articles(title)")
-      .in("status", ["audio_ready", "published"])
+      .in("status", ["audio_ready", "published", "rss_failed"])
       .order("created_at", { ascending: false });
     if (fetchErr) throw new Error(`Episodes fetch failed: ${fetchErr.message}`);
 
@@ -61,7 +61,7 @@ async function processQueue(): Promise<void> {
       .from("episodes")
       .update({ status: "published", published_at: new Date().toISOString() })
       .eq("id", episodeId)
-      .in("status", ["audio_ready"]);
+      .in("status", ["audio_ready", "rss_failed"]);
 
     await queueDelete(db, "rss-queue", msg.msg_id);
     await writeLog(db, {
@@ -75,6 +75,11 @@ async function processQueue(): Promise<void> {
     console.log(`RSS updated, episode ${episodeId} published`);
   } catch (err) {
     console.error(`update-rss failed for episode ${episodeId}:`, err);
+    await db
+      .from("episodes")
+      .update({ status: "rss_failed" })
+      .eq("id", episodeId)
+      .in("status", ["audio_ready", "rss_failed"]);
     await queueDelete(db, "rss-queue", msg.msg_id);
     await writeLog(db, {
       queue_name: "rss-queue",

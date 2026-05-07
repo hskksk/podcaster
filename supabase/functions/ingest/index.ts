@@ -92,7 +92,23 @@ Deno.serve(async (req) => {
     return new Response("Internal error", { status: 500 });
   }
 
-  await queueSend(db, "script-queue", { article_id: article.id });
+  const { data: episode, error: episodeErr } = await db
+    .from("episodes")
+    .insert({
+      article_id: article.id,
+      mem_note_id: body.mem_note_id?.trim() ?? null,
+      title: (resolvedTitle || "Untitled").slice(0, 20),
+      description: "",
+      status: "ingested",
+    })
+    .select("id")
+    .single();
+  if (episodeErr || !episode) {
+    console.error("episodes insert failed:", episodeErr);
+    return new Response("Internal error", { status: 500 });
+  }
 
-  return Response.json({ ok: true, article_id: article.id }, { status: 202 });
+  await queueSend(db, "script-queue", { episode_id: episode.id });
+
+  return Response.json({ ok: true, article_id: article.id, episode_id: episode.id }, { status: 202 });
 });

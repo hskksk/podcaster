@@ -143,6 +143,9 @@ async function processQueue(): Promise<void> {
   let ttsSelection: Record<string, unknown> | null = null;
 
   try {
+    const { error: runningErr } = await db.from("episodes").update({ status: "audio_running" }).eq("id", episodeId);
+    if (runningErr) throw new Error(`Failed to set audio_running: ${runningErr.message}`);
+
     const { data: scriptRow, error: scriptErr } = await db
       .from("scripts")
       .select("id, content, episodes(mem_note_id)")
@@ -327,9 +330,7 @@ async function processQueue(): Promise<void> {
         tts_selection: ttsSelection,
       },
     });
-    if (!regenerate) {
-      await db.from("episodes").update({ status: "failed" }).eq("id", episodeId);
-    }
+    await db.from("episodes").update({ status: "audio_failed" }).eq("id", episodeId);
     await queueDelete(db, "audio-queue", msg.msg_id);
     await writeLog(db, {
       queue_name: "audio-queue",

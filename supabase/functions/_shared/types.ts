@@ -16,7 +16,16 @@ export interface Episode {
   mem_note_id?: string;
   title: string;
   description: string;
-  status: "script_ready" | "audio_ready" | "published" | "failed";
+  status:
+    | "ingested"
+    | "script_running"
+    | "script_ready"
+    | "script_failed"
+    | "audio_running"
+    | "audio_ready"
+    | "audio_failed"
+    | "published"
+    | "rss_failed";
   created_at: string;
   published_at?: string;
 }
