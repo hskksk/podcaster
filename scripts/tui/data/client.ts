@@ -136,15 +136,15 @@ export class DataClient {
     if (!this.db) return { success: false, error: "DB not initialized" };
 
     const msg: Record<string, unknown> = {
-      episode_id: id,
-      start_from: type,
+      episodeId: id,
+      startFrom: type,
       trigger: "manual",
     };
     if (options?.regenerate) msg.regenerate = true;
 
     const { error } = await this.db
       .schema("pgflow")
-      .rpc("start_flow", { flow_slug: "episode_pipeline_v1", input: msg });
+      .rpc("start_flow", { flow_slug: "craftEpisode", input: msg });
     if (error) return { success: false, error: error.message };
     return { success: true };
   }

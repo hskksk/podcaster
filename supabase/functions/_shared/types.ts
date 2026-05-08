@@ -69,11 +69,3 @@ export interface PodcastConfigMap {
   "tts.cohost.tone_options": string[];
   "generator.model": string;
 }
-
-export interface QueueMessage {
-  msg_id: bigint;
-  read_ct: number;
-  enqueued_at: string;
-  vt: string;
-  message: Record<string, unknown>;
-}

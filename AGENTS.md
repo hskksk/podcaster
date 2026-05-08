@@ -4,7 +4,7 @@
 
 ### Overview
 
-Podcaster is an AI podcast generator built on Supabase. Article text flows through a 4-stage Edge Function pipeline: `ingest -> generate-script -> generate-audio -> update-rss`, connected by pgmq queues. See `CLAUDE.md` and `README.md` for full architecture and command reference.
+Podcaster is an AI podcast generator built on Supabase. Article text flows through a pgflow pipeline: `ingest -> craftEpisode(generateScript -> generateAudio -> updateRss)`. Execution is handled by `craft-episode-worker`, and flow definitions are served by `functions/pgflow` ControlPlane. See `CLAUDE.md` and `README.md` for full architecture and command reference.
 
 ### Prerequisites (already installed in the VM environment)
 
@@ -35,7 +35,7 @@ pnpm functions:serve
 - **`supabase status` flag**: Use `-o json` (not `--json`) with this CLI version to get machine-readable output.
 - **Edge Functions return immediately**: All worker functions use `EdgeRuntime.waitUntil()` and return `{"ok":true}` right away. Check `processing_logs` via `TARGET=local pnpm cli logs` to see actual results.
 - **No test suite**: `pnpm typecheck` is the primary correctness check. There are no unit/integration tests.
-- **API keys required for full pipeline**: `GEMINI_API_KEY` and `MEM_API_KEY` must be in `.env` for the ingest and generate-* functions to succeed. Without them, ingest returns errors and generate-script fails after reading from the queue.
+- **API keys required for full pipeline**: `GEMINI_API_KEY` and `MEM_API_KEY` must be in `.env` for `ingest` / pgflow stages to succeed. Without them, ingest returns errors and `generateScript` stage fails.
 - **TUI requires TTY**: `pnpm tui` (Ink-based) needs a real terminal with raw mode support. Use `pnpm tui -- --mock` for mock data. It will fail with "Raw mode is not supported" in non-interactive shells.
 - **`TARGET=local`**: Set this env var for CLI/TUI commands to connect to the local Supabase stack instead of remote.
 - **Seed config after fresh start**: Run `TARGET=local pnpm seed:config` after `supabase start` or `supabase db reset` to initialize `podcast_config` and upload `cover.png`.

@@ -40,7 +40,7 @@ pnpm deploy
 
 ```bash
 KEY=$(supabase status --json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
-curl -s http://localhost:54331/functions/v1/pgflow-worker -H "Authorization: Bearer $KEY"
+curl -s http://localhost:54331/functions/v1/craft-episode-worker -H "Authorization: Bearer $KEY"
 ```
 
 ## Architecture
@@ -48,37 +48,31 @@ curl -s http://localhost:54331/functions/v1/pgflow-worker -H "Authorization: Bea
 Article text enters via the `ingest` Edge Function and starts a **pgflow** DAG run:
 
 ```
-ingest -> pgflow.start_flow("episode_pipeline_v1")
+ingest -> pgflow.start_flow("craftEpisode")
        -> generate_script
        -> generate_audio
        -> update_rss
 ```
 
-In production, `pg_cron` triggers `pgflow-worker` every minute. The worker executes step handlers with pgflow retries/timeouts.
+In production, `pgflow_ensure_workers` (created by pgflow migrations) keeps `craft-episode-worker` alive and restarts it when needed.
 
 ### Edge worker pattern
 
-The queue compatibility functions still use `processQueue()`, but the primary path is the pgflow worker:
+The primary execution path is a pgflow worker edge function:
 
 ```ts
-const EpisodePipelineFlow = new Flow({ slug: "episode_pipeline_v1" })
-  .step({ slug: "generate_script" }, async (input) => { ... })
-  .step({ slug: "generate_audio", dependsOn: ["generate_script"] }, async (deps) => { ... })
-  .step({ slug: "update_rss", dependsOn: ["generate_audio"] }, async (deps) => { ... });
+import { EdgeWorker } from "@pgflow/edge-worker";
+import { CraftEpisode } from "../../flows/craft-episode.ts";
 
-EdgeWorker.start(EpisodePipelineFlow, {
-  maxConcurrent: 3,
-  visibilityTimeout: 960,
-});
+EdgeWorker.start(CraftEpisode);
 ```
 
 Shared utilities live in `supabase/functions/_shared/`:
 - `db.ts` — creates a `service_role` Supabase client from env vars
-- `queue.ts` — `queueRead` / `queueSend` / `queueDelete` wrappers over pgmq RPCs (legacy compatibility path)
 - `config.ts` — loads `podcast_config` table as a typed map
 - `types.ts` — shared interfaces (`Article`, `Episode`, `Script`, `AudioFile`, etc.)
 - `logger.ts` — `writeLog()` inserts to `processing_logs`
-- `pipeline-stages.ts` — shared stage implementations used by both queue workers and pgflow worker
+- `pipeline-stages.ts` — shared stage implementations used by pgflow tasks
 
 ### Runtime configuration
 
@@ -86,8 +80,8 @@ Podcast metadata and AI model settings are stored in the `podcast_config` table 
 
 ### Gemini integration
 
-- **Script generation**: `generate-script` calls `gemini.models.generateContent` with `responseMimeType: "application/json"` and a `responseSchema` to force structured output. The script format is `Host: <line>\nCoHost: <line>` repeated.
-- **TTS (audio generation)**: `generate-audio` calls the same API with a multi-speaker TTS model. The response is raw PCM; `pcmToWav()` in the function adds the WAV header before uploading to Storage.
+- **Script generation**: `generateScript` stage calls `gemini.models.generateContent` with `responseMimeType: "application/json"` and a `responseSchema` to force structured output. The script format is `Host: <line>\nCoHost: <line>` repeated.
+- **TTS (audio generation)**: `generateAudio` stage calls the same API with a multi-speaker TTS model. The response is raw PCM; `pcmToWav()` in the stage implementation adds the WAV header before uploading to Storage.
 
 ### TARGET env var
 

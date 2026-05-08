@@ -14,6 +14,7 @@ export interface LogEntry {
 export async function writeLog(db: SupabaseClient, entry: LogEntry): Promise<void> {
   const { error } = await db.from("processing_logs").insert({
     ...entry,
+    queue_name: entry.queue_name ?? "",
     message_id: entry.message_id != null ? Number(entry.message_id) : null,
   });
   if (error) {

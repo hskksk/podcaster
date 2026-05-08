@@ -20,7 +20,7 @@
 ┌─────────────────────┐
 │      ingest         │  mem_note_id 検証 → articles / episodes を作成
 └────────┬────────────┘
-         │ pgflow.start_flow("episode_pipeline_v1")
+         │ pgflow.start_flow("craftEpisode")
          ▼
 ┌─────────────────────┐
 │  generate_script    │  Gemini Flash でホスト/コホスト台本を JSON 生成
@@ -41,8 +41,8 @@ Supabase Storage (公開バケット `podcast`)
   └── cover.png         ← カバー画像
 ```
 
-本番環境では `pg_cron` が毎分 `pgflow-worker` を呼び出します。  
-各ステージのリトライとタイムアウトは pgflow 側で管理されます。
+本番環境では pgflow migration が作成する `pgflow_ensure_workers` cron が  
+`craft-episode-worker` の死活監視と再起動を行います。
 
 ---
 
@@ -70,19 +70,16 @@ podcaster/
 │   │   └── 20260507031744_..._pgflow_step_conditions.sql
 │   ├── flows/
 │   │   ├── index.ts                # pgflow フローのエクスポート
-│   │   └── greet-user.ts           # 例示フロー
+│   │   └── craft-episode.ts        # 本番フロー定義
 │   └── functions/
 │       ├── _shared/
 │       │   ├── db.ts       # Supabase クライアント
-│       │   ├── queue.ts    # pgmq 操作ヘルパー（互換用）
 │       │   ├── pipeline-stages.ts # 各ステージ共通実装
 │       │   ├── config.ts   # podcast_config ローダー
 │       │   └── types.ts    # 共有型定義
 │       ├── ingest/         # Webhook 受信
-│       ├── pgflow-worker/  # pgflow DAG 実行ワーカー
-│       ├── generate-script/# LLM 台本生成
-│       ├── generate-audio/ # TTS 音声生成
-│       └── update-rss/     # RSS フィード更新
+│       ├── craft-episode-worker/ # pgflow 実行ワーカー
+│       └── pgflow/         # pgflow ControlPlane（フロー定義配信/管理）
 ├── .env.example
 ├── package.json
 └── tsconfig.json
@@ -151,14 +148,14 @@ pnpm test:post
 
 ### ワーカーの手動実行
 
-本番では pg_cron が毎分 `pgflow-worker` を自動実行しますが、ローカルでは手動で呼べます。
+本番では `pgflow_ensure_workers` が自動実行しますが、ローカルでは手動で呼べます。
 
 ```bash
 # service_role key を取得
 KEY=$(supabase status --json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
 
-# pgflow worker（フロー実行）
-curl -s http://localhost:54331/functions/v1/pgflow-worker \
+# craft episode worker（フロー実行）
+curl -s http://localhost:54331/functions/v1/craft-episode-worker \
   -H "Authorization: Bearer $KEY"
 ```
 
@@ -270,12 +267,12 @@ d4e5f6a7  b2c3d4e5  audio/b2c3d4e5.wav        audio/wav  ready   2026-04-26 12:1
 
 #### `logs`
 
-処理ログ（`processing_logs` テーブル）を新しい順に一覧表示します。ステージ名・ステータス・エピソード ID でフィルタできます。
+処理ログ（`processing_logs` テーブル）を新しい順に一覧表示します。ステータス・エピソード ID でフィルタできます。
+`queue_name` は移行期間の暫定として空文字で保存しているため、`--queue` フィルタは基本的に使いません。
 
 ```bash
 pnpm cli logs                          # 最新 20 件
 pnpm cli logs --limit 50               # 最新 50 件
-pnpm cli logs --queue pgflow.generate_script     # script ステージのみ
 pnpm cli logs --status failure         # 失敗ログのみ
 pnpm cli logs --episode b2c3d4e5-...   # 特定エピソードのみ
 ```
@@ -287,11 +284,11 @@ pnpm cli logs --episode b2c3d4e5-...   # 特定エピソードのみ
 
 | サブコマンド | 対象テーブル | 開始ステージ | 送信 payload |
 |------------|-----------|------------|----------|
-| `script` | `episodes` | `script` | `{ episode_id, start_from: "script", trigger: "manual" }` |
-| `audio` | `episodes` | `audio` | `{ episode_id, start_from: "audio", trigger: "manual" }` |
-| `rss` | `episodes` | `rss` | `{ episode_id, start_from: "rss", trigger: "manual" }` |
-| `regenerate-script` | `episodes` | `script` | `{ episode_id, start_from: "script", regenerate: true, trigger: "manual" }` |
-| `regenerate-audio` | `episodes` | `audio` | `{ episode_id, start_from: "audio", regenerate: true, trigger: "manual" }` |
+| `script` | `episodes` | `script` | `{ episodeId, startFrom: "script", trigger: "manual" }` |
+| `audio` | `episodes` | `audio` | `{ episodeId, startFrom: "audio", trigger: "manual" }` |
+| `rss` | `episodes` | `rss` | `{ episodeId, startFrom: "rss", trigger: "manual" }` |
+| `regenerate-script` | `episodes` | `script` | `{ episodeId, startFrom: "script", regenerate: true, trigger: "manual" }` |
+| `regenerate-audio` | `episodes` | `audio` | `{ episodeId, startFrom: "audio", regenerate: true, trigger: "manual" }` |
 
 ```bash
 # 台本生成からやり直す（記事 ID を指定）
@@ -312,8 +309,8 @@ pnpm cli requeue regenerate-audio b2c3d4e5-f6a7-...
 
 ```
 Episode: 第42回：キューイングを… (b2c3d4e5)
-Start flow {"episode_id":"b2c3d4e5-...","start_from":"script","trigger":"manual"} → script? [y/N] y
-Flow started (script): {"episode_id":"b2c3d4e5-...","start_from":"script","trigger":"manual"}
+Start flow {"episodeId":"b2c3d4e5-...","startFrom":"script","trigger":"manual"} → script? [y/N] y
+Flow started (script): {"episodeId":"b2c3d4e5-...","startFrom":"script","trigger":"manual"}
 ```
 
 ---
@@ -348,9 +345,9 @@ pnpm deploy
 3. `supabase link` でプロジェクトに接続
 4. `supabase secrets set` で AI API キーを Edge Function に反映
 5. `supabase db push` でマイグレーションを適用
-6. サービスキーを Supabase Vault に保存（pg_cron が安全に参照）
-7. pg_cron ジョブを作成（毎分 `pgflow-worker` を実行）
-8. `supabase functions deploy` で Edge Functions（`pgflow-worker` 含む）をデプロイ
+6. worker 管理用 Vault secret (`supabase_project_id`, `pgflow_auth_secret`) を更新
+7. `pgflow.track_worker_function('craft-episode-worker')` で監視対象を登録
+8. `supabase functions deploy` で Edge Functions（`ingest`, `craft-episode-worker`, `pgflow`）をデプロイ
 9. `seed-config.ts` で `cover.png` をアップロードし `podcast_config` を初期化
 
 ### 本番 RSS フィード URL
@@ -369,7 +366,7 @@ curl -X POST https://<ref>.supabase.co/functions/v1/ingest \
   -d '{"title": "タイトル", "mem_note_id": "<your-mem-note-id>"}'
 ```
 
-本番では pg_cron が 1 分以内に `pgflow-worker` を自動起動します。
+本番では `pgflow_ensure_workers` が worker を自動起動します。
 
 ---
 
@@ -449,18 +446,18 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 
 他のプロジェクトの Supabase スタックが起動中の場合、`supabase/config.toml` のポートを変更してください（本プロジェクトは 54331〜54337 を使用）。
 
-**`generate-audio` が失敗する（Broken pipe）**
+**`generateAudio` ステージが失敗する（Broken pipe）**
 
 Gemini TTS が返す音声は 5 分エピソードで約 14 MB の WAV になります。
 ローカルの Docker Storage でメモリ不足が発生する場合は、テスト記事の文字数を減らして試してください。
 
-**`generate-script` が JSON を返さない**
+**`generateScript` ステージが JSON を返さない**
 
 Gemini Flash が稀にフォーマットを外れた応答をすることがあります。
 `responseSchema` で構造を強制していますが、それでも失敗した場合は `episodes.error` 列でエラー内容を確認し、記事の `status` を `script_ready` に戻してワーカーを再実行してください。
 
 **本番で pg_cron が動かない**
 
-`pnpm deploy` を再実行すると Vault と cron ジョブが再作成されます。
-Studio → Database → Cron Jobs で `run-pgflow-worker` ジョブが登録されているか、
-Studio → Database → Vault で `service_key` が保存されているか確認してください。
+`pnpm deploy` を再実行すると Vault と worker 登録が更新されます。
+Studio → Database → Cron Jobs で `pgflow_ensure_workers` ジョブが有効か、
+Studio → Database → Vault で `supabase_project_id` と `pgflow_auth_secret` が保存されているか確認してください。

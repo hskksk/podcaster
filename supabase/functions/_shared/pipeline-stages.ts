@@ -3,7 +3,6 @@ import { ThinkingLevel } from "npm:@google/genai";
 import { createSupabaseClient } from "./db.ts";
 import { loadConfig } from "./config.ts";
 import { writeLog } from "./logger.ts";
-import { queueSend } from "./queue.ts";
 import { generateAudioWithGemini, generateScriptWithGemini } from "./gemini-provider.ts";
 import {
   DEFAULT_SYSTEM_INSTRUCTION,
@@ -283,7 +282,7 @@ export async function runGenerateScriptStage(opts: {
     });
 
     await writeLog(db, {
-      queue_name: null,
+      queue_name: "",
       message_id: null,
       article_id: episode.article_id,
       episode_id: episode.id,
@@ -305,7 +304,7 @@ export async function runGenerateScriptStage(opts: {
       });
     }
     await writeLog(db, {
-      queue_name: null,
+      queue_name: "",
       message_id: null,
       ...(articleIdForLog ? { article_id: articleIdForLog } : {}),
       ...(episodeIdForLog ? { episode_id: episodeIdForLog } : {}),
@@ -458,7 +457,7 @@ export async function runGenerateAudioStage(opts: {
     await db.from("episodes").update({ status: "audio_ready" }).eq("id", episodeId);
 
     await writeLog(db, {
-      queue_name: null,
+      queue_name: "",
       message_id: null,
       episode_id: episodeId,
       mem_note_id: memNoteId,
@@ -481,7 +480,7 @@ export async function runGenerateAudioStage(opts: {
     });
     await db.from("episodes").update({ status: "audio_failed" }).eq("id", episodeId);
     await writeLog(db, {
-      queue_name: null,
+      queue_name: "",
       message_id: null,
       episode_id: episodeId,
       mem_note_id: memNoteId,
@@ -535,7 +534,7 @@ export async function runUpdateRssStage(opts: {
       .in("status", ["audio_ready", "rss_failed"]);
 
     await writeLog(db, {
-      queue_name: null,
+      queue_name: "",
       message_id: null,
       episode_id: episodeId,
       mem_note_id: memNoteId,
@@ -550,7 +549,7 @@ export async function runUpdateRssStage(opts: {
       .eq("id", episodeId)
       .in("status", ["audio_ready", "rss_failed"]);
     await writeLog(db, {
-      queue_name: null,
+      queue_name: "",
       message_id: null,
       episode_id: episodeId,
       mem_note_id: memNoteId,
