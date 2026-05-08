@@ -1,0 +1,29 @@
+[geminiMock]
+enabled = false
+
+[geminiMock.script]
+delayMs = 150
+title = "モック台本"
+description = "Gemini モックで生成した説明文です。"
+script = """
+Host: 皆さんこんにちは。これは Gemini API のモック応答です。
+CoHost: 開発時に API コストなしで動作検証できますね。
+Host: dev.gemini.mock.toml を編集すると返り値を変えられます。
+"""
+thoughts = ["mock-thought-1", "mock-thought-2"]
+
+[geminiMock.script.tokenUsage]
+promptTokenCount = 120
+candidatesTokenCount = 380
+totalTokenCount = 500
+
+[geminiMock.audio]
+delayMs = 800
+mimeType = "audio/L16;rate=24000"
+sampleRate = 24000
+durationSeconds = 8
+
+[geminiMock.audio.tokenUsage]
+promptTokenCount = 240
+candidatesTokenCount = 420
+totalTokenCount = 660

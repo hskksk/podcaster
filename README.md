@@ -6,7 +6,7 @@
 - 音声: Gemini TTS のマルチスピーカー合成（WAV 形式）
 - 配信: Supabase Storage の公開バケット（グローバル CDN）
 
-**スタック**: TypeScript / Deno · Supabase Edge Functions · Supabase Storage · Supabase Postgres + pgmq · Gemini API
+**スタック**: TypeScript / Deno · Supabase Edge Functions · Supabase Storage · Supabase Postgres + pgflow · Gemini API
 
 ---
 
@@ -18,22 +18,20 @@
          │ POST /functions/v1/ingest  {title, content}
          ▼
 ┌─────────────────────┐
-│      ingest         │  mem_note_id 検証 → articles テーブルに保存
+│      ingest         │  mem_note_id 検証 → articles / episodes を作成
 └────────┬────────────┘
-         │ pgmq: script-queue
+         │ pgflow.start_flow("episode_pipeline_v1")
          ▼
 ┌─────────────────────┐
-│  generate-script    │  Gemini Flash でホスト/コホスト台本を JSON 生成
+│  generate_script    │  Gemini Flash でホスト/コホスト台本を JSON 生成
 └────────┬────────────┘
-         │ pgmq: audio-queue
          ▼
 ┌─────────────────────┐
-│  generate-audio     │  Gemini TTS 多話者合成 → PCM→WAV 変換 → Storage 保存
+│  generate_audio     │  Gemini TTS 多話者合成 → PCM→WAV 変換 → Storage 保存
 └────────┬────────────┘
-         │ pgmq: rss-queue
          ▼
 ┌─────────────────────┐
-│    update-rss       │  DB から全エピソードを取得 → RSS 2.0 + iTunes 形式で feed.xml 生成
+│    update_rss       │  DB から全エピソードを取得 → RSS 2.0 + iTunes 形式で feed.xml 生成
 └─────────────────────┘
          │
          ▼
@@ -43,8 +41,8 @@ Supabase Storage (公開バケット `podcast`)
   └── cover.png         ← カバー画像
 ```
 
-各ステージは pgmq キューで連結されており、失敗時は visibility timeout 後に自動再試行。
-本番環境では pg_cron が毎分ワーカーを呼び出す。
+本番環境では `pg_cron` が毎分 `pgflow-worker` を呼び出します。  
+各ステージのリトライとタイムアウトは pgflow 側で管理されます。
 
 ---
 
@@ -67,18 +65,21 @@ podcaster/
 │   ├── config.toml                 # Supabase CLI 設定（ポート等）
 │   ├── migrations/
 │   │   ├── 20260423000001_initial.sql        # articles / episodes / Storage バケット
-│   │   ├── 20260423000002_queues.sql         # pgmq キュー作成
-│   │   ├── 20260423000003_cron.sql           # pg_cron / pg_net 有効化
-│   │   ├── 20260423000004_seed_config.sql    # podcast_config デフォルト値
-│   │   ├── 20260423000005_queue_helpers.sql  # JS クライアント向け RPC ラッパー
-│   │   └── 20260424000001_cron_upgrade.sql   # 旧 cron ジョブ削除（deploy.ts が再作成）
+│   │   ├── ...                               
+│   │   ├── 20260507031725_..._pgflow_initial.sql
+│   │   └── 20260507031744_..._pgflow_step_conditions.sql
+│   ├── flows/
+│   │   ├── index.ts                # pgflow フローのエクスポート
+│   │   └── greet-user.ts           # 例示フロー
 │   └── functions/
 │       ├── _shared/
 │       │   ├── db.ts       # Supabase クライアント
-│       │   ├── queue.ts    # pgmq 操作ヘルパー
+│       │   ├── queue.ts    # pgmq 操作ヘルパー（互換用）
+│       │   ├── pipeline-stages.ts # 各ステージ共通実装
 │       │   ├── config.ts   # podcast_config ローダー
 │       │   └── types.ts    # 共有型定義
 │       ├── ingest/         # Webhook 受信
+│       ├── pgflow-worker/  # pgflow DAG 実行ワーカー
 │       ├── generate-script/# LLM 台本生成
 │       ├── generate-audio/ # TTS 音声生成
 │       └── update-rss/     # RSS フィード更新
@@ -106,21 +107,24 @@ podcaster/
 # 1. 依存関係インストール
 pnpm install
 
-# 2. 環境変数ファイルを作成し API キーを記入
+# 2. pgflow のセットアップ（初回または更新時）
+pnpm pgflow:install
+
+# 3. 環境変数ファイルを作成し API キーを記入
 cp .env.example .env.local
 # → GEMINI_API_KEY と MEM_API_KEY を設定
 
-# 3. Supabase ローカルスタックを起動（Docker が必要）
+# 4. Supabase ローカルスタックを起動（Docker が必要）
 supabase start
 
-# 4. マイグレーション適用（テーブル・キュー・cron を初期化）
+# 5. マイグレーション適用
 supabase db reset
 
-# 5. カバー画像をアップロードし podcast_config を初期化
+# 6. カバー画像をアップロードし podcast_config を初期化
 #    （supabase status から接続情報を自動取得）
 pnpm seed:config
 
-# 6. Edge Functions をローカルで起動
+# 7. Edge Functions をローカルで起動
 pnpm functions:serve &
 ```
 
@@ -143,26 +147,18 @@ pnpm test:post
 
 （`SUPABASE_SERVICE_ROLE_KEY` は `supabase status` から自動取得）
 
-202 が返ったら成功。その後ワーカーを順番に呼び出す（後述）。
+202 が返ったら成功。あとは worker を起動すればフローが進行します。
 
 ### ワーカーの手動実行
 
-本番では pg_cron が毎分自動実行しますが、ローカルでは手動で呼びます。
+本番では pg_cron が毎分 `pgflow-worker` を自動実行しますが、ローカルでは手動で呼べます。
 
 ```bash
 # service_role key を取得
 KEY=$(supabase status --json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
 
-# 台本生成（ingest 後に実行）
-curl -s http://localhost:54331/functions/v1/generate-script \
-  -H "Authorization: Bearer $KEY"
-
-# 音声生成（generate-script 完了後）
-curl -s http://localhost:54331/functions/v1/generate-audio \
-  -H "Authorization: Bearer $KEY"
-
-# RSS 更新（generate-audio 完了後）
-curl -s http://localhost:54331/functions/v1/update-rss \
+# pgflow worker（フロー実行）
+curl -s http://localhost:54331/functions/v1/pgflow-worker \
   -H "Authorization: Bearer $KEY"
 ```
 
@@ -274,12 +270,12 @@ d4e5f6a7  b2c3d4e5  audio/b2c3d4e5.wav        audio/wav  ready   2026-04-26 12:1
 
 #### `logs`
 
-処理ログ（`processing_logs` テーブル）を新しい順に一覧表示します。キュー名・ステータス・エピソード ID でフィルタできます。
+処理ログ（`processing_logs` テーブル）を新しい順に一覧表示します。ステージ名・ステータス・エピソード ID でフィルタできます。
 
 ```bash
 pnpm cli logs                          # 最新 20 件
 pnpm cli logs --limit 50               # 最新 50 件
-pnpm cli logs --queue script-queue     # 特定のキューのみ
+pnpm cli logs --queue pgflow.generate_script     # script ステージのみ
 pnpm cli logs --status failure         # 失敗ログのみ
 pnpm cli logs --episode b2c3d4e5-...   # 特定エピソードのみ
 ```
@@ -289,13 +285,13 @@ pnpm cli logs --episode b2c3d4e5-...   # 特定エピソードのみ
 パイプラインの特定ステージを再実行します。ジョブが失敗したときや再処理が必要な場合に使います。
 実行前にレコードの存在確認を行い、確認プロンプトを表示します（`--yes` で省略可）。
 
-| サブコマンド | 対象テーブル | 送信先キュー | メッセージ |
+| サブコマンド | 対象テーブル | 開始ステージ | 送信 payload |
 |------------|-----------|------------|----------|
-| `script` | `articles` | `script-queue` | `{ article_id }` |
-| `audio` | `episodes` | `audio-queue` | `{ episode_id }` |
-| `rss` | `episodes` | `rss-queue` | `{ episode_id }` |
-| `regenerate-script` | `episodes` | `script-queue` | `{ article_id, target_episode_id, regenerate: true }` |
-| `regenerate-audio` | `episodes` | `audio-queue` | `{ episode_id, regenerate: true }` |
+| `script` | `episodes` | `script` | `{ episode_id, start_from: "script", trigger: "manual" }` |
+| `audio` | `episodes` | `audio` | `{ episode_id, start_from: "audio", trigger: "manual" }` |
+| `rss` | `episodes` | `rss` | `{ episode_id, start_from: "rss", trigger: "manual" }` |
+| `regenerate-script` | `episodes` | `script` | `{ episode_id, start_from: "script", regenerate: true, trigger: "manual" }` |
+| `regenerate-audio` | `episodes` | `audio` | `{ episode_id, start_from: "audio", regenerate: true, trigger: "manual" }` |
 
 ```bash
 # 台本生成からやり直す（記事 ID を指定）
@@ -315,9 +311,9 @@ pnpm cli requeue regenerate-audio b2c3d4e5-f6a7-...
 ```
 
 ```
-Article: Supabase の pgmq でバックグラウンドジョブを実装する方法 (a1b2c3d4)
-Re-enqueue {"article_id":"a1b2c3d4-..."} → script-queue? [y/N] y
-Enqueued to script-queue: {"article_id":"a1b2c3d4-..."}
+Episode: 第42回：キューイングを… (b2c3d4e5)
+Start flow {"episode_id":"b2c3d4e5-...","start_from":"script","trigger":"manual"} → script? [y/N] y
+Flow started (script): {"episode_id":"b2c3d4e5-...","start_from":"script","trigger":"manual"}
 ```
 
 ---
@@ -353,8 +349,8 @@ pnpm deploy
 4. `supabase secrets set` で AI API キーを Edge Function に反映
 5. `supabase db push` でマイグレーションを適用
 6. サービスキーを Supabase Vault に保存（pg_cron が安全に参照）
-7. pg_cron ジョブを作成（毎分 Edge Function を自動実行）
-8. `supabase functions deploy` で 4 つの Edge Function をデプロイ
+7. pg_cron ジョブを作成（毎分 `pgflow-worker` を実行）
+8. `supabase functions deploy` で Edge Functions（`pgflow-worker` 含む）をデプロイ
 9. `seed-config.ts` で `cover.png` をアップロードし `podcast_config` を初期化
 
 ### 本番 RSS フィード URL
@@ -373,7 +369,7 @@ curl -X POST https://<ref>.supabase.co/functions/v1/ingest \
   -d '{"title": "タイトル", "mem_note_id": "<your-mem-note-id>"}'
 ```
 
-本番では pg_cron が 1 分以内に各ワーカーを自動起動します。
+本番では pg_cron が 1 分以内に `pgflow-worker` を自動起動します。
 
 ---
 
@@ -466,5 +462,5 @@ Gemini Flash が稀にフォーマットを外れた応答をすることがあ�
 **本番で pg_cron が動かない**
 
 `pnpm deploy` を再実行すると Vault と cron ジョブが再作成されます。
-Studio → Database → Cron Jobs で 3 つのジョブが登録されているか、
+Studio → Database → Cron Jobs で `run-pgflow-worker` ジョブが登録されているか、
 Studio → Database → Vault で `service_key` が保存されているか確認してください。

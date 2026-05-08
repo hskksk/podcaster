@@ -88,7 +88,7 @@ export const EpisodesView: React.FC<Props> = ({
       if (input === 's') {
         openConfirm({
           title: 'Requeue script',
-          message: `Send script-queue job?\n${ep.title}\nepisode_id: ${ep.id}`,
+          message: `Start script flow?\n${ep.title}\nepisode_id: ${ep.id}`,
           onConfirm: async () => {
             const r = await client.requeue('script', ep.id);
             if (!r.success) {
@@ -104,7 +104,7 @@ export const EpisodesView: React.FC<Props> = ({
       if (input === 'a') {
         openConfirm({
           title: 'Requeue audio',
-          message: `Send audio-queue job?\n${ep.title}`,
+          message: `Start audio flow?\n${ep.title}`,
           onConfirm: async () => {
             const r = await client.requeue('audio', ep.id);
             if (!r.success) {
@@ -120,7 +120,7 @@ export const EpisodesView: React.FC<Props> = ({
       if (input === 'y') {
         openConfirm({
           title: 'Requeue RSS',
-          message: `Send rss-queue job?\n${ep.title}`,
+          message: `Start rss flow?\n${ep.title}`,
           onConfirm: async () => {
             const r = await client.requeue('rss', ep.id);
             if (!r.success) {

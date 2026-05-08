@@ -11,6 +11,8 @@ pnpm typecheck
 # Local dev: start Supabase stack + Edge Functions
 supabase start
 pnpm functions:serve          # serves all Edge Functions with .env
+pnpm pgflow:install           # install/upgrade pgflow schema objects (run once per environment)
+pnpm pgflow:compile           # compile flows in supabase/flows to SQL
 
 # Database
 pnpm db:reset                 # wipe + replay all migrations (local only)
@@ -38,52 +40,45 @@ pnpm deploy
 
 ```bash
 KEY=$(supabase status --json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
-curl -s http://localhost:54331/functions/v1/generate-script -H "Authorization: Bearer $KEY"
-curl -s http://localhost:54331/functions/v1/generate-audio  -H "Authorization: Bearer $KEY"
-curl -s http://localhost:54331/functions/v1/update-rss      -H "Authorization: Bearer $KEY"
+curl -s http://localhost:54331/functions/v1/pgflow-worker -H "Authorization: Bearer $KEY"
 ```
 
 ## Architecture
 
-Article text enters via the `ingest` Edge Function and flows through a 4-stage pipeline connected by **pgmq** queues:
+Article text enters via the `ingest` Edge Function and starts a **pgflow** DAG run:
 
 ```
-ingest → [script-queue] → generate-script → [audio-queue] → generate-audio → [rss-queue] → update-rss
+ingest -> pgflow.start_flow("episode_pipeline_v1")
+       -> generate_script
+       -> generate_audio
+       -> update_rss
 ```
 
-Each stage is a Supabase Edge Function (Deno) invoked by `pg_cron` every minute in production. In development, call them manually in sequence. On failure, pgmq's visibility timeout causes automatic retry.
+In production, `pg_cron` triggers `pgflow-worker` every minute. The worker executes step handlers with pgflow retries/timeouts.
 
-### Edge Function pattern
+### Edge worker pattern
 
-Every worker function follows the same structure:
+The queue compatibility functions still use `processQueue()`, but the primary path is the pgflow worker:
 
 ```ts
-Deno.serve(async (_req) => {
-  EdgeRuntime.waitUntil(processQueue());  // non-blocking — response returns immediately
-  return Response.json({ ok: true });
-});
+const EpisodePipelineFlow = new Flow({ slug: "episode_pipeline_v1" })
+  .step({ slug: "generate_script" }, async (input) => { ... })
+  .step({ slug: "generate_audio", dependsOn: ["generate_script"] }, async (deps) => { ... })
+  .step({ slug: "update_rss", dependsOn: ["generate_audio"] }, async (deps) => { ... });
 
-async function processQueue() {
-  const db = createSupabaseClient();
-  const msg = await queueRead(db, "<queue-name>");  // reads 1 message, sets 30-min visibility lock
-  if (!msg) return;
-  try {
-    // do work...
-    await queueDelete(db, "<queue-name>", msg.msg_id);  // ack on success
-    await writeLog(db, { ..., status: "success" });
-  } catch (err) {
-    await queueDelete(db, "<queue-name>", msg.msg_id);  // also ack on failure (no infinite retry)
-    await writeLog(db, { ..., status: "failure" });
-  }
-}
+EdgeWorker.start(EpisodePipelineFlow, {
+  maxConcurrent: 3,
+  visibilityTimeout: 960,
+});
 ```
 
 Shared utilities live in `supabase/functions/_shared/`:
 - `db.ts` — creates a `service_role` Supabase client from env vars
-- `queue.ts` — `queueRead` / `queueSend` / `queueDelete` wrappers over pgmq RPCs
+- `queue.ts` — `queueRead` / `queueSend` / `queueDelete` wrappers over pgmq RPCs (legacy compatibility path)
 - `config.ts` — loads `podcast_config` table as a typed map
 - `types.ts` — shared interfaces (`Article`, `Episode`, `Script`, `AudioFile`, etc.)
 - `logger.ts` — `writeLog()` inserts to `processing_logs`
+- `pipeline-stages.ts` — shared stage implementations used by both queue workers and pgflow worker
 
 ### Runtime configuration
 

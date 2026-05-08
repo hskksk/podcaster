@@ -480,18 +480,21 @@ async function confirm(message: string): Promise<boolean> {
   });
 }
 
-async function requeueRecord(
-  queueName: string,
-  message: Record<string, unknown>,
+async function startFlowRecord(
+  input: Record<string, unknown>,
+  label: string,
   yes: boolean,
 ): Promise<void> {
   if (!yes) {
-    const ok = await confirm(`Re-enqueue ${JSON.stringify(message)} → ${queueName}?`);
+    const ok = await confirm(`Start flow ${JSON.stringify(input)} → ${label}?`);
     if (!ok) { console.log("Aborted."); process.exit(0); }
   }
-  const { error } = await db.rpc("pgmq_send", { queue_name: queueName, msg: message });
+  const { error } = await db.schema("pgflow").rpc("start_flow", {
+    flow_slug: "episode_pipeline_v1",
+    input,
+  });
   if (error) { console.error("Error:", error.message); process.exit(1); }
-  console.log(`Enqueued to ${queueName}: ${JSON.stringify(message)}`);
+  console.log(`Flow started (${label}): ${JSON.stringify(input)}`);
 }
 
 async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> {
@@ -500,19 +503,19 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord("script-queue", { episode_id: id }, yes);
+    await startFlowRecord({ episode_id: id, start_from: "script", trigger: "manual" }, "script", yes);
   } else if (sub === "audio") {
     const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord("audio-queue", { episode_id: id }, yes);
+    await startFlowRecord({ episode_id: id, start_from: "audio", trigger: "manual" }, "audio", yes);
   } else if (sub === "rss") {
     const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord("rss-queue", { episode_id: id }, yes);
+    await startFlowRecord({ episode_id: id, start_from: "rss", trigger: "manual" }, "rss", yes);
   } else if (sub === "regenerate-script") {
     const { data, error } = await db
       .from("episodes")
@@ -522,9 +525,9 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord(
-      "script-queue",
-      { episode_id: id, regenerate: true },
+    await startFlowRecord(
+      { episode_id: id, start_from: "script", regenerate: true, trigger: "manual" },
+      "regenerate-script",
       yes,
     );
   } else if (sub === "regenerate-audio") {
@@ -532,7 +535,11 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord("audio-queue", { episode_id: id, regenerate: true }, yes);
+    await startFlowRecord(
+      { episode_id: id, start_from: "audio", regenerate: true, trigger: "manual" },
+      "regenerate-audio",
+      yes,
+    );
   } else {
     console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio <id> [--yes]");
     process.exit(1);

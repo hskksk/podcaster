@@ -56,45 +56,15 @@ $$;
 
   // 2. Create/replace pg_cron jobs
   runSql(
-    "pg_cron: create drain jobs",
+    "pg_cron: create pgflow worker job",
     `
 do $$
 begin
   perform cron.schedule(
-    'drain-script-queue', '*/5 * * * *',
+    'run-pgflow-worker', '*/1 * * * *',
     $job$
       select net.http_post(
-        url     := '${functionsBase}/generate-script',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
-  perform cron.schedule(
-    'drain-audio-queue', '*/5 * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/generate-audio',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
-  perform cron.schedule(
-    'drain-rss-queue', '*/5 * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/update-rss',
+        url     := '${functionsBase}/pgflow-worker',
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
           'Authorization', 'Bearer ' || (
@@ -159,45 +129,15 @@ $$;
   // 5. Create/replace pg_cron jobs (cron.schedule replaces jobs with the same name)
   const functionsBase = `https://${projectRef}.supabase.co/functions/v1`;
   runSql(
-    "pg_cron: create drain jobs",
+    "pg_cron: create pgflow worker job",
     `
 do $$
 begin
   perform cron.schedule(
-    'drain-script-queue', '* * * * *',
+    'run-pgflow-worker', '* * * * *',
     $job$
       select net.http_post(
-        url     := '${functionsBase}/generate-script',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
-  perform cron.schedule(
-    'drain-audio-queue', '* * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/generate-audio',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
-  perform cron.schedule(
-    'drain-rss-queue', '* * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/update-rss',
+        url     := '${functionsBase}/pgflow-worker',
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
           'Authorization', 'Bearer ' || (
@@ -216,7 +156,7 @@ $$;
 
   // 6. Deploy all Edge Functions
   run(
-    "supabase functions deploy ingest generate-script generate-audio update-rss --no-verify-jwt",
+    "supabase functions deploy ingest generate-script generate-audio update-rss pgflow-worker --no-verify-jwt",
   );
 
   // 7. Upload cover.png and seed podcast_config
