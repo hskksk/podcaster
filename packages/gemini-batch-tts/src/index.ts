@@ -375,17 +375,25 @@ export async function downloadFileToDisk(
 }
 
 /**
- * Read the on-disk JSONL in chunks and run a tiny state machine over the
- * decoded text, in this order:
- *   1) find  "mimeType":"   → 2) capture chars up to closing "
- *   3) find  "data":"       → 4) capture base64 chars up to closing ",
- *      decoding into PCM in 4-char-aligned chunks as we go.
+ * Read the on-disk JSONL in chunks and pull out `mimeType` + `data` from
+ * `inlineData`. The two fields can appear in either order — Gemini emits
+ * `{"data":"...","mimeType":"..."}` for TTS today — so the state machine
+ * scans for whichever needle hits first, then looks for the other.
+ *
+ * Walk:
+ *   scanning      → look for "mimeType":" or "data":", whichever is closer
+ *   capture_mime  → copy chars up to closing "
+ *   capture_data  → decode base64 chars up to closing ", in 4-char-aligned
+ *                   chunks straight to the .pcm file
+ *   done          → both fields captured; stop
  *
  * Why this is safe without a real JSON parser:
  *   • The Gemini API never escapes characters inside the `mimeType` value
- *     (it's an audio MIME like "audio/L16;codec=pcm;rate=24000").
+ *     (it's an audio MIME like "audio/l16; rate=24000; channels=1").
  *   • Base64 alphabet doesn't include '"' or '\\', so a literal '"'
  *     unambiguously terminates the data field.
+ *   • Both needles include the leading '"' on the key name, so common
+ *     suffix collisions like `"some_data":"…"` don't false-match.
  */
 export async function extractAudioToPcmFile(
   client: GeminiBatchTtsClient,
@@ -400,14 +408,12 @@ export async function extractAudioToPcmFile(
 
   const NEEDLE_MIME = '"mimeType":"';
   const NEEDLE_DATA = '"data":"';
+  const TAIL_KEEP = Math.max(NEEDLE_MIME.length, NEEDLE_DATA.length) - 1;
 
-  type Mode =
-    | "find_mime"
-    | "capture_mime"
-    | "find_data"
-    | "capture_data"
-    | "done";
-  let mode: Mode = "find_mime";
+  type Mode = "scanning" | "capture_mime" | "capture_data" | "done";
+  let mode: Mode = "scanning";
+  let needMime = true;
+  let needData = true;
   let pending = "";
   let mimeType = "";
   let base64Carry = "";
@@ -430,17 +436,28 @@ export async function extractAudioToPcmFile(
   try {
     outer: for await (const chunk of reader) {
       pending += decoder.decode(chunk, { stream: true });
+      // Drain `pending` as far as the state machine can advance on what we
+      // currently have, then go fetch the next chunk.
+      // eslint-disable-next-line no-constant-condition
       while (true) {
-        if (mode === "find_mime") {
-          const i = pending.indexOf(NEEDLE_MIME);
-          if (i === -1) {
+        if (mode === "scanning") {
+          const mimeIdx = needMime ? pending.indexOf(NEEDLE_MIME) : -1;
+          const dataIdx = needData ? pending.indexOf(NEEDLE_DATA) : -1;
+          if (mimeIdx === -1 && dataIdx === -1) {
             // keep enough tail that a needle straddling chunks is still
             // findable on the next iteration
-            pending = pending.slice(-(NEEDLE_MIME.length - 1));
+            if (pending.length > TAIL_KEEP) pending = pending.slice(-TAIL_KEEP);
             break;
           }
-          pending = pending.slice(i + NEEDLE_MIME.length);
-          mode = "capture_mime";
+          const takeMime =
+            mimeIdx !== -1 && (dataIdx === -1 || mimeIdx < dataIdx);
+          if (takeMime) {
+            pending = pending.slice(mimeIdx + NEEDLE_MIME.length);
+            mode = "capture_mime";
+          } else {
+            pending = pending.slice(dataIdx + NEEDLE_DATA.length);
+            mode = "capture_data";
+          }
         } else if (mode === "capture_mime") {
           const i = pending.indexOf('"');
           if (i === -1) {
@@ -450,15 +467,12 @@ export async function extractAudioToPcmFile(
           }
           mimeType += pending.slice(0, i);
           pending = pending.slice(i + 1);
-          mode = "find_data";
-        } else if (mode === "find_data") {
-          const i = pending.indexOf(NEEDLE_DATA);
-          if (i === -1) {
-            pending = pending.slice(-(NEEDLE_DATA.length - 1));
-            break;
+          needMime = false;
+          if (!needData) {
+            mode = "done";
+            break outer;
           }
-          pending = pending.slice(i + NEEDLE_DATA.length);
-          mode = "capture_data";
+          mode = "scanning";
         } else if (mode === "capture_data") {
           const i = pending.indexOf('"');
           if (i === -1) {
@@ -467,18 +481,23 @@ export async function extractAudioToPcmFile(
             break;
           }
           await flushBase64(pending.slice(0, i), true);
-          pending = "";
-          mode = "done";
-          break outer;
+          pending = pending.slice(i + 1);
+          needData = false;
+          if (!needMime) {
+            mode = "done";
+            break outer;
+          }
+          mode = "scanning";
         } else {
-          break;
+          break outer;
         }
       }
     }
     if (mode !== "done") {
       const size = (await stat(jsonlPath)).size;
       throw new Error(
-        `inlineData.data not found in batch result (jsonl size=${size}). ` +
+        `inlineData.data / mimeType not both found in batch result ` +
+          `(jsonl size=${size}, gotMime=${!needMime}, gotData=${!needData}). ` +
           `The batch line probably contains an error — open ${jsonlPath} to inspect.`,
       );
     }
