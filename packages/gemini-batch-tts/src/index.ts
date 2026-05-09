@@ -18,7 +18,11 @@
  *      Peak resident memory ≈ `highWaterMark` (default 64 KiB), independent
  *      of audio length.
  *
- * REST endpoints used (auth via `x-goog-api-key`):
+ * REST endpoints used (auth via `x-goog-api-key`). The package talks to the
+ * Gemini REST API directly via `fetch` — no `@google/genai` runtime
+ * dependency, which keeps the install footprint small and lets us control
+ * the streaming behaviour the SDK doesn't expose.
+ *
  *   POST  /upload/v1beta/files                     (resumable upload)
  *   POST  /v1beta/models/{model}:batchGenerateContent
  *   GET   /v1beta/{batchName}

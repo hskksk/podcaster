@@ -1,22 +1,17 @@
 /**
- * CLI for the memory-light Gemini Batch TTS client.
+ * CLI for @podcaster/gemini-batch-tts.
  *
- * The actual implementation lives in `scripts/lib/gemini-batch-tts.ts` so
- * other scripts can import it programmatically. This file just maps argv to
- * those library calls.
+ * Run via the package script:
+ *   pnpm --filter @podcaster/gemini-batch-tts cli submit "<script>"
+ *   pnpm --filter @podcaster/gemini-batch-tts cli status <batchName>
+ *   pnpm --filter @podcaster/gemini-batch-tts cli fetch  <batchName> [out.wav]
  *
- * Usage
- * -----
- *   GEMINI_API_KEY=... npx tsx scripts/gemini-tts-file-download.ts \
- *     submit "Host: こんにちは。\nCoHost: 今日もよろしく。"
- *   # → {"batch":"batches/xxx","inputFile":"files/yyy"}
+ * Or from inside the package directory:
+ *   pnpm cli submit "<script>"
  *
- *   npx tsx scripts/gemini-tts-file-download.ts status batches/xxx
- *   # → {"state":"JOB_STATE_RUNNING"}
- *   # → {"state":"JOB_STATE_SUCCEEDED","output":"files/zzz"}
- *
- *   npx tsx scripts/gemini-tts-file-download.ts fetch batches/xxx out.wav
- *   # → {"out":"out.wav","pcmBytes":...,"sampleRate":24000,"mimeType":"...","rssMiB":...}
+ * Required env: GEMINI_API_KEY
+ * Optional env: GEMINI_TTS_MODEL, GEMINI_TTS_HOST_NAME, GEMINI_TTS_HOST_VOICE,
+ *               GEMINI_TTS_COHOST_NAME, GEMINI_TTS_COHOST_VOICE
  */
 
 import {
@@ -24,7 +19,7 @@ import {
   getBatchStatus,
   submitBatchTts,
   type GeminiBatchTtsClient,
-} from "./lib/gemini-batch-tts.ts";
+} from "./index.ts";
 
 function buildClient(): GeminiBatchTtsClient {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -39,9 +34,9 @@ function usage(): never {
   console.error(
     [
       "usage:",
-      '  tsx scripts/gemini-tts-file-download.ts submit "<script>"',
-      "  tsx scripts/gemini-tts-file-download.ts status <batchName>",
-      "  tsx scripts/gemini-tts-file-download.ts fetch  <batchName> [out.wav]",
+      '  pnpm cli submit "<script>"',
+      "  pnpm cli status <batchName>",
+      "  pnpm cli fetch  <batchName> [out.wav]",
     ].join("\n"),
   );
   process.exit(1);
