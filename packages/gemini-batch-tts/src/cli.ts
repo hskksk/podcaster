@@ -10,8 +10,14 @@
  *   pnpm cli submit "<script>"
  *
  * Required env: GEMINI_API_KEY
- * Optional env: GEMINI_TTS_MODEL, GEMINI_TTS_HOST_NAME, GEMINI_TTS_HOST_VOICE,
- *               GEMINI_TTS_COHOST_NAME, GEMINI_TTS_COHOST_VOICE
+ * Optional env:
+ *   GEMINI_TTS_MODEL, GEMINI_TTS_HOST_NAME, GEMINI_TTS_HOST_VOICE,
+ *   GEMINI_TTS_COHOST_NAME, GEMINI_TTS_COHOST_VOICE
+ *   GEMINI_API_ROOT     (default https://generativelanguage.googleapis.com)
+ *   GEMINI_API_VERSION  (default v1beta)
+ *   GEMINI_ENDPOINT_UPLOAD, GEMINI_ENDPOINT_BATCH_CREATE,
+ *   GEMINI_ENDPOINT_BATCH_GET, GEMINI_ENDPOINT_FILE_DOWNLOAD
+ *     — full-URL overrides, with `{model}` / `{name}` placeholders.
  */
 
 import {
@@ -19,14 +25,33 @@ import {
   getBatchStatus,
   submitBatchTts,
   type GeminiBatchTtsClient,
+  type GeminiBatchTtsEndpoints,
 } from "./index.ts";
 
 function buildClient(): GeminiBatchTtsClient {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+
+  const endpoints: GeminiBatchTtsEndpoints = {};
+  if (process.env.GEMINI_ENDPOINT_UPLOAD) {
+    endpoints.upload = process.env.GEMINI_ENDPOINT_UPLOAD;
+  }
+  if (process.env.GEMINI_ENDPOINT_BATCH_CREATE) {
+    endpoints.batchCreate = process.env.GEMINI_ENDPOINT_BATCH_CREATE;
+  }
+  if (process.env.GEMINI_ENDPOINT_BATCH_GET) {
+    endpoints.batchGet = process.env.GEMINI_ENDPOINT_BATCH_GET;
+  }
+  if (process.env.GEMINI_ENDPOINT_FILE_DOWNLOAD) {
+    endpoints.fileDownload = process.env.GEMINI_ENDPOINT_FILE_DOWNLOAD;
+  }
+
   return {
     apiKey,
     model: process.env.GEMINI_TTS_MODEL,
+    apiRoot: process.env.GEMINI_API_ROOT,
+    apiVersion: process.env.GEMINI_API_VERSION,
+    ...(Object.keys(endpoints).length > 0 ? { endpoints } : {}),
   };
 }
 

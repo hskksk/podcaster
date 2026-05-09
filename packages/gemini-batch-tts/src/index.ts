@@ -37,12 +37,43 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { once } from "node:events";
 
+export interface GeminiBatchTtsEndpoints {
+  /**
+   * Files API resumable upload start. Receives no placeholders.
+   * Default: `${apiRoot}/upload/${apiVersion}/files`.
+   */
+  upload?: string;
+  /**
+   * Batch create. `{model}` is replaced with the configured model id.
+   * Default: `${apiRoot}/${apiVersion}/models/{model}:batchGenerateContent`.
+   */
+  batchCreate?: string;
+  /**
+   * Batch get. `{name}` is replaced with the batch resource name (e.g. `batches/abc`).
+   * Default: `${apiRoot}/${apiVersion}/{name}`.
+   */
+  batchGet?: string;
+  /**
+   * Files API download. `{name}` is replaced with the file resource name (e.g. `files/xyz`).
+   * Default: `${apiRoot}/${apiVersion}/{name}:download?alt=media`.
+   */
+  fileDownload?: string;
+}
+
 export interface GeminiBatchTtsClient {
   apiKey: string;
   /** Default `"gemini-2.5-flash-preview-tts"`. */
   model?: string;
   /** Default `"https://generativelanguage.googleapis.com"`. */
   apiRoot?: string;
+  /** API version path segment. Default `"v1beta"`. */
+  apiVersion?: string;
+  /**
+   * Per-route URL overrides. Anything not set falls back to the default
+   * built from `apiRoot` + `apiVersion`. Useful for proxies, Vertex AI
+   * endpoints, or staging hosts.
+   */
+  endpoints?: GeminiBatchTtsEndpoints;
   /** Read/write buffer size for the on-disk streams. Default `64 * 1024`. */
   highWaterMark?: number;
 }
@@ -95,16 +126,53 @@ export interface FetchBatchTtsAsWavResult {
 
 const DEFAULT_MODEL = "gemini-2.5-flash-preview-tts";
 const DEFAULT_API_ROOT = "https://generativelanguage.googleapis.com";
+const DEFAULT_API_VERSION = "v1beta";
 const DEFAULT_HIGH_WATER_MARK = 64 * 1024;
 
-function resolved(client: GeminiBatchTtsClient) {
+interface ResolvedEndpoints {
+  upload: string;
+  batchCreate: string;
+  batchGet: string;
+  fileDownload: string;
+}
+
+function resolved(client: GeminiBatchTtsClient): {
+  apiKey: string;
+  model: string;
+  apiRoot: string;
+  apiVersion: string;
+  endpoints: ResolvedEndpoints;
+  highWaterMark: number;
+} {
   if (!client.apiKey) throw new Error("GeminiBatchTtsClient: apiKey is required");
+  const apiRoot = (client.apiRoot ?? DEFAULT_API_ROOT).replace(/\/+$/, "");
+  const apiVersion = client.apiVersion ?? DEFAULT_API_VERSION;
+  const ep = client.endpoints ?? {};
   return {
     apiKey: client.apiKey,
     model: client.model ?? DEFAULT_MODEL,
-    apiRoot: client.apiRoot ?? DEFAULT_API_ROOT,
+    apiRoot,
+    apiVersion,
+    endpoints: {
+      upload: ep.upload ?? `${apiRoot}/upload/${apiVersion}/files`,
+      batchCreate:
+        ep.batchCreate ??
+        `${apiRoot}/${apiVersion}/models/{model}:batchGenerateContent`,
+      batchGet: ep.batchGet ?? `${apiRoot}/${apiVersion}/{name}`,
+      fileDownload:
+        ep.fileDownload ?? `${apiRoot}/${apiVersion}/{name}:download?alt=media`,
+    },
     highWaterMark: client.highWaterMark ?? DEFAULT_HIGH_WATER_MARK,
   };
+}
+
+function fillTemplate(
+  template: string,
+  vars: Record<string, string>,
+): string {
+  return template.replace(/\{(\w+)\}/g, (whole, key: string) =>
+    Object.prototype.hasOwnProperty.call(vars, key) ? vars[key] : whole,
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -115,7 +183,7 @@ export async function submitBatchTts(
   client: GeminiBatchTtsClient,
   params: SubmitBatchTtsParams,
 ): Promise<SubmitBatchTtsResult> {
-  const { apiKey, model, apiRoot } = resolved(client);
+  const { apiKey, model, endpoints } = resolved(client);
 
   const speakerVoiceConfigs = [
     {
@@ -146,22 +214,19 @@ export async function submitBatchTts(
 
   const inputFile = await uploadJsonlFile(client, body, "tts-batch-input.jsonl");
 
-  const res = await fetch(
-    `${apiRoot}/v1beta/models/${model}:batchGenerateContent`,
-    {
-      method: "POST",
-      headers: {
-        "x-goog-api-key": apiKey,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        batch: {
-          display_name: params.displayName ?? "podcast-tts",
-          input_config: { file_name: inputFile },
-        },
-      }),
+  const res = await fetch(fillTemplate(endpoints.batchCreate, { model }), {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": apiKey,
+      "content-type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      batch: {
+        display_name: params.displayName ?? "podcast-tts",
+        input_config: { file_name: inputFile },
+      },
+    }),
+  });
   if (!res.ok) {
     throw new Error(`batchGenerateContent ${res.status}: ${await res.text()}`);
   }
@@ -182,11 +247,12 @@ export async function uploadJsonlFile(
   bytes: Buffer,
   displayName: string,
 ): Promise<string> {
-  const { apiKey, apiRoot } = resolved(client);
+  const { apiKey, endpoints } = resolved(client);
 
-  const start = await fetch(`${apiRoot}/upload/v1beta/files?key=${apiKey}`, {
+  const start = await fetch(endpoints.upload, {
     method: "POST",
     headers: {
+      "x-goog-api-key": apiKey,
       "x-goog-upload-protocol": "resumable",
       "x-goog-upload-command": "start",
       "x-goog-upload-header-content-length": String(bytes.byteLength),
@@ -229,8 +295,8 @@ export async function getBatchStatus(
   client: GeminiBatchTtsClient,
   batchName: string,
 ): Promise<BatchStatus> {
-  const { apiKey, apiRoot } = resolved(client);
-  const res = await fetch(`${apiRoot}/v1beta/${batchName}`, {
+  const { apiKey, endpoints } = resolved(client);
+  const res = await fetch(fillTemplate(endpoints.batchGet, { name: batchName }), {
     headers: { "x-goog-api-key": apiKey },
   });
   if (!res.ok) {
@@ -293,10 +359,11 @@ export async function downloadFileToDisk(
   fileName: string,
   destPath: string,
 ): Promise<void> {
-  const { apiKey, apiRoot, highWaterMark } = resolved(client);
-  const res = await fetch(`${apiRoot}/v1beta/${fileName}:download?alt=media`, {
-    headers: { "x-goog-api-key": apiKey },
-  });
+  const { apiKey, endpoints, highWaterMark } = resolved(client);
+  const res = await fetch(
+    fillTemplate(endpoints.fileDownload, { name: fileName }),
+    { headers: { "x-goog-api-key": apiKey } },
+  );
   if (!res.ok || !res.body) {
     const detail = res.body ? await res.text() : "<no body>";
     throw new Error(`download ${res.status}: ${detail}`);
