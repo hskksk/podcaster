@@ -1,0 +1,23 @@
+{
+  "name": "@podcaster/gemini-batch-tts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Memory-light Gemini TTS client over the Batch API. Streams audio straight to disk; peak RSS bounded by the read buffer.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
