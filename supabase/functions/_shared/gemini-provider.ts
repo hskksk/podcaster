@@ -1,6 +1,6 @@
 import { GoogleGenAI, JobState } from "npm:@google/genai";
 
-const DEFAULT_GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com";
+const DEFAULT_GEMINI_API_ROOT = "https://generativelanguage.googleapis.com";
 const MOCK_API_KEY = "mock-api-key";
 
 type AudioBatchStartResult = {
@@ -17,43 +17,43 @@ type AudioBatchPollResult = {
 };
 
 type GeminiProviderOptions = {
-  apiEndpoint?: string;
+  apiRoot?: string;
 };
 
-function normalizeEndpointForComparison(endpoint: string): string {
-  return endpoint.replace(/\/+$/, "");
+function normalizeApiRootForComparison(root: string): string {
+  return root.replace(/\/+$/, "");
 }
 
-function resolveApiEndpoint(rawEndpoint?: string): string {
-  const endpoint = rawEndpoint?.trim();
-  if (endpoint && endpoint.length > 0) {
-    return endpoint;
+function resolveApiRoot(rawApiRoot?: string): string {
+  const root = rawApiRoot?.trim();
+  if (root && root.length > 0) {
+    return root;
   }
-  return DEFAULT_GEMINI_API_ENDPOINT;
+  return DEFAULT_GEMINI_API_ROOT;
 }
 
-function resolveApiKey(apiEndpoint: string): string {
+function resolveApiKey(apiRoot: string): string {
   const envApiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
   if (envApiKey && envApiKey.length > 0) {
     return envApiKey;
   }
 
-  // Allow local/mock endpoints to run without a real Gemini API key.
-  const normalizedEndpoint = normalizeEndpointForComparison(apiEndpoint);
-  const normalizedDefaultEndpoint = normalizeEndpointForComparison(DEFAULT_GEMINI_API_ENDPOINT);
-  if (normalizedEndpoint !== normalizedDefaultEndpoint) {
+  // Allow local/mock api root to run without a real Gemini API key.
+  const normalizedApiRoot = normalizeApiRootForComparison(apiRoot);
+  const normalizedDefaultApiRoot = normalizeApiRootForComparison(DEFAULT_GEMINI_API_ROOT);
+  if (normalizedApiRoot !== normalizedDefaultApiRoot) {
     return MOCK_API_KEY;
   }
 
-  throw new Error("GEMINI_API_KEY is required when using the default Gemini API endpoint");
+  throw new Error("GEMINI_API_KEY is required when using the default Gemini API Root");
 }
 
 function createGeminiClient(options: GeminiProviderOptions = {}): GoogleGenAI {
-  const apiEndpoint = resolveApiEndpoint(options.apiEndpoint);
-  const apiKey = resolveApiKey(apiEndpoint);
+  const apiRoot = resolveApiRoot(options.apiRoot);
+  const apiKey = resolveApiKey(apiRoot);
 
   const httpOptions = {
-    baseUrl: apiEndpoint,
+    baseUrl: apiRoot,
   };
 
   return new GoogleGenAI({

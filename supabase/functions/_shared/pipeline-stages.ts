@@ -267,7 +267,7 @@ export async function runGenerateScriptStage(opts: {
       systemInstruction,
       promptTemplate,
       thinkingLevel: ThinkingLevel.HIGH,
-      generateContent: (params) => generateScriptWithGemini(params, { apiEndpoint: geminiApiRoot }),
+      generateContent: (params) => generateScriptWithGemini(params, { apiRoot: geminiApiRoot }),
     });
 
     const { error: updateErr } = await db
@@ -379,14 +379,13 @@ function resolveGeminiApiKey(endpoint: string): string {
 }
 
 function createGeminiBatchTtsClient(params: {
-  apiEndpoint: string;
+  apiRoot: string;
   model: string;
 }): GeminiBatchTtsClient {
-  const { apiRoot, apiVersion } = splitGeminiApiEndpoint(params.apiEndpoint);
   return {
-    apiKey: resolveGeminiApiKey(params.apiEndpoint),
-    apiRoot,
-    apiVersion,
+    apiKey: resolveGeminiApiKey(params.apiRoot),
+    apiRoot: params.apiRoot,
+    apiVersion: DEFAULT_GEMINI_API_VERSION,
     model: params.model,
   };
 }
@@ -398,11 +397,11 @@ function readBatchJobName(llmResponse: unknown): string | null {
   return typeof jobName === "string" && jobName.length > 0 ? jobName : null;
 }
 
-function readBatchApiEndpoint(llmResponse: unknown): string | null {
+function readBatchApiRoot(llmResponse: unknown): string | null {
   const response = (llmResponse ?? {}) as Record<string, unknown>;
   const batch = (response.batch ?? {}) as Record<string, unknown>;
-  const apiEndpoint = batch.apiEndpoint;
-  return typeof apiEndpoint === "string" && apiEndpoint.trim().length > 0 ? apiEndpoint.trim() : null;
+  const apiRoot = batch.apiRoot;
+  return typeof apiRoot === "string" && apiRoot.trim().length > 0 ? apiRoot.trim() : null;
 }
 
 function readBatchPollCount(llmResponse: unknown): number {
@@ -471,7 +470,7 @@ export async function startGeneratingAudio(opts: {
     }
 
     const cfg = await loadConfig();
-    const geminiApiEndpoint = resolveGeminiApiEndpoint(cfg);
+    const geminiApiRoot = resolveGeminiApiRoot(cfg);
     const webhookCallbackUrl = resolveGeminiWebhookCallbackUrl();
     const ttsModel = cfg["tts.model"] || "gemini-2.5-flash-preview-tts";
     const selectionMode = normalizeSelectionMode(cfg["tts.selection_mode"]);
@@ -510,7 +509,7 @@ export async function startGeneratingAudio(opts: {
       : script.content;
 
     const batchClient = createGeminiBatchTtsClient({
-      apiEndpoint: geminiApiEndpoint,
+      apiRoot: geminiApiRoot,
       model: ttsModel,
     });
     console.log(`[audio-start] creating Gemini batch episode_id=${episodeId}`);
@@ -534,7 +533,7 @@ export async function startGeneratingAudio(opts: {
       batch: {
         jobName: batchJob.batchName,
         state: "JOB_STATE_RUNNING",
-        apiEndpoint: geminiApiEndpoint,
+        apiRoot: geminiApiRoot,
         inputFile: batchJob.inputFile,
         callbackUrl: webhookCallbackUrl,
         createdAt: now,
@@ -644,7 +643,7 @@ export async function downloadGeneratedAudio(opts: {
     }
 
     const cfg = await loadConfig();
-    const defaultGeminiApiEndpoint = resolveGeminiApiEndpoint(cfg);
+    const defaultGeminiApiRoot = resolveGeminiApiRoot(cfg);
 
     const { data: pendingAudio, error: pendingErr } = await db
       .from("audio_files")
@@ -673,9 +672,9 @@ export async function downloadGeneratedAudio(opts: {
       if (syncBatchErr) throw new Error(`Failed to sync batch_name: ${syncBatchErr.message}`);
     }
 
-    const batchApiEndpoint = readBatchApiEndpoint(llmResponse) ?? defaultGeminiApiEndpoint;
+    const batchApiRoot = readBatchApiRoot(llmResponse) ?? defaultGeminiApiRoot;
     const batchClient = createGeminiBatchTtsClient({
-      apiEndpoint: batchApiEndpoint,
+      apiRoot: batchApiRoot,
       model: String(cfg["tts.model"] || "gemini-2.5-flash-preview-tts"),
     });
     const pollCount = readBatchPollCount(llmResponse);
@@ -687,7 +686,7 @@ export async function downloadGeneratedAudio(opts: {
       jobName,
       state: polledState,
       rawState: polledStatus.state,
-      apiEndpoint: batchApiEndpoint,
+      apiRoot: batchApiRoot,
       outputFile: polledStatus.output ?? null,
       pollCount: pollCount + 1,
       lastPolledAt: now,

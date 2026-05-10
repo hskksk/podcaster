@@ -120,7 +120,14 @@ export class DataClient {
       return Mock.SCRIPTS.find(s => s.episode_id === episodeId) as any || null;
     }
     if (!this.db) return null;
-    const { data } = await this.db.from("scripts").select("*").eq("episode_id", episodeId).maybeSingle();
+    const { data } = await this.db
+      .from("scripts")
+      .select("*")
+      .eq("episode_id", episodeId)
+      .eq("status", "ready")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     return data as Script | null;
   }
 
