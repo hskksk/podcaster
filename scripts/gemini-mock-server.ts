@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import dotenv from "dotenv";
-import { randomUUID } from "node:crypto";
+import { createSign, generateKeyPairSync, randomUUID, type KeyObject } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -39,6 +39,10 @@ type GeminiMockConfig = {
   server?: {
     uploadBaseUrl?: string;
   };
+  webhook?: {
+    enabled?: boolean;
+    issuer?: string;
+  };
   script?: ScriptMockConfig;
   audio?: AudioMockConfig;
 };
@@ -52,7 +56,10 @@ type BatchJob = {
   createdAt: number;
   readyAt: number;
   completionLogged: boolean;
+  webhookDispatched: boolean;
   model?: string;
+  webhookUri?: string;
+  webhookAudience?: string;
   outputFile: string;
   metadata?: Record<string, string>;
   response: Record<string, unknown>;
@@ -78,10 +85,49 @@ const DEFAULT_SCRIPT =
 
 const DEFAULT_CONFIG_PATH = resolve("dev.gemini.mock.toml");
 const DEFAULT_PORT = 8099;
+const DEFAULT_WEBHOOK_ISSUER = "https://accounts.google.com";
 
 const batchJobs = new Map<string, BatchJob>();
 const mockFiles = new Map<string, MockFile>();
 const uploadSessions = new Map<string, UploadSession>();
+const mockWebhookKeyId = `gemini-mock-${randomUUID()}`;
+const mockWebhookKeyPair = generateKeyPairSync("rsa", { modulusLength: 2048 });
+
+function base64UrlEncode(value: Buffer | string): string {
+  const asBuffer = Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
+  return asBuffer.toString("base64url");
+}
+
+function buildMockWebhookJwks(): Record<string, unknown> {
+  const exported = mockWebhookKeyPair.publicKey.export({ format: "jwk" }) as Record<string, unknown>;
+  return {
+    keys: [{
+      ...exported,
+      kid: mockWebhookKeyId,
+      alg: "RS256",
+      use: "sig",
+      key_ops: ["verify"],
+    }],
+  };
+}
+
+const mockWebhookJwks = buildMockWebhookJwks();
+
+function signWebhookJwt(privateKey: KeyObject, payload: Record<string, unknown>): string {
+  const header = {
+    alg: "RS256",
+    typ: "JWT",
+    kid: mockWebhookKeyId,
+  };
+  const encodedHeader = base64UrlEncode(JSON.stringify(header));
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+  const signer = createSign("RSA-SHA256");
+  signer.update(signingInput);
+  signer.end();
+  const signature = signer.sign(privateKey);
+  return `${signingInput}.${base64UrlEncode(signature)}`;
+}
 
 function readMockConfig(): DevConfig {
   const configPath = process.env.GEMINI_MOCK_CONFIG_PATH?.trim() || DEFAULT_CONFIG_PATH;
@@ -319,6 +365,105 @@ function readInputFileName(body: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
+function readWebhookUri(body: Record<string, unknown>): string | undefined {
+  const batch = body.batch as Record<string, unknown> | undefined;
+  const webhookConfig = (batch?.webhook_config ?? batch?.webhookConfig) as Record<string, unknown> | undefined;
+  if (!webhookConfig) return undefined;
+  const uris = webhookConfig.uris;
+  if (!Array.isArray(uris)) return undefined;
+  const uri = uris.find((item): item is string => typeof item === "string" && item.trim().length > 0);
+  return uri?.trim();
+}
+
+function readWebhookAudience(body: Record<string, unknown>, webhookUri?: string): string | undefined {
+  const batch = body.batch as Record<string, unknown> | undefined;
+  const webhookConfig = (batch?.webhook_config ?? batch?.webhookConfig) as Record<string, unknown> | undefined;
+  const userMetadata = webhookConfig?.user_metadata as Record<string, unknown> | undefined;
+  const explicitAudience = userMetadata?.audience;
+  if (typeof explicitAudience === "string" && explicitAudience.trim().length > 0) {
+    return explicitAudience.trim();
+  }
+  return webhookUri;
+}
+
+function rewriteLocalHttpsWebhookUri(uri: string): string {
+  try {
+    const parsed = new URL(uri);
+    const isLocalHost = parsed.hostname === "127.0.0.1" ||
+      parsed.hostname === "localhost" ||
+      parsed.hostname === "host.docker.internal";
+    if (parsed.protocol === "https:" && isLocalHost) {
+      parsed.protocol = "http:";
+      return parsed.toString();
+    }
+  } catch {
+    // noop: invalid URL is handled by fetch
+  }
+  return uri;
+}
+
+async function dispatchBatchWebhook(job: BatchJob, config: DevConfig): Promise<void> {
+  if (!job.webhookUri || job.webhookDispatched) return;
+  const now = Math.floor(Date.now() / 1000);
+  const issuer = config.geminiMock?.webhook?.issuer?.trim() || DEFAULT_WEBHOOK_ISSUER;
+  const audience = job.webhookAudience ?? job.webhookUri;
+  const deliveryUri = rewriteLocalHttpsWebhookUri(job.webhookUri);
+  if (deliveryUri !== job.webhookUri) {
+    console.log(`[gemini-mock] rewrite local webhook URI: ${job.webhookUri} -> ${deliveryUri}`);
+  }
+  const token = signWebhookJwt(mockWebhookKeyPair.privateKey, {
+    iss: issuer,
+    aud: audience,
+    iat: now,
+    nbf: now - 2,
+    exp: now + 300,
+    sub: "gemini-mock-webhook",
+  });
+
+  const webhookPayload = {
+    type: "batch.succeeded",
+    version: "v1",
+    timestamp: new Date().toISOString(),
+    data: {
+      id: job.name,
+      output_file_uri: `mock://${job.outputFile}`,
+      file_name: job.outputFile,
+    },
+  };
+  const webhookId = `mock-wh-${randomUUID()}`;
+  try {
+    const response = await fetch(deliveryUri, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Webhook-Signature": token,
+        "webhook-id": webhookId,
+        "webhook-timestamp": String(now),
+      },
+      body: JSON.stringify(webhookPayload),
+    });
+    const responseBody = await response.text().catch(() => "");
+    console.log(
+      `[gemini-mock] webhook delivered batch=${job.name} uri=${deliveryUri} status=${response.status}`,
+    );
+    if (!response.ok) {
+      console.log(`[gemini-mock] webhook response body: ${responseBody}`);
+    }
+    job.webhookDispatched = response.ok;
+  } catch (error) {
+    console.error(`[gemini-mock] webhook delivery failed batch=${job.name} uri=${deliveryUri}`, error);
+  }
+}
+
+function scheduleBatchWebhook(job: BatchJob, config: DevConfig): void {
+  if (!job.webhookUri) return;
+  if (config.geminiMock?.webhook?.enabled === false) return;
+  const delayMs = Math.max(0, job.readyAt - Date.now());
+  setTimeout(() => {
+    void dispatchBatchWebhook(job, config);
+  }, delayMs);
+}
+
 function isAudioGenerateRequest(body: Record<string, unknown>): boolean {
   const config = body.config;
   if (!config || typeof config !== "object") return false;
@@ -337,12 +482,18 @@ function writeDisabledError(res: ServerResponse): void {
   });
 }
 
-function createBatchJobResponse(body: Record<string, unknown>, audioMock: AudioMockConfig): Record<string, unknown> {
+function createBatchJobResponse(
+  body: Record<string, unknown>,
+  audioMock: AudioMockConfig,
+  config: DevConfig,
+): Record<string, unknown> {
   const now = Date.now();
   const jobName = `batches/mock-audio-${randomUUID()}`;
   const delayMs = Math.max(0, audioMock.delayMs ?? 0);
   const metadata = extractMetadata(body);
   const model = typeof body.model === "string" ? body.model : undefined;
+  const webhookUri = readWebhookUri(body);
+  const webhookAudience = readWebhookAudience(body, webhookUri);
   const nowIso = new Date(now).toISOString();
   const inputFile = readInputFileName(body);
   if (inputFile && !mockFiles.has(inputFile)) {
@@ -366,11 +517,18 @@ function createBatchJobResponse(body: Record<string, unknown>, audioMock: AudioM
     createdAt: now,
     readyAt: now + delayMs,
     completionLogged: false,
+    webhookDispatched: false,
     model,
+    webhookUri,
+    webhookAudience,
     outputFile: outputFileName,
     metadata,
     response: createAudioResponse(audioMock),
   });
+  const createdJob = batchJobs.get(jobName);
+  if (createdJob) {
+    scheduleBatchWebhook(createdJob, config);
+  }
 
   return {
     name: jobName,
@@ -388,6 +546,7 @@ function createBatchJobResponse(body: Record<string, unknown>, audioMock: AudioM
     // Legacy fields for easier manual debugging
     state: "JOB_STATE_RUNNING",
     createTime: nowIso,
+    ...(webhookUri ? { webhookConfigured: true } : {}),
   };
 }
 
@@ -427,6 +586,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     const scriptMock = config.geminiMock?.script ?? {};
     await sleep(scriptMock.delayMs ?? 0);
     writeJson(res, 200, createScriptResponse(scriptMock));
+    return;
+  }
+
+  if (method === "GET" && pathname === "/.well-known/jwks.json") {
+    writeJson(res, 200, mockWebhookJwks);
     return;
   }
 
@@ -517,7 +681,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
     const body = await readRequestJson(req);
     const audioMock = config.geminiMock?.audio ?? {};
-    writeJson(res, 200, createBatchJobResponse(body, audioMock));
+    writeJson(res, 200, createBatchJobResponse(body, audioMock, config));
     return;
   }
 
@@ -547,6 +711,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (ready && !job.completionLogged) {
       job.completionLogged = true;
       console.log(`[gemini-mock] batch completed ${job.name}`);
+      void dispatchBatchWebhook(job, config);
     }
     const nowIso = new Date(now).toISOString();
     const response = {

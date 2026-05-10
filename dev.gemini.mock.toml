@@ -6,6 +6,12 @@ enabled = true
 # If omitted, mock server derives it from request headers (Forwarded / X-Forwarded-* / Host).
 # uploadBaseUrl = "http://host.docker.internal:8099"
 
+[geminiMock.webhook]
+enabled = true
+# JWT issuer for mock Webhook-Signature.
+# Keep this aligned with podcast_config key `gemini.webhook_issuer` if you override it.
+issuer = "https://accounts.google.com"
+
 [geminiMock.script]
 delayMs = 150
 title = "モック台本"
