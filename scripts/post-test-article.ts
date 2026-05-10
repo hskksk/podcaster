@@ -63,5 +63,14 @@ const headers: Record<string, string> = {
 
 console.log(`POST ${ingestUrl}`);
 const res = await fetch(ingestUrl, { method: "POST", headers, body });
-const json = await res.json();
-console.log(`Status: ${res.status}`, json);
+const raw = await res.text();
+let parsed: unknown;
+try {
+  parsed = JSON.parse(raw);
+} catch {
+  parsed = raw;
+}
+console.log(`Status: ${res.status}`, parsed);
+if (!res.ok) {
+  process.exit(1);
+}

@@ -29,10 +29,11 @@
  *   GET   /v1beta/{fileName}:download?alt=media
  */
 
-import { createWriteStream } from "node:fs";
-import { mkdtemp, open, rm, stat } from "node:fs/promises";
+import { createReadStream, createWriteStream } from "node:fs";
+import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Buffer } from "node:buffer";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { once } from "node:events";
@@ -62,7 +63,7 @@ export interface GeminiBatchTtsEndpoints {
 
 export interface GeminiBatchTtsClient {
   apiKey: string;
-  /** Default `"gemini-2.5-flash-preview-tts"`. */
+  /** Default `"gemini-3.1-flash-tts-preview"`. */
   model?: string;
   /** Default `"https://generativelanguage.googleapis.com"`. */
   apiRoot?: string;
@@ -94,6 +95,11 @@ export interface SubmitBatchTtsParams {
   displayName?: string;
   /** `key` field for the JSONL request line. Default `"tts-1"`. */
   requestKey?: string;
+  /** Optional dynamic webhook configuration for batch state events. */
+  webhookConfig?: {
+    uris: string[];
+    user_metadata?: Record<string, unknown>;
+  };
 }
 
 export interface SubmitBatchTtsResult {
@@ -124,7 +130,7 @@ export interface FetchBatchTtsAsWavResult {
   mimeType: string;
 }
 
-const DEFAULT_MODEL = "gemini-2.5-flash-preview-tts";
+const DEFAULT_MODEL = "gemini-3.1-flash-tts-preview";
 const DEFAULT_API_ROOT = "https://generativelanguage.googleapis.com";
 const DEFAULT_API_VERSION = "v1beta";
 const DEFAULT_HIGH_WATER_MARK = 64 * 1024;
@@ -224,6 +230,7 @@ export async function submitBatchTts(
       batch: {
         display_name: params.displayName ?? "podcast-tts",
         input_config: { file_name: inputFile },
+        ...(params.webhookConfig ? { webhook_config: params.webhookConfig } : {}),
       },
     }),
   });
@@ -305,13 +312,26 @@ export async function getBatchStatus(
   const json = (await res.json()) as {
     metadata?: { state?: string };
     state?: string;
+    responseFile?: string;
     response?: { dest?: { fileName?: string }; error?: unknown };
     dest?: { fileName?: string };
+    metadataOutput?: { fileName?: string; file_name?: string; responseFile?: string };
     error?: unknown;
   };
-  const state = json.metadata?.state ?? json.state ?? "UNKNOWN";
+  const rawState = json.metadata?.state ?? json.state ?? "UNKNOWN";
+  const state = rawState.startsWith("BATCH_STATE_")
+    ? `JOB_STATE_${rawState.slice("BATCH_STATE_".length)}`
+    : rawState;
+  const metadataOutput = (json as { metadata?: { output?: Record<string, unknown> } }).metadata?.output;
   const output =
-    json.response?.dest?.fileName ?? json.dest?.fileName ?? undefined;
+    json.response?.dest?.fileName ??
+    json.dest?.fileName ??
+    json.responseFile ??
+    (typeof metadataOutput?.fileName === "string" ? metadataOutput.fileName : undefined) ??
+    (typeof metadataOutput?.file_name === "string" ? metadataOutput.file_name : undefined) ??
+    (typeof metadataOutput?.responseFile === "string" ? metadataOutput.responseFile : undefined) ??
+    (typeof metadataOutput?.responsesFile === "string" ? metadataOutput.responsesFile : undefined) ??
+    undefined;
   const error = json.response?.error ?? json.error;
   return { state, ...(output ? { output } : {}), ...(error ? { error } : {}) };
 }
@@ -401,8 +421,7 @@ export async function extractAudioToPcmFile(
   pcmPath: string,
 ): Promise<{ mimeType: string; pcmBytes: number }> {
   const { highWaterMark } = resolved(client);
-  const fh = await open(jsonlPath, "r");
-  const reader = fh.createReadStream({ highWaterMark });
+  const reader = createReadStream(jsonlPath, { highWaterMark });
   const out = createWriteStream(pcmPath, { highWaterMark });
   const decoder = new TextDecoder();
 
@@ -502,7 +521,6 @@ export async function extractAudioToPcmFile(
       );
     }
   } finally {
-    await fh.close();
     await new Promise<void>((resolve, reject) =>
       out.end((err?: unknown) => (err ? reject(err) : resolve())),
     );
@@ -546,11 +564,5 @@ export async function writeWavFile(
 
   const out = createWriteStream(wavPath, { highWaterMark });
   if (!out.write(header)) await once(out, "drain");
-
-  const fh = await open(pcmPath, "r");
-  try {
-    await pipeline(fh.createReadStream({ highWaterMark }), out);
-  } finally {
-    await fh.close();
-  }
+  await pipeline(createReadStream(pcmPath, { highWaterMark }), out);
 }

@@ -28,93 +28,26 @@ const isLocal = process.env.TARGET === "local";
 
 if (isLocal) {
   // ---- Local deployment ----
-  const { apiUrl, serviceKey } = detectLocalStatus();
-  // pg_net runs inside the Postgres Docker container, so 127.0.0.1 is unreachable.
-  // host.docker.internal resolves to the host machine on macOS/Windows Docker.
-  const functionsBase =
-    apiUrl.replace("127.0.0.1", "host.docker.internal") + "/functions/v1";
+  const { apiUrl } = detectLocalStatus();
 
-  // 1. Upsert service_key in local Vault
+  // Register worker function for pgflow worker management
   runSql(
-    "vault: upsert service_key",
+    "pgflow: track worker functions",
     `
 do $$
-declare
-  v_id uuid;
-  v_key text := ${escapeSqlLiteral(serviceKey)};
 begin
-  select id into v_id from vault.secrets where name = 'service_key' limit 1;
-  if v_id is null then
-    perform vault.create_secret(v_key, 'service_key', 'Service role key for pg_cron edge function calls');
-  else
-    perform vault.update_secret(v_id, v_key, 'service_key', 'Service role key for pg_cron edge function calls');
-  end if;
+  perform pgflow.track_worker_function('craft-episode-worker');
+  perform pgflow.track_worker_function('craft-episode-download-worker');
 end;
 $$;
 `,
   );
 
-  // 2. Create/replace pg_cron jobs
-  runSql(
-    "pg_cron: create drain jobs",
-    `
-do $$
-begin
-  perform cron.schedule(
-    'drain-script-queue', '*/5 * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/generate-script',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
-  perform cron.schedule(
-    'drain-audio-queue', '*/5 * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/generate-audio',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
-  perform cron.schedule(
-    'drain-rss-queue', '*/5 * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/update-rss',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
-end;
-$$;
-`,
-  );
-
-  // 3. Upload cover.png and seed podcast_config
+  // Upload cover.png and seed podcast_config
   run("npx tsx scripts/seed-config.ts", { env: { TARGET: "local" } });
 
   console.log("\nLocal deploy complete.");
-  console.log(`Ingest URL:  ${functionsBase}/ingest`);
+  console.log(`Ingest URL:  ${apiUrl}/functions/v1/ingest`);
   console.log(
     `RSS feed:    ${apiUrl}/storage/v1/object/public/podcast/feed.xml`,
   );
@@ -131,24 +64,25 @@ $$;
 
   // 2. Push secrets (edge function env vars)
   run("supabase secrets set --env-file .env");
+  run(`supabase secrets set PGFLOW_AUTH_SECRET=${JSON.stringify(serviceKey)}`);
 
   // 3. Apply migrations (20260424000001 drops old broken cron jobs)
   run("supabase db push");
 
-  // 4. Upsert service_key in Supabase Vault
+  // 4. Upsert pgflow worker-management secrets in Supabase Vault
   runSql(
-    "vault: upsert service_key",
+    "vault: upsert supabase_project_id",
     `
 do $$
 declare
   v_id uuid;
-  v_key text := ${escapeSqlLiteral(serviceKey)};
+  v_value text := ${escapeSqlLiteral(projectRef)};
 begin
-  select id into v_id from vault.secrets where name = 'service_key' limit 1;
+  select id into v_id from vault.secrets where name = 'supabase_project_id' limit 1;
   if v_id is null then
-    perform vault.create_secret(v_key, 'service_key', 'Service role key for pg_cron edge function calls');
+    perform vault.create_secret(v_value, 'supabase_project_id', 'Supabase project ID for pgflow worker management');
   else
-    perform vault.update_secret(v_id, v_key, 'service_key', 'Service role key for pg_cron edge function calls');
+    perform vault.update_secret(v_id, v_value, 'supabase_project_id', 'Supabase project ID for pgflow worker management');
   end if;
 end;
 $$;
@@ -156,70 +90,48 @@ $$;
     "--linked",
   );
 
-  // 5. Create/replace pg_cron jobs (cron.schedule replaces jobs with the same name)
-  const functionsBase = `https://${projectRef}.supabase.co/functions/v1`;
   runSql(
-    "pg_cron: create drain jobs",
+    "vault: upsert pgflow_auth_secret",
     `
 do $$
+declare
+  v_id uuid;
+  v_value text := ${escapeSqlLiteral(serviceKey)};
 begin
-  perform cron.schedule(
-    'drain-script-queue', '* * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/generate-script',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
-  perform cron.schedule(
-    'drain-audio-queue', '* * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/generate-audio',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
-  perform cron.schedule(
-    'drain-rss-queue', '* * * * *',
-    $job$
-      select net.http_post(
-        url     := '${functionsBase}/update-rss',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (
-            select decrypted_secret from vault.decrypted_secrets where name = 'service_key'
-          )
-        ),
-        body    := '{}'::jsonb
-      );
-    $job$
-  );
+  select id into v_id from vault.secrets where name = 'pgflow_auth_secret' limit 1;
+  if v_id is null then
+    perform vault.create_secret(v_value, 'pgflow_auth_secret', 'Auth secret for pgflow ensure_workers HTTP calls');
+  else
+    perform vault.update_secret(v_id, v_value, 'pgflow_auth_secret', 'Auth secret for pgflow ensure_workers HTTP calls');
+  end if;
 end;
 $$;
 `,
     "--linked",
   );
 
-  // 6. Deploy all Edge Functions
+  const functionsBase = `https://${projectRef}.supabase.co/functions/v1`;
+
+  // Deploy Edge Functions
   run(
-    "supabase functions deploy ingest generate-script generate-audio update-rss --no-verify-jwt",
+    "supabase functions deploy ingest craft-episode-worker craft-episode-download-worker audio-batch-callback download-monitor pgflow --no-verify-jwt",
   );
 
-  // 7. Upload cover.png and seed podcast_config
+  // Register worker function for pgflow worker management
+  runSql(
+    "pgflow: track worker functions",
+    `
+do $$
+begin
+  perform pgflow.track_worker_function('craft-episode-worker');
+  perform pgflow.track_worker_function('craft-episode-download-worker');
+end;
+$$;
+`,
+    "--linked",
+  );
+
+  // Upload cover.png and seed podcast_config
   run("npx tsx scripts/seed-config.ts");
 
   console.log("\nDeploy complete.");

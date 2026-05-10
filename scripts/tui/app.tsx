@@ -391,7 +391,7 @@ export const App: React.FC<Props> = ({ isMock }) => {
                   const ep = data.episodes.find((e: { id: string }) => e.id === episodeId);
                   openConfirm({
                     title: 'Requeue audio',
-                    message: `Send audio-queue job?\n${ep?.title ?? episodeId}`,
+                    message: `Start audio flow?\n${ep?.title ?? episodeId}`,
                     onConfirm: async () => {
                       const r = await client.requeue('audio', episodeId);
                       if (!r.success) {

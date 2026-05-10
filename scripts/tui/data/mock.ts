@@ -128,7 +128,7 @@ export const AUDIO_FILES = [
 export const LOGS = [
   {
     processed_at: minus(2),
-    queue_name: 'rss-queue',
+    queue_name: '',
     status: 'success',
     episode_id: 'ep1',
     article_id: null,
@@ -137,7 +137,7 @@ export const LOGS = [
   },
   {
     processed_at: minus(5),
-    queue_name: 'audio-queue',
+    queue_name: '',
     status: 'failure',
     episode_id: 'ep3',
     article_id: null,
@@ -146,7 +146,7 @@ export const LOGS = [
   },
   {
     processed_at: minus(45),
-    queue_name: 'script-queue',
+    queue_name: '',
     status: 'success',
     episode_id: null,
     article_id: ARTICLES[1].id,

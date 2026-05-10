@@ -1,29 +1,47 @@
 import { createSupabaseClient } from "../_shared/db.ts";
-import { queueSend } from "../_shared/queue.ts";
 
 const MEM_API_KEY = Deno.env.get("MEM_API_KEY");
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function fetchMemContent(noteId: string): Promise<{ content: string; title?: string }> {
   if (!MEM_API_KEY) throw new Error("MEM_API_KEY is not configured");
-  const res = await fetch(`https://api.mem.ai/v2/notes/${noteId}`, {
-    headers: {
-      Authorization: `Bearer ${MEM_API_KEY}`,
-    },
-  });
-  if (res.status === 404) throw Object.assign(new Error("mem note not found"), { status: 404 });
-  if (res.status === 401 || res.status === 403) {
-    throw Object.assign(new Error(`mem.ai auth error ${res.status}`), { status: 502 });
+  const maxAttempts = 3;
+  let lastStatus = 0;
+  let lastBody = "";
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(`https://api.mem.ai/v2/notes/${noteId}`, {
+      headers: {
+        Authorization: `Bearer ${MEM_API_KEY}`,
+      },
+    });
+
+    if (res.status === 404) throw Object.assign(new Error("mem note not found"), { status: 404 });
+    if (res.status === 401 || res.status === 403) {
+      throw Object.assign(new Error(`mem.ai auth error ${res.status}`), { status: 502 });
+    }
+
+    if (res.ok) {
+      const data = await res.json();
+      if (!data.content) throw Object.assign(new Error("mem.ai response has no content field"), { status: 502 });
+      return {
+        content: data.content as string,
+        title: data.title as string | undefined,
+      };
+    }
+
+    lastStatus = res.status;
+    lastBody = await res.text();
+    const isRetriable = res.status >= 500 && res.status < 600;
+    if (!isRetriable || attempt === maxAttempts) break;
+    await sleep(300 * (2 ** (attempt - 1)));
   }
-  if (!res.ok) {
-    const text = await res.text();
-    throw Object.assign(new Error(`mem.ai API error ${res.status}: ${text}`), { status: 502 });
-  }
-  const data = await res.json();
-  if (!data.content) throw Object.assign(new Error("mem.ai response has no content field"), { status: 502 });
-  return {
-    content: data.content as string,
-    title: data.title as string | undefined,
-  };
+
+  throw Object.assign(
+    new Error(`mem.ai API error ${lastStatus}: ${lastBody}`),
+    { status: 502 },
+  );
 }
 
 Deno.serve(async (req) => {
@@ -92,7 +110,37 @@ Deno.serve(async (req) => {
     return new Response("Internal error", { status: 500 });
   }
 
-  await queueSend(db, "script-queue", { article_id: article.id });
+  const { data: episode, error: episodeErr } = await db
+    .from("episodes")
+    .insert({
+      article_id: article.id,
+      mem_note_id: body.mem_note_id?.trim() ?? null,
+      title: (resolvedTitle || "Untitled").slice(0, 20),
+      description: "",
+      status: "ingested",
+    })
+    .select("id")
+    .single();
+  if (episodeErr || !episode) {
+    console.error("episodes insert failed:", episodeErr);
+    return new Response("Internal error", { status: 500 });
+  }
 
-  return Response.json({ ok: true, article_id: article.id }, { status: 202 });
+  const { error: flowErr } = await db
+    .schema("pgflow")
+    .rpc("start_flow", {
+      flow_slug: "craftEpisodeSubmit",
+      input: {
+        episodeId: episode.id,
+        regenerate: false,
+        startFrom: "script",
+        trigger: "ingest",
+      },
+    });
+  if (flowErr) {
+    console.error("pgflow.start_flow failed:", flowErr);
+    return new Response("Failed to start flow", { status: 500 });
+  }
+
+  return Response.json({ ok: true, article_id: article.id, episode_id: episode.id }, { status: 202 });
 });

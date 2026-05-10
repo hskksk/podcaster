@@ -16,10 +16,13 @@ interface Props {
 }
 
 const STAGES = [
-  /** Backward-compatible: old rows used script_pending, newer rows use ingested. */
+  /** Backward-compatible: old rows used script_pending. */
   { key: 'ingested', label: 'INGESTED', statuses: ['ingested', 'script_pending'] },
+  { key: 'script_running', label: 'SCRIPT RUNNING', statuses: ['script_running'] },
   { key: 'script_ready', label: 'SCRIPT READY', statuses: ['script_ready'] },
+  { key: 'audio_running', label: 'AUDIO PIPELINE', statuses: ['audio_running', 'audio_generated', 'audio_downloading'] },
   { key: 'audio_ready', label: 'AUDIO READY', statuses: ['audio_ready'] },
+  { key: 'failed', label: 'FAILED', statuses: ['script_failed', 'audio_failed', 'rss_failed', 'failed'] },
   { key: 'published', label: 'PUBLISHED', statuses: ['published'] }
 ];
 
@@ -32,8 +35,8 @@ export const PipelineView: React.FC<Props> = ({
   onRequeueAudioRequest
 }) => {
   const { episodes } = data;
-  const [offsets, setOffsets] = useState<number[]>([0, 0, 0, 0]);
-  const [selectedIndices, setSelectedIndices] = useState<number[]>([-1, -1, -1, -1]);
+  const [offsets, setOffsets] = useState<number[]>(() => STAGES.map(() => 0));
+  const [selectedIndices, setSelectedIndices] = useState<number[]>(() => STAGES.map(() => -1));
   const limit = 10;
 
   const filteredEpisodes = useMemo(() => {

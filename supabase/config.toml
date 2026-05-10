@@ -10,7 +10,7 @@ enabled = true
 port = 54331
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
-schemas = ["public", "graphql_public"]
+schemas = ["public", "graphql_public", "pgflow"]
 # Extra schemas to add to the search_path of every request.
 extra_search_path = ["public", "extensions"]
 # The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
@@ -36,7 +36,7 @@ health_timeout = "2m"
 major_version = 17
 
 [db.pooler]
-enabled = false
+enabled = true
 # Port to use for the local connection pooler.
 port = 54329
 # Specifies when a server connection can be reused by other clients.
@@ -388,17 +388,27 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/ingest/index.ts"
 
-[functions.generate-script]
+[functions.pgflow]
 enabled = true
 verify_jwt = false
-entrypoint = "./functions/generate-script/index.ts"
+entrypoint = "./functions/pgflow/index.ts"
 
-[functions.generate-audio]
+[functions.craft-episode-worker]
 enabled = true
 verify_jwt = false
-entrypoint = "./functions/generate-audio/index.ts"
+entrypoint = "./functions/craft-episode-worker/index.ts"
 
-[functions.update-rss]
+[functions.craft-episode-download-worker]
 enabled = true
 verify_jwt = false
-entrypoint = "./functions/update-rss/index.ts"
+entrypoint = "./functions/craft-episode-download-worker/index.ts"
+
+[functions.audio-batch-callback]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/audio-batch-callback/index.ts"
+
+[functions.download-monitor]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/download-monitor/index.ts"

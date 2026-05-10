@@ -6,7 +6,7 @@
 //   pnpm cli download audio <id>
 //   pnpm cli status <article_id>
 //   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
-//   pnpm cli requeue script            <article_id> [--yes]
+//   pnpm cli requeue script            <episode_id> [--yes]
 //   pnpm cli requeue audio             <episode_id> [--yes]
 //   pnpm cli requeue rss               <episode_id> [--yes]
 //   pnpm cli requeue regenerate-script <episode_id> [--yes]
@@ -68,7 +68,7 @@ function usage(): never {
   pnpm cli download audio <id>
   pnpm cli status <article_id>
   pnpm cli logs [--limit N] [--queue <name>] [--status <status>] [--episode <id>]
-  pnpm cli requeue script            <article_id> [--yes]
+  pnpm cli requeue script            <episode_id> [--yes]
   pnpm cli requeue audio             <episode_id> [--yes]
   pnpm cli requeue rss               <episode_id> [--yes]
   pnpm cli requeue regenerate-script <episode_id> [--yes]
@@ -480,55 +480,56 @@ async function confirm(message: string): Promise<boolean> {
   });
 }
 
-async function requeueRecord(
-  queueName: string,
-  message: Record<string, unknown>,
+async function startFlowRecord(
+  flowSlug: "craftEpisodeSubmit" | "craftEpisodeDownload",
+  input: Record<string, unknown>,
+  label: string,
   yes: boolean,
 ): Promise<void> {
   if (!yes) {
-    const ok = await confirm(`Re-enqueue ${JSON.stringify(message)} → ${queueName}?`);
+    const ok = await confirm(`Start flow ${JSON.stringify(input)} → ${label}?`);
     if (!ok) { console.log("Aborted."); process.exit(0); }
   }
-  const { error } = await db.rpc("pgmq_send", { queue_name: queueName, msg: message });
+  const { error } = await db.schema("pgflow").rpc("start_flow", {
+    flow_slug: flowSlug,
+    input,
+  });
   if (error) { console.error("Error:", error.message); process.exit(1); }
-  console.log(`Enqueued to ${queueName}: ${JSON.stringify(message)}`);
+  console.log(`Flow started (${label}): ${JSON.stringify(input)}`);
 }
 
 async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> {
   if (sub === "script") {
-    const { data, error } = await db.from("articles").select("id, title").eq("id", id).maybeSingle();
+    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
-    if (!data) { console.error(`Article not found: ${id}`); process.exit(1); }
-    console.log(`Article: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord("script-queue", { article_id: id }, yes);
+    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
+    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
+    await startFlowRecord("craftEpisodeSubmit", { episodeId: id, startFrom: "script", trigger: "manual" }, "script", yes);
   } else if (sub === "audio") {
     const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord("audio-queue", { episode_id: id }, yes);
+    await startFlowRecord("craftEpisodeSubmit", { episodeId: id, startFrom: "audio", trigger: "manual" }, "audio", yes);
   } else if (sub === "rss") {
     const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord("rss-queue", { episode_id: id }, yes);
+    await startFlowRecord("craftEpisodeDownload", { episodeId: id, startFrom: "rss", trigger: "manual" }, "rss", yes);
   } else if (sub === "regenerate-script") {
     const { data, error } = await db
       .from("episodes")
-      .select("id, title, article_id")
+      .select("id, title")
       .eq("id", id)
       .maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
-    if (!data.article_id) {
-      console.error(`Episode has no article_id: ${id}`);
-      process.exit(1);
-    }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord(
-      "script-queue",
-      { article_id: data.article_id, target_episode_id: id, regenerate: true },
+    await startFlowRecord(
+      "craftEpisodeSubmit",
+      { episodeId: id, startFrom: "script", regenerate: true, trigger: "manual" },
+      "regenerate-script",
       yes,
     );
   } else if (sub === "regenerate-audio") {
@@ -536,7 +537,12 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await requeueRecord("audio-queue", { episode_id: id, regenerate: true }, yes);
+    await startFlowRecord(
+      "craftEpisodeSubmit",
+      { episodeId: id, startFrom: "audio", regenerate: true, trigger: "manual" },
+      "regenerate-audio",
+      yes,
+    );
   } else {
     console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio <id> [--yes]");
     process.exit(1);

@@ -86,15 +86,11 @@ export const EpisodesView: React.FC<Props> = ({
     const ep = filteredEpisodes.find(e => e.id === selectedId);
     if (ep && key.ctrl) {
       if (input === 's') {
-        if (!ep.article_id) {
-          showToast('No article_id — cannot requeue script', 'error');
-          return;
-        }
         openConfirm({
           title: 'Requeue script',
-          message: `Send script-queue job?\n${ep.title}\narticle_id: ${ep.article_id}`,
+          message: `Start script flow?\n${ep.title}\nepisode_id: ${ep.id}`,
           onConfirm: async () => {
-            const r = await client.requeue('script', ep.article_id!);
+            const r = await client.requeue('script', ep.id);
             if (!r.success) {
               showToast(r.error ?? 'Requeue failed', 'error');
               return;
@@ -108,7 +104,7 @@ export const EpisodesView: React.FC<Props> = ({
       if (input === 'a') {
         openConfirm({
           title: 'Requeue audio',
-          message: `Send audio-queue job?\n${ep.title}`,
+          message: `Start audio flow?\n${ep.title}`,
           onConfirm: async () => {
             const r = await client.requeue('audio', ep.id);
             if (!r.success) {
@@ -124,7 +120,7 @@ export const EpisodesView: React.FC<Props> = ({
       if (input === 'y') {
         openConfirm({
           title: 'Requeue RSS',
-          message: `Send rss-queue job?\n${ep.title}`,
+          message: `Start rss flow?\n${ep.title}`,
           onConfirm: async () => {
             const r = await client.requeue('rss', ep.id);
             if (!r.success) {
@@ -138,18 +134,11 @@ export const EpisodesView: React.FC<Props> = ({
         return;
       }
       if (input === 'g') {
-        if (!ep.article_id) {
-          showToast('No article_id — cannot regenerate script', 'error');
-          return;
-        }
         openConfirm({
           title: 'Regenerate script (same episode)',
           message: `Regenerate script and continue to audio/rss?\n${ep.title}\nepisode_id: ${ep.id}`,
           onConfirm: async () => {
-            const r = await client.requeue('script', ep.article_id!, {
-              regenerate: true,
-              targetEpisodeId: ep.id
-            });
+            const r = await client.requeue('script', ep.id, { regenerate: true });
             if (!r.success) {
               showToast(r.error ?? 'Regenerate script failed', 'error');
               return;
@@ -219,7 +208,7 @@ export const EpisodesView: React.FC<Props> = ({
   });
 
   const items = filteredEpisodes.map(e => ({
-    label: `${e.status.padEnd(9)} │ ${e.title}`,
+    label: `${e.status.padEnd(14)} │ ${e.title}`,
     value: e.id
   }));
 
@@ -350,8 +339,11 @@ export const EpisodesView: React.FC<Props> = ({
               <Text bold color="cyan">PIPELINE</Text>
               <Box flexDirection="row" flexWrap="wrap">
                 {pipelineNodes.map((node, idx) => (
-                  <Text key={node.key} color={node.state === 'failed' ? 'red' : node.state === 'done' ? 'green' : 'gray'}>
-                    {node.state === 'failed' ? '✕' : node.state === 'done' ? '●' : '○'} {node.label}
+                  <Text
+                    key={node.key}
+                    color={node.state === 'failed' ? 'red' : node.state === 'running' ? 'yellow' : node.state === 'done' ? 'green' : 'gray'}
+                  >
+                    {node.state === 'failed' ? '✕' : node.state === 'running' ? '◐' : node.state === 'done' ? '●' : '○'} {node.label}
                     {idx < pipelineNodes.length - 1 ? <Text color="gray">  →  </Text> : ''}
                   </Text>
                 ))}
@@ -447,15 +439,22 @@ function formatTokenCount(totalTokens: number | null, loading: boolean): string 
   return `${totalTokens.toLocaleString()} total`;
 }
 
-function buildPipelineNodes(status: string): Array<{ key: string; label: string; state: 'done' | 'pending' | 'failed' }> {
-  const scriptDone = status === 'script_ready' || status === 'audio_ready' || status === 'published';
-  const audioDone = status === 'audio_ready' || status === 'published';
+function buildPipelineNodes(
+  status: string
+): Array<{ key: string; label: string; state: 'done' | 'pending' | 'running' | 'failed' }> {
+  const scriptDone = ['script_ready', 'audio_running', 'audio_generated', 'audio_downloading', 'audio_ready', 'audio_failed', 'published', 'rss_failed'].includes(status);
+  const audioDone = ['audio_generated', 'audio_downloading', 'audio_ready', 'published', 'rss_failed'].includes(status);
   const rssDone = status === 'published';
+  const scriptRunning = status === 'script_running';
+  const audioRunning = ['audio_running', 'audio_generated', 'audio_downloading'].includes(status);
+  const scriptFailed = status === 'script_failed' || status === 'failed';
+  const audioFailed = status === 'audio_failed' || (status === 'failed' && scriptDone && !audioDone);
+  const rssFailed = status === 'rss_failed';
   return [
     { key: 'ingest', label: 'ingest', state: 'done' },
-    { key: 'script', label: 'generate-script', state: status === 'failed' && !scriptDone ? 'failed' : scriptDone ? 'done' : 'pending' },
-    { key: 'audio', label: 'generate-audio', state: status === 'failed' && scriptDone && !audioDone ? 'failed' : audioDone ? 'done' : 'pending' },
-    { key: 'rss', label: 'update-rss', state: status === 'failed' && audioDone && !rssDone ? 'failed' : rssDone ? 'done' : 'pending' }
+    { key: 'script', label: 'generate-script', state: scriptFailed ? 'failed' : scriptRunning ? 'running' : scriptDone ? 'done' : 'pending' },
+    { key: 'audio', label: 'generate-audio', state: audioFailed ? 'failed' : audioRunning ? 'running' : audioDone ? 'done' : 'pending' },
+    { key: 'rss', label: 'update-rss', state: rssFailed ? 'failed' : rssDone ? 'done' : 'pending' }
   ];
 }
 

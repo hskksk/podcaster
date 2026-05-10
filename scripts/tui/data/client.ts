@@ -26,7 +26,6 @@ export type ClientActionResult = {
 
 type RequeueOptions = {
   regenerate?: boolean;
-  targetEpisodeId?: string;
 };
 
 export class DataClient {
@@ -136,18 +135,17 @@ export class DataClient {
     }
     if (!this.db) return { success: false, error: "DB not initialized" };
 
-    const queueName = type === "script" ? "script-queue" : type === "audio" ? "audio-queue" : "rss-queue";
-    const msg: Record<string, unknown> = type === "script"
-      ? { article_id: id }
-      : { episode_id: id };
-    if (options?.regenerate) {
-      msg.regenerate = true;
-    }
-    if (type === "script" && options?.targetEpisodeId) {
-      msg.target_episode_id = options.targetEpisodeId;
-    }
+    const msg: Record<string, unknown> = {
+      episodeId: id,
+      startFrom: type,
+      trigger: "manual",
+    };
+    if (options?.regenerate) msg.regenerate = true;
+    const flowSlug = type === "rss" ? "craftEpisodeDownload" : "craftEpisodeSubmit";
 
-    const { error } = await this.db.rpc("pgmq_send", { queue_name: queueName, msg });
+    const { error } = await this.db
+      .schema("pgflow")
+      .rpc("start_flow", { flow_slug: flowSlug, input: msg });
     if (error) return { success: false, error: error.message };
     return { success: true };
   }
