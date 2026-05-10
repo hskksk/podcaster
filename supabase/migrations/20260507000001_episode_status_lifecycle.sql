@@ -13,6 +13,7 @@ alter table episodes
       'audio_ready',
       'audio_failed',
       'published',
-      'rss_failed'
+      'rss_failed',
+      'failed'
     )
   );
