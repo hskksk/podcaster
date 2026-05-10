@@ -22,6 +22,8 @@ export interface Episode {
     | "script_ready"
     | "script_failed"
     | "audio_running"
+    | "audio_generated"
+    | "audio_downloading"
     | "audio_ready"
     | "audio_failed"
     | "published"
@@ -47,6 +49,9 @@ export interface AudioFile {
   mime_type: string;
   status: "pending" | "ready" | "failed";
   error?: string;
+  batch_name?: string | null;
+  callback_received_at?: string | null;
+  callback_payload?: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -68,5 +73,11 @@ export interface PodcastConfigMap {
   "tts.cohost.voice_options": string[];
   "tts.cohost.tone_options": string[];
   "generator.model": string;
-  "gemini.api_endpoint"?: string;
+  "gemini.api_root"?: string;
+  "gemini.api_path"?: string;
+  "gemini.webhook_callback_url"?: string;
+  "gemini.webhook_jwks_path"?: string;
+  "gemini.webhook_audience"?: string;
+  "gemini.webhook_issuer"?: string;
+  "download.monitor_interval_seconds"?: number;
 }

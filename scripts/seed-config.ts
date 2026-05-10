@@ -65,7 +65,15 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
     prompt_template?: string;
   };
   gemini?: {
-    api_endpoint?: string;
+    api_root?: string;
+    api_path?: string;
+    webhook_callback_url?: string;
+    webhook_jwks_path?: string;
+    webhook_audience?: string;
+    webhook_issuer?: string;
+  };
+  download?: {
+    monitor_interval_seconds?: number;
   };
 };
 
@@ -87,6 +95,21 @@ if (existsSync(coverPath)) {
 }
 
 const coverUrl = `${publicUrl}/storage/v1/object/public/podcast/${coverImage}`;
+const callbackUrl = config.gemini?.webhook_callback_url
+  ?? process.env.GEMINI_WEBHOOK_CALLBACK_URL
+  ?? `${supabaseUrl}/functions/v1/audio-batch-callback`;
+const geminiApiRoot = config.gemini?.api_root
+  ?? process.env.GEMINI_API_ROOT
+  ?? "https://generativelanguage.googleapis.com";
+const geminiApiPath = config.gemini?.api_path
+  ?? process.env.GEMINI_API_PATH
+  ?? "/v1beta";
+const geminiWebhookJwksPath = config.gemini?.webhook_jwks_path
+  ?? process.env.GEMINI_WEBHOOK_JWKS_PATH
+  ?? "/.well-known/jwks.json";
+const webhookAudience = config.gemini?.webhook_audience
+  ?? process.env.GEMINI_WEBHOOK_AUDIENCE
+  ?? callbackUrl;
 
 const defaults: Record<string, unknown> = {
   "podcast.title": config.podcast.title,
@@ -112,7 +135,13 @@ const defaults: Record<string, unknown> = {
     config.tts.speakers.cohost.tone ?? "親しみやすく好奇心のある受け答え",
   ],
   "generator.model": config.generator.model,
-  "gemini.api_endpoint": config.gemini?.api_endpoint ?? "https://generativelanguage.googleapis.com",
+  "gemini.api_root": geminiApiRoot,
+  "gemini.api_path": geminiApiPath,
+  "gemini.webhook_callback_url": callbackUrl,
+  "gemini.webhook_jwks_path": geminiWebhookJwksPath,
+  "gemini.webhook_audience": webhookAudience,
+  "gemini.webhook_issuer": config.gemini?.webhook_issuer ?? "https://accounts.google.com,accounts.google.com",
+  "download.monitor_interval_seconds": config.download?.monitor_interval_seconds ?? 60,
 };
 
 if (config.generator.system_instruction) {

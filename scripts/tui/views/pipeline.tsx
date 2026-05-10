@@ -20,7 +20,7 @@ const STAGES = [
   { key: 'ingested', label: 'INGESTED', statuses: ['ingested', 'script_pending'] },
   { key: 'script_running', label: 'SCRIPT RUNNING', statuses: ['script_running'] },
   { key: 'script_ready', label: 'SCRIPT READY', statuses: ['script_ready'] },
-  { key: 'audio_running', label: 'AUDIO RUNNING', statuses: ['audio_running'] },
+  { key: 'audio_running', label: 'AUDIO PIPELINE', statuses: ['audio_running', 'audio_generated', 'audio_downloading'] },
   { key: 'audio_ready', label: 'AUDIO READY', statuses: ['audio_ready'] },
   { key: 'failed', label: 'FAILED', statuses: ['script_failed', 'audio_failed', 'rss_failed', 'failed'] },
   { key: 'published', label: 'PUBLISHED', statuses: ['published'] }

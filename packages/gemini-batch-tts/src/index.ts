@@ -95,6 +95,11 @@ export interface SubmitBatchTtsParams {
   displayName?: string;
   /** `key` field for the JSONL request line. Default `"tts-1"`. */
   requestKey?: string;
+  /** Optional dynamic webhook configuration for batch state events. */
+  webhookConfig?: {
+    uris: string[];
+    user_metadata?: Record<string, unknown>;
+  };
 }
 
 export interface SubmitBatchTtsResult {
@@ -225,6 +230,7 @@ export async function submitBatchTts(
       batch: {
         display_name: params.displayName ?? "podcast-tts",
         input_config: { file_name: inputFile },
+        ...(params.webhookConfig ? { webhook_config: params.webhookConfig } : {}),
       },
     }),
   });

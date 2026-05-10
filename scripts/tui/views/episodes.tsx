@@ -442,11 +442,11 @@ function formatTokenCount(totalTokens: number | null, loading: boolean): string 
 function buildPipelineNodes(
   status: string
 ): Array<{ key: string; label: string; state: 'done' | 'pending' | 'running' | 'failed' }> {
-  const scriptDone = ['script_ready', 'audio_running', 'audio_ready', 'audio_failed', 'published', 'rss_failed'].includes(status);
-  const audioDone = ['audio_ready', 'published', 'rss_failed'].includes(status);
+  const scriptDone = ['script_ready', 'audio_running', 'audio_generated', 'audio_downloading', 'audio_ready', 'audio_failed', 'published', 'rss_failed'].includes(status);
+  const audioDone = ['audio_generated', 'audio_downloading', 'audio_ready', 'published', 'rss_failed'].includes(status);
   const rssDone = status === 'published';
   const scriptRunning = status === 'script_running';
-  const audioRunning = status === 'audio_running';
+  const audioRunning = ['audio_running', 'audio_generated', 'audio_downloading'].includes(status);
   const scriptFailed = status === 'script_failed' || status === 'failed';
   const audioFailed = status === 'audio_failed' || (status === 'failed' && scriptDone && !audioDone);
   const rssFailed = status === 'rss_failed';

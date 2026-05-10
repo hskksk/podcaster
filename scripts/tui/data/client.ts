@@ -141,10 +141,11 @@ export class DataClient {
       trigger: "manual",
     };
     if (options?.regenerate) msg.regenerate = true;
+    const flowSlug = type === "rss" ? "craftEpisodeDownload" : "craftEpisodeSubmit";
 
     const { error } = await this.db
       .schema("pgflow")
-      .rpc("start_flow", { flow_slug: "craftEpisode", input: msg });
+      .rpc("start_flow", { flow_slug: flowSlug, input: msg });
     if (error) return { success: false, error: error.message };
     return { success: true };
   }

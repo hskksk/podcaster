@@ -17,7 +17,7 @@
         "seed:config:local": "TARGET=local npx tsx scripts/seed-config.ts",
         "seed:config:remote": "npx tsx scripts/seed-config.ts",
         "pgflow:install": "npx pgflow@latest install",
-        "pgflow:compile": "npx pgflow@latest compile craftEpisode",
+        "pgflow:compile": "npx pgflow@latest compile craftEpisodeSubmit && npx pgflow@latest compile craftEpisodeDownload",
         "deploy": "npx tsx scripts/deploy.ts",
         "deploy:local": "TARGET=local npx tsx scripts/deploy.ts",
         "deploy:remote": "npx tsx scripts/deploy.ts",

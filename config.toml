@@ -116,7 +116,21 @@ prompt_template = """以下が記事の内容です。
 """
 
 [gemini]
-#api_endpoint = "http://host.docker.internal:8099"
+#api_root = "http://host.docker.internal:8099"
+api_path = "/v1beta"
+webhook_jwks_path = "/.well-known/jwks.json"
+# webhook_callback_url should point to a publicly reachable URL in production.
+# Local default can be overridden by scripts/seed-config.ts.
+#webhook_callback_url = "https://<project-ref>.supabase.co/functions/v1/audio-batch-callback"
+webhook_callback_url = "http://127.0.0.1:54331/functions/v1/audio-batch-callback"
+# webhook_audience should match your dynamic webhook audience claim.
+# If omitted, seed-config defaults it to webhook_callback_url.
+# webhook_audience = "https://<project-ref>.supabase.co/functions/v1/audio-batch-callback"
+# Optional issuer allow-list (comma-separated).
+# webhook_issuer = "https://accounts.google.com,accounts.google.com"
+
+[download]
+monitor_interval_seconds = 60
 
 [tui.markdown]
 math_label = "ᵐ"

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { ThinkingLevel } from "npm:@google/genai";
 import { createSupabaseClient } from "./db.ts";
 import { loadConfig } from "./config.ts";
+import { resolveGeminiApiEndpoint } from "./gemini-endpoint.ts";
 import { writeLog } from "./logger.ts";
 import { generateScriptWithGemini } from "./gemini-provider.ts";
 import {
@@ -258,7 +259,7 @@ export async function runGenerateScriptStage(opts: {
     const cfg = await loadConfig();
     const systemInstruction = cfg["generator.system_instruction"] as string || DEFAULT_SYSTEM_INSTRUCTION;
     const promptTemplate = cfg["generator.prompt_template"] as string || DEFAULT_USER_PROMPT_TEMPLATE;
-    const geminiApiEndpoint = resolveGeminiApiEndpoint(cfg["gemini.api_endpoint"]);
+    const geminiApiEndpoint = resolveGeminiApiEndpoint(cfg);
 
     const generated = await generateScriptFromArticle({
       articleContent: article.content,
@@ -335,7 +336,6 @@ const AUDIO_BATCH_PENDING_STATES = new Set([
 
 const AUDIO_BATCH_SUCCESS_STATES = new Set([
   "JOB_STATE_SUCCEEDED",
-  "JOB_STATE_PARTIALLY_SUCCEEDED",
 ]);
 
 const AUDIO_BATCH_FAILURE_STATES = new Set([
@@ -344,15 +344,7 @@ const AUDIO_BATCH_FAILURE_STATES = new Set([
   "JOB_STATE_EXPIRED",
 ]);
 
-const DEFAULT_GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com";
 const DEFAULT_GEMINI_API_VERSION = "v1beta";
-
-function resolveGeminiApiEndpoint(configValue: unknown): string {
-  if (typeof configValue === "string" && configValue.trim().length > 0) {
-    return configValue.trim();
-  }
-  return DEFAULT_GEMINI_API_ENDPOINT;
-}
 
 function normalizeBatchState(state: string): string {
   if (state.startsWith("BATCH_STATE_")) {
@@ -380,7 +372,7 @@ function resolveGeminiApiKey(endpoint: string): string {
   const apiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
   if (apiKey && apiKey.length > 0) return apiKey;
   const { apiRoot } = splitGeminiApiEndpoint(endpoint);
-  if (apiRoot !== DEFAULT_GEMINI_API_ENDPOINT) {
+  if (apiRoot !== "https://generativelanguage.googleapis.com") {
     return "mock-api-key";
   }
   throw new Error("GEMINI_API_KEY is required when using the default Gemini API endpoint");
@@ -450,7 +442,7 @@ export async function startGeneratingAudio(opts: {
 
     const { data: pendingAudio, error: pendingErr } = await db
       .from("audio_files")
-      .select("id, llm_response")
+      .select("id, llm_response, batch_name")
       .eq("episode_id", episodeId)
       .eq("status", "pending")
       .order("created_at", { ascending: false })
@@ -458,8 +450,15 @@ export async function startGeneratingAudio(opts: {
       .maybeSingle();
     if (pendingErr) throw new Error(`Failed to find pending audio record: ${pendingErr.message}`);
 
-    const existingJobName = readBatchJobName(pendingAudio?.llm_response ?? null);
+    const existingJobName = pendingAudio?.batch_name || readBatchJobName(pendingAudio?.llm_response ?? null);
     if (existingJobName && !opts.regenerate) {
+      if (pendingAudio && !pendingAudio.batch_name) {
+        await db
+          .from("audio_files")
+          .update({ batch_name: existingJobName })
+          .eq("id", pendingAudio.id)
+          .eq("status", "pending");
+      }
       await writeLog(db, {
         queue_name: "",
         message_id: null,
@@ -472,7 +471,11 @@ export async function startGeneratingAudio(opts: {
     }
 
     const cfg = await loadConfig();
-    const geminiApiEndpoint = resolveGeminiApiEndpoint(cfg["gemini.api_endpoint"]);
+    const geminiApiEndpoint = resolveGeminiApiEndpoint(cfg);
+    const webhookCallbackUrl = String(cfg["gemini.webhook_callback_url"] ?? "").trim();
+    if (!webhookCallbackUrl) {
+      throw new Error("podcast_config key 'gemini.webhook_callback_url' is required");
+    }
     const ttsModel = cfg["tts.model"] || "gemini-2.5-flash-preview-tts";
     const selectionMode = normalizeSelectionMode(cfg["tts.selection_mode"]);
     const hostName = cfg["tts.host.name"] || "Host";
@@ -520,6 +523,12 @@ export async function startGeneratingAudio(opts: {
       cohost: { name: cohostName, voice: cohostVoice },
       displayName: `podcaster-audio-${episodeId}`,
       requestKey: script.id,
+      webhookConfig: {
+        uris: [webhookCallbackUrl],
+        user_metadata: {
+          episode_id: episodeId,
+        },
+      },
     });
     console.log(`[audio-start] Gemini batch created episode_id=${episodeId} job=${batchJob.batchName}`);
 
@@ -530,6 +539,7 @@ export async function startGeneratingAudio(opts: {
         state: "JOB_STATE_RUNNING",
         apiEndpoint: geminiApiEndpoint,
         inputFile: batchJob.inputFile,
+        callbackUrl: webhookCallbackUrl,
         createdAt: now,
         lastPolledAt: null,
         pollCount: 0,
@@ -546,6 +556,9 @@ export async function startGeneratingAudio(opts: {
           storage_path: "",
           mime_type: "",
           status: "pending",
+          batch_name: batchJob.batchName,
+          callback_received_at: null,
+          callback_payload: null,
           error: null,
           llm_usage: {},
           llm_response: llmResponse,
@@ -559,6 +572,9 @@ export async function startGeneratingAudio(opts: {
         storage_path: "",
         mime_type: "",
         status: "pending",
+        batch_name: batchJob.batchName,
+        callback_received_at: null,
+        callback_payload: null,
         llm_usage: {},
         llm_response: llmResponse,
       });
@@ -600,17 +616,19 @@ export async function startGeneratingAudio(opts: {
   }
 }
 
-export async function pollGeneratingAudio(opts: {
+export async function downloadGeneratedAudio(opts: {
   episodeId: string;
+  batchName?: string;
 }): Promise<{ episodeId: string; done: boolean }> {
   const db = createSupabaseClient();
   const episodeId = opts.episodeId;
   const startMs = Date.now();
-  console.log(`[audio-poll] stage start episode_id=${episodeId}`);
+  console.log(`[audio-download] stage start episode_id=${episodeId}`);
   let memNoteId: string | null = null;
   let ttsSelection: Record<string, unknown> | null = null;
   let pendingAudioId: string | null = null;
-  let failureHandled = false;
+  let latestLlmResponse: Record<string, unknown> | null = null;
+  const requestedBatchName = opts.batchName?.trim() || null;
 
   try {
     const { data: episode, error: episodeErr } = await db
@@ -625,16 +643,15 @@ export async function pollGeneratingAudio(opts: {
       return { episodeId, done: true };
     }
     if (episode.status === "audio_failed") {
-      failureHandled = true;
       throw new Error(`Audio already failed for episode: ${episodeId}`);
     }
 
     const cfg = await loadConfig();
-    const defaultGeminiApiEndpoint = resolveGeminiApiEndpoint(cfg["gemini.api_endpoint"]);
+    const defaultGeminiApiEndpoint = resolveGeminiApiEndpoint(cfg);
 
     const { data: pendingAudio, error: pendingErr } = await db
       .from("audio_files")
-      .select("id, script_id, llm_response")
+      .select("id, script_id, llm_response, batch_name")
       .eq("episode_id", episodeId)
       .eq("status", "pending")
       .order("created_at", { ascending: false })
@@ -645,10 +662,19 @@ export async function pollGeneratingAudio(opts: {
     pendingAudioId = pendingAudio.id;
 
     const llmResponse = (pendingAudio.llm_response ?? {}) as Record<string, unknown>;
+    latestLlmResponse = llmResponse;
     ttsSelection = (llmResponse.tts_selection as Record<string, unknown> | null) ?? null;
     const batchInfo = (llmResponse.batch ?? {}) as Record<string, unknown>;
-    const jobName = readBatchJobName(llmResponse);
+    const jobName = requestedBatchName || pendingAudio.batch_name || readBatchJobName(llmResponse);
     if (!jobName) throw new Error(`Batch job name is missing for episode: ${episodeId}`);
+    if (requestedBatchName && requestedBatchName !== pendingAudio.batch_name) {
+      const { error: syncBatchErr } = await db
+        .from("audio_files")
+        .update({ batch_name: requestedBatchName })
+        .eq("id", pendingAudioId)
+        .eq("status", "pending");
+      if (syncBatchErr) throw new Error(`Failed to sync batch_name: ${syncBatchErr.message}`);
+    }
 
     const batchApiEndpoint = readBatchApiEndpoint(llmResponse) ?? defaultGeminiApiEndpoint;
     const batchClient = createGeminiBatchTtsClient({
@@ -682,6 +708,11 @@ export async function pollGeneratingAudio(opts: {
         .eq("id", pendingAudioId)
         .eq("status", "pending");
       if (updatePendingErr) throw new Error(`Failed to update pending batch state: ${updatePendingErr.message}`);
+      await db
+        .from("episodes")
+        .update({ status: "audio_generated" })
+        .eq("id", episodeId)
+        .eq("status", "audio_downloading");
       return { episodeId, done: false };
     }
 
@@ -713,7 +744,6 @@ export async function pollGeneratingAudio(opts: {
         error_message: failureMessage,
         duration_ms: Date.now() - startMs,
       });
-      failureHandled = true;
       throw new Error(failureMessage);
     }
 
@@ -721,10 +751,10 @@ export async function pollGeneratingAudio(opts: {
       throw new Error(`Unexpected batch state for episode ${episodeId}: ${polledState}`);
     }
     console.log(
-      `[audio-poll] batch succeeded episode_id=${episodeId} job=${jobName} state=${polledState} poll_count=${pollCount + 1}`,
+      `[audio-download] batch succeeded episode_id=${episodeId} job=${jobName} state=${polledState}`,
     );
     const wavTempPath = `/tmp/podcaster-audio-${episodeId}-${crypto.randomUUID()}.wav`;
-    console.log(`[audio-poll] fetching batch output to wav episode_id=${episodeId} tmp=${wavTempPath}`);
+    console.log(`[audio-download] fetching batch output to wav episode_id=${episodeId} tmp=${wavTempPath}`);
     const fetchedWav = await fetchBatchTtsAsWav(batchClient, {
       batchName: jobName,
       outPath: wavTempPath,
@@ -739,10 +769,10 @@ export async function pollGeneratingAudio(opts: {
       total_tokens: null,
     };
     console.log(
-      `[audio-poll] wav ready episode_id=${episodeId} raw_mime=${rawMime} pcm_bytes=${fetchedWav.pcmBytes} wav_bytes=${wavStat.size}`,
+      `[audio-download] wav ready episode_id=${episodeId} raw_mime=${rawMime} pcm_bytes=${fetchedWav.pcmBytes} wav_bytes=${wavStat.size}`,
     );
     console.log(
-      `[audio-poll] uploading wav episode_id=${episodeId} path=${audioPath} upload_mime=${uploadMime}`,
+      `[audio-download] uploading wav episode_id=${episodeId} path=${audioPath} upload_mime=${uploadMime}`,
     );
     const wavFile = await Deno.open(wavTempPath, { read: true });
     try {
@@ -761,15 +791,11 @@ export async function pollGeneratingAudio(opts: {
         if (!(closeErr instanceof Deno.errors.BadResource)) {
           throw closeErr;
         }
-        console.log(`[audio-poll] wav file already closed episode_id=${episodeId}`);
+        console.log(`[audio-download] wav file already closed episode_id=${episodeId}`);
       }
       await Deno.remove(wavTempPath).catch(() => undefined);
     }
-    console.log(`[audio-poll] upload completed episode_id=${episodeId} path=${audioPath} upload_mime=${uploadMime}`);
-
-    console.log(
-      `[audio-poll] updating audio_files row episode_id=${episodeId} pending_audio_id=${pendingAudioId}`,
-    );
+    console.log(`[audio-download] upload completed episode_id=${episodeId} path=${audioPath} upload_mime=${uploadMime}`);
     const { error: updateAudioErr } = await db
       .from("audio_files")
       .update({
@@ -777,6 +803,7 @@ export async function pollGeneratingAudio(opts: {
         storage_path: audioPath,
         mime_type: uploadMime,
         status: "ready",
+        batch_name: jobName,
         error: null,
         llm_usage: tokenUsage,
         llm_response: {
@@ -793,12 +820,11 @@ export async function pollGeneratingAudio(opts: {
       .eq("id", pendingAudioId)
       .eq("status", "pending");
     if (updateAudioErr) throw new Error(`Failed to mark audio ready: ${updateAudioErr.message}`);
-    console.log(
-      `[audio-poll] audio_files row updated episode_id=${episodeId} pending_audio_id=${pendingAudioId}`,
-    );
-
-    await db.from("episodes").update({ status: "audio_ready" }).eq("id", episodeId);
-    console.log(`[audio-poll] episode status updated to audio_ready episode_id=${episodeId}`);
+    await db
+      .from("episodes")
+      .update({ status: "audio_ready" })
+      .eq("id", episodeId)
+      .in("status", ["audio_generated", "audio_downloading", "audio_running"]);
     await writeLog(db, {
       queue_name: "",
       message_id: null,
@@ -809,50 +835,28 @@ export async function pollGeneratingAudio(opts: {
     });
     return { episodeId, done: true };
   } catch (err) {
-    console.error(`[audio-poll] stage failure episode_id=${episodeId}`, err);
-
-    if (!failureHandled) {
-      if (pendingAudioId) {
-        await db
-          .from("audio_files")
-          .update({
-            status: "failed",
+    console.error(`[audio-download] stage failure episode_id=${episodeId}`, err);
+    if (pendingAudioId) {
+      await db
+        .from("audio_files")
+        .update({
+          llm_response: {
+            ...(latestLlmResponse ?? {}),
             error: String(err),
-            llm_usage: {},
-            llm_response: {
-              error: String(err),
-              tts_selection: ttsSelection,
-            },
-          })
-          .eq("id", pendingAudioId)
-          .eq("status", "pending");
-      } else {
-        await db.from("audio_files").insert({
-          episode_id: episodeId,
-          script_id: null,
-          storage_path: "",
-          mime_type: "",
-          status: "failed",
-          error: String(err),
-          llm_usage: {},
-          llm_response: { error: String(err), tts_selection: ttsSelection },
-        });
-      }
-
-      await db.from("episodes").update({ status: "audio_failed" }).eq("id", episodeId);
-      await writeLog(db, {
-        queue_name: "",
-        message_id: null,
-        episode_id: episodeId,
-        mem_note_id: memNoteId,
-        status: "failure",
-        error_message: String(err),
-        duration_ms: Date.now() - startMs,
-      });
+            tts_selection: ttsSelection,
+          },
+        })
+        .eq("id", pendingAudioId)
+        .eq("status", "pending");
     }
-
     throw err;
   }
+}
+
+export async function pollGeneratingAudio(opts: {
+  episodeId: string;
+}): Promise<{ episodeId: string; done: boolean }> {
+  return await downloadGeneratedAudio(opts);
 }
 
 export async function runGenerateAudioStage(opts: {

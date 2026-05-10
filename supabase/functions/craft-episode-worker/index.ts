@@ -1,4 +1,4 @@
 import { EdgeWorker } from "@pgflow/edge-worker";
-import { CraftEpisode } from '../../flows/craft-episode.ts';
+import { CraftEpisodeSubmit } from "../../flows/craft-episode-submit.ts";
 
-EdgeWorker.start(CraftEpisode);
+EdgeWorker.start(CraftEpisodeSubmit);

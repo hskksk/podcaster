@@ -20,7 +20,7 @@
 ┌─────────────────────┐
 │      ingest         │  mem_note_id 検証 → articles / episodes を作成
 └────────┬────────────┘
-         │ pgflow.start_flow("craftEpisode")
+         │ pgflow.start_flow("craftEpisodeSubmit")
          ▼
 ┌─────────────────────┐
 │  generate_script    │  Gemini Flash でホスト/コホスト台本を JSON 生成
@@ -31,7 +31,15 @@
 └────────┬────────────┘
          ▼
 ┌─────────────────────┐
-│ generate_audio_poll │  ジョブ完了をポーリングし、完了後に PCM→WAV 変換 → Storage 保存
+│audio-batch-callback │  JWT + JWKS 検証後、episodes.status を audio_generated に更新
+└────────┬────────────┘
+         ▼
+┌─────────────────────┐
+│ download-monitor    │  audio_generated を検知し craftEpisodeDownload を起動
+└────────┬────────────┘
+         ▼
+┌─────────────────────┐
+│generate_audio_download│ バッチ結果を取得し PCM→WAV 変換 → Storage 保存
 └────────┬────────────┘
          ▼
 ┌─────────────────────┐
@@ -159,8 +167,12 @@ pnpm test:post
 # service_role key を取得
 KEY=$(supabase status --json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
 
-# craft episode worker（フロー実行）
+# craft episode submit worker（script + batch submit）
 curl -s http://localhost:54331/functions/v1/craft-episode-worker \
+  -H "Authorization: Bearer $KEY"
+
+# craft episode download worker（download + rss）
+curl -s http://localhost:54331/functions/v1/craft-episode-download-worker \
   -H "Authorization: Bearer $KEY"
 ```
 
@@ -179,9 +191,11 @@ pnpm functions:serve
 `gemini-provider` のモック分岐は廃止し、Gemini API 互換の mock サーバーを `scripts/` 配下で起動する方式になりました。
 
 ```bash
-# 1. config.toml の endpoint を mock に切り替える
+# 1. config.toml の Gemini API 設定を mock に切り替える
 # [gemini]
-# api_endpoint = "http://127.0.0.1:8099/v1beta"
+# api_root = "http://127.0.0.1:8099"
+# api_path = "/v1beta"
+# webhook_jwks_path = "/.well-known/jwks.json"
 
 # 2. podcast_config に反映（local 対象）
 TARGET=local pnpm seed:config
@@ -371,7 +385,7 @@ pnpm deploy
 5. `supabase db push` でマイグレーションを適用
 6. worker 管理用 Vault secret (`supabase_project_id`, `pgflow_auth_secret`) を更新
 7. `pgflow.track_worker_function('craft-episode-worker')` で監視対象を登録
-8. `supabase functions deploy` で Edge Functions（`ingest`, `craft-episode-worker`, `pgflow`）をデプロイ
+8. `supabase functions deploy` で Edge Functions（`ingest`, `craft-episode-worker`, `craft-episode-download-worker`, `audio-batch-callback`, `download-monitor`, `pgflow`）をデプロイ
 9. `seed-config.ts` で `cover.png` をアップロードし `podcast_config` を初期化
 
 ### 本番 RSS フィード URL
@@ -433,7 +447,12 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 | `podcast.description` | `AI が生成するテック系ポッドキャスト` | 説明文 |
 | `podcast.cover_url` | Storage の `cover.png` URL | カバー画像 URL |
 | `generator.model` | `gemini-2.5-flash` | 台本生成 LLM モデル |
-| `gemini.api_endpoint` | `https://generativelanguage.googleapis.com` | Gemini API ベースエンドポイント（mock 利用時は `http://127.0.0.1:8099/v1beta` など） |
+| `gemini.api_root` | `https://generativelanguage.googleapis.com` | Gemini API のベースURL |
+| `gemini.api_path` | `/v1beta` | Gemini API のパス（`api_root` と結合して利用） |
+| `gemini.webhook_callback_url` | `<functions>/audio-batch-callback` | Dynamic webhook の通知先 URL |
+| `gemini.webhook_jwks_path` | `/.well-known/jwks.json` | Webhook JWT 検証用 JWKS パス（`api_root` と結合して利用） |
+| `gemini.webhook_audience` | `gemini.webhook_callback_url` | Webhook JWT の audience |
+| `download.monitor_interval_seconds` | `60` | `download-monitor` の監視間隔（cron） |
 | `tts.model` | `gemini-2.5-flash-preview-tts` | TTS モデル |
 | `tts.instructions` | *(自然な会話トーンで…)* | TTS への合成指示 |
 | `tts.host.name` | `Host` | ホストのスクリプト上の名前 |

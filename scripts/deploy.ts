@@ -32,11 +32,12 @@ if (isLocal) {
 
   // Register worker function for pgflow worker management
   runSql(
-    "pgflow: track worker function",
+    "pgflow: track worker functions",
     `
 do $$
 begin
   perform pgflow.track_worker_function('craft-episode-worker');
+  perform pgflow.track_worker_function('craft-episode-download-worker');
 end;
 $$;
 `,
@@ -113,16 +114,17 @@ $$;
 
   // Deploy Edge Functions
   run(
-    "supabase functions deploy ingest craft-episode-worker pgflow --no-verify-jwt",
+    "supabase functions deploy ingest craft-episode-worker craft-episode-download-worker audio-batch-callback download-monitor pgflow --no-verify-jwt",
   );
 
   // Register worker function for pgflow worker management
   runSql(
-    "pgflow: track worker function",
+    "pgflow: track worker functions",
     `
 do $$
 begin
   perform pgflow.track_worker_function('craft-episode-worker');
+  perform pgflow.track_worker_function('craft-episode-download-worker');
 end;
 $$;
 `,

@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
   const { error: flowErr } = await db
     .schema("pgflow")
     .rpc("start_flow", {
-      flow_slug: "craftEpisode",
+      flow_slug: "craftEpisodeSubmit",
       input: {
         episodeId: episode.id,
         regenerate: false,

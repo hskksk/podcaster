@@ -481,6 +481,7 @@ async function confirm(message: string): Promise<boolean> {
 }
 
 async function startFlowRecord(
+  flowSlug: "craftEpisodeSubmit" | "craftEpisodeDownload",
   input: Record<string, unknown>,
   label: string,
   yes: boolean,
@@ -490,7 +491,7 @@ async function startFlowRecord(
     if (!ok) { console.log("Aborted."); process.exit(0); }
   }
   const { error } = await db.schema("pgflow").rpc("start_flow", {
-    flow_slug: "craftEpisode",
+    flow_slug: flowSlug,
     input,
   });
   if (error) { console.error("Error:", error.message); process.exit(1); }
@@ -503,19 +504,19 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await startFlowRecord({ episodeId: id, startFrom: "script", trigger: "manual" }, "script", yes);
+    await startFlowRecord("craftEpisodeSubmit", { episodeId: id, startFrom: "script", trigger: "manual" }, "script", yes);
   } else if (sub === "audio") {
     const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await startFlowRecord({ episodeId: id, startFrom: "audio", trigger: "manual" }, "audio", yes);
+    await startFlowRecord("craftEpisodeSubmit", { episodeId: id, startFrom: "audio", trigger: "manual" }, "audio", yes);
   } else if (sub === "rss") {
     const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await startFlowRecord({ episodeId: id, startFrom: "rss", trigger: "manual" }, "rss", yes);
+    await startFlowRecord("craftEpisodeDownload", { episodeId: id, startFrom: "rss", trigger: "manual" }, "rss", yes);
   } else if (sub === "regenerate-script") {
     const { data, error } = await db
       .from("episodes")
@@ -526,6 +527,7 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
     await startFlowRecord(
+      "craftEpisodeSubmit",
       { episodeId: id, startFrom: "script", regenerate: true, trigger: "manual" },
       "regenerate-script",
       yes,
@@ -536,6 +538,7 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
     await startFlowRecord(
+      "craftEpisodeSubmit",
       { episodeId: id, startFrom: "audio", regenerate: true, trigger: "manual" },
       "regenerate-audio",
       yes,
