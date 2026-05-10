@@ -2,7 +2,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { ThinkingLevel } from "npm:@google/genai";
 import { createSupabaseClient } from "./db.ts";
 import { loadConfig } from "./config.ts";
-import { resolveGeminiApiEndpoint, resolveGeminiWebhookCallbackUrl } from "./gemini-endpoint.ts";
+import { resolveGeminiApiRoot, resolveGeminiWebhookCallbackUrl } from "./gemini-endpoint.ts";
 import { writeLog } from "./logger.ts";
 import { generateScriptWithGemini } from "./gemini-provider.ts";
 import {
@@ -259,7 +259,7 @@ export async function runGenerateScriptStage(opts: {
     const cfg = await loadConfig();
     const systemInstruction = cfg["generator.system_instruction"] as string || DEFAULT_SYSTEM_INSTRUCTION;
     const promptTemplate = cfg["generator.prompt_template"] as string || DEFAULT_USER_PROMPT_TEMPLATE;
-    const geminiApiEndpoint = resolveGeminiApiEndpoint(cfg);
+    const geminiApiRoot = resolveGeminiApiRoot(cfg);
 
     const generated = await generateScriptFromArticle({
       articleContent: article.content,
@@ -267,7 +267,7 @@ export async function runGenerateScriptStage(opts: {
       systemInstruction,
       promptTemplate,
       thinkingLevel: ThinkingLevel.HIGH,
-      generateContent: (params) => generateScriptWithGemini(params, { apiEndpoint: geminiApiEndpoint }),
+      generateContent: (params) => generateScriptWithGemini(params, { apiEndpoint: geminiApiRoot }),
     });
 
     const { error: updateErr } = await db
