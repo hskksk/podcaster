@@ -1,5 +1,10 @@
 [geminiMock]
-enabled = false
+enabled = true
+
+[geminiMock.server]
+# Optional override for the resumable upload URL host.
+# If omitted, mock server derives it from request headers (Forwarded / X-Forwarded-* / Host).
+# uploadBaseUrl = "http://host.docker.internal:8099"
 
 [geminiMock.script]
 delayMs = 150
@@ -21,7 +26,7 @@ totalTokenCount = 500
 delayMs = 800
 mimeType = "audio/L16;rate=24000"
 sampleRate = 24000
-durationSeconds = 8
+durationSeconds = 300
 
 [geminiMock.audio.tokenUsage]
 promptTokenCount = 240

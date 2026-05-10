@@ -1,6 +1,7 @@
 import { Flow } from "@pgflow/dsl";
 import { generateScript } from "../tasks/generateScript.ts"
-import { generateAudio } from "../tasks/generateAudio.ts"
+import { startGenerateAudio } from "../tasks/startGenerateAudio.ts"
+import { pollGenerateAudio } from "../tasks/pollGenerateAudio.ts"
 import { updateRss } from "../tasks/updateRss.ts"
 
 type Input = {
@@ -35,10 +36,10 @@ export const CraftEpisode = new Flow<Input>({
   )
   .step(
     {
-      slug: "generateAudio",
+      slug: "generateAudioStart",
       dependsOn: ["generateScript"],
-      maxAttempts: 5,
-      timeout: 900,
+      maxAttempts: 3,
+      timeout: 60,
     },
     async (deps, ctx) => {
       const flowInput = await ctx.flowInput;
@@ -46,7 +47,7 @@ export const CraftEpisode = new Flow<Input>({
         return { episodeId: flowInput.episodeId, skipped: true };
       }
 
-      return await generateAudio({
+      return await startGenerateAudio({
         episodeId: flowInput.episodeId,
         regenerate: flowInput.regenerate,
       });
@@ -54,8 +55,26 @@ export const CraftEpisode = new Flow<Input>({
   )
   .step(
     {
+      slug: "generateAudioPoll",
+      dependsOn: ["generateAudioStart"],
+      maxAttempts: 120,
+      timeout: 30,
+    },
+    async (deps, ctx) => {
+      const flowInput = await ctx.flowInput;
+      if (flowInput.startFrom === "rss") {
+        return { episodeId: flowInput.episodeId, skipped: true };
+      }
+
+      return await pollGenerateAudio({
+        episodeId: flowInput.episodeId,
+      });
+    },
+  )
+  .step(
+    {
       slug: "updateRss",
-      dependsOn: ["generateAudio"],
+      dependsOn: ["generateAudioPoll"],
       maxAttempts: 3,
       timeout: 120,
     },

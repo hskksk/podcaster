@@ -27,7 +27,11 @@
 └────────┬────────────┘
          ▼
 ┌─────────────────────┐
-│  generate_audio     │  Gemini TTS 多話者合成 → PCM→WAV 変換 → Storage 保存
+│ generate_audio_start│  Gemini Batch API で音声生成ジョブを開始
+└────────┬────────────┘
+         ▼
+┌─────────────────────┐
+│ generate_audio_poll │  ジョブ完了をポーリングし、完了後に PCM→WAV 変換 → Storage 保存
 └────────┬────────────┘
          ▼
 ┌─────────────────────┐
@@ -57,6 +61,7 @@ podcaster/
 │   │   ├── supabase-detect.ts      # ローカル / リモート Supabase 接続情報の自動検出
 │   │   └── table.ts                # CLI 用テーブル表示ヘルパー
 │   ├── deploy.ts                   # pnpm deploy の実体
+│   ├── gemini-mock-server.ts       # Gemini API 最小 mock サーバー
 │   ├── ingest.ts                   # mem note ID を指定して記事を投入
 │   ├── podcast-cli.ts              # パイプライン状態確認 CLI
 │   ├── post-test-article.ts        # ローカル動作確認用テスト記事投入
@@ -168,6 +173,25 @@ Storage の `podcast` バケットで確認できます。
 supabase start
 pnpm functions:serve
 ```
+
+### Gemini mock サーバーで開発する
+
+`gemini-provider` のモック分岐は廃止し、Gemini API 互換の mock サーバーを `scripts/` 配下で起動する方式になりました。
+
+```bash
+# 1. config.toml の endpoint を mock に切り替える
+# [gemini]
+# api_endpoint = "http://127.0.0.1:8099/v1beta"
+
+# 2. podcast_config に反映（local 対象）
+TARGET=local pnpm seed:config
+
+# 3. mock サーバー + Edge Functions を同時起動
+pnpm functions:serve:mock
+```
+
+`dev.gemini.mock.toml` を編集すると、台本・音声・遅延・token usage を調整できます。
+mock サーバーだけ起動する場合は `pnpm gemini:mock:serve` を使ってください。
 
 ---
 
@@ -409,6 +433,7 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 | `podcast.description` | `AI が生成するテック系ポッドキャスト` | 説明文 |
 | `podcast.cover_url` | Storage の `cover.png` URL | カバー画像 URL |
 | `generator.model` | `gemini-2.5-flash` | 台本生成 LLM モデル |
+| `gemini.api_endpoint` | `https://generativelanguage.googleapis.com` | Gemini API ベースエンドポイント（mock 利用時は `http://127.0.0.1:8099/v1beta` など） |
 | `tts.model` | `gemini-2.5-flash-preview-tts` | TTS モデル |
 | `tts.instructions` | *(自然な会話トーンで…)* | TTS への合成指示 |
 | `tts.host.name` | `Host` | ホストのスクリプト上の名前 |

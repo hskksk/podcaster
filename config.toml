@@ -115,5 +115,8 @@ prompt_template = """以下が記事の内容です。
 
 """
 
+[gemini]
+#api_endpoint = "http://host.docker.internal:8099"
+
 [tui.markdown]
 math_label = "ᵐ"

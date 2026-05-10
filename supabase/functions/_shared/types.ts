@@ -68,4 +68,5 @@ export interface PodcastConfigMap {
   "tts.cohost.voice_options": string[];
   "tts.cohost.tone_options": string[];
   "generator.model": string;
+  "gemini.api_endpoint"?: string;
 }

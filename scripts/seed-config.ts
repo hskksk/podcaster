@@ -64,6 +64,9 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
     system_instruction?: string;
     prompt_template?: string;
   };
+  gemini?: {
+    api_endpoint?: string;
+  };
 };
 
 // Upload cover image to Storage
@@ -109,6 +112,7 @@ const defaults: Record<string, unknown> = {
     config.tts.speakers.cohost.tone ?? "親しみやすく好奇心のある受け答え",
   ],
   "generator.model": config.generator.model,
+  "gemini.api_endpoint": config.gemini?.api_endpoint ?? "https://generativelanguage.googleapis.com",
 };
 
 if (config.generator.system_instruction) {
