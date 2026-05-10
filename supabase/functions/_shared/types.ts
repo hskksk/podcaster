@@ -75,7 +75,6 @@ export interface PodcastConfigMap {
   "generator.model": string;
   "gemini.api_root"?: string;
   "gemini.api_path"?: string;
-  "gemini.webhook_callback_url"?: string;
   "gemini.webhook_jwks_path"?: string;
   "gemini.webhook_audience"?: string;
   "gemini.webhook_issuer"?: string;

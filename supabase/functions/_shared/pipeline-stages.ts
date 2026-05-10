@@ -2,7 +2,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { ThinkingLevel } from "npm:@google/genai";
 import { createSupabaseClient } from "./db.ts";
 import { loadConfig } from "./config.ts";
-import { resolveGeminiApiEndpoint } from "./gemini-endpoint.ts";
+import { resolveGeminiApiEndpoint, resolveGeminiWebhookCallbackUrl } from "./gemini-endpoint.ts";
 import { writeLog } from "./logger.ts";
 import { generateScriptWithGemini } from "./gemini-provider.ts";
 import {
@@ -472,10 +472,7 @@ export async function startGeneratingAudio(opts: {
 
     const cfg = await loadConfig();
     const geminiApiEndpoint = resolveGeminiApiEndpoint(cfg);
-    const webhookCallbackUrl = String(cfg["gemini.webhook_callback_url"] ?? "").trim();
-    if (!webhookCallbackUrl) {
-      throw new Error("podcast_config key 'gemini.webhook_callback_url' is required");
-    }
+    const webhookCallbackUrl = resolveGeminiWebhookCallbackUrl();
     const ttsModel = cfg["tts.model"] || "gemini-2.5-flash-preview-tts";
     const selectionMode = normalizeSelectionMode(cfg["tts.selection_mode"]);
     const hostName = cfg["tts.host.name"] || "Host";

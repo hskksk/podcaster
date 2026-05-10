@@ -449,9 +449,8 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 | `generator.model` | `gemini-2.5-flash` | 台本生成 LLM モデル |
 | `gemini.api_root` | `https://generativelanguage.googleapis.com` | Gemini API のベースURL |
 | `gemini.api_path` | `/v1beta` | Gemini API のパス（`api_root` と結合して利用） |
-| `gemini.webhook_callback_url` | `<functions>/audio-batch-callback` | Dynamic webhook の通知先 URL |
 | `gemini.webhook_jwks_path` | `/.well-known/jwks.json` | Webhook JWT 検証用 JWKS パス（`api_root` と結合して利用） |
-| `gemini.webhook_audience` | `gemini.webhook_callback_url` | Webhook JWT の audience |
+| `gemini.webhook_audience` | `<SUPABASE_URL>/functions/v1/audio-batch-callback` | Webhook JWT の audience |
 | `download.monitor_interval_seconds` | `60` | `download-monitor` の監視間隔（cron） |
 | `tts.model` | `gemini-2.5-flash-preview-tts` | TTS モデル |
 | `tts.instructions` | *(自然な会話トーンで…)* | TTS への合成指示 |

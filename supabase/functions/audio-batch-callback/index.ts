@@ -1,6 +1,6 @@
 import { createSupabaseClient } from "../_shared/db.ts";
 import { loadConfig } from "../_shared/config.ts";
-import { resolveGeminiJwksUrl } from "../_shared/gemini-endpoint.ts";
+import { resolveGeminiJwksUrl, resolveGeminiWebhookCallbackUrl } from "../_shared/gemini-endpoint.ts";
 import { verifyGeminiWebhookJwt } from "../_shared/gemini-webhook-verify.ts";
 import { writeLog } from "../_shared/logger.ts";
 
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
 
   const db = createSupabaseClient();
   const cfg = await loadConfig();
-  const callbackUrl = String(cfg["gemini.webhook_callback_url"] ?? "").trim();
+  const callbackUrl = resolveGeminiWebhookCallbackUrl();
   const audience = String(cfg["gemini.webhook_audience"] ?? callbackUrl).trim();
   const jwksUrl = resolveGeminiJwksUrl(cfg);
   const issuerConfig = parseIssuerList(cfg["gemini.webhook_issuer"]);

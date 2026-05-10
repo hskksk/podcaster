@@ -67,7 +67,6 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
   gemini?: {
     api_root?: string;
     api_path?: string;
-    webhook_callback_url?: string;
     webhook_jwks_path?: string;
     webhook_audience?: string;
     webhook_issuer?: string;
@@ -95,9 +94,7 @@ if (existsSync(coverPath)) {
 }
 
 const coverUrl = `${publicUrl}/storage/v1/object/public/podcast/${coverImage}`;
-const callbackUrl = config.gemini?.webhook_callback_url
-  ?? process.env.GEMINI_WEBHOOK_CALLBACK_URL
-  ?? `${supabaseUrl}/functions/v1/audio-batch-callback`;
+const defaultWebhookAudience = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/audio-batch-callback`;
 const geminiApiRoot = config.gemini?.api_root
   ?? process.env.GEMINI_API_ROOT
   ?? "https://generativelanguage.googleapis.com";
@@ -109,7 +106,7 @@ const geminiWebhookJwksPath = config.gemini?.webhook_jwks_path
   ?? "/.well-known/jwks.json";
 const webhookAudience = config.gemini?.webhook_audience
   ?? process.env.GEMINI_WEBHOOK_AUDIENCE
-  ?? callbackUrl;
+  ?? defaultWebhookAudience;
 
 const defaults: Record<string, unknown> = {
   "podcast.title": config.podcast.title,
@@ -137,7 +134,6 @@ const defaults: Record<string, unknown> = {
   "generator.model": config.generator.model,
   "gemini.api_root": geminiApiRoot,
   "gemini.api_path": geminiApiPath,
-  "gemini.webhook_callback_url": callbackUrl,
   "gemini.webhook_jwks_path": geminiWebhookJwksPath,
   "gemini.webhook_audience": webhookAudience,
   "gemini.webhook_issuer": config.gemini?.webhook_issuer ?? "https://accounts.google.com,accounts.google.com",
@@ -149,6 +145,19 @@ if (config.generator.system_instruction) {
 }
 if (config.generator.prompt_template) {
   defaults["generator.prompt_template"] = config.generator.prompt_template;
+}
+
+const deprecatedConfigKeys = ["gemini.webhook_callback_url"] as const;
+for (const key of deprecatedConfigKeys) {
+  const { error } = await supabase
+    .from("podcast_config")
+    .delete()
+    .eq("key", key);
+  if (error) {
+    console.error(`Failed to remove deprecated key ${key}:`, error.message);
+  } else {
+    console.log(`Removed deprecated key: ${key}`);
+  }
 }
 
 for (const [key, value] of Object.entries(defaults)) {
