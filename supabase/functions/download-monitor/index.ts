@@ -1,7 +1,11 @@
 import { createSupabaseClient } from "../_shared/db.ts";
 import { writeLog } from "../_shared/logger.ts";
 
-const DEFAULT_SCAN_LIMIT = 20;
+/** Episodes waiting on Gemini batch; download flow polls job state then fetches output. */
+const DOWNLOADABLE_EPISODE_STATUSES = ["audio_running", "audio_generated"] as const;
+
+/** Upper bound when searching oldest pending batch jobs for a downloadable episode. */
+const MAX_PENDING_SCAN = 50;
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -10,97 +14,145 @@ Deno.serve(async (req) => {
 
   const startedAt = Date.now();
   const db = createSupabaseClient();
-  const scanLimit = DEFAULT_SCAN_LIMIT;
 
-  const { data: episodes, error: episodesErr } = await db
-    .from("episodes")
-    .select("id, article_id, mem_note_id")
-    .eq("status", "audio_generated")
+  const { data: pendingRows, error: pendingErr } = await db
+    .from("audio_files")
+    .select("episode_id, batch_name")
+    .eq("status", "pending")
+    .not("batch_name", "is", null)
     .order("created_at", { ascending: true })
-    .limit(scanLimit);
-  if (episodesErr) {
-    console.error("[download-monitor] failed to list audio_generated episodes", episodesErr);
-    return new Response("Failed to query episodes", { status: 500 });
+    .limit(MAX_PENDING_SCAN);
+
+  if (pendingErr) {
+    console.error("[download-monitor] failed to list pending audio", pendingErr);
+    return new Response("Failed to query audio_files", { status: 500 });
   }
 
-  let startedFlows = 0;
-  const skipped: Array<{ episodeId: string; reason: string }> = [];
+  const downloadable = new Set<string>(DOWNLOADABLE_EPISODE_STATUSES);
 
-  for (const episode of episodes ?? []) {
-    const { data: pendingAudio, error: audioErr } = await db
-      .from("audio_files")
-      .select("batch_name")
-      .eq("episode_id", episode.id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (audioErr) {
-      console.error("[download-monitor] failed to read pending audio", audioErr);
-      skipped.push({ episodeId: episode.id, reason: "audio_lookup_failed" });
-      continue;
-    }
-    if (!pendingAudio?.batch_name) {
-      skipped.push({ episodeId: episode.id, reason: "missing_batch_name" });
-      continue;
-    }
+  let candidate: {
+    episodeId: string;
+    batchName: string;
+    article_id: string | null;
+    mem_note_id: string | null;
+    previousStatus: string;
+  } | null = null;
 
-    const { data: lockedEpisode, error: lockErr } = await db
+  for (const row of pendingRows ?? []) {
+    const episodeId = row.episode_id as string;
+    const batchName = String(row.batch_name ?? "").trim();
+    if (!batchName) continue;
+
+    const { data: episode, error: epErr } = await db
       .from("episodes")
-      .update({ status: "audio_downloading" })
-      .eq("id", episode.id)
-      .eq("status", "audio_generated")
-      .select("id")
+      .select("id, status, article_id, mem_note_id")
+      .eq("id", episodeId)
       .maybeSingle();
-    if (lockErr) {
-      console.error("[download-monitor] failed to lock episode", lockErr);
-      skipped.push({ episodeId: episode.id, reason: "lock_failed" });
-      continue;
+
+    if (epErr) {
+      console.error("[download-monitor] episode lookup failed", epErr);
+      const durationMs = Date.now() - startedAt;
+      return Response.json({ ok: false, error: "episode_lookup_failed", durationMs }, { status: 500 });
     }
-    if (!lockedEpisode) {
-      skipped.push({ episodeId: episode.id, reason: "already_locked" });
+    if (!episode) continue;
+
+    if (!downloadable.has(episode.status)) {
       continue;
     }
 
-    const { error: startErr } = await db
-      .schema("pgflow")
-      .rpc("start_flow", {
-        flow_slug: "craftEpisodeDownload",
-        input: {
-          episodeId: episode.id,
-          batchName: pendingAudio.batch_name,
-          trigger: "monitor",
-        },
-      });
-    if (startErr) {
-      console.error("[download-monitor] failed to start craftEpisodeDownload", startErr);
-      await db
-        .from("episodes")
-        .update({ status: "audio_generated" })
-        .eq("id", episode.id)
-        .eq("status", "audio_downloading");
-      skipped.push({ episodeId: episode.id, reason: "start_flow_failed" });
-      continue;
-    }
-
-    startedFlows += 1;
-    await writeLog(db, {
-      queue_name: "download-monitor",
-      message_id: null,
-      episode_id: episode.id,
+    candidate = {
+      episodeId: episode.id,
+      batchName,
       article_id: episode.article_id ?? null,
       mem_note_id: episode.mem_note_id ?? null,
-      status: "success",
-      duration_ms: 0,
+      previousStatus: episode.status,
+    };
+    break;
+  }
+
+  if (!candidate) {
+    const durationMs = Date.now() - startedAt;
+    return Response.json({
+      ok: true,
+      scanned: pendingRows?.length ?? 0,
+      startedFlows: 0,
+      skipped: [],
+      durationMs,
     });
   }
+
+  const { data: lockedEpisode, error: lockErr } = await db
+    .from("episodes")
+    .update({ status: "audio_downloading" })
+    .eq("id", candidate.episodeId)
+    .in("status", [...DOWNLOADABLE_EPISODE_STATUSES])
+    .select("id")
+    .maybeSingle();
+
+  if (lockErr) {
+    console.error("[download-monitor] failed to lock episode", lockErr);
+    const durationMs = Date.now() - startedAt;
+    return Response.json({ ok: false, error: "lock_failed", durationMs }, { status: 500 });
+  }
+
+  if (!lockedEpisode) {
+    const durationMs = Date.now() - startedAt;
+    return Response.json({
+      ok: true,
+      scanned: pendingRows?.length ?? 0,
+      startedFlows: 0,
+      skipped: [{ episodeId: candidate.episodeId, reason: "already_locked_or_moved" }],
+      durationMs,
+    });
+  }
+
+  const { error: startErr } = await db.schema("pgflow").rpc("start_flow", {
+    flow_slug: "craftEpisodeDownload",
+    input: {
+      episodeId: candidate.episodeId,
+      batchName: candidate.batchName,
+      trigger: "monitor",
+    },
+  });
+
+  if (startErr) {
+    console.error("[download-monitor] failed to start craftEpisodeDownload", startErr);
+    await db
+      .from("episodes")
+      .update({ status: candidate.previousStatus })
+      .eq("id", candidate.episodeId)
+      .eq("status", "audio_downloading");
+
+    const durationMs = Date.now() - startedAt;
+    return Response.json(
+      {
+        ok: false,
+        error: String(startErr.message ?? startErr),
+        scanned: pendingRows?.length ?? 0,
+        startedFlows: 0,
+        skipped: [{ episodeId: candidate.episodeId, reason: "start_flow_failed" }],
+        durationMs,
+      },
+      { status: 500 },
+    );
+  }
+
+  await writeLog(db, {
+    queue_name: "download-monitor",
+    message_id: null,
+    episode_id: candidate.episodeId,
+    article_id: candidate.article_id,
+    mem_note_id: candidate.mem_note_id,
+    status: "success",
+    duration_ms: 0,
+  });
 
   const durationMs = Date.now() - startedAt;
   return Response.json({
     ok: true,
-    scanned: episodes?.length ?? 0,
-    startedFlows,
-    skipped,
+    scanned: pendingRows?.length ?? 0,
+    startedFlows: 1,
+    skipped: [],
     durationMs,
   });
 });

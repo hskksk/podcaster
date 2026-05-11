@@ -2,7 +2,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { ThinkingLevel } from "npm:@google/genai";
 import { createSupabaseClient } from "./db.ts";
 import { loadConfig } from "./config.ts";
-import { resolveGeminiApiRoot, resolveGeminiWebhookCallbackUrl } from "./gemini-endpoint.ts";
+import { resolveGeminiApiRoot } from "./gemini-endpoint.ts";
 import { writeLog } from "./logger.ts";
 import { generateScriptWithGemini } from "./gemini-provider.ts";
 import {
@@ -471,7 +471,6 @@ export async function startGeneratingAudio(opts: {
 
     const cfg = await loadConfig();
     const geminiApiRoot = resolveGeminiApiRoot(cfg);
-    const webhookCallbackUrl = resolveGeminiWebhookCallbackUrl();
     const ttsModel = cfg["tts.model"] || "gemini-2.5-flash-preview-tts";
     const selectionMode = normalizeSelectionMode(cfg["tts.selection_mode"]);
     const hostName = cfg["tts.host.name"] || "Host";
@@ -519,12 +518,6 @@ export async function startGeneratingAudio(opts: {
       cohost: { name: cohostName, voice: cohostVoice },
       displayName: `podcaster-audio-${episodeId}`,
       requestKey: script.id,
-      webhookConfig: {
-        uris: [webhookCallbackUrl],
-        user_metadata: {
-          episode_id: episodeId,
-        },
-      },
     });
     console.log(`[audio-start] Gemini batch created episode_id=${episodeId} job=${batchJob.batchName}`);
 
@@ -535,7 +528,6 @@ export async function startGeneratingAudio(opts: {
         state: "JOB_STATE_RUNNING",
         apiRoot: geminiApiRoot,
         inputFile: batchJob.inputFile,
-        callbackUrl: webhookCallbackUrl,
         createdAt: now,
         lastPolledAt: null,
         pollCount: 0,
