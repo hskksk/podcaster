@@ -114,7 +114,7 @@ $$;
 
   // Deploy Edge Functions
   run(
-    "supabase functions deploy ingest craft-episode-worker craft-episode-download-worker audio-batch-callback download-monitor pgflow --no-verify-jwt",
+    "supabase functions deploy ingest craft-episode-worker craft-episode-download-worker download-monitor pgflow --no-verify-jwt",
   );
 
   // Register worker function for pgflow worker management

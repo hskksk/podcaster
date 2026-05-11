@@ -48,9 +48,11 @@ curl -s http://localhost:54331/functions/v1/craft-episode-worker -H "Authorizati
 Article text enters via the `ingest` Edge Function and starts a **pgflow** DAG run:
 
 ```
-ingest -> pgflow.start_flow("craftEpisode")
+ingest -> pgflow.start_flow("craftEpisodeSubmit")
        -> generate_script
-       -> generate_audio
+       -> generate_audio_start
+       -> (download-monitor starts craftEpisodeDownload)
+       -> generate_audio_download
        -> update_rss
 ```
 
@@ -62,9 +64,9 @@ The primary execution path is a pgflow worker edge function:
 
 ```ts
 import { EdgeWorker } from "@pgflow/edge-worker";
-import { CraftEpisode } from "../../flows/craft-episode.ts";
+import { CraftEpisodeSubmit } from "../../flows/craft-episode-submit.ts";
 
-EdgeWorker.start(CraftEpisode);
+EdgeWorker.start(CraftEpisodeSubmit);
 ```
 
 Shared utilities live in `supabase/functions/_shared/`:
@@ -81,7 +83,7 @@ Podcast metadata and AI model settings are stored in the `podcast_config` table 
 ### Gemini integration
 
 - **Script generation**: `generateScript` stage calls `gemini.models.generateContent` with `responseMimeType: "application/json"` and a `responseSchema` to force structured output. The script format is `Host: <line>\nCoHost: <line>` repeated.
-- **TTS (audio generation)**: `generateAudio` stage calls the same API with a multi-speaker TTS model. The response is raw PCM; `pcmToWav()` in the stage implementation adds the WAV header before uploading to Storage.
+- **TTS (audio generation)**: `generateAudioStart` submits a Gemini Batch job with a multi-speaker TTS model, and `generateAudioDownload` polls batch state then fetches WAV output before uploading to Storage.
 
 ### TARGET env var
 

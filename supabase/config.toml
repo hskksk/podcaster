@@ -403,11 +403,6 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/craft-episode-download-worker/index.ts"
 
-[functions.audio-batch-callback]
-enabled = true
-verify_jwt = false
-entrypoint = "./functions/audio-batch-callback/index.ts"
-
 [functions.download-monitor]
 enabled = true
 verify_jwt = false

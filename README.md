@@ -31,15 +31,11 @@
 └────────┬────────────┘
          ▼
 ┌─────────────────────┐
-│audio-batch-callback │  JWT + JWKS 検証後、episodes.status を audio_generated に更新
+│ download-monitor    │  pending batch を検知し craftEpisodeDownload を起動
 └────────┬────────────┘
          ▼
 ┌─────────────────────┐
-│ download-monitor    │  audio_generated を検知し craftEpisodeDownload を起動
-└────────┬────────────┘
-         ▼
-┌─────────────────────┐
-│generate_audio_download│ バッチ結果を取得し PCM→WAV 変換 → Storage 保存
+│generate_audio_download│ バッチ状態をポーリングし、完了後に PCM→WAV 変換 → Storage 保存
 └────────┬────────────┘
          ▼
 ┌─────────────────────┐
@@ -82,8 +78,9 @@ podcaster/
 │   │   ├── 20260507031725_..._pgflow_initial.sql
 │   │   └── 20260507031744_..._pgflow_step_conditions.sql
 │   ├── flows/
-│   │   ├── index.ts                # pgflow フローのエクスポート
-│   │   └── craft-episode.ts        # 本番フロー定義
+│   │   ├── index.ts                        # pgflow フローのエクスポート
+│   │   ├── craft-episode-submit.ts         # 台本生成 + 音声バッチ submit
+│   │   └── craft-episode-download.ts       # 音声ダウンロード + RSS 更新
 │   └── functions/
 │       ├── _shared/
 │       │   ├── db.ts       # Supabase クライアント
@@ -195,7 +192,6 @@ pnpm functions:serve
 # [gemini]
 # api_root = "http://127.0.0.1:8099"
 # api_path = "/v1beta"
-# webhook_jwks_path = "/.well-known/jwks.json"
 
 # 2. podcast_config に反映（local 対象）
 TARGET=local pnpm seed:config
@@ -385,7 +381,7 @@ pnpm deploy
 5. `supabase db push` でマイグレーションを適用
 6. worker 管理用 Vault secret (`supabase_project_id`, `pgflow_auth_secret`) を更新
 7. `pgflow.track_worker_function('craft-episode-worker')` で監視対象を登録
-8. `supabase functions deploy` で Edge Functions（`ingest`, `craft-episode-worker`, `craft-episode-download-worker`, `audio-batch-callback`, `download-monitor`, `pgflow`）をデプロイ
+8. `supabase functions deploy` で Edge Functions（`ingest`, `craft-episode-worker`, `craft-episode-download-worker`, `download-monitor`, `pgflow`）をデプロイ
 9. `seed-config.ts` で `cover.png` をアップロードし `podcast_config` を初期化
 
 ### 本番 RSS フィード URL
@@ -449,8 +445,6 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 | `generator.model` | `gemini-2.5-flash` | 台本生成 LLM モデル |
 | `gemini.api_root` | `https://generativelanguage.googleapis.com` | Gemini API のベースURL |
 | `gemini.api_path` | `/v1beta` | Gemini API のパス（`api_root` と結合して利用） |
-| `gemini.webhook_jwks_path` | `/.well-known/jwks.json` | Webhook JWT 検証用 JWKS パス（`api_root` と結合して利用） |
-| `gemini.webhook_audience` | `<SUPABASE_URL>/functions/v1/audio-batch-callback` | Webhook JWT の audience |
 | `download.monitor_interval_seconds` | `60` | `download-monitor` の監視間隔（cron） |
 | `tts.model` | `gemini-2.5-flash-preview-tts` | TTS モデル |
 | `tts.instructions` | *(自然な会話トーンで…)* | TTS への合成指示 |

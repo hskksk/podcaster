@@ -9,7 +9,6 @@ enabled = true
 [geminiMock.webhook]
 enabled = true
 # JWT issuer for mock Webhook-Signature.
-# Keep this aligned with podcast_config key `gemini.webhook_issuer` if you override it.
 issuer = "https://accounts.google.com"
 
 [geminiMock.script]

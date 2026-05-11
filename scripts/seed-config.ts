@@ -67,9 +67,6 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
   gemini?: {
     api_root?: string;
     api_path?: string;
-    webhook_jwks_path?: string;
-    webhook_audience?: string;
-    webhook_issuer?: string;
   };
   download?: {
     monitor_interval_seconds?: number;
@@ -94,19 +91,12 @@ if (existsSync(coverPath)) {
 }
 
 const coverUrl = `${publicUrl}/storage/v1/object/public/podcast/${coverImage}`;
-const defaultWebhookAudience = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/audio-batch-callback`;
 const geminiApiRoot = config.gemini?.api_root
   ?? process.env.GEMINI_API_ROOT
   ?? "https://generativelanguage.googleapis.com";
 const geminiApiPath = config.gemini?.api_path
   ?? process.env.GEMINI_API_PATH
   ?? "/v1beta";
-const geminiWebhookJwksPath = config.gemini?.webhook_jwks_path
-  ?? process.env.GEMINI_WEBHOOK_JWKS_PATH
-  ?? "/.well-known/jwks.json";
-const webhookAudience = config.gemini?.webhook_audience
-  ?? process.env.GEMINI_WEBHOOK_AUDIENCE
-  ?? defaultWebhookAudience;
 
 const defaults: Record<string, unknown> = {
   "podcast.title": config.podcast.title,
@@ -134,9 +124,6 @@ const defaults: Record<string, unknown> = {
   "generator.model": config.generator.model,
   "gemini.api_root": geminiApiRoot,
   "gemini.api_path": geminiApiPath,
-  "gemini.webhook_jwks_path": geminiWebhookJwksPath,
-  "gemini.webhook_audience": webhookAudience,
-  "gemini.webhook_issuer": config.gemini?.webhook_issuer ?? "https://accounts.google.com,accounts.google.com",
   "download.monitor_interval_seconds": config.download?.monitor_interval_seconds ?? 60,
 };
 
@@ -147,7 +134,12 @@ if (config.generator.prompt_template) {
   defaults["generator.prompt_template"] = config.generator.prompt_template;
 }
 
-const deprecatedConfigKeys = ["gemini.webhook_callback_url"] as const;
+const deprecatedConfigKeys = [
+  "gemini.webhook_callback_url",
+  "gemini.webhook_jwks_path",
+  "gemini.webhook_audience",
+  "gemini.webhook_issuer",
+] as const;
 for (const key of deprecatedConfigKeys) {
   const { error } = await supabase
     .from("podcast_config")
