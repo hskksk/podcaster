@@ -83,37 +83,6 @@ function buildToneInstructions(
   ].join("\n");
 }
 
-function pcmToWav(
-  pcm: Uint8Array,
-  sampleRate: number,
-  numChannels: number,
-  bitsPerSample: number,
-): Uint8Array {
-  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
-  const blockAlign = (numChannels * bitsPerSample) / 8;
-  const dataSize = pcm.byteLength;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-  const write = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  };
-  write(0, "RIFF");
-  view.setUint32(4, 36 + dataSize, true);
-  write(8, "WAVE");
-  write(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitsPerSample, true);
-  write(36, "data");
-  view.setUint32(40, dataSize, true);
-  new Uint8Array(buffer, 44).set(pcm);
-  return new Uint8Array(buffer);
-}
-
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -545,8 +514,6 @@ export async function startGeneratingAudio(opts: {
           mime_type: "",
           status: "pending",
           batch_name: batchJob.batchName,
-          callback_received_at: null,
-          callback_payload: null,
           error: null,
           llm_usage: {},
           llm_response: llmResponse,
@@ -561,8 +528,6 @@ export async function startGeneratingAudio(opts: {
         mime_type: "",
         status: "pending",
         batch_name: batchJob.batchName,
-        callback_received_at: null,
-        callback_payload: null,
         llm_usage: {},
         llm_response: llmResponse,
       });
@@ -839,24 +804,6 @@ export async function downloadGeneratedAudio(opts: {
     }
     throw err;
   }
-}
-
-export async function pollGeneratingAudio(opts: {
-  episodeId: string;
-}): Promise<{ episodeId: string; done: boolean }> {
-  return await downloadGeneratedAudio(opts);
-}
-
-export async function runGenerateAudioStage(opts: {
-  episodeId: string;
-  regenerate?: boolean;
-}): Promise<{ episodeId: string }> {
-  await startGeneratingAudio(opts);
-  const polled = await pollGeneratingAudio({ episodeId: opts.episodeId });
-  if (!polled.done) {
-    throw new Error(`Audio batch is still running for episode: ${opts.episodeId}`);
-  }
-  return { episodeId: opts.episodeId };
 }
 
 export async function runUpdateRssStage(opts: {
