@@ -94,12 +94,10 @@ async function fetchArticleAudioMap(): Promise<Map<string, string>> {
     });
 
     const sql = `
-SELECT a.ingest_meta->>'inbox_file' AS inbox_file, af.storage_path
+SELECT a.ingest_meta->>'inbox_file' AS inbox_file, e.audio_url AS storage_path
 FROM episodes e
 JOIN articles a ON a.id = e.article_id
-JOIN audio_files af ON af.episode_id = e.id
-WHERE e.status IN ('audio_ready', 'published')
-  AND af.status = 'ready'
+WHERE e.audio_url IS NOT NULL
   AND a.ingest_meta->>'inbox_file' IS NOT NULL;
 `;
 

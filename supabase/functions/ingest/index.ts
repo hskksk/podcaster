@@ -110,14 +110,17 @@ Deno.serve(async (req) => {
     return new Response("Internal error", { status: 500 });
   }
 
+  const episodeId = crypto.randomUUID();
   const { data: episode, error: episodeErr } = await db
     .from("episodes")
     .insert({
+      id: episodeId,
       article_id: article.id,
       mem_note_id: body.mem_note_id?.trim() ?? null,
       title: (resolvedTitle || "Untitled").slice(0, 20),
       description: "",
       status: "ingested",
+      audio_url: `audio/${episodeId}.wav`,
     })
     .select("id")
     .single();
