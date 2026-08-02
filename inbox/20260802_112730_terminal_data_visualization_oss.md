@@ -6,16 +6,17 @@
 
 本レポートでは、**GitHubスター数や npm/PyPI の利用実績などから「ある程度使われている」もの**に絞り、ターミナル上でデータを可視化するOSSを調査する。色（ANSI 256色・True Color）前提で問題ない。
 
-大きく分けると次の4カテゴリになる。
+**スコープ**: コマンドを実行すると **stdout/stderr にグラフが出力される** CLI・ライブラリ・エンジンが対象。**対話型TUI**（VisiData, tickrs, gping, btop, Textual 等——全画面起動・キーバインド操作・リアルタイム画面更新が本体のもの）は対象外とする。
+
+大きく分けると次の3カテゴリになる。
 
 | カテゴリ | 代表例 | 典型用途 |
 |---------|--------|---------|
 | **パイプ向けCLI** | YouPlot, termgraph, Miller | CSV/TSVをパイプして即グラフ |
-| **Python/JS ライブラリ** | plotext, plotille, asciichart | スクリプト内で描画 |
-| **対話型TUI** | VisiData, tickrs, gping, btop | 探索・監視・リアルタイム |
-| **インフラ/図表** | gnuplot, Mermaid CLI | 本格描画・ダイアグラム生成 |
+| **Python/JS/Go ライブラリ** | plotext, plotille, asciichart | スクリプト内で描画 |
+| **汎用・図表エンジン** | gnuplot, Mermaid CLI | 本格描画・ダイアグラム生成 |
 
-描画技術の進化も押さえておくと選びやすい。**ASCII（`*` や `─`）→ Unicodeブロック（`▇` `▄`）→ Braille（`⣿`、解像度8倍）→ ANSIカラー → TUI（画面全体を再描画）** という段階がある。
+描画技術の進化も押さえておくと選びやすい。**ASCII（`*` や `─`）→ Unicodeブロック（`▇` `▄`）→ Braille（`⣿`、解像度8倍）→ ANSIカラー** という段階がある。
 
 ---
 
@@ -37,13 +38,9 @@
 
 **termgraph**（mkaz/termgraph, 約3.3k stars）は2012年から、シンプルなテキストファイルを棒グラフ化するCLIとして定着。**YouPlot**（red-data-tools/YouPlot, 約4.8k stars, 2020年〜）は Ruby 製で、bar/line/scatter/boxplot など統計寄りのグラフを `uplot` コマンド一発で描く。DuckDB 公式ドキュメントでもパイプ先として紹介されている。
 
-**VisiData**（saulpw/visidata, 約9k stars）は2016年〜、スプレッドシート的UIで百万行級CSVを開き、Shift+F で頻度表＋ヒストグラム、`.` で散布図——という「探索的可視化」の代名詞になった。
-
 ### モダンPythonエコシステム
 
-**Rich**（Textualize/rich, 約57k stars）自体はグラフ専用ではないが、テーブル・プログレスバー・色付きレイアウトの基盤。**plotext**（piccolomo/plotext, 約2.2k stars）は matplotlib 風APIでターミナルに本格的なチャートを描き、Rich との統合ドキュメントもある。
-
-**Textual**（Textualize/textual, 約37k stars）は TUI フレームワークで Sparkline ウィジェット（`▁▂▃▄▅▆▇█`）を標準提供。ダッシュボード構築の足場になる。
+**Rich**（Textualize/rich, 約57k stars）自体はグラフ専用ではないが、テーブル・色付きレイアウトの基盤として **termcharts** や **plotext** の出力を `Panel` に嵌め込む用途で使われる。**plotext**（piccolomo/plotext, 約2.2k stars）は matplotlib 風APIでターミナルに本格的なチャートを描き、Rich との統合ドキュメントもある。
 
 ---
 
@@ -55,22 +52,21 @@
 |------|--------|-----|
 | ASCII | 1×1 | termplotlib + gnuplot の `*` |
 | Block Elements | 約4×（半ブロック `▄▀`） | plotext, YouPlot |
-| Braille | 約8× | plotille, gping, uniplot |
+| Braille | 約8× | plotille, uniplot, asciigraph |
 | Kitty/Sixel 画像 | ピクセル単位 | termplt（Kitty限定）、plotext 画像モード |
 
-### 2. CLI vs ライブラリ vs TUI
+### 2. CLI vs ライブラリ
 
-- **CLI**: `cat data.csv | uplot bar` — パイプラインの最終段
-- **ライブラリ**: Python/JS/Go から `import` — アプリ組み込み
-- **TUI**: 全画面・キーバインド・リアルタイム更新 — 監視・探索
+- **CLI**: `cat data.csv | uplot bar` — パイプラインの最終段。実行後にグラフが出力され終了
+- **ライブラリ**: Python/JS/Go から `import` — スクリプト内で `print()` / `show()` により出力
 
 ### 3. 入力データ形式
 
-多くのツールは **ラベル列 + 数値列**（CSV/TSV/スペース区切り）を想定。VisiData や Miller は JSON・SQLite・Excel なども扱う。
+多くのツールは **ラベル列 + 数値列**（CSV/TSV/スペース区切り）を想定。Miller は JSON なども処理できる。
 
 ### 4. 色
 
-ANSI エスケープ（8/256/True Color）が主流。termgraph の `--color`、YouPlot の `-c blue`、asciichart の `colors` 配列、gping の `-c` など。ターミナルエミュレータと `$TERM` 設定に依存する点は共通の落とし穴。
+ANSI エスケープ（8/256/True Color）が主流。termgraph の `--color`、YouPlot の `-c blue`、asciichart の `colors` 配列、plotext の `theme()` など。ターミナルエミュレータと `$TERM` 設定に依存する点は共通の落とし穴。
 
 ---
 
@@ -92,10 +88,6 @@ duckdb -s "COPY (SELECT ...) TO '/dev/stdout' WITH (FORMAT csv, HEADER)" \
 ### termplotlib と gnuplot の委譲
 
 termplotlib は **自前で線を引かず gnuplot の dumb/ansi ターミナル出力を借りる**。matplotlib 風 API（`fig.plot`, `fig.hist`, `fig.barh`）の裏で gnuplot プロセスを起動。品質は gnuplot 依存だが、数式プロットや軸ラベルは安定。
-
-### VisiData のグラフモデル
-
-数値列を `#`（int）や `%`（float）に型付けし、`!` でX軸キー列を指定。`.` で単系列散布、`g.` で可視数値列を一括プロット。カテゴリキー列があると色分け散布になる。グラフ画面上で `+`/`-` ズーム、`s`/`t`/`u` で行選択——可視化とデータ操作が一体化している。
 
 ---
 
@@ -295,63 +287,26 @@ Console().print(Panel(chart))
 
 ---
 
-#### Rich / Textual（★ Rich 約57k / Textual 約37k）
+#### Rich（★ 約57k）
 
-Rich 単体はチャートエンジンではないが、**ProgressBar・Sparkline（Textual ウィジェット）** でダッシュボードの部品になる。plotext / termplotlib / termcharts と組み合わせるのが実践的。
-
-Textual Sparkline は `▁▂▃▄▅▆▇█` と min/max 色のグラデーション。
+Rich 単体はチャートエンジンではないが、**termcharts / plotext / termplotlib** の出力を `Panel` や `Columns` に嵌めて stdout に出す用途で使われる。静的な1回描画のダッシュボード風出力向き（対話型TUI ではない）。
 
 ---
 
-### カテゴリC: 対話型・リアルタイム可視化
+#### spark（★ 約6,061）
 
-#### VisiData（★ 約9,163）
-
-- **入力**: CSV, TSV, JSON, SQLite, Excel, HDF5, Parquet 等
-- **可視化**: 頻度表内ヒストグラム（Shift+F）、散布図（`.` / `g.`）、ピボット
-- **操作**: フィルタ・派生列・Python 式 — 可視化は探索の一部
-
-頻度表示イメージ（公式 intro より）:
-
-```
-OPERATOR           ║ count │ percent │ histogram
-UNKNOWN            ║ 23076 │  31.42  │ ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-AMERICAN AIRLINES  ║  4337 │   5.90  │ ■■■■■■■
-DELTA AIRLINES     ║  2817 │   3.84  │ ■■■■
-```
-
-データジャーナリズム・オープンデータ調査の定番。
-
----
-
-#### tickrs（★ 約1,659）
-
-Rust TUI。Yahoo Finance から **line / candle / kagi** チャート、出来高、複数銘柄。金融データのターミナル可視化特化。
+シェルスクリプト1本。**スパークラインのみ**（`▁▂▃▅▇`）。軸なし・1行出力。
 
 ```bash
-tickrs -s AAPL,MSFT -c candle -t 1M --show-volumes
+spark 0 30 55 80 33 150
+# => ▁▂▃▅▂▇
 ```
 
----
-
-#### gping（★ 約12,530）
-
-「Ping, but with a graph」。Braille リアルタイム折れ線。複数ホストを色分け、`--cmd` で任意コマンドの実行時間もグラフ化。
-
-```bash
-gping google.com cloudflare.com
-gping --cmd "curl -o /dev/null -s -w '%{time_total}' https://example.com"
-```
+git log やメトリクス列をパイプしてプロンプト横に貼る用途。`brew install spark` で導入可能。
 
 ---
 
-#### btop / bpytop（★ btop 約33.5k / bpytop 約10.9k）
-
-システムリソースモニタ。CPU・メモリ・ネットワーク・ディスクの**時系列グラフ**（ブロック/Braille風）。データファイル可視化ではないが、「ターミナルでグラフ」文化の代表例。
-
----
-
-### カテゴリD: 汎用・図表エンジン
+### カテゴリC: 汎用・図表エンジン
 
 #### gnuplot
 
@@ -391,11 +346,8 @@ echo 'pie title Pets
 | Python スクリプト内で本格チャート | **plotext** | 種類豊富、matplotlib 風 |
 | Braille 高解像度 | **plotille** / **uniplot** | 散布・ヒスト・ヒートマップ |
 | Node/JS パイプライン | **asciichart** | npm 実績大、折れ線特化 |
-| Go CLI に折れ線 | **asciigraph** | ストリーム `-r` |
-| 百万行CSVを触りながら見る | **VisiData** | 探索+ヒスト+散布 |
-| 株価・ローソク足 | **tickrs** | 金融特化 TUI |
-| ping/レイテンシ監視 | **gping** | リアルタイム Braille |
-| 円グラフ+Rich ダッシュボード | **termcharts** | pie/doughnut 少数派需要 |
+| Go CLI に折れ線 | **asciigraph** | ストリーム `-r` も stdout 出力 |
+| 円グラフ+Rich で stdout 出力 | **termcharts** | pie/doughnut 少数派需要 |
 | 既存 gnuplot 資産 | **termplotlib** | API だけ Python 化 |
 | アーキテクチャ図 | **Mermaid CLI** | テキスト→図 |
 
@@ -408,18 +360,16 @@ echo 'pie title Pets
 | **Thomas Williams, Colin Kelley** | gnuplot 原作者 |
 | **Zach Holman** | spark — シェルスパークライン文化 |
 | **Marcus Kazmierczak** | termgraph |
-| **Saul Pwanson** | VisiData |
 | **Savino Piccolomo** | plotext |
 | **Tammo Ippen** | plotille |
 | **Nico Schlömer (nschloe)** | termplotlib, 科学計算CLIエコシステム |
-| **Will McGugan / Textualize** | Rich, Textual |
+| **Will McGugan / Textualize** | Rich |
 | **red-data-tools** | YouPlot, UnicodePlot |
 | **John Kerl** | Miller |
 | **Igor Kroitor** | asciichart |
 | **Rohit Gupta** | asciigraph (Go) |
-| **Tom Forbes (orf)** | gping |
 
-参考書籍・記事として、VisiData 公式ドキュメント、DuckDB YouPlot ガイド、各 README のサンプルが実質的な「マニュアル」になっている。
+参考書籍・記事として、DuckDB YouPlot ガイド、各 README のサンプルが実質的な「マニュアル」になっている。
 
 ---
 
@@ -428,18 +378,18 @@ echo 'pie title Pets
 ### 動向
 
 1. **AIエージェント × CLI 可視化**: ターミナル内で動く LLM エージェント向けに、stdout に直接グラフを出すツール（plotext, YouPlot, glyph-arts 等）への関心が高まっている。コンテキストスイッチなしで「数値の形」を LLM に渡せる。
-2. **Rust 再実装**: YouPlot → unicode-plot、gping/tickrs/btop など Rust TUI が高性能・配布しやすい。
-3. **Rich/Textual 統合**: 単体プロッタより「Rich パネルに embed」する設計が増加。
-4. **Braille 標準化**: リアルタイム・高解像度の de facto 方式に。gping の `--simple-graphics` で ASCII フォールバックも用意。
+2. **Rust 再実装**: YouPlot → unicode-plot など、パイプ向けCLIの Rust 移植が進む。
+3. **Rich 統合**: 単体プロッタより「Rich パネルに embed して stdout へ」する設計が増加。
+4. **Braille 標準化**: 高解像度静的プロットの de facto 方式に（plotille, uniplot）。
 5. **データベース直結**: DuckDB + uplot パターンの普及。SQL 結果をその場で可視化。
 
 ### 未解決・限界
 
 - **解像度**: ターミナルは本質的に低解像度。論文品質の図には不向き。
-- **インタラクティブ性**: ズーム・ツールチップは VisiData/TUI 系以外弱い。
+- **インタラクティブ性**: 本レポート対象外の TUI 以外では、ズーム・ホバーは基本不可。
 - **色の再現性**: ログファイルにコピペすると ANSI が崩れる（termgraph README も注意）。
 - **ターミナル依存**: Kitty プロトコル（termplt）や Sixel は環境差大。
-- **時系列のCLI**: YouPlot は時系列ネイティブ未サポート（README 明記）。plotext の datetime/candlestick や tickrs で補う。
+- **時系列のCLI**: YouPlot は時系列ネイティブ未サポート（README 明記）。plotext の datetime/candlestick で補う。
 - **3D・地理**: ターミナル 3D はニッチ（termplot-rs 等は star 少）。本格可視化は別ツールへ。
 
 ---
@@ -467,15 +417,10 @@ echo 'pie title Pets
 - asciichart: https://github.com/kroitor/asciichart
 - asciigraph: https://github.com/guptarohit/asciigraph
 - uniplot: https://github.com/olavolav/uniplot
-- VisiData: https://www.visidata.org/
 - Miller: https://miller.readthedocs.io/
 - Rich: https://github.com/Textualize/rich
-- Textual: https://textual.textualize.io/
 - termcharts: https://github.com/Abdur-rahmaanJ/termcharts
 - spark: https://github.com/holman/spark
-- gping: https://github.com/orf/gping
-- tickrs: https://github.com/tarkah/tickrs
-- btop: https://github.com/aristocratos/btop
 - gnuplot: http://www.gnuplot.info/
 - Mermaid CLI: https://github.com/mermaid-js/mermaid-cli
 - drawille: https://github.com/asciimoo/drawille
@@ -490,18 +435,15 @@ echo 'pie title Pets
 | YouPlot | 4.8k | Ruby CLI | bar,line,scatter,hist,box,density | ○ | ◎ |
 | termgraph | 3.3k | Py CLI/Lib | bar,stacked,hist,calendar | ○ | ◎ |
 | plotext | 2.2k | Py Lib | 多数+candlestick+画像 | ○ | △ |
-| VisiData | 9.2k | Py TUI | hist,scatter | ○ | ◎ |
 | Miller | 9.9k | Go CLI | bar,hist | △ | ◎ |
 | asciichart | 2.1k | JS Lib | line | ○ | △ |
 | asciigraph | 3.1k | Go Lib/CLI | line | ○ | ○ |
 | plotille | 515 | Py Lib | line,scatter,hist,heatmap | ○ | × |
 | termplotlib | 719 | Py Lib | line,hist,barh | △ | × |
-| gping | 12.5k | Rust CLI | realtime line | ○ | ◎ |
-| tickrs | 1.7k | Rust TUI | line,candle,kagi | ○ | ◎ |
-| btop | 33.5k | C++ TUI | system graphs | ◎ | ◎ |
 | spark | 6.1k | Shell | sparkline | × | ◎ |
 | Mermaid CLI | 4.9k | Node CLI | diagram,pie | ◎ | ◎ |
-| Rich/Textual | 57k/37k | Py Lib | sparkline,progress | ◎ | △ |
+| Rich | 57k | Py Lib | (layout) | ◎ | △ |
+| termcharts | — | Py Lib | bar,pie,doughnut | ○ | × |
 
 （★は2026年8月時点の GitHub 公開情報に基づく概算。minor ツールは意図的に省略。）
 
@@ -603,7 +545,17 @@ pie title Net traffic
 
 ## 付録C: 意図的に除外したツール
 
-以下は star 数・メンテ状況・重複の観点から本レポートの主役から外した（存在は知っておく程度でよい）。
+以下は本レポートの主役から外した（存在は知っておく程度でよい）。
+
+**対話型TUI（スコープ外）**
+
+- **VisiData**（★9k）: スプレッドシート型探索。Shift+F ヒストグラム等は優秀だが全画面対話が本体
+- **gping**（★12.5k）: ping リアルタイムグラフ。画面更新型
+- **tickrs**（★1.7k）: 株価 TUI
+- **btop / bpytop**（★33k/11k）: システムモニタ
+- **Textual**（★37k）: TUI フレームワーク（Rich との組み合わせで静的出力する場合は Rich 側のみ対象）
+
+**その他（star・重複・用途）**
 
 - **terminalplot / termplot（Python 古参）**: plotext/plotille に機能被り
 - **bashplotlib**: メンテ停滞気味、termgraph で代替可
@@ -646,24 +598,10 @@ plt.show()
 "
 ```
 
-### レシピ4: リアルタイム監視
-
-```bash
-# レイテンシ
-gping -c green,yellow api.example.com db.example.com
-
-# シェルコマンド実行時間
-while true; do
-  t=$( { time curl -s -o /dev/null https://api.example.com/health; } 2>&1 | grep real | awk '{print $2}' | tr -d 'ms' )
-  echo "$t"
-  sleep 1
-done | asciigraph -r
-```
-
 ---
 
 ## まとめ
 
-ターミナルデータ可視化 OSS は、**「パイプで即棒グラフ」（YouPlot/termgraph）**、**「Python に matplotlib 風 API」（plotext）**、**「Braille 高解像度」（plotille/gping）**、**「対話探索」（VisiData）** の4強が柱になっている。色付き ANSI 前提なら、2020年代以降のツールはほぼすべてカラー対応済み。
+ターミナルデータ可視化 OSS（対話型TUI を除く）の柱は、**「パイプで即棒グラフ」（YouPlot/termgraph/Miller）**、**「Python/JS に matplotlib 風 API」（plotext/plotille/asciichart）**、**「Braille 高解像度静的出力」（plotille/uniplot）**、**「汎用エンジン」（gnuplot/Mermaid）** の4つに集約される。色付き ANSI 前提なら、2020年代以降のツールはほぼすべてカラー対応済み。
 
-ポッドキャストや口頭説明用に覚えておくとよいのは、**「データが表形式なら VisiData か YouPlot、スクリプトなら plotext、折れ線だけなら asciichart/spark、監視なら gping/btop」** という分岐だ。README に載った ASCII/Unicode サンプルは、導入前の期待値調整に最も役立つ。
+ポッドキャストや口頭説明用に覚えておくとよいのは、**「表データをパイプするなら YouPlot/termgraph、スクリプトなら plotext、折れ線だけなら asciichart/spark、円グラフなら termcharts」** という分岐だ。README に載った ASCII/Unicode サンプルは、導入前の期待値調整に最も役立つ。
