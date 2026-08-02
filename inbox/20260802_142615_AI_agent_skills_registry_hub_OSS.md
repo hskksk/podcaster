@@ -4,7 +4,7 @@
 
 2025年後半から2026年にかけて、AIコーディングエージェント（Claude Code、Cursor、OpenClaw、Codex など）向けに「Skills（スキル）」を共有・配布する Registry/Hub エコシステムが急速に形成されている。Skills は `SKILL.md` という Markdown ファイルを核としたフォルダ単位の能力拡張パッケージであり、npm が JavaScript パッケージを配布したように、エージェントの「知識・手順・ツール連携」を配布する仕組みとして位置づけられている。
 
-本レポートでは、**実際に使われている主要な OSS・サービス**に焦点を当て、特に最近注目を集めている **ClawHub** とその互換エコシステムを中心に整理する。スター数が極端に少なく実利用が見込めないプロジェクトは除外し、エコシステムの「規格層」「公開 Registry 層」「集約・発見層」「セルフホスト層」の4層構造で理解する。
+本レポートでは、**実際に使われている主要な OSS・サービス**に焦点を当て、特に最近注目を集めている **ClawHub** とその互換エコシステム、および **LiteLLM Skills Gateway** などエンタープライズ向け Registry を中心に整理する。スター数が極端に少なく実利用が見込めないプロジェクトは除外し、エコシステムの「規格層」「公開 Registry 層」「集約・発見層」「セルフホスト層」の4層構造で理解する。
 
 なぜ今この話題が重要か。Skills はエージェントに「何をどう実行するか」を教える**実行可能な指示書**であり、MCP（Model Context Protocol）がツール接続の標準化を担うのに対し、Skills は**手順・判断基準・ワークフロー**の標準化を担う。2026年2月には ClawHub で大規模なサプライチェーン攻撃（ClawHavoc）が発覚し、Registry のセキュリティモデル自体が議論の中心になった。開発者にとって「どの Hub を使うか」は、単なるパッケージマネージャ選びではなく、**信頼・検証・更新・権限**の設計選択でもある。
 
@@ -25,6 +25,8 @@ Anthropic は 2025年10月に Claude 向け Skills 機能を発表した。Skill
 2026年1月、Vercel Labs が `npx skills` CLI と **skills.sh** ディレクトリを公開。同月後半、OpenClaw（旧 Clawdbot）が GitHub で爆発的にスターを獲得し、公式 Registry として **ClawHub**（clawhub.ai）が前面に出た。ClawHub は「AI エージェント向け npm」と称され、3000〜5000件以上の Skills をホストする最大級の公開 Registry となった。
 
 並行して、GitHub 上の `SKILL.md` を横断インデックスする **SkillsMP**（200万件超のスキルを収集・検索）や、Claude Code 向け **Plugin Marketplace**（`.claude-plugin/marketplace.json` 形式）など、複数の「発見・配布」レイヤーが共存する状況になった。
+
+2026年4月、**LiteLLM AI Gateway**（`BerriAI/litellm`、約5.5万 GitHub スター）に **Skills Registry & Hub**（Skills Gateway）が統合された。LLM プロキシ/Gateway を既に運用しているエンタープライズ向けに、Claude Code スキルを中央登録・公開・発見する機能が追加され、AI Platform チームが「Gateway + Skills Registry」を一体運用できるようになった。
 
 ### セキュリティインシデント（2026年2月）
 
@@ -68,7 +70,7 @@ my-skill/
 | 種類 | 役割 | 例 |
 |------|------|-----|
 | **規格（Spec）** | フォーマット定義。配布機能なし | agentskills.io |
-| **Registry/Hub** | スキルの publish/install/version/search を提供 | ClawHub, skills.sh |
+| **Registry/Hub** | スキルの publish/install/version/search を提供 | ClawHub, skills.sh, LiteLLM Skills Gateway |
 | **Marketplace** | プラグインカタログ（skills + commands + hooks 等） | Claude Code Plugin Marketplace |
 | **Aggregator** | 既存ソース（主に GitHub）を横断インデックス | SkillsMP |
 | **Curated Collection** | 厳選リスト。Registry ではない | anthropics/skills, awesome-openclaw-skills |
@@ -273,7 +275,101 @@ Claude Code は **Plugin Marketplace** という別レイヤーを持つ。`.cla
 
 Agent Skills 規格の `SKILL.md` と Claude Plugin Marketplace は**相互運用可能**だが、カタログ形式は異なる。Addy Osmani の `agent-skills` は両方に対応（`npx skills add` と `/plugin marketplace add`）。
 
-### 7. iflytek/skillhub — エンタープライズ向けセルフホスト Registry
+### 7. LiteLLM Skills Gateway — AI Gateway 統合型 Registry
+
+| 項目 | 内容 |
+|------|------|
+| GitHub Stars | 約55,300（`BerriAI/litellm` 本体） |
+| 関連リポ | `BerriAI/litellm-skills`（約77 stars）— Proxy 管理用 Agent Skills |
+| ライセンス | litellm 本体は NOASSERTION / litellm-skills は MIT |
+| 形態 | **セルフホスト**（LiteLLM Proxy Server に組み込み） |
+| リリース | 2026年4月（PR #25118、Agent Skills Marketplace 発表） |
+| 特徴 | LLM Gateway + Skills Registry の**一体型**。Claude Code Plugin Marketplace 互換 |
+| 対象 | AI Platform チーム、LiteLLM Proxy 既存ユーザー |
+
+LiteLLM は100+ LLM API を統合する AI Gateway として広く使われており、Skills Gateway はその Proxy Server 上に構築された**組織内 Skills Registry**である。スキル本体は GitHub 等に置いたまま、LiteLLM がカタログ・公開制御・発見 API を提供する「メタ Registry」モデル。
+
+**何ができるか:**
+
+- Admin UI（AI Hub → Skill Hub）でスキル登録・公開管理
+- GitHub URL をペーストするだけで source type / skill name を自動検出
+- サブディレクトリ内スキル（`git-subdir`）対応
+- 管理者が enable/disable で**公開範囲を制御**（社内のみ → 公開 Hub へ段階的公開）
+- Claude Code から `/plugin marketplace add` で接続可能な `marketplace.json` を自動生成
+- 認証不要の公開 API（`GET /public/skill_hub`）でエージェント・人間双方がスキル発見可能
+
+**スキル登録 API 例:**
+
+```bash
+curl -X POST https://your-proxy/claude-code/plugins \
+  -H "Authorization: Bearer $LITELLM_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "grill-me",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/mattpocock/skills",
+      "path": "grill-me"
+    },
+    "description": "Interview skill for relentless questioning",
+    "domain": "Productivity",
+    "namespace": "interviews",
+    "version": "1.0.0",
+    "keywords": ["interview", "questioning"]
+  }'
+```
+
+**主要 API エンドポイント:**
+
+| エンドポイント | 認証 | 説明 |
+|---------------|------|------|
+| `POST /claude-code/plugins` | 必須 | スキル登録 |
+| `GET /claude-code/plugins` | 必須 | 全スキル一覧（管理者） |
+| `POST /claude-code/plugins/{name}/enable` | 必須 | 公開 Hub へ publish |
+| `POST /claude-code/plugins/{name}/disable` | 必須 | 公開停止 |
+| `GET /public/skill_hub` | 不要 | 公開スキル一覧（エージェント向け） |
+| `GET /claude-code/marketplace.json` | 不要 | Claude Code marketplace マニフェスト |
+
+**Claude Code からの利用:**
+
+```bash
+# エンジニア向けセットアップ（1回）
+claude plugin marketplace add http://litellm.internal.company.com/claude-code/marketplace.json
+
+# 社内承認済みスキルをインストール
+claude plugin install internal-tools@litellm
+```
+
+**スキルメタデータフィールド:**
+
+| フィールド | 説明 |
+|-----------|------|
+| `name` | 一意識別子（`/plugin marketplace add` で使用） |
+| `source` | Git ソース（`github` / `url` / `git-subdir`） |
+| `description` | Hub 表示用の短い説明 |
+| `domain` | カテゴリ（例: `Engineering`, `Productivity`） |
+| `namespace` | domain 内サブカテゴリ（例: `quality`, `meetings`） |
+| `keywords` | 検索・フィルタ用タグ |
+| `version` | semver 文字列 |
+
+**litellm-skills リポジトリ:**
+
+`BerriAI/litellm-skills` は LiteLLM Proxy 自体を**操作する** Agent Skills 集。ユーザー/チーム/キー/モデル/MCP/エージェントの CRUD を `curl` 経由で実行するスキル群（`/add-user`, `/add-key`, `/add-model` 等）を提供する。Registry 機能そのものではなく、LiteLLM 運用を Agent Skills 化したもの。Claude Code、OpenCode、OpenClaw 等の Agent Skills 対応クライアントで利用可能。
+
+**ClawHub / skills.sh との位置づけ:**
+
+| 観点 | LiteLLM Skills Gateway | ClawHub | skills.sh |
+|------|------------------------|---------|-----------|
+| 前提 | LiteLLM Proxy 運用 | OpenClaw エコシステム | なし（CLI のみ） |
+| スキル実体 | GitHub 等（参照のみ） | ClawHub サーバーに publish | GitHub 直接 |
+| 公開制御 | Admin enable/disable | 公開 Registry + モデレーション | なし |
+| Claude Code 連携 | marketplace.json ネイティブ | `--dir` 経由で汎用化 | エージェント別ディレクトリ配置 |
+| エージェント API | `/public/skill_hub`（認証不要） | ClawHub REST API | なし |
+| 強み | Gateway 既存ユーザーへの統合 | OpenClaw ネイティブ + 大規模公開 Hub | マルチエージェント・手軽 |
+
+LiteLLM Skills Gateway は「**すでに LiteLLM で LLM アクセスを統制している組織**が、同じインフラ上で Skills も統制したい」という需要に最適化されている。ClawHub のような大規模公開マーケットプレイスではなく、**エンタープライズ内部の governed Registry** として設計されている点が特徴。
+
+### 8. iflytek/skillhub — エンタープライズ向けセルフホスト Registry
 
 | 項目 | 内容 |
 |------|------|
@@ -291,7 +387,7 @@ clawhub search email
 clawhub publish ./my-skill --slug my-team--my-skill --version 1.0.0
 ```
 
-### 8. VoltAgent/awesome-openclaw-skills — ClawHub キュレーション
+### 9. VoltAgent/awesome-openclaw-skills — ClawHub キュレーション
 
 | 項目 | 内容 |
 |------|------|
@@ -300,7 +396,7 @@ clawhub publish ./my-skill --slug my-team--my-skill --version 1.0.0
 | 特徴 | ClawHub の「人間によるフィルタリング層」。Registry ではない |
 | サイト | clawskills.sh |
 
-### 9. addyosmani/agent-skills — 高品質キュレーションコレクション
+### 10. addyosmani/agent-skills — 高品質キュレーションコレクション
 
 | 項目 | 内容 |
 |------|------|
@@ -309,7 +405,7 @@ clawhub publish ./my-skill --slug my-team--my-skill --version 1.0.0
 | 特徴 | TDD、セキュリティ、パフォーマンス等の**本番グレード工程スキル** |
 | 配布 | `npx skills add addyosmani/agent-skills` または Claude Plugin Marketplace |
 
-### 10. cursor.directory — Cursor コミュニティ Plugin ディレクトリ
+### 11. cursor.directory — Cursor コミュニティ Plugin ディレクトリ
 
 | 項目 | 内容 |
 |------|------|
@@ -352,6 +448,7 @@ clawhub publish ./my-skill --slug my-team--my-skill --version 1.0.0
 | 200万スキルから探索・調査 | **SkillsMP**（必ずソース監査） |
 | 規格準拠を確認 | **agentskills.io** + `skills-ref validate` |
 | Claude Code プラグインとして配布 | **Claude Plugin Marketplace** 形式 |
+| LiteLLM Proxy 運用中の組織で Skills 統制 | **LiteLLM Skills Gateway** |
 | 社内 private Registry（ClawHub CLI 互換） | **iflytek/skillhub** |
 | ClawHub + 社内スキルのハイブリッド | **Hermit**（Proxy 機能） |
 
@@ -419,7 +516,9 @@ npx skills add vercel-labs/agent-skills --skill react-best-practices
 
 ### 事例4: 企業 SkillHub による社内標準化
 
-iflytek/skillhub を K8s 上にデプロイ。チーム namespace（`my-team--code-review`）で RBAC 管理。ClawHub CLI 互換 API により、開発者は既存ワークフローを変えずに社内 Registry へ切り替え。
+### 事例5: LiteLLM Skills Gateway による社内 Skills 統制
+
+AI Platform チームが LiteLLM Proxy を全社 LLM アクセスの単一窓口として運用。Skills Gateway に社内 GitHub リポジトリのスキルを登録し、Admin UI で enable したものだけを `/public/skill_hub` および Claude Code marketplace として公開。開発者は `claude plugin marketplace add http://litellm.internal/claude-code/marketplace.json` で接続し、承認済みスキルのみインストール可能。Gateway の guardrails・cost tracking と Skills 配布が同一インフラで管理される。
 
 ---
 
@@ -441,6 +540,12 @@ iflytek/skillhub を K8s 上にデプロイ。チーム namespace（`my-team--co
 
 - **Vercel Labs（Andrew Qu, Shu Ding）**: `npx skills` CLI、skills.sh 立ち上げ（2026年1月）
 - **Addy Osmani**: agent-skills キュレーションコレクション
+
+### LiteLLM エコシステム
+
+- **Ishaan Jaffer（BerriAI）**: LiteLLM 創業者。Skills Registry & Hub（PR #25118）リード（2026年4月）
+- **BerriAI/litellm**: AI Gateway 本体 + Skills Gateway 統合
+- **BerriAI/litellm-skills**: Proxy 管理用 Agent Skills コレクション
 
 ### セキュリティ研究
 
@@ -481,7 +586,7 @@ Agent Skills フォーマットは統一されつつあるが、**配布メカ�
 
 ### エンタープライズ adoption
 
-iflytek/skillhub の急成長（2026年3月作成、約4800スター）は、企業が「ClawHub の UX + 自社インフラ」を求めているシグナル。RBAC、監査ログ、Skill Scanner はエンタープライズ必須要件になりつつある。
+iflytek/skillhub の急成長（2026年3月作成、約4800スター）は、企業が「ClawHub の UX + 自社インフラ」を求めているシグナル。LiteLLM Skills Gateway も同様に、**既存 Gateway インフラへの Skills 統合**というエンタープライズ向けアプローチを示している。RBAC、監査ログ、Skill Scanner、Admin による公開制御はエンタープライズ必須要件になりつつある。
 
 ### 有料 Skills マーケット
 
@@ -519,22 +624,23 @@ Claude Code では Plugin が skills + commands + hooks + MCP を束ねた上位
                     │     SKILL.md + progressive disclosure      │
                     └─────────────────┬───────────────────┘
                                       │
-          ┌───────────────────────────┼───────────────────────────┐
-          │                           │                           │
-          ▼                           ▼                           ▼
-   ┌─────────────┐           ┌─────────────┐           ┌─────────────────┐
-   │  ClawHub    │           │  skills.sh  │           │ Claude Plugin   │
-   │  (Registry) │           │  (GitHub型) │           │  Marketplace    │
-   │  ~9K stars  │           │  ~28K stars │           │ 2500+ catalogs  │
-   └──────┬──────┘           └─────────────┘           └─────────────────┘
-          │                           │
-          ▼                           ▼
-   ┌─────────────┐           ┌─────────────┐
-   │  OpenClaw   │           │ Cursor/Codex│
-   │  ~385K stars│           │ 70+ agents  │
-   └─────────────┘           └─────────────┘
+     ┌────────────────────────────────┼────────────────────────────────┐
+     │                                │                                │
+     ▼                                ▼                                ▼
+┌─────────────┐              ┌─────────────┐              ┌─────────────────┐
+│  ClawHub    │              │  skills.sh  │              │ Claude Plugin   │
+│  (Registry) │              │  (GitHub型) │              │  Marketplace    │
+│  ~9K stars  │              │  ~28K stars │              │ 2500+ catalogs  │
+└──────┬──────┘              └─────────────┘              └────────┬────────┘
+       │                                                           │
+       ▼                                                           ▼
+┌─────────────┐                                          ┌─────────────────┐
+│  OpenClaw   │                                          │ LiteLLM Skills  │
+│  ~385K stars│                                          │ Gateway (~55K)  │
+└─────────────┘                                          │ Gateway統合型   │
+                                                         └─────────────────┘
 
-   セルフホスト層: iflytek/skillhub (~4.8K), Hermit (Proxy)
+   セルフホスト層: iflytek/skillhub (~4.8K), Hermit (Proxy), LiteLLM (Gateway内蔵)
    発見層: SkillsMP (2M+), awesome-openclaw-skills (~52K)
    参照層: anthropics/skills (~166K), addyosmani/agent-skills (~81K)
 ```
@@ -546,7 +652,8 @@ Claude Code では Plugin が skills + commands + hooks + MCP を束ねた上位
 **実務的推奨**:
 - OpenClaw ユーザー → ClawHub（インストール前に SKILL.md を必ず目視確認）
 - マルチエージェント開発 → skills.sh + `npx skills`
-- 社内標準化 → iflytek/skillhub 等のセルフホスト
+- LiteLLM Proxy 運用中の組織 → LiteLLM Skills Gateway（Gateway + Skills 一体統制）
+- 社内標準化（ClawHub CLI 互換） → iflytek/skillhub 等のセルフホスト
 - 探索・調査 → SkillsMP（ソース監査必須）
 - 品質重視 → anthropics/skills、addyosmani/agent-skills 等のキュレーション
 
@@ -576,6 +683,14 @@ Claude Code では Plugin が skills + commands + hooks + MCP を束ねた上位
 - https://github.com/VoltAgent/awesome-openclaw-skills
 - https://github.com/anthropics/skills
 - https://github.com/addyosmani/agent-skills
+
+### LiteLLM Skills Gateway
+- https://docs.litellm.ai/docs/skills_gateway
+- https://docs.litellm.ai/docs/tutorials/claude_code_plugin_marketplace
+- https://docs.litellm.ai/docs/tutorials/claude_code_skills
+- https://github.com/BerriAI/litellm
+- https://github.com/BerriAI/litellm-skills
+- https://github.com/BerriAI/litellm/pull/25118
 
 ### セルフホスト Registry
 - https://github.com/iflytek/skillhub
