@@ -6,7 +6,7 @@ cover_image = "cover.png"
 # site_url = "https://example.com"
 
 [tts]
-model = "gemini-3.1-flash-tts-preview"
+model = "gemini-2.5-flash-preview-tts"
 response_format = "wav"
 instructions = "これは2人のスピーカーによるポッドキャストの会話です。自然な会話のトーンで、スピーカーの切り替わりに適切な間を置いて話してください。Hostが議論をリードし、CoHostは質問をしながら興味深く反応します。"
 selection_mode = "random"                                                                                                # fixed | random

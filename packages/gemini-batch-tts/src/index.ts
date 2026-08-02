@@ -63,7 +63,7 @@ export interface GeminiBatchTtsEndpoints {
 
 export interface GeminiBatchTtsClient {
   apiKey: string;
-  /** Default `"gemini-3.1-flash-tts-preview"`. */
+  /** Default `"gemini-2.5-flash-preview-tts"`. */
   model?: string;
   /** Default `"https://generativelanguage.googleapis.com"`. */
   apiRoot?: string;
@@ -130,7 +130,7 @@ export interface FetchBatchTtsAsWavResult {
   mimeType: string;
 }
 
-const DEFAULT_MODEL = "gemini-3.1-flash-tts-preview";
+const DEFAULT_MODEL = "gemini-2.5-flash-preview-tts";
 const DEFAULT_API_ROOT = "https://generativelanguage.googleapis.com";
 const DEFAULT_API_VERSION = "v1beta";
 const DEFAULT_HIGH_WATER_MARK = 64 * 1024;

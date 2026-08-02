@@ -24,7 +24,7 @@ const sampleLine = JSON.stringify({
       totalTokenCount: 94,
       serviceTier: "SERVICE_TIER_STANDARD",
     },
-    modelVersion: "gemini-3.1-flash-tts-preview",
+    modelVersion: "gemini-2.5-flash-preview-tts",
     candidates: [
       {
         content: {
