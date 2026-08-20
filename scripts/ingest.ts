@@ -126,23 +126,32 @@ const headers: Record<string, string> = {
 let postBody: Record<string, unknown>;
 
 if (parsed.mode === "file") {
-  console.log(`Registering file in mem.ai: ${parsed.filePath}`);
-  let memNoteId: string;
-  try {
-    memNoteId = createMemNoteFromFile(parsed.filePath, parsed.collectionTitles);
-  } catch (e) {
-    console.error((e as Error).message);
-    process.exit(1);
-  }
-  console.log(`mem_note_id: ${memNoteId}`);
   const content = readFileSync(parsed.filePath, "utf-8");
   const title = extractTitle(content);
+
+  console.log(`Registering file in mem.ai: ${parsed.filePath}`);
+  let memNoteId: string | undefined;
+  let memSyncError: string | undefined;
+  try {
+    memNoteId = createMemNoteFromFile(parsed.filePath, parsed.collectionTitles);
+    console.log(`mem_note_id: ${memNoteId}`);
+  } catch (e) {
+    memSyncError = (e as Error).message;
+    console.warn(`Warning: mem.ai registration failed, continuing without mem_note_id: ${memSyncError}`);
+  }
+
+  const ingestMeta: Record<string, unknown> = {
+    ...(parsed.meta ?? {}),
+    mem_sync: memNoteId ? "ok" : "failed",
+    ...(memSyncError !== undefined ? { mem_sync_error: memSyncError } : {}),
+  };
+
   postBody = {
     content,
-    mem_note_id: memNoteId,
+    ...(memNoteId !== undefined ? { mem_note_id: memNoteId } : {}),
     ...(title !== undefined ? { title } : {}),
     ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
-    ...(parsed.meta !== undefined ? { ingest_meta: parsed.meta } : {}),
+    ingest_meta: ingestMeta,
   };
 } else {
   postBody = {
