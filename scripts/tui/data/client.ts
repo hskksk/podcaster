@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -183,8 +183,8 @@ export class DataClient {
   }
 
   /**
-   * Inbox TUI shortcut: register `./inbox/<file>` or `./articles/<file>` in mem.ai (pnpm mem-ai),
-   * then POST ingest with the returned mem_note_id (same flow as scripts/ingest.ts file mode).
+   * Inbox TUI shortcut: try mem.ai registration, then POST ingest with file content
+   * (same best-effort flow as scripts/ingest.ts file mode).
    */
   async ingestMarkdownFile(fileName: string, pane: "inbox" | "draft"): Promise<ClientActionResult> {
     const subdir = pane === "inbox" ? "inbox" : "articles";
@@ -196,12 +196,43 @@ export class DataClient {
     if (!existsSync(resolved)) {
       return { success: false, error: `File not found: ${resolved}` };
     }
+    if (!this.apiUrl || !this.serviceKey) return { success: false, error: "API not configured" };
+
+    const content = await readFile(resolved, "utf-8");
+    const titleMatch = content.match(/^#\s+(.+)$/m);
+    const title = titleMatch?.[1]?.trim();
+
+    let memNoteId: string | undefined;
+    let memSyncError: string | undefined;
     try {
-      const memNoteId = createMemNoteFromFile(resolved, []);
-      return await this.ingestMemNote(memNoteId);
+      memNoteId = createMemNoteFromFile(resolved, []);
     } catch (e) {
-      return { success: false, error: (e as Error).message };
+      memSyncError = (e as Error).message;
+      console.warn(`Warning: mem.ai registration failed, continuing without mem_note_id: ${memSyncError}`);
     }
+
+    const ingestUrl = `${this.apiUrl}/functions/v1/ingest`;
+    const res = await fetch(ingestUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.serviceKey}`,
+      },
+      body: JSON.stringify({
+        content,
+        ...(memNoteId !== undefined ? { mem_note_id: memNoteId } : {}),
+        ...(title !== undefined ? { title } : {}),
+        ingest_meta: {
+          mem_sync: memNoteId ? "ok" : "failed",
+          ...(memSyncError !== undefined ? { mem_sync_error: memSyncError } : {}),
+        },
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText);
+      return { success: false, error: text || `HTTP ${res.status}` };
+    }
+    return { success: true };
   }
 
   /** Download podcast audio to ./downloads (audio_files.id or episode_id). */
