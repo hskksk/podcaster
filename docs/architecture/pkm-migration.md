@@ -2,7 +2,8 @@
 
 > 出典: 添付仕様書「次世代パーソナルナレッジ基盤 要件定義・設計仕様書」v1.0.0（2026-09-13）  
 > 対象リポジトリ: `hskksk/podcaster`  
-> ステータス: 設計（実装前）
+> ステータス: 設計（レビュー反映済み / 実装前）  
+> レビュー: 独立エージェント 2 系（仕様適合 + 現行コード突合）。判定は **approve-with-changes**。P0/P1 を本版で閉じた。
 
 この文書は PDF の仕組みを **このリポジトリに載せる** ための設計である。新規リポジトリを切らず、既存の記事・音声・RSS・パイプラインを残したまま、知識の正を Mem.ai から Git + Markdoc に移す。
 
@@ -10,8 +11,8 @@
 
 ## 1. 結論
 
-PDF の 5 層（入力 / Bridge+GUI / Git / 閲覧編集 / MCP）をそのまま採用する。  
-本リポジトリがすでに持っている **ポッドキャスト工場** は、知識層の下流コンシューマとして残す。キャプチャとポッドキャスト投入は分離する。
+仕様の 5 層は **入力 / Bridge / Git / GUI / MCP**。Bridge と GUI は Next.js に同居し、公開サイトは Git の下流コンシューマである。  
+本リポジトリがすでに持っている **ポッドキャスト工場** も同様に下流コンシューマとして残す。キャプチャとポッドキャスト投入は分離する。
 
 ```
 [Clipper / Raycast / iOS / エージェント / curl]
@@ -42,7 +43,7 @@ Mem.ai は知識ストアとしては廃止対象。既存の `mem_note_id` は�
 | GitHub Pages（`scripts/build-web.ts` + `web/template.html`） | `articles/` を静的 HTML 化、音声プレイヤー付き | Phase 4 まで維持。その後 Next.js 公開面が置換。URL リダイレクト必須 |
 | `public/cover.png` / `config.toml` | 番組メタデータ | 変更しない |
 | Supabase パイプライン（ingest, pgflow, TTS, RSS, Storage） | 記事テキスト → 台本 → 音声 → feed.xml | **実行系として維持**。入力元だけ Git に替える |
-| `episodes` / `scripts` / `audio_files` / `processing_logs` | 配信履歴 | 触らない。新規行に `content_path` を足すだけ |
+| `episodes` / `scripts` / `audio_files` / `processing_logs` | 配信履歴 | **触らない**。参照キーは `articles.content_path` / `articles.content_sha` を新規 migration で足す |
 | TUI / CLI | inbox 閲覧、再キュー、ログ | パスと ingest 手順だけ付け替える |
 | `podcast-research` スキル | `inbox/*.md` に書いて PR | 保存先を `content/web-clips` または `content/docs` に変更 |
 | `packages/gemini-batch-tts` | TTS 実装 | そのまま |
@@ -117,6 +118,8 @@ podcast: none          # クリップ直後は none。Wiki 昇格後に queued
 
 キャプチャは **Git に置くだけ**。音声生成はしない。
 
+このリポジトリは GitHub Pages で公開されている。`content/` も同じ public tree に置く（現行 `articles/` と同じ公開前提）。`web-clips` は公開サイトに出さない（noindex / 非公開ルート）。個人メモを秘密にしたい場合は別 private repo に切り出すが、**この移行の既定は公開リポジトリ**である。
+
 ### 4.3 ライフサイクル
 
 ```
@@ -134,7 +137,21 @@ capture → content/web-clips (podcast: none)
          docs.podcast = published
 ```
 
-現行の「inbox に置いて main へマージすると自動 ingest」は、移行期間だけ `content/web-clips` または `docs` の `podcast: queued` を見て動かす。定常状態では **queued の明示** を必須にする。思考のキャプチャと 1–2 分の TTS ジョブを結び付けないため。
+現行の「inbox に置いて main へマージすると自動 ingest」は、ファイル移動後だけ `docs`（または昇格済み clips）の `podcast: queued` を見て動かす。定常状態では **queued の明示** を必須にする。思考のキャプチャと 1–2 分の TTS ジョブを結び付けないため。
+
+web-clips → docs の昇格は **move しない**。docs に新規エントリを copy し、元クリップへ `promotedTo: content/docs/{slug}` を付ける。`git mv` は履歴が切れる。
+
+### 4.4 `podcast: queued` 契約（冪等）
+
+現行 CI が安全なのは、ingest 後にファイルが `inbox/` から消えるから。フラグ方式では終端が無いと再 push のたびに TTS される。
+
+1. **検知**: `podcast == queued` の path 集合。新規追加だけでなく、既存ファイルが `queued` になった更新も含む
+2. **成功後の書き戻し**: ingest した **同じ GitHub Actions ワークフロー** が `podcast: published` と `content_sha` を同じ commit で書き戻す（`contents: write`）。ingest Edge Function は Git に書かない
+3. **一意性**: `articles.content_path` は UNIQUE。衝突時は新規 episode を作らず 409。再生成は既存の `requeue` / 明示 `force`
+4. **失敗**: フラグは `queued` のまま残し、再実行可能
+5. **Capture 既定**: `podcast: none` のまま。Capture から ingest は呼ばない（`ingest_route: "capture"` は使わない）
+
+移行直後の inbox 4 本を `queued` にするかは Phase 3 の作業時に明示する。黙って一括 TTS しない。
 
 ---
 
@@ -156,12 +173,13 @@ packages/gemini-batch-tts/
 
 ```ts
 storage: {
-  kind: process.env.NODE_ENV === "production" ? "github" : "local",
+  kind: process.env.KEYSTATIC_STORAGE === "github" ? "github" : "local",
   repo: "hskksk/podcaster",
 }
 ```
 
-ローカルは Git 作業ツリー直書き。本番 Keystatic は GitHub storage。Capture API は常に Octokit で commit し、Keystatic のセッションに依存しない。
+`NODE_ENV` では切り替えない（`next build` / Vercel Preview でも `production` になる）。  
+ローカルと開発時 Capture は作業ツリー直書き（Keystatic local と同じ）。Octokit はデプロイ時のみ。本番 Keystatic は GitHub App + ユーザー OAuth（これは `GITHUB_TOKEN` とは別シークレットで、NFR-02 の表に含める）。Capture の対象は `main` 直 commit。ブランチ保護を掛ける場合は Phase 2 で bypass 規則を決める。
 
 ### 5.1 Capture API（PDF 5.2 を拡張）
 
@@ -185,6 +203,7 @@ storage: {
 - 衝突時は末尾に短ハッシュ
 - レスポンスは commit SHA と path。ポッドキャスト job id は返さない
 - `collection: "docs"` と `podcast: "queued"` は許可するが、クライアント既定にはしない
+- GitHub API が 2 秒を超えそうなら 202 を返し、commit はバックグラウンド。失敗時はクライアントが再送する（NFR-03）
 
 生成ファイルは PDF 例どおり:
 
@@ -196,7 +215,9 @@ content/web-clips/2026-09-13-article/index.mdoc
 
 | フェーズ | 公開サイト | 編集 UI |
 |----------|------------|---------|
-| 1–3 | 既存 GitHub Pages（`articles/` または `content/docs` を読むよう build-web を拡張） | 未公開の Keystatic（Access 配下） |
+| 1 | 既存 GitHub Pages（`articles/` のまま） | ローカル Keystatic のみ |
+| 1b–3 | Pages は `content/docs` を CommonMark として読む | Keystatic は Access 相当の下 |
+| 4 | Next.js が Pages を置換。音声プレイヤーは現行テンプレ相当 | `/keystatic` は非公開 |
 | 4 | Next.js が Pages を置換。音声プレイヤーは現行テンプレ相当 | `/keystatic` は非公開 |
 
 既存 URL `https://hskksk.github.io/podcaster/articles/{slug}.html` はリダイレクトで残す。slug 規則（ファイル名先頭の日付除去）は `legacyFilename` から再現する。
@@ -214,9 +235,11 @@ ingest → craftEpisodeSubmit(generateScript → generateAudioStart)
 
 変えるのは **ingest の入力** だけ。
 
-### 6.1 現行の問題
+### 6.1 現行の事実
 
-ファイル投入は「Git にある本文」をいったん mem.ai に上げ、その note id で ingest している。本文は既に Git にある。mem は正本ではなく複製。
+file モードは **すでに本文を直接 POST** している。`scripts/ingest.ts` / TUI は mem 登録を best-effort にし、失敗しても `content` で ingest する。Edge Function は `content` があれば mem を呼ばない。
+
+mem が必須なのは `mem_note_id` のみの経路（`ingest-mem-note.yml` と TUI の note ingest）だけ。Phase 3 の本作業は mem 外しではなく、**CI / TUI / スキルのパス切替** と `content_path` 記録である。
 
 ### 6.2 目標の ingest 契約
 
@@ -229,13 +252,24 @@ ingest → craftEpisodeSubmit(generateScript → generateAudioStart)
   content_path?: string        // 例: content/docs/markdoc_features/index.mdoc
   content_sha?: string
   source_url?: string
-  ingest_route?: "capture" | "keystatic" | "cli" | "inbox_ci" | "skill"
+  ingest_route?: "keystatic" | "cli" | "inbox_ci" | "skill" | "queued_ci"
   ingest_meta?: object
   mem_note_id?: string         // レガシー任意
 }
 ```
 
-Postgres は新規 migration で `articles.content_path` / `articles.content_sha` を追加する。既存 `mem_note_id` は NOT NULL にしない（現状どおり nullable）。
+Postgres は新規 migration で **`articles.content_path` / `articles.content_sha`** を追加する（episodes には足さない）。`content_path` は UNIQUE。既存 `mem_note_id` は現状どおり nullable。
+
+既存の Pages プレイヤーは `ingest_meta.inbox_file`（basename）で音声を引く。TUI ingest はこのキーを付けていない（既存の穴）。ファイル移動と同じ PR で (1) 既存行へ `content_path` / `legacyFilename` を SQL バックフィル、(2) audio map を `inbox_file` **または** `legacyFilename` の OR にする。
+
+Git 正本は `.mdoc` のまま。パイプラインへ渡す本文は ingest 前に正規化する（pgflow は触らない）:
+
+1. YAML frontmatter を除去
+2. 既知タグはテキスト化（callout → 本文、diagram → キャプション、math → TeX ソース）
+3. 未知タグは中身だけ残す
+4. `$` / `$$` はそのまま（現行 `config.toml` の読み下し指示が使える）
+
+この変換は `scripts/ingest.ts` か小さな shared モジュールに閉じる。
 
 ### 6.3 投入トリガーの置き換え
 
@@ -243,7 +277,7 @@ Postgres は新規 migration で `articles.content_path` / `articles.content_sha
 |------|--------|
 | `inbox/*.md` push → Actions → mem create → ingest → `git mv articles/` | `podcast: queued` の mdoc を検知して **ファイル本文を直接** ingest。mem は任意 |
 | TUI `i` = mem + ingest | Git 上の mdoc を読んで ingest。mem 同期は残しても本線ではない |
-| `podcast-research` → `inbox/` PR | `content/docs` または `web-clips` に mdoc を書いて PR。マージ後に queued なら ingest |
+| `podcast-research` → `inbox/` PR | checkout 済みエージェント / スキルは作業ツリーに mdoc を書いて PR。checkout 無しの外部 Agent だけ MCP → Capture |
 | `workflow_dispatch` の mem note URL | 移行期間は残す。定常では `content_path` 指定に置換 |
 
 RSS・Storage・TUI の episodes / logs / requeue は変更しない。
@@ -252,14 +286,16 @@ RSS・Storage・TUI の episodes / logs / requeue は変更しない。
 
 ## 7. Markdoc 互換
 
-既存原稿は CommonMark + `$` / `$$` 数式。Markdoc タグはまだ無い。
+既存原稿は CommonMark + `$` / `$$` 数式。YAML frontmatter は **0 件**（`---` は水平線として本文に出る）。約 13 本が `$` を含み、Markdoc 解説記事は `{% ... %}` をコード例として含む。
+
+「Markdown ⊂ Markdoc」は危険。`$n$` やフェンス内の `{%` がパーサに食われる。
 
 移行スクリプトの方針:
 
-1. 本文はそのまま `.mdoc` に入れる（Markdown は Markdoc の下位互換）
-2. frontmatter を付与
-3. `$...$` / `$$...$$` はカスタム node `math` に変換してよいが、**初回は生テキストのまま**でもよい。公開面が KaTeX を維持する間はビルド側で今まで通り解釈できる
-4. 壊れた frontmatter や未定義タグで ingest を止めない。バリデーションは Keystatic / 公開ビルド側
+1. 本文は無変換で `.mdoc` に入れる。frontmatter だけ付与する
+2. Phase 1–3 の公開面（`build-web.ts`）は **Markdoc パーサを掛けない**。現行どおり CommonMark + KaTeX
+3. Keystatic / Next 公開面で Markdoc を使うとき、`$` と作例中の `{%` を escape するか custom node にする
+4. 壊れた frontmatter や未定義タグで ingest を止めない
 
 初期タグ:
 
@@ -283,7 +319,7 @@ Cloud Agent は GitHub を直接触らせず、MCP 経由にする。
 - `write_clip(title, content, url?)` … 内部的に Capture API と同じ commit
 - `queue_podcast(path)` … frontmatter を `queued` にして commit（生成そのものは ingest 側）
 
-MCP は `GITHUB_TOKEN` を持たず、Capture / 内部 API を呼ぶ。NFR-02 の二重化を崩さない。
+書き込み（`write_clip` / `queue_podcast`）は Capture / 内部 API を呼ぶ。読み取り（`search_docs` / `get_doc`）は contents:read のみの `GITHUB_READ_TOKEN` を使うか、checkout 済みランタイム専用にする。書き込み用 `GITHUB_TOKEN` を MCP に渡さない。`queue_podcast` は Capture を更新（PATCH 相当）できるようにしてから載せる。
 
 ---
 
@@ -291,9 +327,11 @@ MCP は `GITHUB_TOKEN` を持たず、Capture / 内部 API を呼ぶ。NFR-02 �
 
 PDF 6 章をそのまま使う。
 
-- `GITHUB_TOKEN`: Contents write。Vercel / ホストの env のみ
-- `CAPTURE_API_TOKEN`: クリップ用。漏洩しても GitHub 権限は無い
-- `/keystatic`: Cloudflare Access（GitHub/Google SSO）
+- `GITHUB_TOKEN`: Contents write。ホスト env のみ。Capture のサーバ側が使う
+- `KEYSTATIC_GITHUB_CLIENT_*`: Keystatic GitHub App OAuth。`GITHUB_TOKEN` とは別
+- `GITHUB_READ_TOKEN`: MCP 読み取り専用（contents:read）。未使用なら MCP は checkout 済み専用
+- `CAPTURE_API_TOKEN`: クリップ用。漏洩しても ingest / Gemini / service_role には届かない。ただし **Git への書き込みはできる**（公開 repo のクリップ本文が載る）
+- `/keystatic`: Cloudflare Access またはホスト側の同等（Vercel 単独では Access が無いので、選んだホストで「Access 相当」を必須にする）
 - `/api/capture`: Access Bypass または Service Token + Bearer
 - 既存 Supabase `ingest` は service_role のまま。公開しない。Capture から直接は呼ばない
 
@@ -307,28 +345,46 @@ PDF 6 章をそのまま使う。
 
 ### Phase 0 — 設計（本ドキュメント）
 
-### Phase 1 — 知識層の器
+### Phase 1 — 知識層の器（ファイルは動かさない）
 
-- `apps/web` に Keystatic + ローカル storage
-- `content/docs`, `content/web-clips` を追加
-- `scripts/migrate-content.ts`: `articles/` → docs、`inbox/` → web-clips。`legacyFilename` を記録
-- 移行後も `articles/` `inbox/` は **読み取り互換の stub 期間** を置く（git mv で履歴を保つ）
-- パイプライン・Pages・mem はまだ動かさない
+- `pnpm-workspace.yaml` に `apps/*` を追加。`apps/web` は独自 `package.json`（root の Ink/React と分離）
+- Keystatic + **local** storage（GitHub storage は Phase 2）
+- 空の `content/docs`, `content/web-clips`
+- `articles/` `inbox/` は **このフェーズでは git mv しない**。Pages / TUI / inbox CI / スキルがこのパスに結合している
+- `supabase/functions` と DB は触らない
+
+完了条件: `pnpm typecheck` が壊れない。`pnpm web:build` が現行 36 HTML を出す。TUI mock が起動する。functions の diff が空。
+
+### Phase 1b — 物理移動（コンシューマ追随と同一 PR）
+
+`git mv` するなら、同じ PR で次を全部入れる。stub（コピー残し）は作らない。
+
+- `articles/` → `content/docs`、`inbox/` → `content/web-clips`。`legacyFilename` を付与
+- `scripts/build-web.ts` が `content/docs/**/index.mdoc` を読む（Markdoc パーサは使わない）
+- `pages.yml` の `paths` に `content/docs/**`
+- audio map を `inbox_file` OR `legacyFilename`。既存行を SQL バックフィル
+- TUI の scan 先を新パスへ
+- inbox CI は新パスに切り替えるか、この PR で disable するかを選ぶ（黙って死なせない）
+- スキル 3 種の保存先を更新
+
+受け入れ: 本文 36+4 の frontmatter 除去 diff が空。`pnpm web:build` が 36 HTML。`markdoc_features.html` / `勝海舟.html` / `multi-agent-prompt-consistency.html` が残る。数式記事に `math-inline` / `math-display` が残る。
+
+公開 URL slug はディレクトリ名ではない。現行と同じ `parseSlugFromFilename(legacyFilename)`（先頭 `YYYYMMDD` と任意の `_HHMMSS_` を落とす）。日本語は `encodeURIComponent`。関数は一箇所に置く。
 
 ### Phase 2 — Capture
 
-- `POST /api/capture` + Bearer
-- CLI `pnpm capture --title ... --file ...`（curl の薄いラッパ）
-- TUI inbox は `content/web-clips` を読む
-- この時点で Mem.ai への新規クリップを止めてよい
+- `POST /api/capture` + Bearer。デプロイ時のみ Octokit。開発時は FS 直書き
+- ホストを決める（Vercel または Tunnel 配下 Docker）。Access 相当を必須化
+- CLI `pnpm capture --title ... --file ...`
+- 新規クリップの既定保存先は `content/web-clips`（`podcast: none`）
+- Mem.ai への新規クリップを止めてよい
 
 ### Phase 3 — ポッドキャスト入力を Git に切替
 
-- ingest に `content_path` / `content_sha`
-- file ingest から mem 必須を外す（現行の best-effort を本線化）
-- Actions: `podcast: queued` の新規 mdoc を ingest
-- `podcast-research` の保存先変更
-- Pages の audio map は `legacyFilename` または `content_path` で引く
+- ingest に `content_path` / `content_sha`、UNIQUE、正規化前処理
+- Actions: `queued` 検知 → ingest → **同じ job が `published` を書き戻す**
+- `podcast-research` は mdoc を書いて PR（queued は明示）
+- `mem_note_id` のみ経路は残してよい。本線ではない
 
 ### Phase 4 — 公開サイト
 
@@ -365,7 +421,8 @@ inbox/20260815_095800_reverse_tunnel.md
 - `git mv` 後に frontmatter を足す（履歴を保つ）
 - `multi-agent-prompt-consistency.md` のように日付接頭辞が無いものは slug をそのまま使う
 - 公開済み相当の docs は `podcast: published`
-- inbox 由来は `podcast: queued`（現行 CI がマージで ingest するため）。Phase 3 以降の新規クリップは `none`
+- inbox 由来の既定は `podcast: none`。Phase 3 で投入するものだけ `queued` にする
+- ディレクトリ slug は現行ファイル名（拡張子なし）。Pages URL は `legacyFilename` から現行規則で再計算する。Capture 新規は `{YYYY-MM-DD}-{slugified-title}`（日本語は slug をファイル名ベースにし、無理に ASCII 化しない）
 
 ---
 
@@ -378,12 +435,22 @@ inbox/20260815_095800_reverse_tunnel.md
 - コレクションは PDF どおり 2 つ。podcast は frontmatter
 - ポッドキャスト実行系（Supabase / pgflow / Gemini TTS）は残す
 
-**実装時に選ぶこと（設計はブロックしない）**
+**Phase 1 開始前に閉じたこと（レビュー後）**
 
-- Next.js のホスト: Vercel か、Tunnel 配下の Docker か。NFR-04 を満たせばどちらでもよい。Keystatic GitHub mode はサーバが必要
+- `content/` は現行と同じ公開 Git。web-clips はサイトに出さない
+- Phase 1 ではファイルを動かさない。移動は Phase 1b でコンシューマ追随と同一 PR
+- `queued` のライターは GitHub Actions。UNIQUE + 409。Capture は ingest しない
+- Capture 開発時は FS 直書き。Keystatic 切替は `KEYSTATIC_STORAGE`
+- clips → docs は copy + `promotedTo`
+- ingest 本文は frontmatter 除去と既知タグの textify
+- 公開 slug 関数は `parseSlugFromFilename(legacyFilename)` と同一
+
+**実装時に選ぶこと（Phase 1 はブロックしない）**
+
+- Next.js のホスト: Vercel か Tunnel 配下 Docker か（Phase 2 の入口で決める）
 - Chrome 拡張 web-clipper の導入時期。Phase 2 は curl / スキル / TUI で FR-02 を満たす
 - 数式を Markdoc タグに正規化するタイミング
-- MCP のデプロイ先（同じ Next プロセスか別プロセスか）
+- MCP のデプロイ先（別プロセス推奨。Python FastMCP ならランタイム追加）
 
 **やらないこと（この移行の範囲外）**
 
@@ -400,7 +467,8 @@ inbox/20260815_095800_reverse_tunnel.md
 |--------|------|
 | Keystatic と Capture の同時書き込みで衝突 | パス規則を collection で分け、slug に日付を入れる。GitHub API は SHA 付き更新 |
 | Pages の slug とディレクトリ slug の不一致 | `legacyFilename` とリダイレクト表を移行スクリプトが生成 |
-| 自動 ingest がクリップのたびに TTS を撃つ | 既定 `podcast: none` |
+| 自動 ingest がクリップのたびに TTS を撃つ | 既定 `podcast: none`。queued は Actions が `published` に書き戻す |
+| Phase 1 で `git mv` すると Pages/TUI/CI が死ぬ | 移動は Phase 1b。コンシューマ追随と同一 PR |
 | Markdoc 変換で数式が壊れる | Phase 1 は本文無変換。レンダラ側で `$` を維持 |
 | mem_note_id 依存のログ / TUI | 列は残す。UI は `content_path` を優先表示 |
 
@@ -408,9 +476,35 @@ inbox/20260815_095800_reverse_tunnel.md
 
 ## 14. 次の実装単位（Phase 1）
 
-1. `apps/web` の Next.js + Keystatic スケルトン（local storage）
-2. 空の `content/docs`, `content/web-clips`
-3. `articles/` `inbox/` からの `git mv` + frontmatter 付与スクリプト
-4. `scripts/build-web.ts` が新旧パスを読めるようにする（公開を止めない）
+1. `pnpm-workspace.yaml` に `apps/*`
+2. `apps/web` の Next.js + Keystatic スケルトン（`KEYSTATIC_STORAGE=local`）
+3. 空の `content/docs`, `content/web-clips`（`.gitkeep` のみ）
+4. `articles/` `inbox/` は動かさない
 
-パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。
+パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。  
+Phase 1 で触ってよい既存ファイルは workspace 設定と docs のみ。`scripts/build-web.ts` / `pages.yml` / TUI / スキルは **Phase 1b の移動 PR** で触る。
+
+---
+
+## 15. レビュー記録
+
+独立エージェント 2 系（仕様適合 / 現行コード突合）。判定 **approve-with-changes**。
+
+取り入れた P0:
+
+- Phase 1 の `git mv` を撤回。Pages / TUI / inbox CI が `articles/` `inbox/` に結合している
+- `queued` の終端・冪等・UNIQUE・書き戻し主体を契約にした
+
+取り入れた P1:
+
+- file ingest は既に raw content 本線（§6.1 の誤認を訂正）
+- `content_path` は `articles` のみ
+- 公開 repo へのクリップ直書きを明示
+- audio map の `inbox_file` バックフィル
+- Keystatic storage を `KEYSTATIC_STORAGE` に
+- mdoc → 台本入力の正規化
+- 昇格は copy。エージェント経路を 2 系統に分離
+- MCP 読み取りトークン
+- Phase 1–3 は Markdoc パーサを Pages に掛けない
+
+残した良い判断: 知識の正 = Git、配信の正 = Supabase、キャプチャと TTS の分離、第 3 コレクションを作らない、トークン二層、Mem 全件 import をしない。
