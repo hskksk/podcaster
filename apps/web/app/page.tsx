@@ -27,7 +27,7 @@ export default async function HomePage() {
       <ul>
         <li>Wiki documents: {docs.length}</li>
         <li>Web clips: {clips.length}</li>
-        <li>Storage: {(process.env.NEXT_PUBLIC_KEYSTATIC_STORAGE ?? process.env.KEYSTATIC_STORAGE) === "github" ? "github" : "local"}</li>
+        <li>Storage: {process.env.NEXT_PUBLIC_KEYSTATIC_STORAGE === "github" ? "github" : "local"}</li>
       </ul>
     </main>
   );

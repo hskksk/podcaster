@@ -1,13 +1,12 @@
 import { config, collection, fields } from "@keystatic/core";
 import { markdocComponents, podcastSelect } from "./lib/markdoc-components";
+import { titleSlugField } from "./lib/slug";
 
 const githubRepo = "hskksk/podcaster" as const;
 
 function storage() {
-  const kind =
-    process.env.NEXT_PUBLIC_KEYSTATIC_STORAGE ??
-    process.env.KEYSTATIC_STORAGE;
-  if (kind === "github") {
+  // Client bundle only inlines NEXT_PUBLIC_* . Do not read KEYSTATIC_STORAGE here.
+  if (process.env.NEXT_PUBLIC_KEYSTATIC_STORAGE === "github") {
     return { kind: "github" as const, repo: githubRepo };
   }
   return { kind: "local" as const };
@@ -32,7 +31,7 @@ export default config({
       entryLayout: "content",
       columns: ["podcast", "publishedAt"],
       schema: {
-        title: fields.slug({ name: { label: "Title" } }),
+        title: fields.slug(titleSlugField),
         publishedAt: fields.date({ label: "Published Date" }),
         sourceUrl: fields.text({ label: "Source URL" }),
         podcast: podcastSelect,
@@ -50,7 +49,7 @@ export default config({
       format: { contentField: "content" },
       columns: ["podcast", "clippedAt"],
       schema: {
-        title: fields.slug({ name: { label: "Title" } }),
+        title: fields.slug(titleSlugField),
         url: fields.text({ label: "Source URL" }),
         clippedAt: fields.text({
           label: "Clipped At",
