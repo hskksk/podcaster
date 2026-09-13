@@ -1,0 +1,68 @@
+import { config, collection, fields } from "@keystatic/core";
+import { markdocComponents, podcastSelect } from "./lib/markdoc-components";
+
+const githubRepo = "hskksk/podcaster" as const;
+
+function storage() {
+  const kind =
+    process.env.NEXT_PUBLIC_KEYSTATIC_STORAGE ??
+    process.env.KEYSTATIC_STORAGE;
+  if (kind === "github") {
+    return { kind: "github" as const, repo: githubRepo };
+  }
+  return { kind: "local" as const };
+}
+
+const markdocField = fields.markdoc({
+  label: "Content",
+  components: markdocComponents,
+});
+
+export default config({
+  storage: storage(),
+  ui: {
+    brand: { name: "Podcaster PKM" },
+  },
+  collections: {
+    docs: collection({
+      label: "Wiki Documents",
+      slugField: "title",
+      path: `content/docs/${"*"}/`,
+      format: { contentField: "content" },
+      entryLayout: "content",
+      columns: ["podcast", "publishedAt"],
+      schema: {
+        title: fields.slug({ name: { label: "Title" } }),
+        publishedAt: fields.date({ label: "Published Date" }),
+        sourceUrl: fields.text({ label: "Source URL" }),
+        podcast: podcastSelect,
+        legacyFilename: fields.text({
+          label: "Legacy filename",
+          description: "Original articles/ basename. Used for Pages URL redirects.",
+        }),
+        content: markdocField,
+      },
+    }),
+    webClips: collection({
+      label: "Web Clips & Notes",
+      slugField: "title",
+      path: `content/web-clips/${"*"}/`,
+      format: { contentField: "content" },
+      columns: ["podcast", "clippedAt"],
+      schema: {
+        title: fields.slug({ name: { label: "Title" } }),
+        url: fields.text({ label: "Source URL" }),
+        clippedAt: fields.text({
+          label: "Clipped At",
+          description: "ISO-8601 timestamp",
+        }),
+        podcast: podcastSelect,
+        promotedTo: fields.text({
+          label: "Promoted to",
+          description: "Set to content/docs/{slug} after copy-promote. Do not git mv.",
+        }),
+        content: markdocField,
+      },
+    }),
+  },
+});

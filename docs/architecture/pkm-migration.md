@@ -218,7 +218,6 @@ content/web-clips/2026-09-13-article/index.mdoc
 | 1 | 既存 GitHub Pages（`articles/` のまま） | ローカル Keystatic のみ |
 | 1b–3 | Pages は `content/docs` を CommonMark として読む | Keystatic は Access 相当の下 |
 | 4 | Next.js が Pages を置換。音声プレイヤーは現行テンプレ相当 | `/keystatic` は非公開 |
-| 4 | Next.js が Pages を置換。音声プレイヤーは現行テンプレ相当 | `/keystatic` は非公開 |
 
 既存 URL `https://hskksk.github.io/podcaster/articles/{slug}.html` はリダイレクトで残す。slug 規則（ファイル名先頭の日付除去）は `legacyFilename` から再現する。
 
@@ -483,6 +482,8 @@ inbox/20260815_095800_reverse_tunnel.md
 
 パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。  
 Phase 1 で触ってよい既存ファイルは workspace 設定と docs のみ。`scripts/build-web.ts` / `pages.yml` / TUI / スキルは **Phase 1b の移動 PR** で触る。
+
+実装済み（`feat/pkm-phase-1-keystatic`）: `apps/web` の Keystatic local admin、空の `content/docs` と `content/web-clips`。`articles/` と `inbox/` は未移動。
 
 ---
 

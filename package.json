@@ -25,7 +25,10 @@
         "cli": "tsx scripts/podcast-cli.ts",
         "tui": "tsx scripts/tui/index.tsx",
         "typecheck": "tsc --noEmit",
-        "web:build": "tsx scripts/build-web.ts"
+        "typecheck:web": "pnpm --filter @podcaster/web typecheck",
+        "web:build": "tsx scripts/build-web.ts",
+        "web:dev": "pnpm --filter @podcaster/web dev",
+        "web:start": "pnpm --filter @podcaster/web start"
     },
     "devDependencies": {
         "@hskksk/mem-ai-cli": "latest",
