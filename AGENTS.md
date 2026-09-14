@@ -4,7 +4,7 @@
 
 ### Overview
 
-Podcaster is an AI podcast generator built on Supabase. Article text flows through a pgflow pipeline: `ingest -> craftEpisode(generateScript -> generateAudio -> updateRss)`. Execution is handled by `craft-episode-worker`, and flow definitions are served by `functions/pgflow` ControlPlane. See `CLAUDE.md` and `README.md` for full architecture and command reference.
+Podcaster is an AI podcast generator built on Supabase. Article text flows through a pgflow pipeline: `ingest -> craftEpisode(generateScript -> generateAudio -> updateRss)`. Execution is handled by `craft-episode-worker`, and flow definitions are served by `functions/pgflow` ControlPlane. See `CLAUDE.md` and `README.md` for full architecture and command reference. PKM next work is Phase 1b (`docs/architecture/pkm-next.md`).
 
 ### Prerequisites (already installed in the VM environment)
 

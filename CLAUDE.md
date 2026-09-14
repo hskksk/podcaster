@@ -47,7 +47,7 @@ curl -s http://localhost:54331/functions/v1/craft-episode-worker -H "Authorizati
 
 ## Architecture
 
-Git + Markdoc (`content/`) is the designed knowledge store. Phase 1 adds `apps/web` (Keystatic, local storage). Existing `articles/` + GitHub Pages remain the public site until Phase 1b. The podcast factory below is unchanged.
+Git + Markdoc (`content/`) is the designed knowledge store. Phase 1 is done: `apps/web` Keystatic (local FS in `pnpm web:dev`, GitHub storage on Vercel). Existing `articles/` + GitHub Pages remain the public site until Phase 1b. Next work: `docs/architecture/pkm-next.md`. The podcast factory below is unchanged.
 
 Article text enters via the `ingest` Edge Function and starts a **pgflow** DAG run:
 

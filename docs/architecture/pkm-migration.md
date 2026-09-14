@@ -2,7 +2,8 @@
 
 > 出典: 添付仕様書「次世代パーソナルナレッジ基盤 要件定義・設計仕様書」v1.0.0（2026-09-13）  
 > 対象リポジトリ: `hskksk/podcaster`  
-> ステータス: Phase 1 実装中（`cursor/pkm-phase-1-keystatic`）  
+> ステータス: Phase 1 完了（Keystatic + Vercel GitHub storage）。次は Phase 1b  
+> 作業計画: [pkm-next.md](./pkm-next.md)  
 > レビュー: 独立エージェント 2 系（仕様適合 + 現行コード突合）。判定は **approve-with-changes**。P0/P1 を本版で閉じた。
 
 この文書は PDF の仕組みを **このリポジトリに載せる** ための設計である。新規リポジトリを切らず、既存の記事・音声・RSS・パイプラインを残したまま、知識の正を Mem.ai から Git + Markdoc に移す。
@@ -217,8 +218,8 @@ content/web-clips/2026-09-13-article/index.mdoc
 
 | フェーズ | 公開サイト | 編集 UI |
 |----------|------------|---------|
-| 1 | 既存 GitHub Pages（`articles/` のまま） | ローカル Keystatic のみ |
-| 1b–3 | Pages は `content/docs` を CommonMark として読む | Keystatic は Access 相当の下 |
+| 1 | 既存 GitHub Pages（`articles/` のまま） | Keystatic（local + Vercel GitHub storage）。完了 |
+| 1b–3 | Pages は `content/docs` を CommonMark として読む | Keystatic は GitHub OAuth の下 |
 | 4 | Next.js が Pages を置換。音声プレイヤーは現行テンプレ相当 | `/keystatic` は非公開 |
 
 既存 URL `https://hskksk.github.io/podcaster/articles/{slug}.html` はリダイレクトで残す。slug 規則（ファイル名先頭の日付除去）は `legacyFilename` から再現する。
@@ -342,11 +343,11 @@ PDF 6 章をそのまま使う。
 
 ## 10. 移行フェーズ
 
-実装はフェーズ順。この PR は設計のみ。
+実装はフェーズ順。作業計画は [pkm-next.md](./pkm-next.md)。
 
 ### Phase 0 — 設計（本ドキュメント）
 
-### Phase 1 — 知識層の器（ファイルは動かさない）
+### Phase 1 — 知識層の器（ファイルは動かさない）✅
 
 - `pnpm-workspace.yaml` に `apps/*` を追加。`apps/web` は独自 `package.json`（root の Ink/React と分離）
 - Keystatic + **local** storage for `pnpm web:dev`。Vercel 公開は GitHub storage（`NEXT_PUBLIC_VERCEL_ENV`）
@@ -354,9 +355,9 @@ PDF 6 章をそのまま使う。
 - `articles/` `inbox/` は **このフェーズでは git mv しない**。Pages / TUI / inbox CI / スキルがこのパスに結合している
 - `supabase/functions` と DB は触らない
 
-完了条件: `pnpm typecheck` が壊れない。`pnpm web:build` が現行 36 HTML を出す。TUI mock が起動する。functions の diff が空。
+完了条件: `pnpm typecheck` が壊れない。`pnpm web:build` が現行 36 HTML を出す。TUI mock が起動する。functions の diff が空。**満たした（#79–#81）。**
 
-### Phase 1b — 物理移動（コンシューマ追随と同一 PR）
+### Phase 1b — 物理移動（コンシューマ追随と同一 PR）← 次
 
 `git mv` するなら、同じ PR で次を全部入れる。stub（コピー残し）は作らない。
 
@@ -475,17 +476,18 @@ inbox/20260815_095800_reverse_tunnel.md
 
 ---
 
-## 14. 次の実装単位（Phase 1）
+## 14. 実装状況
+
+Phase 1 完了（#79–#81）:
 
 1. `pnpm-workspace.yaml` に `apps/*`
-2. `apps/web` の Next.js + Keystatic（local は dev、Vercel は GitHub storage）
+2. `apps/web` の Next.js + Keystatic（local は `pnpm web:dev`、Vercel は GitHub storage）
 3. 空の `content/docs`, `content/web-clips`（`.gitkeep` のみ）
-4. `articles/` `inbox/` は動かさない
+4. GitHub App ウィザードは development で動作。Vercel へ env をコピー済み
 
-パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。  
-Phase 1 で触ってよい既存ファイルは workspace 設定と docs のみ。`scripts/build-web.ts` / `pages.yml` / TUI / スキルは **Phase 1b の移動 PR** で触る。
+`articles/` と `inbox/` は未移動。パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。
 
-実装済み（`feat/pkm-phase-1-keystatic`）: `apps/web` の Keystatic local admin、空の `content/docs` と `content/web-clips`。`articles/` と `inbox/` は未移動。
+**次の実装単位は Phase 1b。** 手順・受け入れ条件・やらないことは [pkm-next.md](./pkm-next.md) に切り出した。`scripts/build-web.ts` / `pages.yml` / TUI / スキルは **Phase 1b の移動 PR** で触る。
 
 ---
 
