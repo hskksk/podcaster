@@ -54,6 +54,10 @@ export default config({
           description: "ISO-8601 timestamp",
         }),
         podcast: podcastSelect,
+        legacyFilename: fields.text({
+          label: "Legacy filename",
+          description: "Original inbox/ basename.",
+        }),
         promotedTo: fields.text({
           label: "Promoted to",
           description: "Set to content/docs/{slug} after copy-promote. Do not git mv.",

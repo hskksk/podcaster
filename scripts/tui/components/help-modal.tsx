@@ -30,7 +30,7 @@ export const HelpModal: React.FC = () => {
         <Text dimColor>Pipeline (lane focused): Ctrl+A — Requeue audio for selected card</Text>
         <Text dimColor>Episodes (detail): p play / s stop / Ctrl+S script / Ctrl+A audio / Ctrl+Y rss / Ctrl+G regen-script / Ctrl+R regen-audio / Ctrl+D download</Text>
         <Text dimColor>Audio (main focused): i detail │ p play │ s stop │ Ctrl+D download │ Ctrl+A requeue</Text>
-        <Text dimColor>Inbox (list): i = mem-ai from ./inbox|articles file + ingest │ h/l / arrows │ Tab │ j/k</Text>
+        <Text dimColor>Inbox (list): i = mem-ai from content/web-clips|docs mdoc + ingest │ h/l / arrows │ Tab │ j/k</Text>
       </Box>
       <Box marginTop={1}>
         <Text dimColor>Commands: reload │ target local │ target remote │ demo confirm (see palette with :)</Text>

@@ -1,6 +1,6 @@
 ---
 name: podcast-research
-description: Research a topic deeply, save a markdown report to inbox/, and create a PR to trigger the podcast ingest pipeline
+description: Research a topic deeply, save a Markdoc report to content/web-clips/, and create a PR (does not auto-ingest)
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -9,7 +9,7 @@ allowed-tools:
   - Write
   - Read
   - Bash(git checkout -b article/*)
-  - Bash(git add inbox/*)
+  - Bash(git add content/web-clips/*)
   - Bash(git commit -m*)
   - Bash(git push -u origin article/*)
   - Bash(gh pr create*)
@@ -22,8 +22,8 @@ metadata:
 指定されたテーマについて深く調査し、ポッドキャスト台本生成用の詳細な Markdown レポートを作成します。
 
 1. **多角的なリサーチ**: 概要・背景・詳細・最新動向・具体例・関連トピックを複数回のWeb検索で収集
-2. **レポート保存**: `./inbox/` に Markdown として保存する
-3. **PR 作成**: origin/main ベースのブランチを作成して PR を出す（マージされると CI が自動で ingest を実行）
+2. **レポート保存**: `content/web-clips/` に Markdoc (`index.mdoc`) として保存する
+3. **PR 作成**: origin/main ベースのブランチを作成して PR を出す（マージしても TTS は走らない。`podcast: none`）
 
 ## When to use me
 
@@ -92,17 +92,27 @@ metadata:
 （調査に使用したURL一覧）
 ```
 
-### ステップ 4: inbox/ に保存して PR を作成する
+### ステップ 4: content/web-clips/ に保存して PR を作成する
 
 ユーザーの確認は不要。以下を順に実行する。
 
-1. `./inbox/YYYYMMDD_HHMMSS_<テーマ>.md` に Markdown レポートを保存する
+1. `content/web-clips/YYYYMMDD_HHMMSS_<テーマ>/index.mdoc` にレポートを保存する。先頭に YAML frontmatter を付ける（本文のプロスは Markdown のまま。数式は `$...$` / `$$` でよい）:
+
+   ```markdown
+   ---
+   title: "<テーマタイトル>"
+   clippedAt: "YYYY-MM-DDTHH:MM:SS.000Z"
+   podcast: none
+   legacyFilename: YYYYMMDD_HHMMSS_<topic-slug>.md
+   ---
+   ```
+
 2. origin/main ベースの新しいブランチを作成してコミット:
    ```bash
-   FILENAME="YYYYMMDD_HHMMSS_<topic-slug>.md"
-   BRANCH="article/YYYYMMDD_HHMMSS_<topic-slug>"
+   SLUG="YYYYMMDD_HHMMSS_<topic-slug>"
+   BRANCH="article/$SLUG"
    git checkout -b "$BRANCH" origin/main
-   git add "inbox/$FILENAME"
+   git add "content/web-clips/$SLUG/index.mdoc"
    git commit -m "Add podcast research article: <テーマ>"
    git push -u origin "$BRANCH"
    ```
@@ -114,18 +124,19 @@ metadata:
        --title "Podcast Research: <テーマ>" \
        --body "## 概要
 
-記事を main にマージすると CI が自動で ingest を実行します。
+知識として content/web-clips に入れます。マージしても TTS は実行しません（podcast: none）。
 
-- ファイル: inbox/$FILENAME
+- ファイル: content/web-clips/$SLUG/index.mdoc
 - テーマ: <テーマ>"
      ```
    - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
 4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
-5. 「`inbox/` に保存して PR を作成しました。main にマージされると CI が自動で ingest を実行します。」と伝える
+5. 「`content/web-clips/` に保存して PR を作成しました。main にマージしても自動 ingest / TTS は走りません。」と伝える
 
 ### 注意事項
 
-- inbox ディレクトリは存在しない場合は作成する
+- `content/web-clips/` ディレクトリは存在しない場合は作成する
 - ファイル名のテーマ部分はファイルシステムで安全な文字のみ使用する（スペースはアンダースコアに）
 - リサーチ中は進捗を都度報告する（「〇〇について調査中...」など）
 - 情報の信頼性が低い場合はその旨を明記する
+- `podcast: queued` にはしない（Phase 3 まで queued の自動 ingest が無い）

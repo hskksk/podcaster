@@ -3,9 +3,10 @@ import path from "path";
 import { execSync } from "node:child_process";
 import { marked, type MarkedExtension } from "marked";
 import { parse as parseToml } from "smol-toml";
-import { detectProjectRef } from "./lib/supabase-detect.ts";
+import { parseDateFromFilename, parseSlugFromFilename } from "./lib/article-slug.ts";
+import { parseFrontmatter, parseTitleFromContent, textify } from "./lib/mdoc.ts";
 
-const ARTICLES_DIR = path.resolve("articles");
+const DOCS_DIR = path.resolve("content/docs");
 const OUT_DIR = path.resolve("dist/web");
 const ARTICLES_OUT_DIR = path.join(OUT_DIR, "articles");
 const WEB_DIR = path.resolve("web");
@@ -81,24 +82,32 @@ marked.use(mathExtension);
 
 /**
  * Queries Supabase for published episodes and returns a map of
- * article filename (= inbox_file from ingest_meta) → public audio URL.
+ * legacy filename (`inbox_file` OR `legacyFilename` in ingest_meta) → public audio URL.
  * Uses the Supabase CLI (SUPABASE_ACCESS_TOKEN + SUPABASE_PROJECT_REF).
  * Falls back to an empty map if credentials are unavailable.
  */
 async function fetchArticleAudioMap(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
-  const projectRef = detectProjectRef();
+  const projectRef = process.env.SUPABASE_PROJECT_REF;
+  if (!projectRef) {
+    console.log("  skipping audio map (SUPABASE_PROJECT_REF unset)");
+    return map;
+  }
   try {
     execSync(`supabase link --project-ref ${projectRef}`, {
       stdio: ["pipe", "pipe", "pipe"],
     });
 
     const sql = `
-SELECT a.ingest_meta->>'inbox_file' AS inbox_file, e.audio_url AS storage_path
+SELECT COALESCE(a.ingest_meta->>'inbox_file', a.ingest_meta->>'legacyFilename') AS inbox_file,
+       e.audio_url AS storage_path
 FROM episodes e
 JOIN articles a ON a.id = e.article_id
 WHERE e.audio_url IS NOT NULL
-  AND a.ingest_meta->>'inbox_file' IS NOT NULL;
+  AND (
+    a.ingest_meta->>'inbox_file' IS NOT NULL
+    OR a.ingest_meta->>'legacyFilename' IS NOT NULL
+  );
 `;
 
     const raw = execSync(`supabase db query --linked -o json`, {
@@ -111,7 +120,9 @@ WHERE e.audio_url IS NOT NULL
     const rows = (JSON.parse(raw) as Array<{ inbox_file: string; storage_path: string }>) ?? [];
     for (const row of rows) {
       if (row.inbox_file && row.storage_path) {
-        map.set(row.inbox_file, `${storageBase}/${row.storage_path}`);
+        const url = `${storageBase}/${row.storage_path}`;
+        map.set(row.inbox_file, url);
+        map.set(path.basename(row.inbox_file), url);
       }
     }
     console.log(`  fetched ${map.size} episode audio URLs from Supabase`);
@@ -131,33 +142,29 @@ interface ArticleMeta {
   content: string;
 }
 
-function parseDateFromFilename(filename: string): string {
-  const m = filename.match(/^(\d{4})(\d{2})(\d{2})/);
-  return m ? `${m[1]}-${m[2]}-${m[3]}` : "";
-}
-
-function parseSlugFromFilename(filename: string): string {
-  return filename.replace(/^\d{8}(_\d{6})?_/, "").replace(/\.md$/, "");
-}
-
-function parseTitleFromContent(content: string, fallback: string): string {
-  const m = content.match(/^#\s+(.+)$/m);
-  return m ? m[1].trim() : fallback;
+function audioKey(article: ArticleMeta): string {
+  return path.basename(article.filename);
 }
 
 function loadArticles(): ArticleMeta[] {
+  if (!fs.existsSync(DOCS_DIR)) return [];
   return fs
-    .readdirSync(ARTICLES_DIR)
-    .filter((f) => f.endsWith(".md"))
-    .sort()
-    .reverse()
-    .map((filename) => {
-      const content = fs.readFileSync(path.join(ARTICLES_DIR, filename), "utf8");
+    .readdirSync(DOCS_DIR, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => {
+      const indexPath = path.join(DOCS_DIR, e.name, "index.mdoc");
+      if (!fs.existsSync(indexPath)) return null;
+      const raw = fs.readFileSync(indexPath, "utf8");
+      const { attrs } = parseFrontmatter(raw);
+      const content = textify(raw);
+      const filename = attrs.legacyFilename || `${e.name}.md`;
       const slug = parseSlugFromFilename(filename);
-      const date = parseDateFromFilename(filename);
-      const title = parseTitleFromContent(content, slug);
+      const date = attrs.publishedAt || parseDateFromFilename(filename);
+      const title = attrs.title || parseTitleFromContent(content, slug);
       return { filename, slug, date, title, content };
-    });
+    })
+    .filter((a): a is ArticleMeta => a !== null)
+    .sort((a, b) => b.filename.localeCompare(a.filename));
 }
 
 // ── Template rendering ───────────────────────────────────────────────────────
@@ -237,10 +244,10 @@ function buildFeaturedSection(
   articles: ArticleMeta[],
   episodeMap: Map<string, string>,
 ): string {
-  const withAudio = articles.filter((a) => episodeMap.has(path.basename(a.filename)));
+  const withAudio = articles.filter((a) => episodeMap.has(audioKey(a)));
   const candidates = withAudio.length >= 3
     ? withAudio.slice(0, 3)
-    : [...withAudio, ...articles.filter((a) => !episodeMap.has(path.basename(a.filename)))].slice(0, 3);
+    : [...withAudio, ...articles.filter((a) => !episodeMap.has(audioKey(a)))].slice(0, 3);
 
   if (candidates.length === 0) return "";
 
@@ -338,7 +345,7 @@ async function buildArticleContent(
     ? `<p class="article-meta">${article.date}</p>`
     : "";
 
-  const audioUrl = episodeMap.get(path.basename(article.filename));
+      const audioUrl = episodeMap.get(audioKey(article));
   const playerHtml = audioUrl
     ? `<div class="podcast-player">
   <p>🎧 このエピソードを聴く</p>

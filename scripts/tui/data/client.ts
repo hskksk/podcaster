@@ -11,6 +11,7 @@ import {
   detectServiceKey,
 } from "../../lib/supabase-detect.js";
 import { createMemNoteFromFile } from "../../lib/create-mem-note-from-file.js";
+import { parseFrontmatter, parseTitleFromContent, textify } from "../../lib/mdoc.js";
 import * as Mock from "./mock.js";
 import { Article, Episode, AudioFile, ProcessingLog, PodcastConfig, Script } from "./types.js";
 
@@ -86,8 +87,8 @@ export class DataClient {
       this.db.from("audio_files").select("*").order("created_at", { ascending: false }),
       this.db.from("processing_logs").select("*").order("processed_at", { ascending: false }).limit(50),
       this.db.from("podcast_config").select("*"),
-      this.scanDir("inbox"),
-      this.scanDir("articles"),
+      this.scanCollection("content/web-clips"),
+      this.scanCollection("content/docs"),
     ]);
 
     return {
@@ -101,15 +102,18 @@ export class DataClient {
     };
   }
 
-  private async scanDir(dir: string) {
+  private async scanCollection(dir: string) {
     try {
-      const files = await readdir(dir);
-      return await Promise.all(
-        files.filter(f => f.endsWith(".md")).map(async (f) => {
-          const s = await stat(join(dir, f));
-          return { name: f, size: s.size, mtime: s.mtime.toISOString() };
-        })
-      );
+      const entries = await readdir(dir, { withFileTypes: true });
+      const files = [];
+      for (const e of entries) {
+        if (!e.isDirectory()) continue;
+        const index = join(dir, e.name, "index.mdoc");
+        if (!existsSync(index)) continue;
+        const s = await stat(index);
+        files.push({ name: e.name, size: s.size, mtime: s.mtime.toISOString() });
+      }
+      return files.sort((a, b) => b.name.localeCompare(a.name));
     } catch {
       return [];
     }
@@ -185,10 +189,12 @@ export class DataClient {
   /**
    * Inbox TUI shortcut: try mem.ai registration, then POST ingest with file content
    * (same best-effort flow as scripts/ingest.ts file mode).
+   * Reads content/web-clips/{slug}/index.mdoc or content/docs/{slug}/index.mdoc
+   * and textifies Markdoc before POST.
    */
   async ingestMarkdownFile(fileName: string, pane: "inbox" | "draft"): Promise<ClientActionResult> {
-    const subdir = pane === "inbox" ? "inbox" : "articles";
-    const resolved = join(process.cwd(), subdir, fileName);
+    const subdir = pane === "inbox" ? "content/web-clips" : "content/docs";
+    const resolved = join(process.cwd(), subdir, fileName, "index.mdoc");
     if (this.isMock) {
       console.log(`Mock: ingest markdown file ${resolved}`);
       return { success: true };
@@ -198,9 +204,10 @@ export class DataClient {
     }
     if (!this.apiUrl || !this.serviceKey) return { success: false, error: "API not configured" };
 
-    const content = await readFile(resolved, "utf-8");
-    const titleMatch = content.match(/^#\s+(.+)$/m);
-    const title = titleMatch?.[1]?.trim();
+    const raw = await readFile(resolved, "utf-8");
+    const content = textify(raw);
+    const { attrs } = parseFrontmatter(raw);
+    const title = attrs.title || parseTitleFromContent(content, fileName);
 
     let memNoteId: string | undefined;
     let memSyncError: string | undefined;
@@ -225,6 +232,8 @@ export class DataClient {
         ingest_meta: {
           mem_sync: memNoteId ? "ok" : "failed",
           ...(memSyncError !== undefined ? { mem_sync_error: memSyncError } : {}),
+          inbox_file: attrs.legacyFilename || `${fileName}.md`,
+          legacyFilename: attrs.legacyFilename || `${fileName}.md`,
         },
       }),
     });

@@ -2,7 +2,7 @@
 
 > 出典: 添付仕様書「次世代パーソナルナレッジ基盤 要件定義・設計仕様書」v1.0.0（2026-09-13）  
 > 対象リポジトリ: `hskksk/podcaster`  
-> ステータス: Phase 1 完了（Keystatic + Vercel GitHub storage）。次は Phase 1b  
+> ステータス: Phase 1b 完了（`content/docs` + `content/web-clips`。Pages は textify して CommonMark + KaTeX）。次は Phase 2  
 > 作業計画: [pkm-next.md](./pkm-next.md)  
 > レビュー: 独立エージェント 2 系（仕様適合 + 現行コード突合）。判定は **approve-with-changes**。P0/P1 を本版で閉じた。
 
@@ -359,7 +359,7 @@ PDF 6 章をそのまま使う。
 
 完了条件: `pnpm typecheck` が壊れない。`pnpm web:build` が現行 36 HTML を出す。TUI mock が起動する。functions の diff が空。**満たした（#79–#81）。**
 
-### Phase 1b — 物理移動（コンシューマ追随と同一 PR）← 次
+### Phase 1b — 物理移動（コンシューマ追随と同一 PR）✅
 
 `git mv` するなら、同じ PR で次を全部入れる。stub（コピー残し）は作らない。
 
@@ -488,9 +488,9 @@ Phase 1 完了（#79–#81）:
 3. 空の `content/docs`, `content/web-clips`（`.gitkeep` のみ）
 4. GitHub App ウィザードは development で動作。Vercel へ env をコピー済み
 
-`articles/` と `inbox/` は未移動。パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。
+`articles/` と `inbox/` は `content/docs` / `content/web-clips` へ移動済み（Phase 1b）。パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。
 
-**次の実装単位は Phase 1b。** 手順・受け入れ条件・やらないことは [pkm-next.md](./pkm-next.md) に切り出した。`scripts/build-web.ts` / `pages.yml` / TUI / スキルは **Phase 1b の移動 PR** で触る。
+**次の実装単位は Phase 2（Capture）。** 手順は [pkm-next.md](./pkm-next.md)。
 
 ---
 
