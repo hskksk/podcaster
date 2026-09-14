@@ -2,7 +2,8 @@
 
 > 出典: 添付仕様書「次世代パーソナルナレッジ基盤 要件定義・設計仕様書」v1.0.0（2026-09-13）  
 > 対象リポジトリ: `hskksk/podcaster`  
-> ステータス: Phase 1 実装中（`cursor/pkm-phase-1-keystatic`）  
+> ステータス: Phase 1 完了（Keystatic + Vercel GitHub storage）。次は Phase 1b  
+> 作業計画: [pkm-next.md](./pkm-next.md)  
 > レビュー: 独立エージェント 2 系（仕様適合 + 現行コード突合）。判定は **approve-with-changes**。P0/P1 を本版で閉じた。
 
 この文書は PDF の仕組みを **このリポジトリに載せる** ための設計である。新規リポジトリを切らず、既存の記事・音声・RSS・パイプラインを残したまま、知識の正を Mem.ai から Git + Markdoc に移す。
@@ -217,8 +218,8 @@ content/web-clips/2026-09-13-article/index.mdoc
 
 | フェーズ | 公開サイト | 編集 UI |
 |----------|------------|---------|
-| 1 | 既存 GitHub Pages（`articles/` のまま） | ローカル Keystatic のみ |
-| 1b–3 | Pages は `content/docs` を CommonMark として読む | Keystatic は Access 相当の下 |
+| 1 | 既存 GitHub Pages（`articles/` のまま） | Keystatic（local + Vercel GitHub storage）。完了 |
+| 1b–3 | Pages は `content/docs` を CommonMark として読む | Keystatic は GitHub OAuth の下 |
 | 4 | Next.js が Pages を置換。音声プレイヤーは現行テンプレ相当 | `/keystatic` は非公開 |
 
 既存 URL `https://hskksk.github.io/podcaster/articles/{slug}.html` はリダイレクトで残す。slug 規則（ファイル名先頭の日付除去）は `legacyFilename` から再現する。
@@ -291,12 +292,14 @@ RSS・Storage・TUI の episodes / logs / requeue は変更しない。
 
 「Markdown ⊂ Markdoc」は危険。`$n$` やフェンス内の `{%` がパーサに食われる。
 
-移行スクリプトの方針:
+移行スクリプトの方針（Phase 1b で実施。詳細は [pkm-next.md](./pkm-next.md)）:
 
-1. 本文は無変換で `.mdoc` に入れる。frontmatter だけ付与する
-2. Phase 1–3 の公開面（`build-web.ts`）は **Markdoc パーサを掛けない**。現行どおり CommonMark + KaTeX
-3. Keystatic / Next 公開面で Markdoc を使うとき、`$` と作例中の `{%` を escape するか custom node にする
-4. 壊れた frontmatter や未定義タグで ingest を止めない
+1. `.md` は残さない。`content/.../index.mdoc` が正本
+2. プロスは無変換。フェンス外の `$` / `$$` と mermaid フェンスだけ既知タグへ機械変換する
+3. コードフェンス / インラインコードの `{%` と `$` は触らない
+4. Phase 1–3 の公開面（`build-web.ts`）は **Markdoc パーサを掛けない**。textify してから現行どおり CommonMark + KaTeX
+5. 壊れた frontmatter や未定義タグで ingest を止めない
+6. 変換は可逆: textify 結果が元 `.md` 本文と一致すること
 
 初期タグ:
 
@@ -342,11 +345,11 @@ PDF 6 章をそのまま使う。
 
 ## 10. 移行フェーズ
 
-実装はフェーズ順。この PR は設計のみ。
+実装はフェーズ順。作業計画は [pkm-next.md](./pkm-next.md)。
 
 ### Phase 0 — 設計（本ドキュメント）
 
-### Phase 1 — 知識層の器（ファイルは動かさない）
+### Phase 1 — 知識層の器（ファイルは動かさない）✅
 
 - `pnpm-workspace.yaml` に `apps/*` を追加。`apps/web` は独自 `package.json`（root の Ink/React と分離）
 - Keystatic + **local** storage for `pnpm web:dev`。Vercel 公開は GitHub storage（`NEXT_PUBLIC_VERCEL_ENV`）
@@ -354,21 +357,22 @@ PDF 6 章をそのまま使う。
 - `articles/` `inbox/` は **このフェーズでは git mv しない**。Pages / TUI / inbox CI / スキルがこのパスに結合している
 - `supabase/functions` と DB は触らない
 
-完了条件: `pnpm typecheck` が壊れない。`pnpm web:build` が現行 36 HTML を出す。TUI mock が起動する。functions の diff が空。
+完了条件: `pnpm typecheck` が壊れない。`pnpm web:build` が現行 36 HTML を出す。TUI mock が起動する。functions の diff が空。**満たした（#79–#81）。**
 
-### Phase 1b — 物理移動（コンシューマ追随と同一 PR）
+### Phase 1b — 物理移動（コンシューマ追随と同一 PR）← 次
 
 `git mv` するなら、同じ PR で次を全部入れる。stub（コピー残し）は作らない。
 
 - `articles/` → `content/docs`、`inbox/` → `content/web-clips`。`legacyFilename` を付与
-- `scripts/build-web.ts` が `content/docs/**/index.mdoc` を読む（Markdoc パーサは使わない）
+- `.md` は残さない。フェンス外の数式と mermaid を既知タグへ機械変換（プロスは無変換）
+- `scripts/build-web.ts` が `content/docs/**/index.mdoc` を読む（Markdoc パーサは使わない。textify して CommonMark + KaTeX）
 - `pages.yml` の `paths` に `content/docs/**`
 - audio map を `inbox_file` OR `legacyFilename`。既存行を SQL バックフィル
 - TUI の scan 先を新パスへ
 - inbox CI は新パスに切り替えるか、この PR で disable するかを選ぶ（黙って死なせない）
 - スキル 3 種の保存先を更新
 
-受け入れ: 本文 36+4 の frontmatter 除去 diff が空。`pnpm web:build` が 36 HTML。`markdoc_features.html` / `勝海舟.html` / `multi-agent-prompt-consistency.html` が残る。数式記事に `math-inline` / `math-display` が残る。
+受け入れ: 移行スクリプトの textify 結果が元 36+4 の `.md` 本文と一致。`pnpm web:build` が 36 HTML。`markdoc_features.html` / `勝海舟.html` / `multi-agent-prompt-consistency.html` が残る。数式記事に `math-inline` / `math-display` が残る。Keystatic が全件開ける。
 
 公開 URL slug はディレクトリ名ではない。現行と同じ `parseSlugFromFilename(legacyFilename)`（先頭 `YYYYMMDD` と任意の `_HHMMSS_` を落とす）。日本語は `encodeURIComponent`。関数は一箇所に置く。
 
@@ -419,7 +423,7 @@ inbox/20260815_095800_reverse_tunnel.md
 ```
 
 - slug は現行ファイル名（拡張子なし）。Pages の slug 規則は `legacyFilename` から計算
-- `git mv` 後に frontmatter を足す（履歴を保つ）
+- `git mv` 後に frontmatter を足し、フェンス外の数式と mermaid だけ既知タグへ機械変換する（プロスは書き直さない）
 - `multi-agent-prompt-consistency.md` のように日付接頭辞が無いものは slug をそのまま使う
 - 公開済み相当の docs は `podcast: published`
 - inbox 由来の既定は `podcast: none`。Phase 3 で投入するものだけ `queued` にする
@@ -445,19 +449,19 @@ inbox/20260815_095800_reverse_tunnel.md
 - clips → docs は copy + `promotedTo`
 - ingest 本文は frontmatter 除去と既知タグの textify
 - 公開 slug 関数は `parseSlugFromFilename(legacyFilename)` と同一
+- Phase 1b で `.md` は残さない。数式と mermaid は既知タグへ機械変換する（2026-09-14）
 
 **実装時に選ぶこと（Phase 1 はブロックしない）**
 
 - Next.js のホスト: **Vercel**（GitHub storage）。Tunnel 配下 Docker / Railway は任意
 - Chrome 拡張 web-clipper の導入時期。Phase 2 は curl / スキル / TUI で FR-02 を満たす
-- 数式を Markdoc タグに正規化するタイミング
 - MCP のデプロイ先（別プロセス推奨。Python FastMCP ならランタイム追加）
 
 **やらないこと（この移行の範囲外）**
 
 - pgflow の置き換え
 - TTS ベンダー変更
-- 記事本文の書き直し
+- 記事本文の書き直し（数式・mermaid の機械的なタグ化は除く。プロスは触らない）
 - Mem.ai 上の過去ノートの全件インポート（Git に無いものは必要になったら個別）
 
 ---
@@ -470,22 +474,23 @@ inbox/20260815_095800_reverse_tunnel.md
 | Pages の slug とディレクトリ slug の不一致 | `legacyFilename` とリダイレクト表を移行スクリプトが生成 |
 | 自動 ingest がクリップのたびに TTS を撃つ | 既定 `podcast: none`。queued は Actions が `published` に書き戻す |
 | Phase 1 で `git mv` すると Pages/TUI/CI が死ぬ | 移動は Phase 1b。コンシューマ追随と同一 PR |
-| Markdoc 変換で数式が壊れる | Phase 1 は本文無変換。レンダラ側で `$` を維持 |
+| Markdoc 変換で数式が壊れる | フェンス外の `$`/`$$` と mermaid だけタグ化。コード内は触らない。Pages は textify してから KaTeX。roundtrip で元 md と一致させる |
 | mem_note_id 依存のログ / TUI | 列は残す。UI は `content_path` を優先表示 |
 
 ---
 
-## 14. 次の実装単位（Phase 1）
+## 14. 実装状況
+
+Phase 1 完了（#79–#81）:
 
 1. `pnpm-workspace.yaml` に `apps/*`
-2. `apps/web` の Next.js + Keystatic（local は dev、Vercel は GitHub storage）
+2. `apps/web` の Next.js + Keystatic（local は `pnpm web:dev`、Vercel は GitHub storage）
 3. 空の `content/docs`, `content/web-clips`（`.gitkeep` のみ）
-4. `articles/` `inbox/` は動かさない
+4. GitHub App ウィザードは development で動作。Vercel へ env をコピー済み
 
-パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。  
-Phase 1 で触ってよい既存ファイルは workspace 設定と docs のみ。`scripts/build-web.ts` / `pages.yml` / TUI / スキルは **Phase 1b の移動 PR** で触る。
+`articles/` と `inbox/` は未移動。パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。
 
-実装済み（`feat/pkm-phase-1-keystatic`）: `apps/web` の Keystatic local admin、空の `content/docs` と `content/web-clips`。`articles/` と `inbox/` は未移動。
+**次の実装単位は Phase 1b。** 手順・受け入れ条件・やらないことは [pkm-next.md](./pkm-next.md) に切り出した。`scripts/build-web.ts` / `pages.yml` / TUI / スキルは **Phase 1b の移動 PR** で触る。
 
 ---
 
