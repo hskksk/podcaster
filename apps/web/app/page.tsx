@@ -59,9 +59,10 @@ export default async function HomePage() {
           <ol>
             <li>
               Locally: <code>pnpm web:github</code> then open{" "}
-              <code>/keystatic</code>
+              <Link href="/keystatic/setup">/keystatic/setup</Link> (or click
+              Log in with GitHub — in dev that page is next)
             </li>
-            <li>Create the GitHub App from the Keystatic prompt</li>
+            <li>Create the GitHub App on that setup screen</li>
             <li>
               Copy <code>KEYSTATIC_GITHUB_CLIENT_ID</code>,{" "}
               <code>KEYSTATIC_GITHUB_CLIENT_SECRET</code>,{" "}
