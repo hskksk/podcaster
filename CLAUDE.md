@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Type checking (no test suite — this is the primary correctness check)
 pnpm typecheck
+pnpm typecheck:web            # Next.js / Keystatic app
+pnpm web:dev                  # Keystatic admin at http://127.0.0.1:3000/keystatic
 
 # Local dev: start Supabase stack + Edge Functions
 supabase start
@@ -44,6 +46,8 @@ curl -s http://localhost:54331/functions/v1/craft-episode-worker -H "Authorizati
 ```
 
 ## Architecture
+
+Git + Markdoc (`content/`) is the designed knowledge store. Phase 1 adds `apps/web` (Keystatic, local storage). Existing `articles/` + GitHub Pages remain the public site until Phase 1b. The podcast factory below is unchanged.
 
 Article text enters via the `ingest` Edge Function and starts a **pgflow** DAG run:
 

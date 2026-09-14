@@ -47,6 +47,8 @@ See `CLAUDE.md` for the full list. Key commands:
 | Task | Command |
 |------|---------|
 | Type check | `pnpm typecheck` |
+| Type check (Keystatic app) | `pnpm typecheck:web` |
+| Keystatic admin | `pnpm web:dev` |
 | Start Supabase | `supabase start` |
 | Serve functions | `pnpm functions:serve` |
 | Reset DB | `pnpm db:reset` |
