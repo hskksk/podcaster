@@ -127,8 +127,12 @@ function selfTest(): void {
       md: "`{% tag_name attribute=\"value\" %}` と `{% image /%}` 形式。\n",
     },
     {
-      name: "mermaid",
-      md: "intro\n\n```mermaid\npie title Net\n    \"Direct\" : 45\n```\n\nafter\n",
+      name: "display in blockquote stays dollars",
+      md: "> **定理**\n>\n> $$\n> x = 1\n> $$\n>\n> 続く\n",
+    },
+    {
+      name: "display with trailing fullwidth paren stays dollars",
+      md: "$$-1 = 1$$（注）\n",
     },
   ];
 
@@ -158,7 +162,12 @@ function selfTest(): void {
     console.error("FAIL inline $ must not become {% math %} (Keystatic wrapper is block-only)");
     process.exit(1);
   }
-  console.log("ok  inline $ remains dollar (no math tag)");
+  const bq = markdownToMdoc("> $$\n> x\n> $$\n");
+  if (bq.includes("{% math")) {
+    console.error("FAIL blockquote $$ must not become {% math %}");
+    process.exit(1);
+  }
+  console.log("ok  blockquote $$ remains dollar");
 }
 
 function verify(list: Job[]): RoundtripFailure[] {

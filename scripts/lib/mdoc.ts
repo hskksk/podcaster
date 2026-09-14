@@ -194,6 +194,16 @@ function convertMathInText(text: string): string {
     if (text.startsWith("$$", i)) {
       const end = text.indexOf("$$", i + 2);
       if (end !== -1) {
+        const lineStart = text.lastIndexOf("\n", i - 1) + 1;
+        const lineBefore = text.slice(lineStart, i);
+        const afterSameLine = text.slice(end + 2).split("\n")[0] ?? "";
+        // Block wrapper cannot live inside a blockquote (`> $$`) or share a
+        // line with trailing prose (`$$...$$（注）`). Leave those as dollars.
+        if (/^\s*>/.test(lineBefore) || afterSameLine.length > 0) {
+          out += text.slice(i, end + 2);
+          i = end + 2;
+          continue;
+        }
         const inner = text.slice(i + 2, end);
         out += `{% math display=true %}\n${inner}\n{% /math %}`;
         i = end + 2;
