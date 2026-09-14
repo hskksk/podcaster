@@ -59,7 +59,7 @@ Supabase Storage (公開バケット `podcast`)
 ```
 podcaster/
 ├── apps/
-│   └── web/                        # Next.js + Keystatic (Phase 1: local admin)
+│   └── web/                        # Next.js + Keystatic (local admin; Railway で公開可)
 ├── content/
 │   ├── docs/                       # Wiki Markdoc (empty until Phase 1b)
 │   └── web-clips/                  # Capture notes (empty until Phase 2)

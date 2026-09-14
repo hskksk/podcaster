@@ -27,6 +27,9 @@ scripts/*.txt
 # Claude Code local settings
 .claude/settings.local.json
 
+# Railway CLI local project link
+.railway/
+
 
 # temporary
 podcast-delivery-system-tui/
