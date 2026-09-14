@@ -92,6 +92,12 @@ Phase 6   mem / inbox CI 掃除
 
 `$` の誤変換（`$HOME` 等）を避ける。フェンス外の `$...$` / `$$` だけを対象にし、変換結果は textify で元の md に戻せることをテストする。
 
+実装メモ（Keystatic `wrapper()` 制約）:
+
+- インライン `$...$` はタグ化しない。`{% math display=false %}` を段落内に置くと “tag has unexpected children” で編集 UI が落ちる
+- 引用内の `> $$` と、同じ行に後続テキストがある `$$...$$（注）` もタグ化しない（blockquote / 閉じタグが壊れる）
+- 独立した display `$$` と mermaid フェンスだけ既知タグにする。Pages は textify 後の `$`/`$$` を現行どおり KaTeX する
+
 例:
 
 ```
