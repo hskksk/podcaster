@@ -12,7 +12,7 @@ pnpm web:dev
 
 ## Vercel（推奨）
 
-モノレポなので Root Directory は `apps/web`。`vercel.json` に書いてある。
+モノレポなので、Vercel の Project Settings → Root Directory を **`apps/web`** にする（Import 画面の Edit でも可）。`rootDirectory` は vercel.json には書けない。
 
 1. GitHub にこのリポジトリを Import するか、`vercel link --repo` してから `vercel deploy`
 2. 一度だけ GitHub App を作る（Keystatic のウィザードは **development でしか動かない**）:
