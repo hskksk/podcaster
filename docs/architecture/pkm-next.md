@@ -36,7 +36,7 @@ Keystatic は動くが、中身が無い。Vercel に載せた意義を出すに
 - ファイル移動は **コンシューマ追随と同一 PR**。stub（コピー残し）は作らない
 - Phase 1–3 の Pages は Markdoc パーサを掛けない（CommonMark + KaTeX のまま）
 - 既存エピソードの RSS と Storage 音声を壊さない
-- 知識ファイルの本文は git blame で追えること（`git mv` 後に frontmatter だけ足す）
+- 知識ファイルのプロスは git blame で追えること（`git mv` + 機械変換のみ。文章の再構成はしない）
 
 ---
 
@@ -70,10 +70,27 @@ Phase 6   mem / inbox CI 掃除
 
 - basename は拡張子なしの現行ファイル名（日付接頭辞付きを含む）
 - `legacyFilename` に現行 basename を入れる
-- 本文は無変換。YAML frontmatter だけ先頭に足す
-- `git mv` してから frontmatter を足す（履歴を切らない）
+- **`.md` のまま残さない。** Keystatic の正本は `index.mdoc`
+- `git mv` 相当で履歴を付けたあと、frontmatter 追加と下記の機械変換を行う
 - `multi-agent-prompt-consistency.md` のように日付接頭辞が無いものは slug をそのまま使う
 - inbox 4 本は **この PR で ingest / TTS しない**（設計書: 黙って一括 TTS しない）
+
+#### 4.1.1 `.md` → `.mdoc` で変換するもの / しないもの
+
+プロス（見出し・段落・リスト）は書き直さない。変換はスクリプトで、コードフェンスの中は触らない。
+
+| 対象 | 件数の目安 | 変換 |
+|------|------------|------|
+| ファイル配置と拡張子 | 36+4 | `*.md` → `{basename}/index.mdoc` |
+| YAML frontmatter | 0 件（現行に無し） | 先頭に付与 |
+| `$$...$$` / `$...$` 数式 | articles 側に十数本 | `{% math display=true %}` / `{% math display=false %}` |
+| ` ```mermaid ` フェンス | 2 本 | `{% diagram type="mermaid" %}` |
+| コードフェンス内の `{%`・`$` | markdoc 解説など | **そのまま**（パーサに食わせない） |
+| インラインコードの `{% tag %}` | 同上 | **そのまま** |
+| callout / podcastPlayer | 現行に無し | 作らない |
+| 文章の再構成 | — | **しない** |
+
+`$` の誤変換（`$HOME` 等）を避ける。フェンス外の `$...$` / `$$` だけを対象にし、変換結果は textify で元の md に戻せることをテストする。
 
 例:
 
@@ -91,7 +108,7 @@ inbox/20260815_095800_reverse_tunnel.md
 
 | 対象 | 変更 |
 |------|------|
-| `scripts/build-web.ts` | `content/docs/**/index.mdoc` を読む。frontmatter を除去してから現行 marked + KaTeX。公開 slug は `parseSlugFromFilename(legacyFilename)` と同一（関数は一箇所） |
+| `scripts/build-web.ts` | `content/docs/**/index.mdoc` を読む。frontmatter 除去 + 既知タグの textify（`math` → `$`/`$$`、`diagram` → mermaid フェンス）のあと、現行 marked + KaTeX。公開 slug は `parseSlugFromFilename(legacyFilename)` と同一（関数は一箇所）。**Markdoc パーサは掛けない** |
 | `.github/workflows/pages.yml` | `paths` に `content/docs/**` |
 | audio map | `ingest_meta.inbox_file` **または** `legacyFilename` の OR。既存行は SQL バックフィル |
 | TUI `scripts/tui/data/client.ts` | `scanDir("inbox")` / `scanDir("articles")` を新パスへ。ingest ショートカットも新パス |
@@ -128,12 +145,12 @@ Phase 3 の `articles.content_path` UNIQUE はこの PR では必須にしない
 
 ### 4.5 受け入れ条件
 
-設計書 §10 Phase 1b をそのまま使う。
+設計書 §10 Phase 1b を、mdoc 機械変換に合わせて次のように読む。
 
-- 本文 36+4 の frontmatter 除去 diff が空（本文バイトが変わらない）
-- `pnpm web:build` が 36 HTML を出す
+- 移行スクリプトの **textify（frontmatter 除去 + 既知タグ戻し）** が、元の 36+4 本の `.md` 本文と一致する
+- `pnpm web:build` が 36 HTML を出す。数式記事の HTML は現行と同等（`math-inline` / `math-display` が残る）
 - `markdoc_features.html` / `勝海舟.html` / `multi-agent-prompt-consistency.html` が残る
-- 数式記事に `math-inline` / `math-display` が残る
+- Keystatic が 36+4 を開ける（未定義タグや生の `{%` で落ちない）
 - 公開 URL は現行どおり `https://hskksk.github.io/podcaster/articles/{slug}.html`
 - `pnpm typecheck` が通る
 - TUI mock が起動する
@@ -218,9 +235,10 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 推奨手順:
 
 1. `origin/main` からブランチ
-2. 移行スクリプトを先に書き、ローカルで 36+4 を変換して本文 diff を検証
-3. コンシューマ（build-web / pages.yml / TUI / スキル / inbox CI disable）を同じコミット列で追随
-4. `pnpm typecheck` と `pnpm web:build` を必ず回す
-5. 数式記事と日本語 slug の HTML を目視（`勝海舟` / `markdoc_features` / 数式 13 本）
+2. 移行スクリプトを先に書く（配置 + frontmatter + 数式/mermaid タグ化 + textify）
+3. 36+4 を変換し、**textify 結果が元 `.md` と一致する**ことを検証してからコンテンツをコミット
+4. コンシューマ（build-web の textify / pages.yml / TUI / スキル / inbox CI disable）を同じコミット列で追随
+5. `pnpm typecheck` と `pnpm web:build` を必ず回す
+6. 数式記事と日本語 slug の HTML を目視（`勝海舟` / `markdoc_features` / 数式記事）。Keystatic で数式記事と mermaid 2 本が開けることを確認
 
 設計の解釈で迷ったら [pkm-migration.md](./pkm-migration.md) を優先する。この計画と食い違う新判断が必要なら、コードより先に設計 PR を出す。
