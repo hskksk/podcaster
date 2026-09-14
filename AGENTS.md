@@ -38,6 +38,7 @@ pnpm functions:serve
 - **API keys required for full pipeline**: `GEMINI_API_KEY` and `MEM_API_KEY` must be in `.env` for `ingest` / pgflow stages to succeed. Without them, ingest returns errors and `generateScript` stage fails.
 - **TUI requires TTY**: `pnpm tui` (Ink-based) needs a real terminal with raw mode support. Use `pnpm tui -- --mock` for mock data. It will fail with "Raw mode is not supported" in non-interactive shells.
 - **`TARGET=local`**: Set this env var for CLI/TUI commands to connect to the local Supabase stack instead of remote.
+- **Never edit existing migrations**: Schema changes require a new `supabase/migrations/` file named `YYYYMMDD{seq}_snake_case_description.sql` (never modify committed migrations). See CLAUDE.md → Database Migrations.
 - **Seed config after fresh start**: Run `TARGET=local pnpm seed:config` after `supabase start` or `supabase db reset` to initialize `podcast_config` and upload `cover.png`.
 
 ### Commands quick reference

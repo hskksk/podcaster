@@ -99,6 +99,16 @@ Scripts in `scripts/` use `TARGET=local` to connect to the local Supabase stack 
 
 ## Database Migrations
 
+### Migration file rules
+
+- **Never edit existing migration files.** Migration history is append-only — do not modify already-committed migrations (applies to `supabase/migrations/*.sql`, including pgflow-managed files).
+- **Create a new migration for every schema change**, named with the implementation date + sequence + description:
+  - Naming convention: `YYYYMMDD{seq}_snake_case_description.sql`
+  - Examples: `20260423000001_initial.sql`, `20260507000001_episode_status_lifecycle.sql`
+- If `db reset`/`db push` would be affected by the change, make a new migration rather than altering history.
+
+### RLS pattern
+
 When creating a new table, always add `ENABLE ROW LEVEL SECURITY` immediately after:
 
 ```sql
