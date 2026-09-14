@@ -19,7 +19,8 @@ pnpm web:dev
 
 ```bash
 pnpm web:github
-# http://127.0.0.1:3000/keystatic を開いて Create GitHub App
+# 開く: http://127.0.0.1:3000/keystatic/setup
+# /keystatic の「Log in with GitHub」でも同じセットアップに飛ぶ
 ```
 
 3. 生成された値を Vercel → Project → Settings → Environment Variables に入れる:
@@ -50,6 +51,7 @@ GitHub App 作成だけするとき:
 
 ```bash
 pnpm web:github
+# http://127.0.0.1:3000/keystatic/setup
 ```
 
 ## 他ホスト
