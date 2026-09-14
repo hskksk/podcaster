@@ -168,6 +168,7 @@ function selfTest(): void {
     process.exit(1);
   }
   console.log("ok  blockquote $$ remains dollar");
+  console.log(`self-test: ${cases.length} passed`);
 }
 
 function verify(list: Job[]): RoundtripFailure[] {
