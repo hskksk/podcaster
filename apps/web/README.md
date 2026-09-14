@@ -2,7 +2,7 @@
 
 Next.js App Router + Keystatic admin for the Git + Markdoc knowledge layer.
 
-Phase 1: local filesystem for `pnpm web:dev`. **Vercel では GitHub storage**（GitHub API 経由で `content/` に commit）。`articles/` とポッドキャストパイプラインは未変更。
+Phase 1b: local filesystem for `pnpm web:dev`. **Vercel では GitHub storage**（GitHub API 経由で `content/` に commit）。知識の正本は `content/docs` と `content/web-clips`。ポッドキャストパイプラインは未変更。
 
 ```bash
 # from repo root

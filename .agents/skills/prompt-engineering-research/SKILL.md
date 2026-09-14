@@ -5,12 +5,12 @@ description: AIエージェントやOSSリポジトリで採用されている�
 
 ## What I do
 
-様々なAIエージェントやOSSリポジトリを調査し、そこで使われているAIへの指示、プロンプトエンジニアリングのテクニック、ガイドライン、規約、原則をまとめた詳細な Markdown レポートを作成します。レポートは「AI指示・プロンプト原則調査シリーズ」として `inbox/` に保存され、PRが作成されます。
+様々なAIエージェントやOSSリポジトリを調査し、そこで使われているAIへの指示、プロンプトエンジニアリングのテクニック、ガイドライン、規約、原則をまとめた詳細な Markdown レポートを作成します。レポートは「AI指示・プロンプト原則調査シリーズ」として `content/web-clips/` に保存され、PRが作成されます。
 
-1. **対象の選定**: 指定がない場合は `awesome-agents` 等を参照し、`articles/` に存在しない未調査のOSSを選定します。
+1. **対象の選定**: 指定がない場合は `awesome-agents` 等を参照し、`content/docs/` に存在しない未調査のOSSを選定します。
 2. **多角的なリサーチ**: GitHubリポジトリ内のプロンプトファイル（`.txt`, `.md`, `.yaml`, `.json` 等）、ソースコード内の文字列定数、公式ドキュメント、Wiki、DeepWiki等を検索し、プロンプトの構造や指示内容を抽出・分析します。
-3. **レポート保存**: シリーズタイトルを含めたMarkdownとして `./inbox/` に保存します。
-4. **PR 作成**: origin/main ベースのブランチを作成して PR を出します（マージされると CI が自動で ingest を実行します）。
+3. **レポート保存**: シリーズタイトルを含めた Markdoc として `content/web-clips/` に保存します。
+4. **PR 作成**: origin/main ベースのブランチを作成して PR を出します（マージしても TTS は走りません。`podcast: none`）。
 
 ## When to use me
 
@@ -28,7 +28,7 @@ description: AIエージェントやOSSリポジトリで採用されている�
 - ユーザーから特定のOSS名やリポジトリURLが指定されている場合は、それをターゲットとします。
 - 指定がない場合：
   1. `web_fetch` 等を使用して `https://github.com/kyrolabs/awesome-agents` や類似のキュレーションリストを取得します。
-  2. `list_directory` や `glob` を使ってローカルの `articles/` 以下のファイル名を調べ、既に調査済みのOSSを把握します。
+  2. `list_directory` や `glob` を使ってローカルの `content/docs/` 以下のディレクトリ名を調べ、既に調査済みのOSSを把握します。
   3. まだ調査されていない、プロンプトエンジニアリングが高度だと思われるAI/エージェント関連OSSを1つ選び、ターゲットとしてユーザーに宣言します。
 
 ### ステップ 2: 徹底的なリサーチ
@@ -69,17 +69,27 @@ description: AIエージェントやOSSリポジトリで採用されている�
 （調査に使用したリポジトリ、ドキュメント、具体的なプロンプトファイルのURL一覧）
 ```
 
-### ステップ 4: inbox/ に保存して PR を作成する
+### ステップ 4: content/web-clips/ に保存して PR を作成する
 
-1. `./inbox/YYYYMMDD_HHMMSS_prompt_eng_<oss-name>.md` というファイル名で Markdown レポートを保存します。
+1. `content/web-clips/YYYYMMDD_HHMMSS_prompt_eng_<oss-name>/index.mdoc` というパスでレポートを保存します。先頭に YAML frontmatter:
+
+   ```markdown
+   ---
+   title: "AI指示・プロンプト原則調査シリーズ: <OSS名> におけるプロンプトエンジニアリング"
+   clippedAt: "YYYY-MM-DDTHH:MM:SS.000Z"
+   podcast: none
+   legacyFilename: YYYYMMDD_HHMMSS_prompt_eng_<oss-name>.md
+   ---
+   ```
+
 2. origin/main ベースの新しいブランチを作成してコミットします:
    ```bash
-   FILENAME="YYYYMMDD_HHMMSS_prompt_eng_<oss-name>.md"
-   BRANCH="article/YYYYMMDD_HHMMSS_prompt_eng_<oss-name>"
+   SLUG="YYYYMMDD_HHMMSS_prompt_eng_<oss-name>"
+   BRANCH="article/$SLUG"
    git checkout -b "$BRANCH" origin/main
-   git add "inbox/$FILENAME"
+   git add "content/web-clips/$SLUG/index.mdoc"
    git commit -m "Add Prompt Engineering research article: <OSS名>"
    git push -u origin "$BRANCH"
    ```
-3. PR を作成します（`gh` CLI 使用）。
-4. レポートの概要を提示し、「\`inbox/\` に保存して PR を作成しました。」と報告して完了します。
+3. PR を作成します（`gh` CLI 使用）。マージしても TTS は実行しません。
+4. レポートの概要を提示し、「`content/web-clips/` に保存して PR を作成しました。自動 ingest はしません。」と報告して完了します。

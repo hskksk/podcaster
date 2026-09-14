@@ -5,12 +5,12 @@ description: OSSリポジトリ（特にAI・エージェント関連）のア�
 
 ## What I do
 
-指定されたOSSリポジトリ（または自動選定したAI・エージェント関連のOSS）について深く調査し、そのアーキテクチャ、設計思想、開発原則、導入されている品質向上ツールなどをまとめた詳細な Markdown レポートを作成します。レポートはシリーズものとして `inbox/` に保存され、PRが作成されます。
+指定されたOSSリポジトリ（または自動選定したAI・エージェント関連のOSS）について深く調査し、そのアーキテクチャ、設計思想、開発原則、導入されている品質向上ツールなどをまとめた詳細な Markdown レポートを作成します。レポートはシリーズものとして `content/web-clips/` に保存され、PRが作成されます。
 
-1. **対象の選定**: 指定がない場合は `awesome-agents` 等を参照し、`articles/` に存在しない未調査のOSSを選定します。
+1. **対象の選定**: 指定がない場合は `awesome-agents` 等を参照し、`content/docs/` に存在しない未調査のOSSを選定します。
 2. **多角的なリサーチ**: GitHubリポジトリ、Wiki、公式ドキュメント、技術ブログ等を検索・取得し、システムのアーキテクチャや設計思想を深掘りします。
-3. **レポート保存**: シリーズタイトルを含めたMarkdownとして `./inbox/` に保存します。
-4. **PR 作成**: origin/main ベースのブランチを作成して PR を出します（マージされると CI が自動で ingest を実行します）。
+3. **レポート保存**: シリーズタイトルを含めた Markdoc として `content/web-clips/` に保存します。
+4. **PR 作成**: origin/main ベースのブランチを作成して PR を出します（マージしても TTS は走りません。`podcast: none`）。
 
 ## When to use me
 
@@ -28,7 +28,7 @@ description: OSSリポジトリ（特にAI・エージェント関連）のア�
 - ユーザーから特定のOSS名やリポジトリURLが指定されている場合は、それをターゲットとします。
 - 指定がない場合：
   1. `web_fetch` 等を使用して `https://github.com/kyrolabs/awesome-agents` や類似のキュレーションリストを取得します。
-  2. `list_directory` や `glob` を使ってローカルの `articles/` 以下のファイル名を調べ、既に調査済みのOSSを把握します。
+  2. `list_directory` や `glob` を使ってローカルの `content/docs/` 以下のディレクトリ名を調べ、既に調査済みのOSSを把握します。
   3. まだ調査されていない、人気のある（スター数が多い）メジャーなAI/エージェント関連OSSを1つ選び、ターゲットとしてユーザーに宣言します。
 
 ### ステップ 2: 徹底的なリサーチ
@@ -74,15 +74,25 @@ description: OSSリポジトリ（特にAI・エージェント関連）のア�
 （調査に使用したリポジトリやドキュメントのURL一覧）
 ```
 
-### ステップ 4: inbox/ に保存して PR を作成する
+### ステップ 4: content/web-clips/ に保存して PR を作成する
 
-1. `./inbox/YYYYMMDD_HHMMSS_oss_arch_<oss-name>.md` というファイル名で Markdown レポートを保存します。
+1. `content/web-clips/YYYYMMDD_HHMMSS_oss_arch_<oss-name>/index.mdoc` というパスでレポートを保存します。先頭に YAML frontmatter:
+
+   ```markdown
+   ---
+   title: "OSSアーキテクチャ深掘りシリーズ: <OSS名> のアーキテクチャと設計思想"
+   clippedAt: "YYYY-MM-DDTHH:MM:SS.000Z"
+   podcast: none
+   legacyFilename: YYYYMMDD_HHMMSS_oss_arch_<oss-name>.md
+   ---
+   ```
+
 2. origin/main ベースの新しいブランチを作成してコミットします:
    ```bash
-   FILENAME="YYYYMMDD_HHMMSS_oss_arch_<oss-name>.md"
-   BRANCH="article/YYYYMMDD_HHMMSS_oss_arch_<oss-name>"
+   SLUG="YYYYMMDD_HHMMSS_oss_arch_<oss-name>"
+   BRANCH="article/$SLUG"
    git checkout -b "$BRANCH" origin/main
-   git add "inbox/$FILENAME"
+   git add "content/web-clips/$SLUG/index.mdoc"
    git commit -m "Add OSS research article: <OSS名>"
    git push -u origin "$BRANCH"
    ```
@@ -94,10 +104,10 @@ description: OSSリポジトリ（特にAI・エージェント関連）のア�
        --title "OSS Arch Research: <OSS名>" \
        --body "## 概要
 
-記事を main にマージすると CI が自動で ingest を実行します。
+知識として content/web-clips に入れます。マージしても TTS は実行しません（podcast: none）。
 
-- ファイル: inbox/$FILENAME
+- ファイル: content/web-clips/$SLUG/index.mdoc
 - テーマ: <OSS名> のアーキテクチャと設計思想"
      ```
    - `gh` CLI が使えない場合は、ユーザーに手動で PR を作成するよう案内します。
-4. レポートの概要をユーザーに提示し、「`inbox/` に保存して PR を作成しました。」と報告して完了します。
+4. レポートの概要をユーザーに提示し、「`content/web-clips/` に保存して PR を作成しました。自動 ingest はしません。」と報告して完了します。

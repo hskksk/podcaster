@@ -79,10 +79,10 @@ export const InboxView: React.FC<Props> = ({
         showToast('No file selected', 'error');
         return;
       }
-      const dirLabel = pane === 'inbox' ? 'inbox/' : 'articles/';
+      const dirLabel = pane === 'inbox' ? 'content/web-clips/' : 'content/docs/';
       openConfirm({
         title: 'Run ingest',
-        message: `mem-ai note create from file, then POST ingest:\n${dirLabel}${file.name}`,
+        message: `mem-ai note create from file, then POST ingest:\n${dirLabel}${file.name}/index.mdoc`,
         onConfirm: async () => {
           const r = await client.ingestMarkdownFile(file.name, pane === 'inbox' ? 'inbox' : 'draft');
           if (!r.success) {

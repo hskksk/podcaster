@@ -1,9 +1,9 @@
 # PKM 今後の開発計画
 
 > 日付: 2026-09-14  
-> 前提: Phase 1（Keystatic の器 + Vercel GitHub storage）完了。GitHub App 設定も通った。  
+> 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
 > 設計の正: [pkm-migration.md](./pkm-migration.md)  
-> 次の実装: **Phase 1b（物理移動。コンシューマ追随と同一 PR）**
+> 次の実装: **Phase 2（Capture API。Git に置くだけ。TTS は呼ばない）**
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
 
@@ -15,9 +15,9 @@
 |----|------|
 | 知識の器 | `apps/web` の Next.js + Keystatic。ローカルは FS、Vercel は GitHub storage |
 | 編集 UI | `/keystatic` が Vercel 上で GitHub ログインできる |
-| 知識ファイル | まだ空。`content/docs` と `content/web-clips` は `.gitkeep` のみ |
-| 公開サイト | 現行 GitHub Pages。`articles/` 36 本を `scripts/build-web.ts` が HTML 化 |
-| 投入待ち | `inbox/` 4 本。main マージで `ingest-articles.yml` が自動 ingest → `articles/` へ `git mv` |
+| 知識ファイル | `content/docs`（公開 wiki）と `content/web-clips`（クリップ）。正本は `index.mdoc` |
+| 公開サイト | 現行 GitHub Pages。`content/docs/**/index.mdoc` を textify してから `scripts/build-web.ts` が HTML 化 |
+| 投入待ち | web-clips は `podcast: none`。自動 ingest CI は disable |
 | 配信 | Supabase ingest → pgflow → TTS → RSS。**触らない**（Phase 3 まで） |
 | Capture / MCP | 未実装（`apps/web/app/api/` は Keystatic のみ。`apps/mcp` なし） |
 
@@ -43,8 +43,8 @@ Keystatic は動くが、中身が無い。Vercel に載せた意義を出すに
 ## 3. 実装順
 
 ```
-Phase 1b  物理移動 + コンシューマ追随     ← 次
-Phase 2   Capture API（Git に置くだけ）
+Phase 1b  物理移動 + コンシューマ追随     ✅
+Phase 2   Capture API（Git に置くだけ）   ← 次
 Phase 3   ポッドキャスト入力を Git に切替
 Phase 4   Next.js 公開サイト（Pages 置換）
 Phase 5   MCP
@@ -55,7 +55,7 @@ Phase 6   mem / inbox CI 掃除
 
 ---
 
-## 4. Phase 1b — 物理移動（次の PR）
+## 4. Phase 1b — 物理移動（完了）
 
 **目的**: Keystatic が現行ナレッジを編集でき、Pages が同じ URL で同じ本文を出し続ける。
 
@@ -91,6 +91,12 @@ Phase 6   mem / inbox CI 掃除
 | 文章の再構成 | — | **しない** |
 
 `$` の誤変換（`$HOME` 等）を避ける。フェンス外の `$...$` / `$$` だけを対象にし、変換結果は textify で元の md に戻せることをテストする。
+
+実装メモ（Keystatic `wrapper()` 制約）:
+
+- インライン `$...$` はタグ化しない。`{% math display=false %}` を段落内に置くと “tag has unexpected children” で編集 UI が落ちる
+- 引用内の `> $$` と、同じ行に後続テキストがある `$$...$$（注）` もタグ化しない（blockquote / 閉じタグが壊れる）
+- 独立した display `$$` と mermaid フェンスだけ既知タグにする。Pages は textify 後の `$`/`$$` を現行どおり KaTeX する
 
 例:
 
@@ -228,17 +234,8 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 
 ## 10. エージェント向けの切り方
 
-次の実装エージェントは **Phase 1b だけ** をやる。PR タイトルの目安:
+次の実装エージェントは **Phase 2 だけ** をやる。PR タイトルの目安:
 
-`feat: move articles and inbox into content/ for Keystatic (Phase 1b)`
+`feat: add Capture API to commit web-clips (Phase 2)`
 
-推奨手順:
-
-1. `origin/main` からブランチ
-2. 移行スクリプトを先に書く（配置 + frontmatter + 数式/mermaid タグ化 + textify）
-3. 36+4 を変換し、**textify 結果が元 `.md` と一致する**ことを検証してからコンテンツをコミット
-4. コンシューマ（build-web の textify / pages.yml / TUI / スキル / inbox CI disable）を同じコミット列で追随
-5. `pnpm typecheck` と `pnpm web:build` を必ず回す
-6. 数式記事と日本語 slug の HTML を目視（`勝海舟` / `markdoc_features` / 数式記事）。Keystatic で数式記事と mermaid 2 本が開けることを確認
-
-設計の解釈で迷ったら [pkm-migration.md](./pkm-migration.md) を優先する。この計画と食い違う新判断が必要なら、コードより先に設計 PR を出す。
+推奨手順は §5。設計の解釈で迷ったら [pkm-migration.md](./pkm-migration.md) を優先する。この計画と食い違う新判断が必要なら、コードより先に設計 PR を出す。

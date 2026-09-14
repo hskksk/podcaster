@@ -4,11 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'articles/**'
+      - 'content/docs/**'
       - 'scripts/build-web.ts'
-  workflow_run:
-    workflows: ["Ingest Articles from inbox/"]
-    types: [completed]
+      - 'scripts/lib/**'
+      - 'web/**'
   workflow_dispatch:
 
 permissions:
