@@ -138,7 +138,9 @@ for await (const event of run.events()) {
 
 2026年前半、中国発のオープンウェイト MoE モデル群が SWE-bench で Opus 4.6/4.7 と同等のスコアを **1/5〜1/50 のコスト** で達成。共通パターン：
 
-{% math display=true %}\text{Performance} \approx f(\text{Base Model}, \text{Agent RL Post-training}, \text{Synthetic SWE Tasks}){% /math %}
+{% math display=true %}
+\text{Performance} \approx f(\text{Base Model}, \text{Agent RL Post-training}, \text{Synthetic SWE Tasks})
+{% /math %}
 
 - **MoE 効率**: 1T total / 3B〜40B active で推論コストを抑制
 - **Agent RL**: 20,000 並列環境での multi-turn tool-use 訓練（Qwen3-Coder の例）

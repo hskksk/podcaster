@@ -161,17 +161,16 @@ function splitSegments(src: string): Segment[] {
   return segments;
 }
 
-function isDigit(ch: string | undefined): boolean {
-  return ch !== undefined && ch >= "0" && ch <= "9";
-}
-
-function isWs(ch: string | undefined): boolean {
-  return ch === " " || ch === "\t" || ch === "\n" || ch === "\r";
-}
-
 /**
- * Convert fence-outside math and mermaid. Leaves code untouched.
- * Inner content of `$`/`$$` is copied byte-for-byte so textify can invert.
+ * Convert fence-outside display math (`$$`) and mermaid. Leaves code untouched.
+ *
+ * Inline `$...$` is left as-is: Keystatic's `math` component is a block
+ * `wrapper()`, so `{% math display=false %}` inside a paragraph fails
+ * ("tag has unexpected children"). Pages still renders `$` via marked.
+ *
+ * Display math is wrapped with newlines so the tag body is a block
+ * (required by the same wrapper). textify strips exactly one leading and
+ * trailing newline to restore the original `$$` inner bytes.
  */
 export function markdownToMdoc(md: string): string {
   return splitSegments(md)
@@ -196,16 +195,8 @@ function convertMathInText(text: string): string {
       const end = text.indexOf("$$", i + 2);
       if (end !== -1) {
         const inner = text.slice(i + 2, end);
-        out += `{% math display=true %}${inner}{% /math %}`;
+        out += `{% math display=true %}\n${inner}\n{% /math %}`;
         i = end + 2;
-        continue;
-      }
-    }
-    if (text[i] === "$" && text[i + 1] !== "$") {
-      const inline = matchInlineMath(text, i);
-      if (inline) {
-        out += `{% math display=false %}${inline.inner}{% /math %}`;
-        i = inline.end;
         continue;
       }
     }
@@ -213,26 +204,6 @@ function convertMathInText(text: string): string {
     i++;
   }
   return out;
-}
-
-function matchInlineMath(text: string, i: number): { inner: string; end: number } | null {
-  if (isWs(text[i + 1])) return null;
-  let j = i + 1;
-  while (j < text.length) {
-    if (text[j] === "\n") return null;
-    if (text[j] === "$") {
-      if (text[j + 1] === "$") return null;
-      if (j === i + 1) return null;
-      if (isWs(text[j - 1])) return null;
-      if (isDigit(text[j + 1])) {
-        j++;
-        continue;
-      }
-      return { inner: text.slice(i + 1, j), end: j + 1 };
-    }
-    j++;
-  }
-  return null;
 }
 
 const MATH_OPEN_RE = /^\{%\s*math\s+display=(true|false)\s*%\}/;
@@ -269,9 +240,14 @@ function restoreTagsInText(text: string): string {
         const innerStart = i + mathOpen[0].length;
         const closeAt = text.indexOf(MATH_CLOSE, innerStart);
         if (closeAt !== -1) {
-          const inner = text.slice(innerStart, closeAt);
-          const display = mathOpen[1] === "true";
-          out += display ? `$$${inner}$$` : `$${inner}$`;
+          let inner = text.slice(innerStart, closeAt);
+          if (mathOpen[1] === "true") {
+            if (inner.startsWith("\n")) inner = inner.slice(1);
+            if (inner.endsWith("\n")) inner = inner.slice(0, -1);
+            out += `$$${inner}$$`;
+          } else {
+            out += `$${inner}$`;
+          }
           i = closeAt + MATH_CLOSE.length;
           continue;
         }

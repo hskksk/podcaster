@@ -47,7 +47,9 @@ p-進数の誕生は1897年、クルト・ヘンゼル（Kurt Hensel, 1861-1941�
 
 例えば、有理数 1/5 を素数 3 の周りで「展開」すると次のような無限級数になる：
 
-{% math display=true %}\frac{1}{5} = 2 + 1 \cdot 3 + 2 \cdot 3^2 + 0 \cdot 3^3 + 1 \cdot 3^4 + \cdots{% /math %}
+{% math display=true %}
+\frac{1}{5} = 2 + 1 \cdot 3 + 2 \cdot 3^2 + 0 \cdot 3^3 + 1 \cdot 3^4 + \cdots
+{% /math %}
 
 これは実数の小数展開（右に無限に続く）ではなく、**左に無限に続く** 3-進展開だ。見た目は奇妙だが、代数関数論でのローラン展開に完全に対応している。
 
@@ -80,7 +82,9 @@ p-進数の世界に入るための最初の鍵は、**p-進付値（p-adic valu
 
 そして **p-進絶対値（p-adic absolute value）** を次のように定義する：
 
-{% math display=true %}|x|_p = p^{-v_p(x)}{% /math %}
+{% math display=true %}
+|x|_p = p^{-v_p(x)}
+{% /math %}
 
 （x = 0 のとき |0|ₚ = 0 と定義）
 
@@ -98,11 +102,15 @@ p-進数の世界に入るための最初の鍵は、**p-進付値（p-adic valu
 
 p-進絶対値から距離関数を作れる：
 
-{% math display=true %}d_p(x, y) = |x - y|_p{% /math %}
+{% math display=true %}
+d_p(x, y) = |x - y|_p
+{% /math %}
 
 この距離はふつうの（ユークリッド的な）距離と全く異なる性質を持つ。最大の違いは「**超距離不等式（ultrametric inequality）**」を満たすことだ：
 
-{% math display=true %}|x + y|_p \leq \max(|x|_p, |y|_p){% /math %}
+{% math display=true %}
+|x + y|_p \leq \max(|x|_p, |y|_p)
+{% /math %}
 
 これは通常の三角不等式 |x + y| ≤ |x| + |y| よりも**ずっと強い**制約だ。
 
@@ -133,7 +141,9 @@ p-進絶対値 |·|ₚ で完備化すると **p-進数体 ℚₚ** が得られ
 
 p-進数体 ℚₚ の中で、付値が非負のもの全体が **p-進整数環 ℤₚ** を形成する：
 
-{% math display=true %}\mathbb{Z}_p = \{x \in \mathbb{Q}_p : |x|_p \leq 1\}{% /math %}
+{% math display=true %}
+\mathbb{Z}_p = \{x \in \mathbb{Q}_p : |x|_p \leq 1\}
+{% /math %}
 
 ℤₚ の視覚化として特に美しいのが**木構造（ツリー）** による表現だ。
 
@@ -157,17 +167,21 @@ p-進数体 ℚₚ の中で、付値が非負のもの全体が **p-進整数�
 
 p-進数体 ℚₚ の任意の元は、次の形に一意に展開できる：
 
-{% math display=true %}x = \sum_{n=N}^{\infty} a_n p^n \quad (a_n \in \{0, 1, \ldots, p-1\}, \; N \in \mathbb{Z}){% /math %}
+{% math display=true %}
+x = \sum_{n=N}^{\infty} a_n p^n \quad (a_n \in \{0, 1, \ldots, p-1\}, \; N \in \mathbb{Z})
+{% /math %}
 
 実数の小数展開が小数点以下（右方向）に無限に続くのと対照的に、p-進展開は **左方向（高いべき乗の方向）に無限に続く**。
 
 具体例として、有理数 1/3 を 5-進展開してみよう：
 
-{% math display=true %}\frac{1}{3} = 2 + 1\cdot 5 + 3\cdot 5^2 + 1\cdot 5^3 + 3\cdot 5^4 + \cdots = \ldots 313132_5{% /math %}
+{% math display=true %}
+\frac{1}{3} = 2 + 1\cdot 5 + 3\cdot 5^2 + 1\cdot 5^3 + 3\cdot 5^4 + \cdots = \ldots 313132_5
+{% /math %}
 
 （5-進法で右から読むと 2, 3, 1, 3, 1, 3, ... という周期的なパターン）
 
-確認：{% math display=false %}3 \times (\ldots 313132)_5 = \ldots 000001_5 = 1{% /math %}。正しい。
+確認：$3 \times (\ldots 313132)_5 = \ldots 000001_5 = 1$。正しい。
 
 有理数の p-進展開は必ず**最終的に周期的**になる。これは実数での有理数の小数展開（最終的に循環小数になる）と全く対応している。
 
@@ -175,7 +189,9 @@ p-進数体 ℚₚ の任意の元は、次の形に一意に展開できる：
 
 p-進数の最も衝撃的な具体例の一つは、2-進数体 ℚ₂ において次が成り立つことだ：
 
-{% math display=true %}-1 = 1 + 2 + 4 + 8 + 16 + \cdots = \sum_{n=0}^{\infty} 2^n{% /math %}
+{% math display=true %}
+-1 = 1 + 2 + 4 + 8 + 16 + \cdots = \sum_{n=0}^{\infty} 2^n
+{% /math %}
 
 実数の世界では右辺は明らかに発散する（項が 0 に収束しない）。ところが 2-進絶対値で測ると、|2ⁿ|₂ = 2⁻ⁿ → 0（n → ∞）であり、項はゼロに収束する。
 
@@ -185,13 +201,17 @@ p-進数の最も衝撃的な具体例の一つは、2-進数体 ℚ₂ にお�
 
 では -1 = 1 + 2 + 4 + 8 + ... を確認してみよう。公比 2 の等比数列の無限和を形式的に計算すると：
 
-{% math display=true %}S = 1 + 2 + 4 + \cdots \Rightarrow 2S = 2 + 4 + 8 + \cdots \Rightarrow S - 2S = 1 \Rightarrow -S = 1 \Rightarrow S = -1{% /math %}
+{% math display=true %}
+S = 1 + 2 + 4 + \cdots \Rightarrow 2S = 2 + 4 + 8 + \cdots \Rightarrow S - 2S = 1 \Rightarrow -S = 1 \Rightarrow S = -1
+{% /math %}
 
 これは代数的には正しい操作だ。そして 2-進距離の意味で正当化できる。
 
 また、この等式に対応する 2-進整数表現を見てみよう：
 
-{% math display=true %}-1 = \ldots 11111111_2{% /math %}（2-進表記で全ビットが 1）
+{% math display=true %}
+-1 = \ldots 11111111_2
+{% /math %}（2-進表記で全ビットが 1）
 
 実数での -1 と全く同じ数が、2-進世界では「全ての桁が 1 の無限ビット列」として表される。これはコンピューターの2の補数表現の無限ビット拡張とも解釈できる——コンピューターが 8-bit で -1 を `11111111` と表現するのと同じ仕組みが、p-進数の無限ビット版なのだ。
 
@@ -209,7 +229,9 @@ p-進数の最も衝撃的な具体例の一つは、2-進数体 ℚ₂ にお�
 
 このプロセスはまさにニュートン法の p-進版だ：
 
-{% math display=true %}a_{n+1} = a_n - \frac{f(a_n)}{f'(a_n)}{% /math %}
+{% math display=true %}
+a_{n+1} = a_n - \frac{f(a_n)}{f'(a_n)}
+{% /math %}
 
 この式で実数的な意味の除算の代わりに p-進整数での演算を行うと、近似解が mod p, mod p², mod p³, ... と精度良く求まっていく。
 
@@ -222,11 +244,13 @@ p-進数の最も衝撃的な具体例の一つは、2-進数体 ℚ₂ にお�
 
 実数の解析学（微積分）では収束の問題が非常に繊細だ。しかし p-進解析（p-adic analysis）では、超距離不等式のおかげで収束条件が劇的に単純になる。
 
-**p-進べき級数の収束：** 冪級数 {% math display=false %}\sum_{n=0}^{\infty} c_n (x-a)^n{% /math %} の収束域は、実数・複素数と同様にアダマールの公式で与えられる。ただし p-進では収束域が「開球」（clopen set）になるため、境界上の収束問題が存在しない。
+**p-進べき級数の収束：** 冪級数 $\sum_{n=0}^{\infty} c_n (x-a)^n$ の収束域は、実数・複素数と同様にアダマールの公式で与えられる。ただし p-進では収束域が「開球」（clopen set）になるため、境界上の収束問題が存在しない。
 
 **p-進指数関数と対数関数：**
 
-{% math display=true %}\exp_p(x) = \sum_{n=0}^{\infty} \frac{x^n}{n!}, \quad \log_p(1+x) = \sum_{n=1}^{\infty} \frac{(-1)^{n-1}}{n} x^n{% /math %}
+{% math display=true %}
+\exp_p(x) = \sum_{n=0}^{\infty} \frac{x^n}{n!}, \quad \log_p(1+x) = \sum_{n=1}^{\infty} \frac{(-1)^{n-1}}{n} x^n
+{% /math %}
 
 ただしこれらの収束域は実数とは異なる。例えば p-進指数関数は |x|ₚ < p^(-1/(p-1)) の範囲でのみ収束する（p = 2 の場合は |x|₂ < 1/2）。
 
@@ -236,13 +260,17 @@ p-進数の最も衝撃的な具体例の一つは、2-進数体 ℚ₂ にお�
 
 p-進整数環 ℤₚ は、**逆極限（inverse limit）** として代数的に構成することもできる：
 
-{% math display=true %}\mathbb{Z}_p = \varprojlim_{n} \mathbb{Z}/p^n\mathbb{Z}{% /math %}
+{% math display=true %}
+\mathbb{Z}_p = \varprojlim_{n} \mathbb{Z}/p^n\mathbb{Z}
+{% /math %}
 
 これは「mod p, mod p², mod p³, ... すべての合同式を同時に満たすような整数全体」という意味だ。
 
 さらに、整数全体の完備化（プロ有限完備化）は：
 
-{% math display=true %}\hat{\mathbb{Z}} = \varprojlim_{n} \mathbb{Z}/n\mathbb{Z} \cong \prod_p \mathbb{Z}_p{% /math %}
+{% math display=true %}
+\hat{\mathbb{Z}} = \varprojlim_{n} \mathbb{Z}/n\mathbb{Z} \cong \prod_p \mathbb{Z}_p
+{% /math %}
 
 中国式剰余定理により、すべての素数についての p-進整数の直積として表される。これは「すべての素数を同時に考える」アデール的な視点への橋渡しとなる。
 
@@ -281,7 +309,9 @@ p-進数の強力な活用法として、**アデール（adèles）** という
 
 有理数体のアデール環は次のように定義される：
 
-{% math display=true %}\mathbb{A}_\mathbb{Q} = \mathbb{R} \times \prod_p' \mathbb{Q}_p{% /math %}
+{% math display=true %}
+\mathbb{A}_\mathbb{Q} = \mathbb{R} \times \prod_p' \mathbb{Q}_p
+{% /math %}
 
 ここで ∏' は**制限直積（restricted product）** を表し、ほとんどすべての p に対して成分が ℤₚ に属するような元からなる積を意味する。
 
@@ -289,7 +319,9 @@ p-進数の強力な活用法として、**アデール（adèles）** という
 
 **イデール（idèles）** はアデール環の乗法群：
 
-{% math display=true %}\mathbb{A}_\mathbb{Q}^\times = \mathbb{R}^\times \times \prod_p' \mathbb{Q}_p^\times{% /math %}
+{% math display=true %}
+\mathbb{A}_\mathbb{Q}^\times = \mathbb{R}^\times \times \prod_p' \mathbb{Q}_p^\times
+{% /math %}
 
 ### アデールが解く問題
 
@@ -312,7 +344,9 @@ p-進数の強力な活用法として、**アデール（adèles）** という
 
 リーマンゼータ関数 ζ(s) は s = -1, -3, -5, ... の負の奇数整数で特殊値を持つ（ベルヌーイ数で表される）。久保田-レオポルトのp-進ゼータ関数 ζₚ(s) は、これらの特殊値をp-進的に補間する。
 
-{% math display=true %}\zeta_p(1-n) = (1-p^{n-1})\zeta(1-n) \quad (n \geq 1, \, p \nmid n){% /math %}
+{% math display=true %}
+\zeta_p(1-n) = (1-p^{n-1})\zeta(1-n) \quad (n \geq 1, \, p \nmid n)
+{% /math %}
 
 これは「離散的な値の列を連続的なp-進関数につなぐ」という驚くべき操作だ。
 
@@ -324,7 +358,9 @@ p-進数の強力な活用法として、**アデール（adèles）** という
 
 **岩澤不変量：** 塔の各階 Fₙ のイデアル類群のシロー p-部分群 Aₙ の大きさは、n が大きいとき
 
-{% math display=true %}|A_n| = p^{e_n}, \quad e_n = \mu p^n + \lambda n + \nu{% /math %}
+{% math display=true %}
+|A_n| = p^{e_n}, \quad e_n = \mu p^n + \lambda n + \nu
+{% /math %}
 
 という形に漸近する。ここで μ, λ, ν が**岩澤不変量**で、塔全体の算術的な情報を圧縮している。
 
@@ -429,13 +465,17 @@ p-進ガロア表現は、これらのペリオド環に対する「相性」に
 
 さらに具体的な動機は、ベネツィアーノ振幅（Veneziano amplitude）の発見だ。オープン弦の散乱振幅を表すこの式は：
 
-{% math display=true %}A(s,t) = \frac{\Gamma(-\alpha(s))\Gamma(-\alpha(t))}{\Gamma(-\alpha(s)-\alpha(t))}{% /math %}
+{% math display=true %}
+A(s,t) = \frac{\Gamma(-\alpha(s))\Gamma(-\alpha(t))}{\Gamma(-\alpha(s)-\alpha(t))}
+{% /math %}
 
 というガンマ関数の積で与えられるが、これはある意味で「実数の絶対値で定義された積分」だ。ここで絶対値をp-進絶対値で置き換えると、ほぼ同じ形の「p-進ベネツィアーノ振幅」が得られ、これが通常の振幅と深い関係を持つことが分かった。
 
 さらに、すべての素数についての p-進振幅の積と実数の振幅を組み合わせると：
 
-{% math display=true %}A_\infty \cdot \prod_p A_p = 1{% /math %}
+{% math display=true %}
+A_\infty \cdot \prod_p A_p = 1
+{% /math %}
 
 という美しい「積公式」が成り立つ（これはアデール的な関係式だ）。
 
@@ -499,7 +539,9 @@ p-進数を学ぶ上での最大の認識転換は、「実数こそが例外的
 
 コンピューターでは整数を「2の補数」で表現する。8ビットの場合 -1 は `11111111₂` と表される。これはまさに 2-進数体での -1 の表現：
 
-{% math display=true %}-1 = \ldots 111111111_2 \in \mathbb{Z}_2{% /math %}
+{% math display=true %}
+-1 = \ldots 111111111_2 \in \mathbb{Z}_2
+{% /math %}
 
 のビット列を有限（8ビット）で打ち切ったものだ。コンピューターの整数オーバーフローの挙動は、ℤ₂ の演算の「有限版」として完全に説明される。
 

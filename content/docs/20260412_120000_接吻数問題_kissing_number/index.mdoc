@@ -94,7 +94,9 @@ legacyFilename: "20260412_120000_接吻数問題_kissing_number.md"
 **超球の体積のパラドックス**  
 n次元単位球の体積は次の式で与えられる：
 
-{% math display=true %}V_n = \frac{\pi^{n/2}}{\Gamma(n/2 + 1)}{% /math %}
+{% math display=true %}
+V_n = \frac{\pi^{n/2}}{\Gamma(n/2 + 1)}
+{% /math %}
 
 この体積は、n が大きくなるにつれて**0に近づく**。つまり、高次元の「単位球」は、同じ「単位」サイズの超立方体に比べてどんどん小さくなる。
 
@@ -134,7 +136,9 @@ E₈ 格子は8次元ユークリッド空間の特殊な点の集合で、次�
 
 すべての座標が整数か、すべてが半整数（±1/2）であり、かつ座標の総和が**偶数**になる点の集合：
 
-{% math display=true %}\Lambda_8 = \left\{ \mathbf{x} \in \mathbb{R}^8 : \text{全座標が整数か全て半整数}, \sum x_i \equiv 0 \pmod{2} \right\}{% /math %}
+{% math display=true %}
+\Lambda_8 = \left\{ \mathbf{x} \in \mathbb{R}^8 : \text{全座標が整数か全て半整数}, \sum x_i \equiv 0 \pmod{2} \right\}
+{% /math %}
 
 ### 240という数の意味
 
@@ -200,11 +204,15 @@ E₈ 格子は、例外型単純リー代数 E₈ の**ルート格子**だ。�
 
 **大砲玉問題（Cannonball Problem）**: 正方形に並べた大砲玉を、正四角錐に積み重ねることができるか？
 
-{% math display=true %}1^2 + 2^2 + 3^2 + \cdots + N^2 = M^2{% /math %}
+{% math display=true %}
+1^2 + 2^2 + 3^2 + \cdots + N^2 = M^2
+{% /math %}
 
 この方程式の非自明な整数解は（N, M）= **(24, 70)** ただひとつ（1918年、ワトソンが証明）：
 
-{% math display=true %}1^2 + 2^2 + 3^2 + \cdots + 24^2 = 70^2 = 4900{% /math %}
+{% math display=true %}
+1^2 + 2^2 + 3^2 + \cdots + 24^2 = 70^2 = 4900
+{% /math %}
 
 これは4900個の大砲玉を 70×70 の正方形に並べることも、24層の正四角錐に積むこともできることを意味する。
 
@@ -246,7 +254,9 @@ E₈ 格子は、例外型単純リー代数 E₈ の**ルート格子**だ。�
 
 n次元格子 Λ の**テータ関数**は、各ノルムを持つ点の個数を追跡する生成関数だ：
 
-{% math display=true %}\Theta_\Lambda(q) = \sum_{\mathbf{x} \in \Lambda} q^{|\mathbf{x}|^2} = \sum_{k=0}^{\infty} N_k q^k{% /math %}
+{% math display=true %}
+\Theta_\Lambda(q) = \sum_{\mathbf{x} \in \Lambda} q^{|\mathbf{x}|^2} = \sum_{k=0}^{\infty} N_k q^k
+{% /math %}
 
 ここで N_k はノルム k の格子点の個数。
 
@@ -254,7 +264,9 @@ n次元格子 Λ の**テータ関数**は、各ノルムを持つ点の個数�
 
 リーチ格子のテータ関数は：
 
-{% math display=true %}\Theta_{\Lambda_{24}}(\tau) = 1 + 196560q^4 + 16773120q^6 + 398034000q^8 + \cdots{% /math %}
+{% math display=true %}
+\Theta_{\Lambda_{24}}(\tau) = 1 + 196560q^4 + 16773120q^6 + 398034000q^8 + \cdots
+{% /math %}
 
 （ここで q = e^{2\pi i \tau}）
 
@@ -264,11 +276,15 @@ q⁴ の係数がまさに196,560、つまり接吻数だ！
 
 重さ 12 の保型形式の空間は非常に小さい（1次元）。この唯一の形式がラマヌジャンのデルタ関数：
 
-{% math display=true %}\Delta(\tau) = q \prod_{n=1}^{\infty} (1-q^n)^{24} = \sum_{n=1}^{\infty} \tau(n) q^n{% /math %}
+{% math display=true %}
+\Delta(\tau) = q \prod_{n=1}^{\infty} (1-q^n)^{24} = \sum_{n=1}^{\infty} \tau(n) q^n
+{% /math %}
 
 24次元のリーチ格子のテータ関数は、アイゼンシュタイン系列 E₁₂ とデルタ関数の組み合わせで書ける：
 
-{% math display=true %}\Theta_{\Lambda_{24}} = E_{12} - \frac{196560}{691} \Delta + \cdots{% /math %}
+{% math display=true %}
+\Theta_{\Lambda_{24}} = E_{12} - \frac{196560}{691} \Delta + \cdots
+{% /math %}
 
 「なぜか24次元は接吻数が計算できてしまう」のは、このラマヌジャンのデルタ（重さ12の保型形式）が24次元のリーチ格子のテータ関数に完璧にフィットするからだ。24という次元は「保型形式の理論と格子理論が一致するための、数学的に正確なサイズ」なのだ。
 
@@ -455,7 +471,9 @@ E₈ の場合、240個の球は完全に「ロック」されている。各球
 
 26次元ローレンツ格子 II₂₅,₁ にベクトル (0, 1, 2, ..., 24, 70) を「ワイルベクトル」として組み込み、その直交補空間の商格子を取ると、リーチ格子が得られる。
 
-{% math display=true %}\text{26次元弦理論} \rightarrow \text{24次元横断方向} \rightarrow \text{リーチ格子} \rightarrow \text{接吻数 196,560}{% /math %}
+{% math display=true %}
+\text{26次元弦理論} \rightarrow \text{24次元横断方向} \rightarrow \text{リーチ格子} \rightarrow \text{接吻数 196,560}
+{% /math %}
 
 数学の奥深い構造が、物理の最先端理論と見えない糸で繋がっている。
 

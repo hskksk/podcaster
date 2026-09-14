@@ -105,7 +105,7 @@ function snippet(s: string, at: number): string {
 
 function selfTest(): void {
   const cases: Array<{ name: string; md: string }> = [
-    { name: "inline math", md: "正整数 $n$ から出発し、$n = 6$ となる。\n" },
+    { name: "inline math stays dollars", md: "正整数 $n$ から出発し、$n = 6$ となる。\n" },
     { name: "display same-line", md: "$$V_n = \\frac{\\pi^{n/2}}{\\Gamma(n/2 + 1)}$$\n" },
     {
       name: "display multiline",
@@ -153,7 +153,12 @@ function selfTest(): void {
     console.error(`self-test: ${failed} failed`);
     process.exit(1);
   }
-  console.log(`self-test: ${cases.length} passed`);
+  const inlineBody = markdownToMdoc("正整数 $n$ から。\n");
+  if (inlineBody.includes("{% math")) {
+    console.error("FAIL inline $ must not become {% math %} (Keystatic wrapper is block-only)");
+    process.exit(1);
+  }
+  console.log("ok  inline $ remains dollar (no math tag)");
 }
 
 function verify(list: Job[]): RoundtripFailure[] {
