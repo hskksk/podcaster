@@ -1,12 +1,10 @@
 import { config, collection, fields } from "@keystatic/core";
 import { markdocComponents, podcastSelect } from "./lib/markdoc-components";
 import { titleSlugField } from "./lib/slug";
-
-const githubRepo = "hskksk/podcaster" as const;
+import { githubRepo, isGithubStorage } from "./lib/storage";
 
 function storage() {
-  // Client bundle only inlines NEXT_PUBLIC_* . Do not read KEYSTATIC_STORAGE here.
-  if (process.env.NEXT_PUBLIC_KEYSTATIC_STORAGE === "github") {
+  if (isGithubStorage()) {
     return { kind: "github" as const, repo: githubRepo };
   }
   return { kind: "local" as const };

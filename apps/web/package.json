@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
-    "start": "next start --port 3000",
+    "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -16,6 +16,9 @@
     "next": "15.1.11",
     "react": "19.2.5",
     "react-dom": "19.2.5"
+  },
+  "engines": {
+    "node": "22.x"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

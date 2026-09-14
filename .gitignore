@@ -27,6 +27,12 @@ scripts/*.txt
 # Claude Code local settings
 .claude/settings.local.json
 
+# Railway CLI local project link
+.railway/
+
+# Vercel CLI
+.vercel/
+
 
 # temporary
 podcast-delivery-system-tui/

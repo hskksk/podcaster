@@ -1,0 +1,17 @@
+.git
+.github
+.cursor
+.claude
+.agents
+**/.next
+**/node_modules
+**/.turbo
+supabase/.temp
+inbox
+articles
+web
+*.md
+!apps/web/README.md
+.env
+.env.*
+!**/.env.example
