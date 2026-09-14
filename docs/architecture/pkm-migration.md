@@ -173,13 +173,15 @@ packages/gemini-batch-tts/
 
 ```ts
 storage: {
-  kind: process.env.KEYSTATIC_STORAGE === "github" ? "github" : "local",
+  kind: process.env.NEXT_PUBLIC_KEYSTATIC_STORAGE === "github" ||
+    process.env.NEXT_PUBLIC_VERCEL_ENV
+    ? "github"
+    : "local",
   repo: "hskksk/podcaster",
 }
 ```
 
-`NODE_ENV` では切り替えない（`next build` / Vercel Preview でも `production` になる）。  
-ローカルと開発時 Capture は作業ツリー直書き（Keystatic local と同じ）。Octokit はデプロイ時のみ。本番 Keystatic は GitHub App + ユーザー OAuth（これは `GITHUB_TOKEN` とは別シークレットで、NFR-02 の表に含める）。Capture の対象は `main` 直 commit。ブランチ保護を掛ける場合は Phase 2 で bypass 規則を決める。
+`NODE_ENV` では切り替えない（`next build` は常に `production`）。Vercel では `NEXT_PUBLIC_VERCEL_ENV` で GitHub storage にする。ローカル `pnpm web:dev` は FS 直書き。GitHub App は `pnpm web:github`（development）で一度作り、env を Vercel にコピーする。Octokit はデプロイ時のみ。本番 Keystatic は GitHub App + ユーザー OAuth（これは `GITHUB_TOKEN` とは別シークレットで、NFR-02 の表に含める）。Capture の対象は `main` 直 commit。ブランチ保護を掛ける場合は Phase 2 で bypass 規則を決める。
 
 ### 5.1 Capture API（PDF 5.2 を拡張）
 
@@ -347,7 +349,7 @@ PDF 6 章をそのまま使う。
 ### Phase 1 — 知識層の器（ファイルは動かさない）
 
 - `pnpm-workspace.yaml` に `apps/*` を追加。`apps/web` は独自 `package.json`（root の Ink/React と分離）
-- Keystatic + **local** storage（GitHub storage は Phase 2）
+- Keystatic + **local** storage for `pnpm web:dev`。Vercel 公開は GitHub storage（`NEXT_PUBLIC_VERCEL_ENV`）
 - 空の `content/docs`, `content/web-clips`
 - `articles/` `inbox/` は **このフェーズでは git mv しない**。Pages / TUI / inbox CI / スキルがこのパスに結合している
 - `supabase/functions` と DB は触らない
@@ -439,14 +441,14 @@ inbox/20260815_095800_reverse_tunnel.md
 - `content/` は現行と同じ公開 Git。web-clips はサイトに出さない
 - Phase 1 ではファイルを動かさない。移動は Phase 1b でコンシューマ追随と同一 PR
 - `queued` のライターは GitHub Actions。UNIQUE + 409。Capture は ingest しない
-- Capture 開発時は FS 直書き。Keystatic 切替は `KEYSTATIC_STORAGE`
+- Capture 開発時は FS 直書き。Keystatic 切替は `NEXT_PUBLIC_KEYSTATIC_STORAGE` / Vercel では GitHub
 - clips → docs は copy + `promotedTo`
 - ingest 本文は frontmatter 除去と既知タグの textify
 - 公開 slug 関数は `parseSlugFromFilename(legacyFilename)` と同一
 
 **実装時に選ぶこと（Phase 1 はブロックしない）**
 
-- Next.js のホスト: Vercel か Tunnel 配下 Docker か（Phase 2 の入口で決める）
+- Next.js のホスト: **Vercel**（GitHub storage）。Tunnel 配下 Docker / Railway は任意
 - Chrome 拡張 web-clipper の導入時期。Phase 2 は curl / スキル / TUI で FR-02 を満たす
 - 数式を Markdoc タグに正規化するタイミング
 - MCP のデプロイ先（別プロセス推奨。Python FastMCP ならランタイム追加）
@@ -476,7 +478,7 @@ inbox/20260815_095800_reverse_tunnel.md
 ## 14. 次の実装単位（Phase 1）
 
 1. `pnpm-workspace.yaml` に `apps/*`
-2. `apps/web` の Next.js + Keystatic スケルトン（`KEYSTATIC_STORAGE=local`）
+2. `apps/web` の Next.js + Keystatic（local は dev、Vercel は GitHub storage）
 3. 空の `content/docs`, `content/web-clips`（`.gitkeep` のみ）
 4. `articles/` `inbox/` は動かさない
 

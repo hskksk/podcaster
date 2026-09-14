@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "rootDirectory": "apps/web",
+  "installCommand": "pnpm install --frozen-lockfile --filter @podcaster/web..."
+}

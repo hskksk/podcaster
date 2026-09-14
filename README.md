@@ -59,7 +59,7 @@ Supabase Storage (公開バケット `podcast`)
 ```
 podcaster/
 ├── apps/
-│   └── web/                        # Next.js + Keystatic (local admin; Railway で公開可)
+│   └── web/                        # Next.js + Keystatic (local admin; Vercel は GitHub storage)
 ├── content/
 │   ├── docs/                       # Wiki Markdoc (empty until Phase 1b)
 │   └── web-clips/                  # Capture notes (empty until Phase 2)
