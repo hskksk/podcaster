@@ -31,9 +31,7 @@ Vercel 自体が難しいというより、**今の Phase 1（local storage）�
 
 ### Railway（推奨・このリポジトリの設定済み）
 
-公開中: [https://keystatic-production.up.railway.app/keystatic](https://keystatic-production.up.railway.app/keystatic)
-
-ルートの `railway.json` と `apps/web/Dockerfile` で、リポジトリルートをコンテキストにした standalone ビルドを行う。無料枠で新規プロジェクトが作れなかったため、既存 Railway プロジェクトに `keystatic` サービスとして載せている。マージ後はデプロイブランチを `main` に切り替える。
+ルートの `railway.json` と `apps/web/Dockerfile` で、リポジトリルートをコンテキストにした standalone ビルドを行う。公開デプロイは一旦停止済み。再開するときは専用プロジェクトを作るか、既存プロジェクトに `keystatic` サービスを足す。
 
 ```bash
 # CLI がリンク済みなら
