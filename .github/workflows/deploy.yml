@@ -3,6 +3,15 @@ name: Deploy to Supabase
 on:
   push:
     branches: [main]
+    paths:
+      - "supabase/**"
+      - "scripts/deploy.ts"
+      - "scripts/seed-config.ts"
+      - "scripts/lib/**"
+      - "config.toml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 jobs:

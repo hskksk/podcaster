@@ -7,6 +7,9 @@ export function SiteHeader(props: { siteTitle: string; feedUrl: string }) {
       <Link href="/" className="site-title">
         {props.siteTitle}
       </Link>
+      <nav className="site-nav">
+        <Link href="/web-clips">Web Clips</Link>
+      </nav>
       {props.feedUrl ? (
         <a className="rss-link" href={props.feedUrl}>
           📻 Podcast RSS

@@ -41,6 +41,16 @@ body { background: #f7f8fc; }
       gap: 4px;
     }
     .rss-link:hover { text-decoration: underline; }
+    .site-nav {
+      font-size: 0.85rem;
+      display: flex;
+      gap: 16px;
+    }
+    .site-nav a {
+      color: #1a1a1a;
+      text-decoration: none;
+    }
+    .site-nav a:hover { text-decoration: underline; }
 
     /* ── Hero section ── */
     .hero {
