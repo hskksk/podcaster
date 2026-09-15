@@ -3,7 +3,7 @@
 > 日付: 2026-09-14  
 > 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
 > 設計の正: [pkm-migration.md](./pkm-migration.md)  
-> 次の実装: **Phase 2（Capture API。Git に置くだけ。TTS は呼ばない）**
+> 次の実装: **Phase 3（ポッドキャスト入力を Git に切替）**。Phase 2（Capture）はスタック PR。
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
 
@@ -44,7 +44,7 @@ Keystatic は動くが、中身が無い。Vercel に載せた意義を出すに
 
 ```
 Phase 1b  物理移動 + コンシューマ追随     ✅
-Phase 2   Capture API（Git に置くだけ）   ← 次
+Phase 2   Capture API（Git に置くだけ）   ← このスタックの底
 Phase 3   ポッドキャスト入力を Git に切替
 Phase 4   Next.js 公開サイト（Pages 置換）
 Phase 5   MCP
@@ -180,12 +180,13 @@ Phase 3 の `articles.content_path` UNIQUE はこの PR では必須にしない
 Phase 1b のあと。知識を Git に置く入口を増やす。TTS は呼ばない。
 
 - `POST /api/capture` + `Authorization: Bearer <CAPTURE_API_TOKEN>`（constant-time 比較）
+- `PATCH /api/capture` で `podcast` フラグだけ更新（Phase 5 `queue_podcast` 用。ingest は呼ばない）
 - 本番は Octokit で `main` に Direct Commit。開発時は FS 直書き
 - 既定は `content/web-clips/{YYYY-MM-DD}-{slug}/index.mdoc`、`podcast: none`
 - CLI `pnpm capture --title ... --file ...`
 - レスポンスは commit SHA と path。job id は返さない
 - GitHub API が遅いときは 202 + 再送可能な設計
-- ブランチ保護を掛ける場合の bypass 規則をここで決める
+- ブランチ保護: Capture 用 GitHub App / PAT を bypass allowlist に入れる。PR 必須のまま Direct Commit は使わない
 
 Chrome 拡張は後追い。curl / スキル / TUI で FR-02 を満たす。
 
@@ -234,7 +235,7 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 
 ## 10. エージェント向けの切り方
 
-次の実装エージェントは **Phase 2 だけ** をやる。PR タイトルの目安:
+Phase 2 以降はスタック PR。次の実装単位の目安:
 
 `feat: add Capture API to commit web-clips (Phase 2)`
 

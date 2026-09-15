@@ -31,7 +31,8 @@
         "web:dev": "pnpm --filter @podcaster/web dev",
         "web:github": "NEXT_PUBLIC_KEYSTATIC_STORAGE=github pnpm --filter @podcaster/web dev",
         "web:start": "pnpm --filter @podcaster/web start",
-        "vercel-build": "pnpm --filter @podcaster/web build"
+        "vercel-build": "pnpm --filter @podcaster/web build",
+        "capture": "tsx scripts/capture.ts"
     },
     "devDependencies": {
         "@hskksk/mem-ai-cli": "latest",

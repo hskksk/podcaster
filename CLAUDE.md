@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm typecheck
 pnpm typecheck:web            # Next.js / Keystatic app
 pnpm web:dev                  # Keystatic admin at http://127.0.0.1:3000/keystatic
+pnpm capture --title ... --file ...   # POST /api/capture (Git only, no TTS)
 
 # Local dev: start Supabase stack + Edge Functions
 supabase start
