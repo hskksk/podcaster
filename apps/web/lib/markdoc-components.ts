@@ -45,7 +45,7 @@ export const markdocComponents = {
 
 export const podcastSelect = fields.select({
   label: "Podcast",
-  description: "none = knowledge only. queued triggers ingest (Phase 3).",
+  description: "none = knowledge only. queued is ingested by GitHub Actions, then written back as published.",
   options: [
     { label: "None", value: "none" },
     { label: "Queued", value: "queued" },

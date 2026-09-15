@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -219,6 +220,7 @@ export class DataClient {
     }
 
     const ingestUrl = `${this.apiUrl}/functions/v1/ingest`;
+    const contentPath = `${subdir}/${fileName}/index.mdoc`;
     const res = await fetch(ingestUrl, {
       method: "POST",
       headers: {
@@ -229,6 +231,9 @@ export class DataClient {
         content,
         ...(memNoteId !== undefined ? { mem_note_id: memNoteId } : {}),
         ...(title !== undefined ? { title } : {}),
+        content_path: contentPath,
+        content_sha: createHash("sha256").update(raw).digest("hex"),
+        ingest_route: pane === "inbox" ? "tui_clip" : "tui_doc",
         ingest_meta: {
           mem_sync: memNoteId ? "ok" : "failed",
           ...(memSyncError !== undefined ? { mem_sync_error: memSyncError } : {}),
@@ -237,6 +242,9 @@ export class DataClient {
         },
       }),
     });
+    if (res.status === 409) {
+      return { success: false, error: "Already ingested (content_path). Use requeue to regenerate." };
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => res.statusText);
       return { success: false, error: text || `HTTP ${res.status}` };

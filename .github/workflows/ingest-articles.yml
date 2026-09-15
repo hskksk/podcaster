@@ -1,7 +1,6 @@
 # Phase 1b: auto ingest on inbox/*.md is disabled.
-# Knowledge now lives in content/; clips default to podcast: none.
-# Phase 3 will ingest only when frontmatter is podcast: queued, then write published.
-# Manual TUI ingest (file body POST) still works. Do not re-enable push here.
+# Phase 3 uses .github/workflows/ingest-queued.yml (podcast: queued → published).
+# Do not re-enable this workflow.
 name: Ingest Articles from inbox/
 
 on:
