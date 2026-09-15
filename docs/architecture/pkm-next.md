@@ -1,9 +1,9 @@
 # PKM 今後の開発計画
 
-> 日付: 2026-09-14  
+> 日付: 2026-09-15（Phase 2–4 完了反映）  
 > 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
 > 設計の正: [pkm-migration.md](./pkm-migration.md)  
-> 次の実装: **Phase 5（MCP）**。Phase 2–4 はスタック PR。
+> 次の実装: **Phase 5（MCP）**。
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
 
@@ -15,13 +15,12 @@
 |----|------|
 | 知識の器 | `apps/web` の Next.js + Keystatic。ローカルは FS、Vercel は GitHub storage |
 | 編集 UI | `/keystatic` が Vercel 上で GitHub ログインできる |
-| 知識ファイル | `content/docs`（公開 wiki）と `content/web-clips`（クリップ）。正本は `index.mdoc` |
-| 公開サイト | 現行 GitHub Pages。`content/docs/**/index.mdoc` を textify してから `scripts/build-web.ts` が HTML 化 |
-| 投入待ち | web-clips は `podcast: none`。自動 ingest CI は disable |
-| 配信 | Supabase ingest → pgflow → TTS → RSS。**触らない**（Phase 3 まで） |
-| Capture / MCP | 未実装（`apps/web/app/api/` は Keystatic のみ。`apps/mcp` なし） |
-
-Keystatic は動くが、中身が無い。Vercel に載せた意義を出すには、既存 36+4 本を `content/` に移し、Pages / TUI / CI / スキルを同じ PR で追随させる。
+| 知識ファイル | `content/docs`（公開 wiki）と `content/web-clips`（クリップ）。正本は `index.mdoc`（36+4 本移行済み） |
+| 公開サイト | Next.js（`/`・`/articles/[slug]`）。GitHub Pages は旧 URL リダイレクト（Phase 4） |
+| 投入待ち | web-clips 既定 `podcast: none`。`queued` は `pnpm ingest:queued` / Actions（Phase 3） |
+| 配信 | Supabase ingest → pgflow → TTS → RSS（`content_path` 対応済み） |
+| Capture | ✅ `POST` / `PATCH /api/capture`（#87）。CLI `pnpm capture`。クライアント手順は [capture-clients.md](../guides/capture-clients.md) |
+| MCP | 未実装（`apps/mcp` なし） |
 
 ---
 
@@ -43,15 +42,13 @@ Keystatic は動くが、中身が無い。Vercel に載せた意義を出すに
 ## 3. 実装順
 
 ```
-Phase 1b  物理移動 + コンシューマ追随     ✅
-Phase 2   Capture API（Git に置くだけ）   ← このスタックの底
-Phase 3   ポッドキャスト入力を Git に切替  ← この PR
-Phase 4   Next.js 公開サイト（Pages 置換） ← この PR
-Phase 5   MCP
+Phase 1b  物理移動 + コンシューマ追随     ✅ (#83)
+Phase 2   Capture API（Git に置くだけ）   ✅ (#87)
+Phase 3   ポッドキャスト入力を Git に切替  ✅ (#88)
+Phase 4   Next.js 公開サイト（Pages 置換） ✅ (#90, #94)
+Phase 5   MCP                              ← 次
 Phase 6   mem / inbox CI 掃除
 ```
-
-後のフェーズを先に始めない。Capture も queued ingest も、正本がまだ `articles/` `inbox/` にあるうちは二重管理になる。
 
 ---
 
@@ -175,26 +172,27 @@ Phase 3 の `articles.content_path` UNIQUE はこの PR では必須にしない
 
 ---
 
-## 5. Phase 2 — Capture
+## 5. Phase 2 — Capture（完了 #87）
 
-Phase 1b のあと。知識を Git に置く入口を増やす。TTS は呼ばない。
+知識を Git に置く HTTP 入口。TTS は呼ばない。
 
+- 実装: `apps/web/app/api/capture/route.ts`
 - `POST /api/capture` + `Authorization: Bearer <CAPTURE_API_TOKEN>`（constant-time 比較）
-- `PATCH /api/capture` で `podcast` フラグだけ更新（Phase 5 `queue_podcast` 用。ingest は呼ばない）
+- `PATCH /api/capture` で `podcast` フラグだけ更新（ingest は呼ばない）
 - 本番は Octokit で `main` に Direct Commit。開発時は FS 直書き
 - 既定は `content/web-clips/{YYYY-MM-DD}-{slug}/index.mdoc`、`podcast: none`
 - CLI `pnpm capture --title ... --file ...`
-- レスポンスは commit SHA と path。job id は返さない
-- GitHub API が遅いときは 202 + 再送可能な設計
-- ブランチ保護: Capture 用 GitHub App / PAT を bypass allowlist に入れる。PR 必須のまま Direct Commit は使わない
+- レスポンスは commit SHA と path。GitHub API が遅いときは 202 + 再送可能
+- 運用・env・ブランチ保護: [apps/web/README.md](../../apps/web/README.md)
+- Mac / iPhone からの使い方: [capture-clients.md](../guides/capture-clients.md)（iOS はショートカット推奨。Web Clip 用 UI `/clip` は任意の後追い）
 
-Chrome 拡張は後追い。curl / スキル / TUI で FR-02 を満たす。
+Chrome 拡張・最小 Web UI は後追い可。curl / CLI / ショートカット / スキルで FR-02 を満たす。
 
 ---
 
-## 6. Phase 3 — ポッドキャスト入力を Git に切替
+## 6. Phase 3 — ポッドキャスト入力を Git に切替（完了 #88）
 
-実行グラフは変えない。変えるのは ingest の入力とトリガー。
+実行グラフは変えない。ingest の入力とトリガーを Git 正本に合わせた。
 
 - migration: `articles.content_path` / `content_sha`（UNIQUE）。episodes には足さない
 - ingest は既存 `{ title, content }` を維持し、任意で `content_path` 等を受け取る。UNIQUE 衝突は **409**
@@ -207,7 +205,7 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 
 ---
 
-## 7. Phase 4 — 公開サイト
+## 7. Phase 4 — 公開サイト（完了 #90, #94）
 
 - Next.js が記事一覧・詳細・プレイヤーを描画（`/` と `/articles/[slug]`）
 - GitHub Pages ワークフローは旧 URL の meta-refresh リダイレクトだけ出す（`NEXT_PUBLIC_SITE_URL`）
@@ -236,8 +234,8 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 
 ## 10. エージェント向けの切り方
 
-Phase 2 以降はスタック PR。次の実装単位の目安:
+次の実装単位の目安:
 
-`feat: add Capture API to commit web-clips (Phase 2)`
+`feat: FastMCP knowledge tools (Phase 5)`
 
-推奨手順は §5。設計の解釈で迷ったら [pkm-migration.md](./pkm-migration.md) を優先する。この計画と食い違う新判断が必要なら、コードより先に設計 PR を出す。
+Capture / 公開サイト / Git ingest は完了済み。設計の解釈で迷ったら [pkm-migration.md](./pkm-migration.md) を優先する。この計画と食い違う新判断が必要なら、コードより先に設計 PR を出す。
