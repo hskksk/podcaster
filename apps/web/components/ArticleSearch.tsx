@@ -9,7 +9,12 @@ export type ArticleCard = {
   audioUrl?: string;
 };
 
-export function ArticleSearch(props: { articles: ArticleCard[] }) {
+export function ArticleSearch(props: {
+  articles: ArticleCard[];
+  basePath?: string;
+  searchPlaceholder?: string;
+}) {
+  const basePath = props.basePath ?? "/articles";
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -24,7 +29,7 @@ export function ArticleSearch(props: { articles: ArticleCard[] }) {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="🔍 記事を検索..."
+          placeholder={props.searchPlaceholder ?? "🔍 記事を検索..."}
           autoComplete="off"
         />
       </div>
@@ -32,7 +37,7 @@ export function ArticleSearch(props: { articles: ArticleCard[] }) {
         {filtered.map((a) => (
           <div className="article-card" key={a.slug}>
             <span className="card-date">{a.date}</span>
-            <a className="card-title" href={`/articles/${encodeURIComponent(a.slug)}`}>
+            <a className="card-title" href={`${basePath}/${encodeURIComponent(a.slug)}`}>
               {a.title}
             </a>
             {a.audioUrl ? (
