@@ -3,7 +3,7 @@
 > 日付: 2026-09-14  
 > 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
 > 設計の正: [pkm-migration.md](./pkm-migration.md)  
-> 次の実装: **Phase 5（MCP）**。Phase 2–4 はスタック PR。
+> 次の実装: **Phase 6（mem / inbox CI 掃除）**。Phase 2–5 はスタック PR。
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
 
@@ -47,7 +47,7 @@ Phase 1b  物理移動 + コンシューマ追随     ✅
 Phase 2   Capture API（Git に置くだけ）   ← このスタックの底
 Phase 3   ポッドキャスト入力を Git に切替  ← この PR
 Phase 4   Next.js 公開サイト（Pages 置換） ← この PR
-Phase 5   MCP
+Phase 5   MCP                          ← この PR
 Phase 6   mem / inbox CI 掃除
 ```
 
@@ -221,9 +221,9 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 
 `apps/mcp`（FastMCP）。Cloud Agent は repo checkout なしで知識に触れる。
 
-- `search_docs` / `get_doc` … 読み取り専用トークンまたは checkout 済み専用
-- `write_clip` / `queue_podcast` … Capture / 内部 API。書き込み用 `GITHUB_TOKEN` を MCP に渡さない
-- `queue_podcast` は Capture の更新（PATCH 相当）が先
+- `search_docs` / `get_doc` … 読み取り専用トークン（`GITHUB_READ_TOKEN`）または checkout 済み専用
+- `write_clip` / `queue_podcast` … Capture API。書き込み用 `GITHUB_TOKEN` を MCP に渡さない
+- `queue_podcast` は Capture の PATCH（Phase 2）を使う
 
 ---
 
