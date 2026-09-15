@@ -15,6 +15,12 @@ pnpm web:dev
 
 モノレポなので、Vercel の Project Settings → Root Directory を **`apps/web`** にする（Import 画面の Edit でも可）。`rootDirectory` は vercel.json には書けない。
 
+公開ページ（`/` と `/articles/[slug]`）は GitHub Pages の `scripts/build-web.ts` と同じく **ビルド時に静的 HTML を焼く**（`force-static`）。`content/docs` は Vercel の git clone に含まれているので `next build` から読める。サーバーレス関数に `content/` を同梱しない。Keystatic は GitHub storage のまま（管理画面にドキュメントがあっても、公開面はデプロイ時の Git スナップショット）。
+
+記事本文は `@markdoc/next.js`（`mode: "static"`）と同じスキーマ（`apps/web/markdoc/`）で `@markdoc/markdoc` がコンパイルする。Keystatic の正本は `content/docs/{entry}/index.mdoc` なので、プラグインが要求する `app/**/*.mdoc` へは置かない（slug は `legacyFilename`、ディレクトリ名ではない）。
+
+音声プレイヤーもビルド時に Supabase から解決する。Vercel の `SUPABASE_PROJECT_REF` と `SUPABASE_SERVICE_ROLE_KEY` は **Build** 対象に含める（Runtime だけだとプレイヤーが空のまま焼ける）。
+
 1. GitHub にこのリポジトリを Import するか、`vercel link --repo` してから `vercel deploy`
 2. 一度だけ GitHub App を作る（Keystatic のウィザードは **development でしか動かない**）:
 

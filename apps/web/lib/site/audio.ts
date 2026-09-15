@@ -30,7 +30,9 @@ export async function fetchArticleAudioMap(): Promise<Map<string, string>> {
         apikey: key,
         Authorization: `Bearer ${key}`,
       },
-      next: { revalidate: 120 },
+      // Public pages are SSG (GitHub Pages equivalent). Cache at build so
+      // `revalidate` does not flip them into ISR that would re-read disk.
+      cache: "force-cache",
     });
     if (!res.ok) {
       console.warn("audio map fetch failed", res.status, await res.text().catch(() => ""));
