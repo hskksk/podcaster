@@ -4,6 +4,8 @@ import { audioForDoc, fetchArticleAudioMap } from "../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../lib/site/config";
 import { loadPublicDocs } from "../lib/site/docs";
 
+// Audio URLs come from Supabase at request time; Markdoc is read from the
+// bundled `.data/` snapshot (see lib/repo-root.ts).
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {

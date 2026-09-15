@@ -2,7 +2,7 @@ import "server-only";
 
 import fs from "node:fs";
 import path from "node:path";
-import { getRepoRoot } from "../repo-root";
+import { getSiteDataRoot } from "../repo-root";
 import { parseDateFromFilename, parseSlugFromFilename } from "../../../../scripts/lib/article-slug";
 import { parseFrontmatter, parseTitleFromContent, textify } from "../../../../scripts/lib/mdoc";
 
@@ -17,12 +17,17 @@ export type PublicDoc = {
 };
 
 function docsDir(): string {
-  return path.join(getRepoRoot(), "content", "docs");
+  return path.join(getSiteDataRoot(), "content", "docs");
 }
 
 export function loadPublicDocs(): PublicDoc[] {
   const root = docsDir();
-  if (!fs.existsSync(root)) return [];
+  if (!fs.existsSync(root)) {
+    console.warn(
+      `[site] content/docs missing at ${root} (siteDataRoot=${getSiteDataRoot()} cwd=${process.cwd()})`,
+    );
+    return [];
+  }
   return fs
     .readdirSync(root, { withFileTypes: true })
     .filter((e) => e.isDirectory())

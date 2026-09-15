@@ -2,7 +2,7 @@ import "server-only";
 
 import fs from "node:fs";
 import path from "node:path";
-import { getRepoRoot } from "../repo-root";
+import { getSiteDataRoot } from "../repo-root";
 
 export type SiteConfig = {
   siteTitle: string;
@@ -26,7 +26,7 @@ export function loadSiteConfig(): SiteConfig {
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "",
     coverImage: "cover.png",
   };
-  const tomlPath = path.join(getRepoRoot(), "config.toml");
+  const tomlPath = path.join(getSiteDataRoot(), "config.toml");
   if (!fs.existsSync(tomlPath)) return fallback;
   const raw = fs.readFileSync(tomlPath, "utf8");
   const podcast: Record<string, string> = {};

@@ -15,6 +15,8 @@ pnpm web:dev
 
 モノレポなので、Vercel の Project Settings → Root Directory を **`apps/web`** にする（Import 画面の Edit でも可）。`rootDirectory` は vercel.json には書けない。
 
+公開一覧は Keystatic ではなく `content/docs` をサーバー側で読む。Root Directory が `apps/web` だと、その外の `content/` はビルド時に見えてもサーバーレス関数には入らない。`prebuild` が `content/docs` と `config.toml` を `apps/web/.data/` にコピーし、`outputFileTracingIncludes` で lambda に同梱する。Keystatic（GitHub storage）は別経路なので、管理画面にドキュメントがあっても公開サイトが空、という状態になり得る。
+
 1. GitHub にこのリポジトリを Import するか、`vercel link --repo` してから `vercel deploy`
 2. 一度だけ GitHub App を作る（Keystatic のウィザードは **development でしか動かない**）:
 

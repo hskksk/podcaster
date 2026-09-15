@@ -33,6 +33,9 @@ scripts/*.txt
 # Vercel CLI
 .vercel/
 
+# Copied into the Next.js app at build so Vercel can serve content/docs
+apps/web/.data/
+
 # Serena (local AI assistant config, auto-regenerated)
 .serena/
 

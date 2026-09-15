@@ -7,6 +7,8 @@ import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
 import { markdownToHtml } from "../../../lib/site/markdown";
 
+// Audio URLs come from Supabase at request time; Markdoc is read from the
+// bundled `.data/` snapshot (see lib/repo-root.ts).
 export const dynamic = "force-dynamic";
 
 type Params = { slug: string };
