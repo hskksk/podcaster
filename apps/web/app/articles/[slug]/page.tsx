@@ -5,14 +5,24 @@ import { SiteShell } from "../../../components/SiteShell";
 import { audioForDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
-import { markdownToHtml } from "../../../lib/site/markdown";
+import { renderMarkdoc } from "../../../lib/site/render-markdoc";
+import { textify } from "../../../../../scripts/lib/mdoc";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
+export const revalidate = false;
+export const dynamicParams = false;
 
 type Params = { slug: string };
 
 export async function generateStaticParams() {
-  return loadPublicDocs().map((d) => ({ slug: d.slug }));
+  const docs = loadPublicDocs();
+  if (docs.length === 0) {
+    throw new Error(
+      `content/docs produced 0 articles at build (cwd=${process.cwd()}). ` +
+        "The public site is statically generated like GitHub Pages; the monorepo content/ tree must be visible to `next build`.",
+    );
+  }
+  return docs.map((d) => ({ slug: d.slug }));
 }
 
 export async function generateMetadata({
@@ -24,7 +34,7 @@ export async function generateMetadata({
   const doc = loadPublicDoc(slug);
   if (!doc) return { title: "Not found" };
   const cfg = loadSiteConfig();
-  const desc = doc.markdown
+  const desc = textify(doc.source)
     .replace(/^#.*$/m, "")
     .replace(/[#*`[\]]/g, "")
     .trim()
@@ -44,7 +54,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   const docs = loadPublicDocs();
   const audioMap = await fetchArticleAudioMap();
   const audioUrl = audioForDoc(audioMap, doc.filename);
-  const html = await markdownToHtml(doc.markdown);
+  const body = renderMarkdoc(doc.source);
   const rss = feedUrl();
 
   return (
@@ -60,13 +70,8 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
             <audio controls preload="metadata" src={audioUrl} />
           </div>
         ) : null}
-        <article dangerouslySetInnerHTML={{ __html: html }} />
+        <article className="markdoc">{body}</article>
       </SiteShell>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `document.addEventListener("DOMContentLoaded",function(){if(window.renderMathInElement){window.renderMathInElement(document.body,{delimiters:[{left:"\\\\[",right:"\\\\]",display:true},{left:"\\\\(",right:"\\\\)",display:false}]});}});`,
-        }}
-      />
     </div>
   );
 }

@@ -4,7 +4,11 @@ import { audioForDoc, fetchArticleAudioMap } from "../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../lib/site/config";
 import { loadPublicDocs } from "../lib/site/docs";
 
-export const dynamic = "force-dynamic";
+// GitHub Pages equivalent: bake HTML at `next build`. Vercel’s clone still
+// has `content/` at build even when Root Directory is apps/web. `force-dynamic`
+// was why the live site showed 0 articles (lambda has no content/).
+export const dynamic = "force-static";
+export const revalidate = false;
 
 export default async function HomePage() {
   const cfg = loadSiteConfig();
@@ -69,17 +73,6 @@ export default async function HomePage() {
         <p className="section-title">すべての記事 ({docs.length}件)</p>
         <ArticleSearch articles={cards} />
       </SiteShell>
-      <KaTeXBoot />
     </div>
-  );
-}
-
-function KaTeXBoot() {
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `document.addEventListener("DOMContentLoaded",function(){if(window.renderMathInElement){window.renderMathInElement(document.body,{delimiters:[{left:"\\\\[",right:"\\\\]",display:true},{left:"\\\\(",right:"\\\\)",display:false}]});}});`,
-      }}
-    />
   );
 }
