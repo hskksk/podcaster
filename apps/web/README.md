@@ -2,12 +2,13 @@
 
 Next.js App Router + Keystatic admin for the Git + Markdoc knowledge layer.
 
-Phase 2: local filesystem for `pnpm web:dev`. **Vercel では GitHub storage**（GitHub API 経由で `content/` に commit）。知識の正本は `content/docs` と `content/web-clips`。`POST /api/capture` は Git に置くだけ。TTS は呼ばない。
+Phase 4: Next.js が公開サイト（一覧・記事・プレイヤー）。`/keystatic` は非公開。`POST /api/capture` は Git に置くだけ。TTS は呼ばない。
 
 ```bash
 # from repo root
 pnpm web:dev
-# Keystatic: http://127.0.0.1:3000/keystatic
+# Public site: http://127.0.0.1:3000/
+# Keystatic:   http://127.0.0.1:3000/keystatic
 ```
 
 ## Vercel（推奨）
@@ -80,7 +81,7 @@ pnpm web:github
 
 | ホスト | 向き |
 |---|---|
-| **Vercel** | GitHub storage。Phase 1 の公開先 |
+| **Vercel** | 公開サイト + GitHub storage。Phase 4 の公開先 |
 | Netlify | 同様に GitHub storage なら可 |
 | Railway | local storage の常駐プロセス向け（`apps/web/Dockerfile`）。必須ではない |
 | Supabase | Next.js のホストではない |

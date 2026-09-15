@@ -3,7 +3,7 @@
 > 日付: 2026-09-14  
 > 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
 > 設計の正: [pkm-migration.md](./pkm-migration.md)  
-> 次の実装: **Phase 4（Next.js 公開サイト）**。Phase 2–3 はスタック PR。
+> 次の実装: **Phase 5（MCP）**。Phase 2–4 はスタック PR。
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
 
@@ -45,8 +45,8 @@ Keystatic は動くが、中身が無い。Vercel に載せた意義を出すに
 ```
 Phase 1b  物理移動 + コンシューマ追随     ✅
 Phase 2   Capture API（Git に置くだけ）   ← このスタックの底
-Phase 3   ポッドキャスト入力を Git に切替
-Phase 4   Next.js 公開サイト（Pages 置換）
+Phase 3   ポッドキャスト入力を Git に切替  ← この PR
+Phase 4   Next.js 公開サイト（Pages 置換） ← この PR
 Phase 5   MCP
 Phase 6   mem / inbox CI 掃除
 ```
@@ -209,10 +209,11 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 
 ## 7. Phase 4 — 公開サイト
 
-- Next.js が記事一覧・詳細・プレイヤーを描画
-- GitHub Pages ワークフローを停止し、旧 URL をリダイレクト
-- `web/template.html` / `scripts/build-web.ts` はアーカイブ
+- Next.js が記事一覧・詳細・プレイヤーを描画（`/` と `/articles/[slug]`）
+- GitHub Pages ワークフローは旧 URL の meta-refresh リダイレクトだけ出す（`NEXT_PUBLIC_SITE_URL`）
+- `web/template.html` / `scripts/build-web.ts` は `archive/` へ
 - `/keystatic` は非公開のまま（GitHub OAuth。必要なら Basic Auth 追加）
+- `web-clips` は一覧に出さない
 
 ---
 

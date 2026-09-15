@@ -61,7 +61,7 @@ podcaster/
 ├── apps/
 │   └── web/                        # Next.js + Keystatic (local admin; Vercel は GitHub storage)
 ├── content/
-│   ├── docs/                       # Wiki Markdoc（公開 Pages の入力）
+│   ├── docs/                       # Wiki Markdoc（公開サイトの入力）
 │   └── web-clips/                  # クリップ & メモ（サイト非掲載、podcast: none）
 ├── public/
 │   └── cover.png                   # ポッドキャストカバー画像

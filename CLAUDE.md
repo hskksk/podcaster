@@ -49,7 +49,7 @@ curl -s http://localhost:54331/functions/v1/craft-episode-worker -H "Authorizati
 
 ## Architecture
 
-Git + Markdoc (`content/`) is the designed knowledge store. Phase 1b: wiki lives in `content/docs/**/index.mdoc`, clips in `content/web-clips/**/index.mdoc`. Keystatic (local FS / Vercel GitHub storage) edits those files. GitHub Pages still builds from `content/docs` via `scripts/build-web.ts` (textify → CommonMark + KaTeX). The podcast factory below is unchanged until Phase 3.
+Git + Markdoc (`content/`) is the designed knowledge store. Wiki lives in `content/docs/**/index.mdoc`, clips in `content/web-clips/**/index.mdoc`. Keystatic edits those files. The public site is Next.js (`apps/web`: `/` and `/articles/[slug]`). GitHub Pages only publishes redirects to that origin. The podcast factory (ingest → pgflow → TTS → RSS) is unchanged.
 
 Article text enters via the `ingest` Edge Function and starts a **pgflow** DAG run:
 
