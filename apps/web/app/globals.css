@@ -244,6 +244,14 @@ body { background: #f7f8fc; }
       color: #555;
     }
     .math-display { overflow-x: auto; margin: 1.2em 0; }
+    .callout {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 1.2em 0;
+    }
+    .callout-note { background: #eef6ff; border: 1px solid #c5ddf5; }
+    .callout-warning { background: #fff8e8; border: 1px solid #f0d8b0; }
+    .callout-error { background: #fff1f0; border: 1px solid #f0c0b8; }
 
     /* ── Footer ── */
     .site-footer {

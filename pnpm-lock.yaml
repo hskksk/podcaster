@@ -93,12 +93,12 @@ importers:
       '@markdoc/markdoc':
         specifier: ^0.5.9
         version: 0.5.9(@types/react@19.2.14)(react@19.2.5)
+      '@markdoc/next.js':
+        specifier: ^0.5.0
+        version: 0.5.0(@markdoc/markdoc@0.5.9(@types/react@19.2.14)(react@19.2.5))(next@15.1.11(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react@19.2.5)
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
-      marked:
-        specifier: ^15.0.12
-        version: 15.0.12
       next:
         specifier: 15.1.11
         version: 15.1.11(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -554,6 +554,13 @@ packages:
         optional: true
       react:
         optional: true
+
+  '@markdoc/next.js@0.5.0':
+    resolution: {integrity: sha512-gzWvRc2dlxArQn1mDS4SHed46vkAoKBbXkELihQRYv1eVSA0u9eoNEdJXNuBL4Ajn9j2dPpwZp6nAVjN4nzZlA==}
+    peerDependencies:
+      '@markdoc/markdoc': '*'
+      next: '*'
+      react: '*'
 
   '@next/env@15.1.11':
     resolution: {integrity: sha512-yp++FVldfLglEG5LoS2rXhGypPyoSOyY0kxZQJ2vnlYJeP8o318t5DrDu5Tqzr03qAhDWllAID/kOCsXNLcwKw==}
@@ -2436,6 +2443,13 @@ snapshots:
       '@types/linkify-it': 3.0.5
       '@types/markdown-it': 12.2.3
       '@types/react': 19.2.14
+      react: 19.2.5
+
+  '@markdoc/next.js@0.5.0(@markdoc/markdoc@0.5.9(@types/react@19.2.14)(react@19.2.5))(next@15.1.11(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react@19.2.5)':
+    dependencies:
+      '@markdoc/markdoc': 0.5.9(@types/react@19.2.14)(react@19.2.5)
+      js-yaml: 4.3.2
+      next: 15.1.11(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       react: 19.2.5
 
   '@next/env@15.1.11': {}
