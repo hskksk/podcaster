@@ -44,7 +44,12 @@ if (process.env.KEYSTATIC_STANDALONE === "1") {
   };
 }
 
-export default withMarkdoc({
+const wrapped = withMarkdoc({
   mode: "static",
   schemaPath: "./markdoc",
 })(nextConfig);
+
+// @markdoc/next.js 0.5 injects `turbopack`, which Next 15.1 rejects.
+delete (wrapped as { turbopack?: unknown }).turbopack;
+
+export default wrapped;
