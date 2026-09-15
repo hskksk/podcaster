@@ -4,7 +4,7 @@
 
 ### Overview
 
-Podcaster is an AI podcast generator built on Supabase. Article text flows through a pgflow pipeline: `ingest -> craftEpisode(generateScript -> generateAudio -> updateRss)`. Execution is handled by `craft-episode-worker`, and flow definitions are served by `functions/pgflow` ControlPlane. See `CLAUDE.md` and `README.md` for full architecture and command reference. Knowledge files live under `content/`. PKM stack: Phase 2 Capture, Phase 3 Git ingest (`docs/architecture/pkm-next.md`).
+Podcaster is an AI podcast generator built on Supabase. Article text flows through a pgflow pipeline: `ingest -> craftEpisode(generateScript -> generateAudio -> updateRss)`. Execution is handled by `craft-episode-worker`, and flow definitions are served by `functions/pgflow` ControlPlane. See `CLAUDE.md` and `README.md` for full architecture and command reference. Knowledge files live under `content/`. PKM stack: Capture, Git ingest, Next.js public site, MCP, mem cleanup (`docs/architecture/pkm-next.md`).
 
 ### Prerequisites (already installed in the VM environment)
 
@@ -35,7 +35,7 @@ pnpm functions:serve
 - **`supabase status` flag**: Use `-o json` (not `--json`) with this CLI version to get machine-readable output.
 - **Edge Functions return immediately**: All worker functions use `EdgeRuntime.waitUntil()` and return `{"ok":true}` right away. Check `processing_logs` via `TARGET=local pnpm cli logs` to see actual results.
 - **No test suite**: `pnpm typecheck` is the primary correctness check. There are no unit/integration tests.
-- **API keys required for full pipeline**: `GEMINI_API_KEY` and `MEM_API_KEY` must be in `.env` for `ingest` / pgflow stages to succeed. Without them, ingest returns errors and `generateScript` stage fails.
+- **API keys required for full pipeline**: `GEMINI_API_KEY` must be in `.env` for pgflow stages to succeed. Without it, `generateScript` fails.
 - **TUI requires TTY**: `pnpm tui` (Ink-based) needs a real terminal with raw mode support. Use `pnpm tui -- --mock` for mock data. It will fail with "Raw mode is not supported" in non-interactive shells.
 - **`TARGET=local`**: Set this env var for CLI/TUI commands to connect to the local Supabase stack instead of remote.
 - **Never edit existing migrations**: Schema changes require a new `supabase/migrations/` file named `YYYYMMDD{seq}_snake_case_description.sql` (never modify committed migrations). See CLAUDE.md → Database Migrations.

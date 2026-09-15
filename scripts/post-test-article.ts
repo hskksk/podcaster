@@ -7,15 +7,16 @@ import { detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
 dotenv.config({ path: ".env" });
 console.log("Using env file: .env");
 
-const MEM_NOTE_ID = process.env.MEM_NOTE_ID;
-
-if (!MEM_NOTE_ID) {
-  console.error("Error: MEM_NOTE_ID environment variable is required");
-  console.error("Usage: MEM_NOTE_ID=<uuid> pnpm tsx scripts/post-test-article.ts");
-  process.exit(1);
-}
-
 const target = process.env.TARGET ?? "local";
+
+const article = {
+  title: "テスト記事: AI生成ポッドキャストの仕組み",
+  content:
+    "これはローカル動作確認用のテスト記事です。ingest は Git 本文を受け取り、pgflow が台本と音声を作ります。",
+  ingest_route: "test",
+  ingest_meta: { target },
+  ...(process.env.MEM_NOTE_ID ? { mem_note_id: process.env.MEM_NOTE_ID } : {}),
+};
 
 let authKey: string;
 let ingestUrl: string;
@@ -46,13 +47,6 @@ if (target === "remote") {
     ? `${status["API_URL"]}/functions/v1/ingest`
     : "http://127.0.0.1:54331/functions/v1/ingest";
 }
-
-const article = {
-  title: "テスト記事: AI生成ポッドキャストの仕組み",
-  mem_note_id: MEM_NOTE_ID,
-  ingest_route: "test",
-  ingest_meta: { target },
-};
 
 const body = JSON.stringify(article);
 
