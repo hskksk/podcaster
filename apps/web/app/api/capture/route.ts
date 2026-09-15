@@ -3,6 +3,7 @@ import { captureTokenFromEnv, captureTokenOk } from "../../../lib/capture/auth";
 import {
   isCollection,
   isPodcastFlag,
+  parseFrontmatter,
   setFrontmatterField,
   wrapMdoc,
   type CaptureCollection,
@@ -81,6 +82,19 @@ function buildMdoc(opts: {
   );
 }
 
+/** Ignore clippedAt / publishedAt so the same JSON body retries the same path. */
+function sameClip(a: string, b: string): boolean {
+  const left = parseFrontmatter(a);
+  const right = parseFrontmatter(b);
+  return (
+    left.body.trim() === right.body.trim() &&
+    (left.attrs.title ?? "") === (right.attrs.title ?? "") &&
+    (left.attrs.url ?? left.attrs.sourceUrl ?? "") ===
+      (right.attrs.url ?? right.attrs.sourceUrl ?? "") &&
+    (left.attrs.podcast ?? "") === (right.attrs.podcast ?? "")
+  );
+}
+
 async function resolvePath(
   collection: CaptureCollection,
   slug: string,
@@ -89,18 +103,18 @@ async function resolvePath(
   const primary = entryPath(collection, slug);
   const existing = await readCaptureFile(primary);
   if (!existing) return { path: primary, identical: false };
-  if (existing.text === content) {
+  if (sameClip(existing.text, content)) {
     return { path: primary, existingSha: existing.sha, identical: true };
   }
   const hashed = entryPath(collection, `${slug}-${shortHash(content)}`);
   const hashedExisting = await readCaptureFile(hashed);
-  if (hashedExisting?.text === content) {
+  if (hashedExisting && sameClip(hashedExisting.text, content)) {
     return { path: hashed, existingSha: hashedExisting.sha, identical: true };
   }
   if (!hashedExisting) return { path: hashed, identical: false };
   const longer = entryPath(collection, `${slug}-${shortHash(content, 12)}`);
   const longerExisting = await readCaptureFile(longer);
-  if (longerExisting?.text === content) {
+  if (longerExisting && sameClip(longerExisting.text, content)) {
     return { path: longer, existingSha: longerExisting.sha, identical: true };
   }
   return { path: longer, existingSha: longerExisting?.sha, identical: false };
