@@ -16,6 +16,7 @@ export type DocsFrontmatter = {
   sourceUrl?: string;
   podcast: PodcastFlag;
   legacyFilename: string;
+  contentSha?: string;
 };
 
 export type WebClipFrontmatter = {
@@ -25,6 +26,7 @@ export type WebClipFrontmatter = {
   podcast: PodcastFlag;
   legacyFilename: string;
   promotedTo?: string;
+  contentSha?: string;
 };
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n(?:\r?\n)?/;
@@ -80,6 +82,14 @@ export function renderFrontmatter(fields: Record<string, string | undefined>): s
 
 export function wrapMdoc(fields: Record<string, string | undefined>, body: string): string {
   return `${renderFrontmatter(fields)}${body}`;
+}
+
+export function setFrontmatterFields(
+  src: string,
+  patch: Record<string, string | undefined>,
+): string {
+  const { attrs, body } = parseFrontmatter(src);
+  return wrapMdoc({ ...attrs, ...patch }, body);
 }
 
 type Segment =

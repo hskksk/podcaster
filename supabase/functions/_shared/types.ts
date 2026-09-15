@@ -7,6 +7,8 @@ export interface Article {
   mem_note_id?: string;
   ingest_route?: string;
   ingest_meta?: Record<string, unknown>;
+  content_path?: string;
+  content_sha?: string;
   created_at: string;
 }
 

@@ -3,7 +3,7 @@
 > 日付: 2026-09-14  
 > 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
 > 設計の正: [pkm-migration.md](./pkm-migration.md)  
-> 次の実装: **Phase 3（ポッドキャスト入力を Git に切替）**。Phase 2（Capture）はスタック PR。
+> 次の実装: **Phase 4（Next.js 公開サイト）**。Phase 2–3 はスタック PR。
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
 
@@ -197,11 +197,11 @@ Chrome 拡張は後追い。curl / スキル / TUI で FR-02 を満たす。
 実行グラフは変えない。変えるのは ingest の入力とトリガー。
 
 - migration: `articles.content_path` / `content_sha`（UNIQUE）。episodes には足さない
-- ingest は既存 `{ title, content }` を維持し、任意で `content_path` 等を受け取る
+- ingest は既存 `{ title, content }` を維持し、任意で `content_path` 等を受け取る。UNIQUE 衝突は **409**
 - Git 正本は `.mdoc`。パイプラインへ渡す前に frontmatter 除去 + 既知タグの textify
-- Actions: `podcast: queued` を検知 → ingest → **同じ job が `published` を書き戻す**
+- Actions: `podcast: queued` を検知 → ingest → **同じ job が `published` + `contentSha` を書き戻す**
 - `podcast-research` は mdoc を書いて PR。queued は明示
-- inbox 4 本のうち投入するものだけ、このフェーズで `queued` にする
+- 移行済み web-clips 4 本は **queued にしない**（黙って TTS しない）
 
 mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではない。
 

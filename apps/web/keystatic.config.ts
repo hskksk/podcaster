@@ -33,6 +33,10 @@ export default config({
         publishedAt: fields.date({ label: "Published Date" }),
         sourceUrl: fields.text({ label: "Source URL" }),
         podcast: podcastSelect,
+        contentSha: fields.text({
+          label: "Content SHA",
+          description: "Set by queued ingest CI after a successful episode.",
+        }),
         legacyFilename: fields.text({
           label: "Legacy filename",
           description: "Original articles/ basename. Used for Pages URL redirects.",
@@ -54,6 +58,10 @@ export default config({
           description: "ISO-8601 timestamp",
         }),
         podcast: podcastSelect,
+        contentSha: fields.text({
+          label: "Content SHA",
+          description: "Set by queued ingest CI after a successful episode.",
+        }),
         legacyFilename: fields.text({
           label: "Legacy filename",
           description: "Original inbox/ basename.",

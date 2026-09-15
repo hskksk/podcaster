@@ -56,6 +56,8 @@ Deno.serve(async (req) => {
     source_url?: string;
     ingest_route?: string;
     ingest_meta?: Record<string, unknown>;
+    content_path?: string;
+    content_sha?: string;
   };
   try {
     body = await req.json();
@@ -90,6 +92,9 @@ Deno.serve(async (req) => {
     return new Response("Missing content", { status: 400 });
   }
 
+  const contentPath = body.content_path?.trim() || null;
+  const contentSha = body.content_sha?.trim() || null;
+
   const db = createSupabaseClient();
   const { data: article, error } = await db
     .from("articles")
@@ -101,11 +106,16 @@ Deno.serve(async (req) => {
       mem_note_id: body.mem_note_id?.trim() ?? null,
       ingest_route: body.ingest_route ?? null,
       ingest_meta: body.ingest_meta ?? null,
+      content_path: contentPath,
+      content_sha: contentSha,
     })
     .select("id")
     .single();
 
   if (error) {
+    if (error.code === "23505") {
+      return new Response("Duplicate content_path", { status: 409 });
+    }
     console.error("articles insert failed:", error);
     return new Response("Internal error", { status: 500 });
   }

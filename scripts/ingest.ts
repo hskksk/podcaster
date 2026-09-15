@@ -6,6 +6,7 @@
 //   (file modes default to --collection-title "Podcast Drafts" when none given)
 
 import dotenv from "dotenv";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { detectLocalStatus, detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
@@ -13,6 +14,7 @@ import {
   createMemNoteFromFile,
   DEFAULT_MEM_COLLECTION_TITLE,
 } from "./lib/create-mem-note-from-file.ts";
+import { parseFrontmatter, parseTitleFromContent, textify } from "./lib/mdoc.ts";
 
 dotenv.config({ path: ".env" });
 
@@ -101,6 +103,19 @@ function extractTitle(content: string): string | undefined {
   return match?.[1]?.trim();
 }
 
+function sha256(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
+}
+
+function repoRelative(filePath: string): string {
+  const abs = path.resolve(filePath);
+  const root = path.resolve(process.cwd());
+  if (abs === root || abs.startsWith(root + path.sep)) {
+    return path.relative(root, abs).split(path.sep).join("/");
+  }
+  return filePath.split(path.sep).join("/");
+}
+
 const parsed = parseArgs(process.argv.slice(2));
 
 const target = process.env.TARGET ?? "remote";
@@ -126,8 +141,12 @@ const headers: Record<string, string> = {
 let postBody: Record<string, unknown>;
 
 if (parsed.mode === "file") {
-  const content = readFileSync(parsed.filePath, "utf-8");
-  const title = extractTitle(content);
+  const raw = readFileSync(parsed.filePath, "utf-8");
+  const rel = repoRelative(parsed.filePath);
+  const isMdoc = rel.endsWith(".mdoc") || raw.startsWith("---");
+  const content = isMdoc ? textify(raw) : raw;
+  const { attrs } = parseFrontmatter(raw);
+  const title = attrs.title || parseTitleFromContent(content, extractTitle(content) ?? path.basename(parsed.filePath));
 
   console.log(`Registering file in mem.ai: ${parsed.filePath}`);
   let memNoteId: string | undefined;
@@ -144,6 +163,9 @@ if (parsed.mode === "file") {
     ...(parsed.meta ?? {}),
     mem_sync: memNoteId ? "ok" : "failed",
     ...(memSyncError !== undefined ? { mem_sync_error: memSyncError } : {}),
+    ...(attrs.legacyFilename
+      ? { inbox_file: attrs.legacyFilename, legacyFilename: attrs.legacyFilename }
+      : {}),
   };
 
   postBody = {
@@ -152,6 +174,8 @@ if (parsed.mode === "file") {
     ...(title !== undefined ? { title } : {}),
     ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
     ingest_meta: ingestMeta,
+    ...(rel.startsWith("content/") ? { content_path: rel, content_sha: sha256(raw) } : {}),
+    ...(attrs.sourceUrl || attrs.url ? { source_url: attrs.sourceUrl || attrs.url } : {}),
   };
 } else {
   postBody = {
@@ -167,6 +191,16 @@ const res = await fetch(ingestUrl, {
   headers,
   body: JSON.stringify(postBody),
 });
-const json = await res.json();
-console.log(`Status: ${res.status}`, JSON.stringify(json));
+const text = await res.text();
+let json: unknown = text;
+try {
+  json = JSON.parse(text);
+} catch {
+  // plain-text error bodies (e.g. 409 Duplicate content_path)
+}
+console.log(`Status: ${res.status}`, typeof json === "string" ? json : JSON.stringify(json));
+if (res.status === 409) {
+  console.error("content_path already ingested. Use requeue/force to regenerate.");
+  process.exit(1);
+}
 if (!res.ok) process.exit(1);
