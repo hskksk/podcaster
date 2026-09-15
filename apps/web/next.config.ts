@@ -11,6 +11,15 @@ const repoRoot = fs.existsSync(path.join(repoRootCandidate, "pnpm-workspace.yaml
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@keystatic/core", "@keystatic/next"],
+  async redirects() {
+    return [
+      {
+        source: "/articles/:slug.html",
+        destination: "/articles/:slug",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 // Standalone (Docker / Railway) needs the monorepo root in the file trace.
@@ -20,7 +29,8 @@ if (process.env.KEYSTATIC_STANDALONE === "1") {
   nextConfig.output = "standalone";
   nextConfig.outputFileTracingRoot = repoRoot;
   nextConfig.outputFileTracingIncludes = {
-    "/": ["../../content/**/*", "../../pnpm-workspace.yaml"],
+    "/": ["../../content/**/*", "../../pnpm-workspace.yaml", "../../config.toml"],
+    "/articles/[slug]": ["../../content/**/*", "../../config.toml"],
     "/api/keystatic/[...params]": [
       "../../content/**/*",
       "../../pnpm-workspace.yaml",

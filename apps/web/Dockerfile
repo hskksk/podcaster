@@ -35,6 +35,7 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=nextjs:nodejs /app/content ./content
+COPY --from=build --chown=nextjs:nodejs /app/config.toml ./config.toml
 COPY --from=build --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 USER nextjs

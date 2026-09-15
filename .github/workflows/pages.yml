@@ -1,13 +1,16 @@
-name: Deploy Articles to GitHub Pages
+# GitHub Pages no longer hosts the article site (Phase 4: Next.js).
+# This job publishes meta-refresh redirects so
+# https://hskksk.github.io/podcaster/articles/{slug}.html keeps working.
+name: Redirect GitHub Pages to Next.js
 
 on:
   push:
     branches: [main]
     paths:
-      - 'content/docs/**'
-      - 'scripts/build-web.ts'
-      - 'scripts/lib/**'
-      - 'web/**'
+      - "content/docs/**"
+      - "scripts/build-pages-redirects.ts"
+      - "scripts/lib/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -23,8 +26,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,22 +41,32 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install
+      - run: pnpm install
 
-      - uses: supabase/setup-cli@v2
-
-      - name: Build web
+      - name: Build redirect stubs
         run: pnpm web:build
 
+      - name: Skip when SITE_URL is unset
+        id: check
+        run: |
+          if [ ! -f dist/web/index.html ]; then
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            echo "NEXT_PUBLIC_SITE_URL is not set; skipping Pages deploy."
+          else
+            echo "skip=0" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/configure-pages@v5
+        if: steps.check.outputs.skip != '1'
 
       - uses: actions/upload-pages-artifact@v3
+        if: steps.check.outputs.skip != '1'
         with:
           path: dist/web
 
   deploy:
     needs: build
+    if: needs.build.outputs.skip != '1'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
