@@ -13,14 +13,8 @@ function setSecret(name: string, value: string) {
 }
 
 const geminiKey = process.env.GEMINI_API_KEY;
-const memKey = process.env.MEM_API_KEY;
-
 if (!geminiKey) {
   console.error("GEMINI_API_KEY が .env に設定されていません。");
-  process.exit(1);
-}
-if (!memKey) {
-  console.error("MEM_API_KEY が .env に設定されていません。");
   process.exit(1);
 }
 
@@ -28,7 +22,6 @@ const projectRef = detectProjectRef();
 
 setSecret("SUPABASE_PROJECT_REF", projectRef);
 setSecret("GEMINI_API_KEY", geminiKey);
-setSecret("MEM_API_KEY", memKey);
 
 console.log("\n完了。残り 2 つの Secret は GitHub Settings から手動登録してください:");
 console.log("  SUPABASE_ACCESS_TOKEN  https://supabase.com/dashboard/account/tokens");

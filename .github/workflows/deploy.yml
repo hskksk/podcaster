@@ -34,7 +34,6 @@ jobs:
       - name: Create .env
         run: |
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
-          echo "MEM_API_KEY=${{ secrets.MEM_API_KEY }}" >> .env
 
       - name: Deploy
         run: pnpm run deploy

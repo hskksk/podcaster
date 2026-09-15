@@ -24,8 +24,9 @@
         "setup:gh-secrets": "npx tsx scripts/setup-gh-secrets.ts",
         "cli": "tsx scripts/podcast-cli.ts",
         "tui": "tsx scripts/tui/index.tsx",
-        "typecheck": "tsc --noEmit && pnpm typecheck:web",
+        "typecheck": "tsc --noEmit && pnpm typecheck:web && pnpm typecheck:mcp",
         "typecheck:web": "pnpm --filter @podcaster/web typecheck",
+        "typecheck:mcp": "pnpm --filter @podcaster/mcp typecheck",
         "web:build": "tsx scripts/build-pages-redirects.ts",
         "content:migrate": "tsx scripts/migrate-content.ts",
         "ingest:queued": "tsx scripts/ingest-queued.ts",
@@ -33,7 +34,8 @@
         "web:github": "NEXT_PUBLIC_KEYSTATIC_STORAGE=github pnpm --filter @podcaster/web dev",
         "web:start": "pnpm --filter @podcaster/web start",
         "vercel-build": "pnpm --filter @podcaster/web build",
-        "capture": "tsx scripts/capture.ts"
+        "capture": "tsx scripts/capture.ts",
+        "mcp": "pnpm --filter @podcaster/mcp start"
     },
     "devDependencies": {
         "@hskksk/mem-ai-cli": "latest",

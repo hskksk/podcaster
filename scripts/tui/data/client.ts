@@ -11,7 +11,6 @@ import {
   detectProjectRef,
   detectServiceKey,
 } from "../../lib/supabase-detect.js";
-import { createMemNoteFromFile } from "../../lib/create-mem-note-from-file.js";
 import { parseFrontmatter, parseTitleFromContent, textify } from "../../lib/mdoc.js";
 import * as Mock from "./mock.js";
 import { Article, Episode, AudioFile, ProcessingLog, PodcastConfig, Script } from "./types.js";
@@ -162,36 +161,17 @@ export class DataClient {
     return { success: true };
   }
 
-  /** POST /functions/v1/ingest with mem_note_id (same contract as scripts/ingest.ts). */
-  async ingestMemNote(memNoteId: string): Promise<ClientActionResult> {
-    const trimmed = memNoteId.trim();
-    if (!trimmed) return { success: false, error: "mem_note_id is empty" };
-    if (this.isMock) {
-      console.log(`Mock: ingest ${trimmed}`);
-      return { success: true };
-    }
-    if (!this.apiUrl || !this.serviceKey) return { success: false, error: "API not configured" };
-    const ingestUrl = `${this.apiUrl}/functions/v1/ingest`;
-    const res = await fetch(ingestUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.serviceKey}`,
-      },
-      body: JSON.stringify({ mem_note_id: trimmed }),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => res.statusText);
-      return { success: false, error: text || `HTTP ${res.status}` };
-    }
-    return { success: true };
+  /** mem.ai note ingest was removed in Phase 6. Use a Git mdoc file. */
+  async ingestMemNote(_memNoteId: string): Promise<ClientActionResult> {
+    return {
+      success: false,
+      error: "mem.ai ingest was removed. Ingest a content/ docs or web-clips file instead.",
+    };
   }
 
   /**
-   * Inbox TUI shortcut: try mem.ai registration, then POST ingest with file content
-   * (same best-effort flow as scripts/ingest.ts file mode).
-   * Reads content/web-clips/{slug}/index.mdoc or content/docs/{slug}/index.mdoc
-   * and textifies Markdoc before POST.
+   * Inbox TUI shortcut: POST ingest with textified Markdoc.
+   * Reads content/web-clips/{slug}/index.mdoc or content/docs/{slug}/index.mdoc.
    */
   async ingestMarkdownFile(fileName: string, pane: "inbox" | "draft"): Promise<ClientActionResult> {
     const subdir = pane === "inbox" ? "content/web-clips" : "content/docs";
@@ -210,15 +190,6 @@ export class DataClient {
     const { attrs } = parseFrontmatter(raw);
     const title = attrs.title || parseTitleFromContent(content, fileName);
 
-    let memNoteId: string | undefined;
-    let memSyncError: string | undefined;
-    try {
-      memNoteId = createMemNoteFromFile(resolved, []);
-    } catch (e) {
-      memSyncError = (e as Error).message;
-      console.warn(`Warning: mem.ai registration failed, continuing without mem_note_id: ${memSyncError}`);
-    }
-
     const ingestUrl = `${this.apiUrl}/functions/v1/ingest`;
     const contentPath = `${subdir}/${fileName}/index.mdoc`;
     const res = await fetch(ingestUrl, {
@@ -229,14 +200,11 @@ export class DataClient {
       },
       body: JSON.stringify({
         content,
-        ...(memNoteId !== undefined ? { mem_note_id: memNoteId } : {}),
         ...(title !== undefined ? { title } : {}),
         content_path: contentPath,
         content_sha: createHash("sha256").update(raw).digest("hex"),
         ingest_route: pane === "inbox" ? "tui_clip" : "tui_doc",
         ingest_meta: {
-          mem_sync: memNoteId ? "ok" : "failed",
-          ...(memSyncError !== undefined ? { mem_sync_error: memSyncError } : {}),
           inbox_file: attrs.legacyFilename || `${fileName}.md`,
           legacyFilename: attrs.legacyFilename || `${fileName}.md`,
         },
