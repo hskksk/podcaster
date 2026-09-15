@@ -42,10 +42,6 @@ jobs:
 
       - uses: supabase/setup-cli@v2
 
-      - name: Create .env
-        run: |
-          echo "MEM_API_KEY=${{ secrets.MEM_API_KEY }}" > .env
-
       - name: Ingest queued files and write published
         env:
           INGEST_QUEUED_COMMIT: "1"

@@ -3,7 +3,7 @@
 > 日付: 2026-09-14  
 > 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
 > 設計の正: [pkm-migration.md](./pkm-migration.md)  
-> 次の実装: **Phase 6（mem / inbox CI 掃除）**。Phase 2–5 はスタック PR。
+> PKM スタック Phase 2–6。知識の正は Git + Markdoc。配信の正は Supabase。
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
 
@@ -48,7 +48,7 @@ Phase 2   Capture API（Git に置くだけ）   ← このスタックの底
 Phase 3   ポッドキャスト入力を Git に切替  ← この PR
 Phase 4   Next.js 公開サイト（Pages 置換） ← この PR
 Phase 5   MCP                          ← この PR
-Phase 6   mem / inbox CI 掃除
+Phase 6   mem / inbox CI 掃除          ← この PR
 ```
 
 後のフェーズを先に始めない。Capture も queued ingest も、正本がまだ `articles/` `inbox/` にあるうちは二重管理になる。
@@ -230,7 +230,7 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 ## 9. Phase 6 — 掃除
 
 - mem 必須パス、旧 inbox CI、`MEM_API_KEY` の本線利用を削除
-- `mem_note_id` 列は履歴として残してよい
+- `mem_note_id` 列は履歴として残す（ingest は `content` 必須。mem からの fetch はしない）
 
 ---
 

@@ -82,7 +82,7 @@ export const InboxView: React.FC<Props> = ({
       const dirLabel = pane === 'inbox' ? 'content/web-clips/' : 'content/docs/';
       openConfirm({
         title: 'Run ingest',
-        message: `mem-ai note create from file, then POST ingest:\n${dirLabel}${file.name}/index.mdoc`,
+        message: `POST ingest (textified mdoc):\n${dirLabel}${file.name}/index.mdoc`,
         onConfirm: async () => {
           const r = await client.ingestMarkdownFile(file.name, pane === 'inbox' ? 'inbox' : 'draft');
           if (!r.success) {
@@ -167,7 +167,7 @@ export const InboxView: React.FC<Props> = ({
       </Box>
       {keyboardEnabled && (
         <Box paddingX={1} flexShrink={0}>
-          <Text dimColor>h/l / ←/→: Inbox ↔ Draft (h on Inbox → sidebar) │ Tab │ j/k │ i: ingest file (mem-ai + API)</Text>
+          <Text dimColor>h/l / ←/→: Inbox ↔ Draft (h on Inbox → sidebar) │ Tab │ j/k │ i: ingest file</Text>
         </Box>
       )}
     </Box>
