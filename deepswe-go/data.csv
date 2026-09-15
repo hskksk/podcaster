@@ -1,0 +1,17 @@
+model,deep_swe_pass_at_1,weekly_requests,effort,score_source,notes
+GPT 5.6 Luna,67.2,5100,max,BenchLM mirror of DeepSWE v1.1 (2026-09-01),
+Kimi K3,68.5,250,max,BenchLM mirror of DeepSWE v1.1 (2026-09-01),
+Grok 4.6,66.7,423,xhigh,BenchLM mirror of DeepSWE v1.1 (2026-09-01),
+GLM-5.3,69.0,540,max,BenchLM mirror of DeepSWE v1.1 (2026-09-01),
+GLM-5.3-Flash,63.4,15790,max,BenchLM mirror of DeepSWE v1.1 (2026-09-01),
+GLM-5.2,43.8,2150,max,BenchLM mirror of DeepSWE v1.1 (2026-09-01),
+GLM-5.1,17.5,2150,default,Official DeepSWE v1 (paper arXiv:2607.07946, May 2026),homepage shows 18%
+DeepSeek V4 Pro,62.8,2600,max,BenchLM mirror of DeepSWE v1.1 (2026-09-01),0813 checkpoint; official v1 default-effort value = 7.5%
+DeepSeek V4 Flash,53.3,32500,max,BenchLM mirror of DeepSWE v1.1 (2026-09-01),0731 checkpoint
+Qwen3.8 Max,57.5,400,xhigh,BenchLM mirror of DeepSWE v1.1 (2026-09-01),
+Qwen3.6 Plus,2.7,8200,default,Official DeepSWE v1 (paper arXiv:2607.07946, May 2026),homepage shows 3%
+Kimi K2.7 Code,30.5,3380,default,BenchLM mirror of DeepSWE v1.1 (2026-09-01),
+Kimi K2.6,23.9,2880,default,Official DeepSWE v1 (paper arXiv:2607.07946, May 2026),homepage shows 24%
+MiMo-V2.5-Pro,19.5,8150,default,Official DeepSWE v1 (paper arXiv:2607.07946, May 2026),homepage shows 19%
+MiniMax M2.7,0.2,8500,default,Official DeepSWE v1 (paper arXiv:2607.07946, May 2026),pass@1 rounds to 0%
+Muse Spark 1.2 Contributor,54.9,113300,xhigh,BenchLM mirror of DeepSWE v1.1 (2026-09-01),listed as "Muse Spark 1.2"
