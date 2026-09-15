@@ -45,7 +45,7 @@ Keystatic は動くが、中身が無い。Vercel に載せた意義を出すに
 ```
 Phase 1b  物理移動 + コンシューマ追随     ✅
 Phase 2   Capture API（Git に置くだけ）   ← このスタックの底
-Phase 3   ポッドキャスト入力を Git に切替  ← この PR
+Phase 3   ポッドキャスト入力を Git に切替
 Phase 4   Next.js 公開サイト（Pages 置換）
 Phase 5   MCP
 Phase 6   mem / inbox CI 掃除
