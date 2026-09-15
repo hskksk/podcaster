@@ -30,12 +30,13 @@ export default async function HomePage() {
 
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
-      <p style={{ color: "#666", margin: 0 }}>Phase 1 · Keystatic</p>
+      <p style={{ color: "#666", margin: 0 }}>Phase 2 · Capture</p>
       <h1 style={{ marginTop: 8 }}>Podcaster knowledge base</h1>
       <p>
         Git + Markdoc is the source of truth. On Vercel, Keystatic uses GitHub
         storage so edits become commits. Locally, `pnpm web:dev` still writes
-        `content/` on disk.
+        `content/` on disk. <code>POST /api/capture</code> commits a web-clip
+        and does not start TTS.
       </p>
       <p>
         <Link href="/keystatic">Open Keystatic admin</Link>

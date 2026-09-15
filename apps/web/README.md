@@ -2,7 +2,7 @@
 
 Next.js App Router + Keystatic admin for the Git + Markdoc knowledge layer.
 
-Phase 1b: local filesystem for `pnpm web:dev`. **Vercel では GitHub storage**（GitHub API 経由で `content/` に commit）。知識の正本は `content/docs` と `content/web-clips`。ポッドキャストパイプラインは未変更。
+Phase 2: local filesystem for `pnpm web:dev`. **Vercel では GitHub storage**（GitHub API 経由で `content/` に commit）。知識の正本は `content/docs` と `content/web-clips`。`POST /api/capture` は Git に置くだけ。TTS は呼ばない。
 
 ```bash
 # from repo root
@@ -29,6 +29,8 @@ pnpm web:github
    - `KEYSTATIC_GITHUB_CLIENT_SECRET`
    - `KEYSTATIC_SECRET`
    - `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG`
+   - `CAPTURE_API_TOKEN`（クリップ用 Bearer。ingest / Gemini には届かない）
+   - `CAPTURE_GITHUB_TOKEN` または `GITHUB_TOKEN`（Contents: write。Keystatic OAuth とは別）
 
 4. GitHub App の Callback URL に  
    `https://<vercel-domain>/api/keystatic/github/oauth/callback` があることを確認
@@ -36,7 +38,27 @@ pnpm web:github
 
 Vercel 上では `NEXT_PUBLIC_VERCEL_ENV` があるので storage は自動的に `github` になる。`NODE_ENV` では切り替えない。
 
-任意で `KEYSTATIC_BASIC_AUTH=user:password` を足すと `/keystatic` を二重に守れる。GitHub OAuth の callback は Basic 認証の外。
+任意で `KEYSTATIC_BASIC_AUTH=user:password` を足すと `/keystatic` を二重に守れる。GitHub OAuth の callback は Basic 認証の外。`/api/capture` は Basic の外で、`Authorization: Bearer <CAPTURE_API_TOKEN>` だけを見る（Cloudflare Access を掛けるなら Capture だけ Bypass / Service Token）。
+
+## Capture
+
+```bash
+# apps/web/.env.local に CAPTURE_API_TOKEN を入れて pnpm web:dev
+pnpm capture --title "クリップ" --file notes.md
+pnpm capture --title "記事" --file page.md --url https://example.com
+# 既定: content/web-clips/{YYYY-MM-DD}-{slug}/index.mdoc 、podcast: none
+```
+
+本番は Octokit で `main` に Direct Commit。GitHub API が 2 秒を超えると `202` + `retryable: true`。同じ body を再送すると既存 SHA を返す。
+
+### ブランチ保護
+
+Capture は `main` 直 commit。保護を掛けるなら次のどちらか:
+
+1. **bypass allowlist** に Capture 用 GitHub App または fine-grained PAT のアクターを入れる（推奨）
+2. `main` に保護を掛けない（現状どおり）
+
+Rulesets で「restrict updates」だけを使うと Octokit の Direct Commit は 403 になる。PR 必須ルールは Capture と両立しないので、必須レビューは `content/` 以外、または上記 bypass にする。
 
 ## ローカル
 
