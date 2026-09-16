@@ -134,7 +134,7 @@ Scalefree 等の推奨: Raw/Business Vault では **文字列型 HK** でツー�
 
 **Hash Diff** は Satellite payload 列から計算し、直前バージョンと比較して insert 要否を決める。
 
-ハッシュルール変更時は **rehash** が必要（DataVault4dbt の `rehash_all_rdv_entities` 等）。Hub → Link → Satellite の順で処理し、旧 HK 列を `_deprecated` として検証後に削除する運用が文档化されている。
+ハッシュルール変更時は **rehash** が必要（DataVault4dbt の `rehash_all_rdv_entities` 等）。Hub → Link → Satellite の順で処理し、旧 HK 列を `_deprecated` として検証後に削除する運用がドキュメント化されている。
 
 ### insert-only と LEDTS / PIT
 
@@ -154,7 +154,7 @@ Scalefree 等の推奨: Raw/Business Vault では **文字列型 HK** でツー�
 | **Record Tracking Satellite** | ソース行レベルの追跡 |
 | **Non-Historized Link** | 不変トランザクション、細かい grain |
 
-AutomateDV では `ma_sat`, `eff_sat`, `pit`, `bridge` マクロが这些をテンプレ化する。
+AutomateDV では `ma_sat`, `eff_sat`, `pit`, `bridge` マクロがこれらをテンプレ化する。
 
 ### ロードパターン（Raw Vault）
 
@@ -392,7 +392,7 @@ WHERE sat.customer_hk IS NULL;
 | **DataVault4dbt** | グローバル変数でハッシュ算法・列エイリアスをカスタム。Premium で拡張。dbt Fusion 互換を明示 |
 | **VaultSpeed** | ビジュアルモデル + アクティブメタデータ。AutomateDV / TurboVault 向け export |
 | **Agile Data Engine / beVault** | 商用プラットフォーム型。Effectivity Sat、Bridge 生成、品質結果の BV 格納 |
-| **WhereScape / Matillion** | メタデータ大規模管理の選択肢（AutomateDV 文档が言及） |
+| **WhereScape / Matillion** | メタデータ大規模管理の選択肢（AutomateDV ドキュメントが言及） |
 
 いずれも **「DV = 手書き SQL」からの脱却**が前提。メタデータが真実のソース（Single Source of Truth）になり、モデル変更は **メタデータ更新 → 再生成 → dbt test** のループになる。
 
