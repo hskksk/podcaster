@@ -27,8 +27,12 @@ scripts/*.txt
 # Claude Code local settings
 .claude/settings.local.json
 
-# Railway CLI local project link
-.railway/
+# Railway CLI local project link (but keep IaC config files)
+.railway/*
+!.railway/railway.ts
+!.railway/railway.py
+!.railway/railway.go
+!.railway/README.md
 
 # Vercel CLI
 .vercel/
