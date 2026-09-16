@@ -1,0 +1,39 @@
+model,deep_swe_pass_at_1,input_price_usd_per_1m,output_price_usd_per_1m,effort,score_source,notes
+GPT 6 Astra,74.1,10.00,50.00,xhigh,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),best config = xhigh (74.1; max=73.2 medium=72.8)
+Gemini 3.8 Flash,73.8,1.50,7.50,high,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+Claude Opus 5,73.6,5.00,25.00,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+GPT 5.6 Sol,72.7,2.00,10.00,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+Claude Fable 5,69.9,10.00,50.00,xhigh,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+GPT 5.6 Terra,69.6,2.00,12.00,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+GLM 5.3,69.0,1.40,4.40,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+Kimi K3,68.5,3.00,15.00,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+Grok 4.6,67.5,2.00,6.00,medium,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),best config = medium (67.5; xhigh=66.7)
+GPT 5.6 Luna,67.2,0.20,1.20,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+GPT 5.5,67.0,5.00,30.00,xhigh,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),v1 paper value = 70.0
+Gemini 3.7 Flash,65.5,1.50,7.50,medium,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),best config = medium (65.5; high=65.3)
+GLM 5.3 Flash,63.4,0.15,0.50,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+DeepSeek V4 Pro,62.8,1.74,3.48,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),0813 checkpoint; v1 default-effort = 7.5%
+Claude Opus 4.8,59.0,5.00,25.00,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+Muse Spark 1.2,54.9,1.25,4.25,xhigh,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+Claude Sonnet 5,53.8,2.00,10.00,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+Grok 4.5,53.8,2.00,6.00,high,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+DeepSeek V4 Flash,53.3,0.14,0.28,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),0731 checkpoint
+GPT 5.4,51.8,2.50,15.00,xhigh,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),v1 value = 55.5
+Gemini 3.6 Flash,46.7,1.50,7.50,high,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+GLM 5.2,43.8,1.40,4.40,max,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),v1 value = 41.5
+Gemini 3.5 Flash,36.1,1.50,9.00,high,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),v1 value = 28.3
+Kimi K2.7 Code,30.5,0.95,4.00,default,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),
+Claude Sonnet 4.6,29.9,3.00,15.00,high,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),v1 value = 31.8
+Claude Opus 4.7,54.2,5.00,25.00,max,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+Claude Opus 4.6,27.6,5.00,25.00,max,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+GPT 5.4 Mini,24.3,0.75,4.50,xhigh,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+Kimi K2.6,23.9,0.95,4.00,default,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+MiniMax M3,20.4,0.30,1.20,default,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+Qwen3.7 Max,17.7,2.50,7.50,default,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+GLM 5.1,17.5,1.40,4.40,default,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+Grok Build 0.1,13.1,1.00,2.00,default,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+Gemini 3.1 Pro,11.7,2.00,12.00,high,official DeepSWE v1.1 (deepswe.datacurve.ai live JSON 2026-09-03),preview checkpoint; v1 = 9.7
+Gemini 3 Flash,5.1,0.50,3.00,default,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),preview checkpoint; not in official v1.1 JSON
+Qwen3.6 Plus,2.7,0.50,3.00,default,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+Claude Haiku 4.5,0.2,1.00,5.00,default,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
+MiniMax M2.7,0.2,0.30,1.20,default,official DeepSWE v1 (deepswe.datacurve.ai artifacts/v1 2026-06-20),not in official v1.1 JSON
