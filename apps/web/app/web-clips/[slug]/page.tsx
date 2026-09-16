@@ -42,6 +42,10 @@ export async function generateMetadata({
   return {
     title: clip.title,
     description: desc || cfg.siteDescription,
+    // Access is gated by middleware (same GitHub OAuth login as Keystatic);
+    // keep it out of search indexes too, in case the static HTML is ever
+    // reachable.
+    robots: { index: false, follow: false },
   };
 }
 
