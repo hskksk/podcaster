@@ -462,14 +462,13 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 
 ## Claude Code スキル
 
-`.claude/podcast-research/SKILL.md` にスキルが定義されています。
+`.claude/skills/podcast-research/SKILL.md` にスキルが定義されています。
 
 ```
 /podcast-research <テーマ>
 ```
 
-と呼び出すと、Claude Code がテーマを深く調査してレポートを作成し、
-`ingest` エンドポイントに自動 POST してパイプラインを起動します。
+と呼び出すと、Claude Code がテーマを深く調査してレポートを `content/docs/`（Wiki 記事）に保存し PR を出します。既定は `podcast: none` で、マージだけでは ingest / TTS は走りません。
 
 例:
 

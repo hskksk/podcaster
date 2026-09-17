@@ -1,0 +1,431 @@
+---
+title: "Data Vault 2.0 完全解説：考え方・技術・プラクティス"
+publishedAt: 2026-09-16
+podcast: none
+legacyFilename: 20260916_234436_data_vault.md
+---
+# Data Vault 2.0 完全解説：考え方・技術・プラクティス
+
+## 概要
+
+Data Vault（データヴォールト）は、エンタープライズデータウェアハウス（EDW）向けのモデリング手法であり、2000年前後に Dan Linstedt によって公開された。2010年代以降の **Data Vault 2.0（DV2.0）** は、単なる「テーブルの置き方」ではなく、**モデル・参照アーキテクチャ・開発方法論**の三つ組として整理されている。中核は **Hub（ハブ）・Link（リンク）・Satellite（サテライト）** という三要素で、ビジネスキーと関係の骨格を安定させつつ、属性と履歴をソースごと・時系列ごとに分離して保持する設計だ。
+
+なぜ今も議論されるか。Kimball のディメンショナルモデルは BI 利用者にとって直感的で、Inmon の 3NF EDW は企業統合の厳密さを重視する。どちらも「上流システムの変更」や「複数ソースの意味のズレ」に弱い場面がある。Data Vault は **Raw Vault にソースに忠実な履歴を insert-only で蓄積**し、クレンジングやビジネスルールは **Business Vault や情報マート** に押し出すことで、監査可能性・拡張性・並列ロードを両立しようとする。クラウド DWH（Snowflake、Databricks 等）と dbt 系の自動化パッケージ（AutomateDV、DataVault4dbt）の普及により、2020年代以降は「大規模・多ソース・規制産業」向けの実装パターンとして再び注目されている。
+
+一方で、テーブル数と JOIN の爆発、BI 向けの別プレゼンテーション層の必須性、習熟コストは現実的なデメリットだ。本稿では DV2.0 の歴史的位置づけから、エンティティ定義、ロードパターン、Business Vault・PIT・Bridge、自動化とクラウド実装、採用判断とアンチパターンまで、ポッドキャスト台本生成に足る密度で整理する。
+
+---
+
+## 背景・歴史
+
+### Inmon と Kimball の文脈
+
+1990年代、Bill Inmon は **正規化された中央 EDW** を先に作り、そこから部門別データマートを派生させるトップダウン型を提唱した。Ralph Kimball は **ビジネスプロセス単位のスタースキーマ** をボトムアップに積み上げ、コンフォームド・ディメンションで横断分析を可能にした。Kimball は Time-to-Value が速く BI ツールと相性が良い。Inmon は統合とガバナンスが強いが、初期投資が大きい。
+
+Linstedt の研究は **1990年代初頭から始まり、1999年頃に一区切り**、1999〜2001年に早期採用サイトで検証された。2000年頃にパブリックドメインの手法として公開され、2002年7月の TDAN 連載「Data Vault Overview」、2003年のコンポーネント解説などで体系化された。Wikipedia や Kent Graziano の入門資料では、Data Vault を **3NF とスタースキーマの「ハイブリッド」** と位置づけ、**構造（キーと関係）と記述属性を分離**することで、上流変更の影響を Raw 層から切り離す意図が説明されている。
+
+### DV1.0 から DV2.0 へ
+
+初期の Data Vault は主に **EDW 内の正規化モデル**として理解されがちだった。DV2.0（代表的文献: *Building a Scalable Data Warehouse with Data Vault 2.0*, Linstedt & Olschimke）では次が強調される。
+
+- **ハッシュキー**を前提とした並列ロード（Hub を先にシーケンス解決する依存の削減）
+- **Hash Diff** による Satellite の差分検出
+- **Raw Vault / Business Vault** の責務分離の明確化
+- **アジャイル・CMMI・Six Sigma・Disciplined Agile Delivery（DAD）** などを取り込んだプロジェクト方法論
+- ビッグデータ、半構造化ソース、ストリーミングを視野に入れたアーキテクチャ
+
+Dan Linstedt 自身は「モデルだけでは DV の潜在能力の半分も使えない」と述べ、**方法論とアーキテクチャなしにモデルだけ導入しても CMMI の低い成熟度に留まる**という議論を展開している。2020年代には **Ensemble Modeling**（Hub-Link-Satellite の集合を Core Business Concept の表現とみなす）や、Data Vault Alliance / dvstandards.com 上の公開標準が、Kimball の「ディメンション」と並ぶ語彙として整理されている。
+
+---
+
+## 核となる概念
+
+### Core Business Concept（CBC）と Ensemble
+
+Data Vault では、モデリングの起点を **技術テーブル**ではなく **ビジネスが共通理解している概念（顧客、契約、商品、注文イベント等）** に置く。各 CBC は **Ensemble（アンサンブル）** として表現され、通常 **1 Hub + 0 個以上の Link + 1 個以上の Satellite** で構成される。Ensemble Identifier は Hub に格納される「その概念の1インスタンスを enterprise 内で識別するキー」であり、運用 DB の natural key に相当するが、**複数ソース統合では composite key や hash  surrogate が現実的**になる。
+
+### Hub（ハブ）
+
+**定義**: ある CBC に属する **ビジネスキー（Business Key, BK）の一意リスト**。Hub 自身は記述属性を持たない（監査メタデータのみ）。
+
+典型的な列:
+
+| 列 | 役割 |
+| --- | --- |
+| Hash Key（HK） | BK から決定論的に計算される surrogate（DV2.0 では推奨） |
+| Business Key 列 | ソース上の natural key（複合可） |
+| `load_date` / LDTS | 倉庫がそのキーを **初めて観測した** 日時 |
+| `record_source` / RSRC | どのフィード・システムから来たか |
+
+**Hub に載せるべきでないもの**: 名前、住所、ステータスなどの記述属性（これらは Satellite）。**ソースごとに別 Hub に分ける「ソースシステム Hub」** は passive integration を誤ると増殖し、Fake Vault の典型とされる（後述）。
+
+ビジネスキーは「画面上で人が検索・参照に使う識別子」であるべきで、意味のない内部 ID だけに頼ると統合が難しくなる。衝突時は **collision code（ソース識別子を BK に含める）** や **Same-As Link** で正規化する。
+
+### Link（リンク）
+
+**定義**: **2 つ以上の Hub**（または同一 Hub への二重参照）の **関係の一意集合**。注文が顧客と商品を結ぶ、従業員が管理者に報告する、など。
+
+Link は **多対多や交差エンティティ**を正規化して表現する。粒度（grain）は **Unit of Work**（ビジネス上の1取引単位）に合わせる。Link 自身も Satellite を持てる（関係に関する記述属性・履歴）。
+
+特殊な Link パターン:
+
+- **Same-As Link**: 同一 Hub の2キーが同一実体（MDM の duplicate 統合）
+- **Hierarchical Link**: 同一 Hub 内の親子（従業員–管理者）。列名は `MANAGER_HK` / `EMPLOYEE_HK` のように役割を明示
+- **Link-on-Link / 探索 Link**: より複雑なグラフ（上級）
+- **Non-Historized Link（旧 Transactional Link）**: 関係に **追加の grain 列**（取引 ID、イベント時刻）が PK に必要。イミュータブルなイベントを Satellite なしで Link に payload 載せることもある
+
+### Satellite（サテライト）
+
+**定義**: Hub または Link に **1 対 1で付随**する、**時系列の記述属性**。親は Hub か Link のどちらか一方のみ。
+
+ロード原則:
+
+- **insert-only**（Raw Vault では UPDATE/DELETE しない）
+- 新行は **Hash Diff（属性集合のハッシュ）が変わったときのみ**
+- Hash Diff から **LDTS・RSRC は除外**（含めると毎ロードで差分扱いになり履歴が膨らむ）
+
+監査の二層時間:
+
+- **LDTS**: 「倉庫がいつその事実を知ったか」（ロード日時）
+- **Effective From / 業務有効日**: 「ビジネス上いつから有効か」（ソースが持てば Satellite に保持）
+
+Satellite 分割（**Split Satellite**）は、変更頻度・ソース・セキュリティ分類が異なる属性群を分けるための定石。過度な分割は JOIN を増やすので、Databricks 等では **最小限の分割 + Business Vault で仮想化**が推奨されることがある。
+
+### Raw Vault と Business Vault
+
+| 層 | 目的 | ビジネスルール |
+| --- | --- | --- |
+| **Raw Vault（RDV）** | ソースに忠実な統合履歴。再生可能な監査証跡 | 原則 **適用しない**（型変換・キー正規化程度） |
+| **Business Vault（BDV）** | ビジネスルール適用結果の **履歴付きマテリアライズ** | クレンジング、計算、Same-As 解決、品質結果の記録等 |
+
+Raw Vault は「**いつ・どのソースが・何と言ったか**」の証拠保管庫。Business Vault は **Raw から導出されたルール適用アーティファクト**であり、Kimball 次元の **完全なコピー** ではない、というのが Fake Vault 議論で強調される正しい理解だ。
+
+### 参照アーキテクチャ（レイヤー）
+
+実装により名称は異なるが、論理フローは共通する。
+
+```text
+ソース → Landing / Staging（一時 or PSA）→ Raw Vault → Business Vault → Information Mart
+```
+
+- **Staging**: ハッシュ計算、型変換、メタ列付与。**データ調和（harmonization）はここではしない**のが原則（Datavault4dbt / AutomateDV のドキュメント）
+- **PSA（Persistent Staging Area）**: ソース配信の完全履歴が必要な場合（BK が汚い、後から BK 解決が必要等）
+- **Information Mart**: Kimball 型スタースキーマ等。**分析利用者が触るのは基本ここ**
+
+Snowflake のガイドでは **Landing Zone（不変 PSA）→ Enterprise Memory Zone（Raw/Business Vault）→ Information Delivery Zone** といった **Data Vault 2.1 論理ゾーン**が言及される。Databricks では **Bronze ≈ Landing/Staging、Silver ≈ Raw+Business Vault、Gold ≈ Mart** のメダリオン対応がよく使われる。
+
+---
+
+## 詳細な仕組み・理論
+
+### 正規化と「3½ 正規形」
+
+Kent Graziano の解説では、Data Vault は **高い正規化**を志向する。Hub の BK 部分は極端に分解された形、Satellite は **1 親に1サテライト**制約など、Inmon 3NF とスタースキーマの中間的性質を持つ。Referential Integrity は **Hub-Link-Satellite 間で常に維持**されるべきだとされる（プラットフォーム FK またはロード順序・テストで担保）。
+
+### ハッシュキーと Hash Diff
+
+**Hash Key** は通常、正規化済み BK 文字列（区切り子・大文字小文字ルールを固定）を MD5 等でハッシュした **固定長**値。目的は:
+
+1. **親子ロードの依存排除**（Satellite は Hub の HK を計算するだけでよい）
+2. **複合 BK の JOIN 簡素化**（単一列 equi-join）
+3. **環境間の一貫性**（同じ BK → 同じ HK）
+
+Scalefree 等の推奨: Raw/Business Vault では **文字列型 HK** でツール互換性を優先し、Mart や OLAP 向けに binary 化する選択もある。MD5 は衝突確率が低く広くサポートされるが、**暗号用途ではない**ことに注意。
+
+**Hash Diff** は Satellite payload 列から計算し、直前バージョンと比較して insert 要否を決める。
+
+ハッシュルール変更時は **rehash** が必要（DataVault4dbt の `rehash_all_rdv_entities` 等）。Hub → Link → Satellite の順で処理し、旧 HK 列を `_deprecated` として検証後に削除する運用がドキュメント化されている。
+
+### insert-only と LEDTS / PIT
+
+クラシックな Satellite は **Load End Date Timestamp（LEDTS）** で現行行をマークし、新 delta 到着時に **旧行の LEDTS を UPDATE** するパターンがあった。Scalefree は **100% insert-only** を志向し、LEDTS 更新の代わりに **Point-in-Time（PIT）テーブル**でスナップショット日ごとに「どの Satellite 行が有効か」を **ウィンドウ関数で事前計算**する手法を推奨する。
+
+**PIT テーブル**: 1 Hub（または Link）にぶら下がる複数 Satellite の **HK + LDTS 参照**をスナップショット日軸で横並びにした補助表。Mart のディメンション生成で **OUTER JOIN 地獄を equi-join に置き換える**。
+
+**Bridge テーブル**: **複数 Hub/Link を跨ぐ**関係のスナップショット（ファクト構築の起点）。Effectivity Satellite と組み合わせ、ある日時点で有効な関係だけを残す。PIT が「1 エンティティの属性履歴」なら、Bridge は「グラフ上の経路の圧縮」に近い。
+
+### 拡張 Satellite パターン
+
+| パターン | 用途 |
+| --- | --- |
+| **Multi-Active Satellite（MAS）** | 同一親に **同時に複数有効**な子（複数電話番号、複数住所）。grain に **Multi-Active Key** を追加 |
+| **Effectivity Satellite** | Link の **関係の開始・終了日**（payload 履歴は別 SAT に分けるのが無難） |
+| **Status Tracking Satellite** | ステータス遷移の明示的追跡 |
+| **Record Tracking Satellite** | ソース行レベルの追跡 |
+| **Non-Historized Link** | 不変トランザクション、細かい grain |
+
+AutomateDV では `ma_sat`, `eff_sat`, `pit`, `bridge` マクロがこれらをテンプレ化する。
+
+### ロードパターン（Raw Vault）
+
+1. **Stage**: `LDTS`, `RSRC`, HK, Link HK, Hash Diff 列を生成
+2. **Hub**: 新 BK のみ insert（incremental）
+3. **Link**: 新しい Hub 組み合わせのみ insert
+4. **Satellite**: 同一 HK で Hash Diff が未出現のときのみ insert
+5. **重複排除**: Stage で grain ごとに最新行を選ぶ
+
+複数ソースから **同一 Hub** へは、**同一 BK 意味を持つ** Stage を UNION して 1 ロードにまとめる（AutomateDV の multi-source hub）。
+
+Snowflake リアルタイム例では **Stream + Task + Multi-Table Insert** で複数 Raw オブジェクトを **1 トランザクション**で並列投入するパターンが示される。
+
+---
+
+## 具体例・応用事例
+
+### 小売: 顧客・注文・商品
+
+- `HUB_CUSTOMER(customer_id)` … 顧客 BK
+- `HUB_PRODUCT(sku)` … 商品 BK
+- `LINK_CUSTOMER_ORDER` … 注文が顧客を結ぶ（注文番号を BK に含めるか、注文自体を Hub にするかは grain 設計）
+- `SAT_CUSTOMER_DETAILS` … 名前、セグメント（CRM ソース）
+- `SAT_CUSTOMER_DETAILS_MARKETING` … 別ソース・別変更頻度なら Satellite 分割
+
+新 CRM が追加されても **新 Satellite を Hub に追加**するだけで、既存 ETL の大幅リファクタは避けやすい。Mart では `DIM_CUSTOMER` を PIT + SAT から生成。
+
+### 金融: 口座・施設（Facility）の Business Vault
+
+Data Vault Alliance / Fake Vault 議論の例: ソースはローン口座と相殺口座が **別 Facility ID** を持つが、ビジネス上は **1 つの Umbrella Facility** として見たい。Raw Vault にはソース忠実な Link を保持し、Business Vault に **再定義 Link または Same-As / 計算 Satellite** でビジネス視点を materialize する。BDV を「BI 向けにきれいにリネームした Raw のコピー」と誤ると監査と拡張の両方で失敗する。
+
+### 規制・監査: Defensible Analytics（Snowflake）
+
+Snowflake ガイドは Landing で **受信時点の不変コピー**を資産としてガバナンス（タグ、暗号化、ライフサイクルポリシー）し、Enterprise Memory に Raw Vault を構築する流れを示す。**「いつ・どのソースが・何を届けたか」**が再現可能であることが、規制対応の「防御可能な分析」の要点だ。
+
+### Lakehouse（Databricks）
+
+Databricks ブログの TPCH 例: Bronze Delta → Raw Vault（Hub/SAT/Link）→ Business Vault（例: 注文優先度 tier 付与）→ `dim_customer`, `fact_order` マート。Delta Live Tables でパイプライン化。**Delta Time Travel だけに履歴を頼らない**（VACUUM で失われる）こと、**Data Vault の insert-only Satellite** と併用する警告が Scalefree にもある。
+
+---
+
+## 重要人物・文献
+
+| 人物 / 組織 | 貢献 |
+| --- | --- |
+| **Dan Linstedt** | Data Vault 発明者、DV2.0 標準、*Super Charge Your Data Warehouse*, *Building a Scalable Data Warehouse with Data Vault 2.0* |
+| **Michael Olschimke**（Scalefree） | DV2.0 共著、ハッシュキー・PIT・自動化の普及 |
+| **Kent Graziano** | 早期の入門資料、Inmon との関係整理 |
+| **Data Vault Alliance / dvstandards.com** | 公開 Modeling Guide、Ensemble 標準 |
+| **Patrick Cuba 等** | Fake Vault、コミュニティベストプラクティス |
+
+必読文献:
+
+- Dan Linstedt, TDAN 連載（2002–2003 シリーズ）
+- *Building a Scalable Data Warehouse with Data Vault 2.0*（Elsevier）
+- Data Vault Modeling Specification v2.0.x（Hub/Link/Sat 定義）
+- AutomateDV / DataVault4dbt 公式ドキュメント（実装パターン）
+
+---
+
+## 最新動向・未解決問題
+
+### 自動化とメタデータ駆動
+
+手書き SQL で数百 Hub を維持するのは **アンチパターン**と広く認識される。dbt パッケージ **AutomateDV**（旧 dbtvault）と **DataVault4dbt** がマクロで Stage/Hub/Link/Sat/PIT/Bridge を生成する。**VaultSpeed** 等はビジュアルモデルから AutomateDV メタデータを export し、スキーマドリフト追跡を行う。VS Code 拡張や dbt Fusion 互換など、2024–2025 年もエコシステムは拡大中。
+
+### クラウド・リアルタイム
+
+- Snowflake: Snowpipe Streaming、Dynamic Tables、MTI、Streams/Tasks
+- Databricks: Auto Loader、CDC、Unity Catalog、Photon 実行エンジン
+
+**課題**: DV は JOIN が多く、列ストア＋MPP でも Mart/PIT/Bridge 設計がなければクエリコストが読めない。従量課金では Bridge が **コスト削減**手段として Zenn 等で言及される。
+
+### 2026 年頃の適用性議論
+
+FinitData 等の整理では、**dbt とカラムナーストレージの成熟**により「テーブル数の管理コスト」は下がったが、**中規模 SaaS が DV 全面採用するのは過剰**なケースが多い、という見方がある。一方 **銀行・保険・医療・多 M&A 企業**では監査とソース追加の容易さが依然として強い動機になる。
+
+未解決に近い論点:
+
+- **BK 品質が低い組織**では DV 以前に MDM / ガバナンスが必要
+- **Hash ルール・BK 定義変更**の運用コスト（rehash）
+- **AI/ML 特徴量層**と Raw Vault の境界（Business Vault で十分か、Feature Store か）
+
+---
+
+## Kimball / Inmon / Data Vault の使い分け
+
+```mermaid
+flowchart LR
+  subgraph sources [ソースシステム群]
+    S1[ERP]
+    S2[CRM]
+    S3[SaaS]
+  end
+  subgraph dv [Data Vault 層]
+    RDV[Raw Vault H/L/S]
+    BDV[Business Vault]
+  end
+  subgraph consume [消費層]
+    Mart[Information Mart Star Schema]
+    BI[BI / レポート]
+  end
+  sources --> RDV
+  RDV --> BDV
+  BDV --> Mart
+  Mart --> BI
+```
+
+| 観点 | Kimball | Inmon 3NF EDW | Data Vault 2.0 |
+| --- | --- | --- | --- |
+| 主目的 | 分析性能・使いやすさ | 企業統合・一貫性 | 監査・拡張・多ソース統合 |
+| 変更耐性 | ディメンション改修コスト | スキーマ変更コスト大 | Raw 層は additive |
+| 利用者向け | マート直 | マート派生 | **必ず Mart 等が要る** |
+| 向く規模 | 中〜大 | 大 | **ソース多・規制・履歴厳格** |
+
+現代のハイブリッドは **DV を Integration 層、Kimball を Presentation 層**とする構成が最も一般的だ。
+
+---
+
+## プラクティスとアンチパターン
+
+### 推奨プラクティス
+
+1. **CBC をビジネスワークショップで特定**（Ensemble Business Mapping）
+2. **BK は enterprise 意味を意識**し、ソース ID だけに逃げない
+3. **Raw ではソース列名を維持**（Satellite 列の premature conform は技術的負債）
+4. **Stage でハッシュと Hash Diff**、衝突チェック
+5. **自動生成テンプレ**（dbt パッケージ）で H/L/S を量産
+6. **PIT/Bridge を Mart  SLA に合わせて設計**（スナップショット日粒度）
+7. **テスト**: BK 一意性、Link grain、Satellite 差分、参照整合
+8. **Disciplined Agile**: スプリントでビジネス価値を出しつつ、リリースバンドルで本番投入
+
+### 向かないケース
+
+- 単一ソース、統合不要、監査要件弱い
+- 単一巨大イベントストリームのみ（専用イベントモデルの方が単純なことも）
+- データモデリング文化が乏しく、メタデータ維持体制がない
+
+### Fake Vault / アンチパターン（WWDC 2019 等）
+
+- Business Vault を **単なる BI 向け conformed コピー**とみなす
+- **ソースごと Hub** で passive integration 失敗
+- **弱い Hub**（意味のないキー容器）
+- BK を Hub に **文字列連結の山**として押し込み、毎クエリ split
+- Raw/Business Vault を **手書き SQL** で運用（自動化なし）
+- Satellite 列名を **早期にビジネス向けに統一**しスキーマドリフトに弱体化
+- **BI に Raw Vault を直接公開**
+
+---
+
+## 関連トピック
+
+- **Active Data Warehousing / オペレーショナル DWH**: DV は細粒度履歴を保持しやすい
+- **Data Mesh / データプロダクト**: DV は中央 EDW パターン；Mesh とは緊張関係もあるが、ドメイン間統合層として部分採用はある
+- **Lakehouse メダリオン**: Bronze/Silver/Gold と DV レイヤーの対応設計
+- **MDM / Same-As Link**: ゴールデンレコード問題
+- **Temporal / Bi-temporal モデリング**: Effectivity Sat, LDTS vs 業務時間
+- **OLAP スタースキーマ**: 本リポジトリの OLAP 解説記事とセットで Mart 設計を学ぶとよい
+
+---
+
+## 方法論：アジャイル EDW としての DV2.0
+
+Data Vault 2.0 の方法論は、ウォーターフォール型の「全要件固定」ではなく、**スプリントごとに使える成果物**（特定ソースの Raw ロード、特定 Mart、特定 PIT）を出すことを想定する。Scalefree の解説では **Scrum**（開発チームの反復）、**CMMI**（プロセス成熟度：理解→定義→指標→計測→最適化）、**Six Sigma**（品質）、**Function Point Analysis**（見積もり）が組み合わさるとされる。
+
+Dan Linstedt は方法論が **CMMI Level 3 相当のテンプレート**（ロードパターン、クエリパターン、チューニングパターン）から始め、スプリントレビューで改善ループを回すことで Level 5 に近づける、と述べている。大企業では **2〜4 週間スプリントで開発し、四半期リリースで本番バンドル**する **Disciplined Agile Delivery（DAD）** 適用が推奨されることがある。Scrum だけでは「2 週間ごとに本番デプロイできない」組織が多いため、DAD の Inception / Construction / Transition フェーズが Data Vault プロジェクト向けに適合させられている。
+
+プロジェクト開始時は **1〜2 ページの目的定義**で十分とされ、詳細な全期間 WBS より **バックログの優先順位**（ビジネス価値順）が重視される。各スプリント末に **スプリントレビュー**（ステークホルダーが動く成果を確認）と **レトロスペクティブ**（プロセス改善）が必須。Data Vault では「ソース onboarding」「Hub 設計変更」「Mart 1 本」などがスプリント単位のデリバラブルになりやすい。
+
+---
+
+## 実装スケッチ：Stage から Satellite まで
+
+以下は概念を固定するための簡略 SQL イメージ（プラットフォーム非依存）。
+
+**Staging で Hash Key を計算**（BK 正規化後）:
+
+```sql
+-- 例: MD5 を 16 進文字列で保持するパターン
+SELECT
+  MD5(UPPER(TRIM(customer_id)) || '||' || UPPER(TRIM(country_code))) AS customer_hk,
+  customer_id,
+  country_code,
+  customer_name,
+  MD5(COALESCE(customer_name, '') || '|' || COALESCE(customer_phone, '')) AS customer_hashdiff,
+  CURRENT_TIMESTAMP AS load_datetime,
+  'CRM_EU' AS record_source
+FROM landing.crm_customers;
+```
+
+**Hub ロード**（新規 BK のみ）:
+
+```sql
+INSERT INTO rdv.hub_customer (customer_hk, customer_id, country_code, load_datetime, record_source)
+SELECT s.customer_hk, s.customer_id, s.country_code, s.load_datetime, s.record_source
+FROM stg.customer s
+LEFT JOIN rdv.hub_customer h ON h.customer_hk = s.customer_hk
+WHERE h.customer_hk IS NULL;
+```
+
+**Satellite ロード**（Hash Diff 変化時のみ）:
+
+```sql
+INSERT INTO rdv.sat_customer_details (customer_hk, hashdiff, customer_name, customer_phone, load_datetime, record_source)
+SELECT s.customer_hk, s.customer_hashdiff, s.customer_name, s.customer_phone, s.load_datetime, s.record_source
+FROM stg.customer s
+LEFT JOIN rdv.sat_customer_details sat
+  ON sat.customer_hk = s.customer_hk
+ AND sat.hashdiff = s.customer_hashdiff
+ AND sat.load_datetime = (
+   SELECT MAX(load_datetime) FROM rdv.sat_customer_details x WHERE x.customer_hk = s.customer_hk
+ )
+WHERE sat.customer_hk IS NULL;
+```
+
+本番では dbt の incremental マクロが **最新 Hash Diff との比較**を隠蔽する。Link も `MD5(hk1 || '||' || hk2 || ...)` で **ロード順序に依存しない**形が典型だ。
+
+---
+
+## Reference Table・Ghost Record・データ品質
+
+**Reference Table（参照テーブル）**は、通貨コード、国コード、ステータス辞書など **変更頻度が低い参照データ**を DV モデルに載せるパターン。履歴不要なら **No-History Reference**、ゆるやかな履歴が必要なら Satellite 化する。Hub/Link グラフから **参照だけを分離**すると、ファクト周辺の JOIN が読みやすくなる。
+
+**Ghost Record**（AutomateDV / DataVault4dbt のオプション）は、**子 Satellite が親 Hub より先に到着**したときの参照整合を保つためのプレースホルダ Hub 行。ストリーミングや out-of-order ロードで議論される。enable_ghost_records のようなフラグで制御する。
+
+**データ品質**結果を Business Vault に **Link + Satellite** として永続化する例（beVault ドキュメント）がある。検証ルールの失敗を「いつ・どのルールで・どのキーが」問題だったかとして履歴化し、監査と remediation ワークフローに繋げる。
+
+---
+
+## ツールチェーン比較（dbt 中心）
+
+| ツール | 位置づけ |
+| --- | --- |
+| **AutomateDV** | dbt ネイティブ。YAML/Jinja メタデータから H/L/S/PIT/Bridge を生成。Snowflake 並列ロードと相性がよいとされる |
+| **DataVault4dbt** | グローバル変数でハッシュ算法・列エイリアスをカスタム。Premium で拡張。dbt Fusion 互換を明示 |
+| **VaultSpeed** | ビジュアルモデル + アクティブメタデータ。AutomateDV / TurboVault 向け export |
+| **Agile Data Engine / beVault** | 商用プラットフォーム型。Effectivity Sat、Bridge 生成、品質結果の BV 格納 |
+| **WhereScape / Matillion** | メタデータ大規模管理の選択肢（AutomateDV ドキュメントが言及） |
+
+いずれも **「DV = 手書き SQL」からの脱却**が前提。メタデータが真実のソース（Single Source of Truth）になり、モデル変更は **メタデータ更新 → 再生成 → dbt test** のループになる。
+
+---
+
+## 日本語圏の実務メモ
+
+Zenn や Databricks 日本語ブログでは、**Snowflake との相性**（マイクロパーティション、クラスタリングキーに HK を選ぶか BK か、Bridge によるスキャン削減）や **dbtvault / AutomateDV マクロで PIT を簡略化**する話が共有されている。従量課金 DWH では **Mart までの JOIN 回数がコストに直結**するため、「Raw の purity を守る」ことと「Bridge で消費を最適化する」ことのバランスが現場の永遠のトレードオフになる。
+
+組織内教育では **H/L/S の日本語訳（ハブ・リンク・サテライト）**に統一し、Kimball の「ディメンション＝Hub」と誤解しないよう **Ensemble = 複数テーブルセット**であることを最初に固定するのがよい。PoC では 1 ドメイン（例: 顧客）だけ Raw + 1 Mart + 1 PIT を end-to-end で自動生成し、**ソース追加シナリオ**（新 Satellite 追加だけで済むか）をデモすると採用判断がしやすい。
+
+---
+
+## 参考リンク
+
+- https://en.wikipedia.org/wiki/Data_vault_modeling
+- https://www.dataversity.net/articles/data-vault-series-1-data-vault-overview/
+- https://kentgraziano.com/wp-content/uploads/2012/02/introduction-to-data-vault-modeling.pdf
+- http://dvstandards.com/wp-content/uploads/2021/02/data_vault_modeling_guide_2019_v3.pdf
+- http://dvstandards.com/standards/
+- https://datavaultalliance.com/engineering/data-vault-2-0-an-introduction/
+- https://www.linkedin.com/pulse/data-vault-20-beyond-model-dan-linstedt
+- https://zenn.dev/yujmatsu/articles/20251221_data_vault
+- https://www.databricks.com/jp/blog/2022/06/24/prescriptive-guidance-for-implementing-a-data-vault-model-on-the-databricks-lakehouse-platform.html
+- https://www.databricks.com/blog/data-vault-best-practice-implementation-lakehouse
+- https://www.snowflake.com/en/developers/guides/defensible-analytics-using-data-vault-and-snowflake/
+- https://www.snowflake.com/en/developers/guides/vhol-data-vault/
+- https://automate-dv.readthedocs.io/en/stable/
+- https://www.datavault4dbt.com/
+- https://www.scalefree.com/blog/data-vault/hash-keys-in-the-data-vault/
+- https://www.scalefree.com/blog/data-vault/insert-only-in-data-vault/
+- https://roelantvos.com/blog/modelling-a-hierarchy-in-data-vault/
+- https://www.business-thinking.com/post/when-is-data-vault-not-the-right-option
+- https://medium.com/the-modern-scientist/seven-deadly-sins-of-fake-vault-ce5b1ecfd264
+- https://docs.datavault-builder.com/documentation/latest/_generalOverview/layerConcept
+- https://aws.amazon.com/blogs/big-data/design-and-build-a-data-vault-model-in-amazon-redshift-from-a-transactional-database/
