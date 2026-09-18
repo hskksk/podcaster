@@ -462,18 +462,21 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 
 ## Claude Code スキル
 
-`.claude/skills/podcast-research/SKILL.md` にスキルが定義されています。
+調査レポート用スキルは 2 つあり、しばらく併用する。どちらも `content/docs/`（Wiki 記事）に保存して PR を出し、既定は `podcast: none`（マージだけでは ingest / TTS は走らない）。
 
 ```
 /podcast-research <テーマ>
+/podcast-research2 <テーマ>
 ```
 
-と呼び出すと、Claude Code がテーマを深く調査してレポートを `content/docs/`（Wiki 記事）に保存し PR を出します。既定は `podcast: none` で、マージだけでは ingest / TTS は走りません。
+- `podcast-research`（`.claude/skills/podcast-research/SKILL.md`）: 概要→背景→核概念…のサーベイ型
+- `podcast-research2`（`.claude/skills/podcast-research2/SKILL.md`）: 同じ調査手順に、prism-data-labs-agent のレポート情報設計（三層開示・lede・見出しと第一文の分担）を入れた実験版。分析特有の提言・判断待ち lede・骨格図は入れていない
 
 例:
 
 ```
 /podcast-research Supabase の pgmq でバックグラウンドジョブを実装する方法
+/podcast-research2 モジュラー曲線と楕円曲線の関係
 ```
 
 ---
