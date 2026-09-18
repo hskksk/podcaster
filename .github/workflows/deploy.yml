@@ -3,6 +3,15 @@ name: Deploy to Supabase
 on:
   push:
     branches: [main]
+    paths:
+      - "supabase/**"
+      - "scripts/deploy.ts"
+      - "scripts/seed-config.ts"
+      - "scripts/lib/**"
+      - "config.toml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 jobs:
@@ -34,7 +43,6 @@ jobs:
       - name: Create .env
         run: |
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
-          echo "MEM_API_KEY=${{ secrets.MEM_API_KEY }}" >> .env
 
       - name: Deploy
         run: pnpm run deploy

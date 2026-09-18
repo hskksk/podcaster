@@ -1,31 +1,21 @@
 #!/usr/bin/env tsx
 // Usage:
-//   pnpm tsx scripts/ingest.ts <mem-note-id>
-//   pnpm tsx scripts/ingest.ts --file <path> [--collection-title <title>]...
-//   pnpm tsx scripts/ingest.ts <path-to-existing-file> [--collection-title <title>]...
-//   (file modes default to --collection-title "Podcast Drafts" when none given)
+//   pnpm tsx scripts/ingest.ts --file <path> [--route <route>] [--meta <json>]
+//   pnpm tsx scripts/ingest.ts <path-to-existing-file> [--route <route>] [--meta <json>]
 
 import dotenv from "dotenv";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { detectLocalStatus, detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
-import {
-  createMemNoteFromFile,
-  DEFAULT_MEM_COLLECTION_TITLE,
-} from "./lib/create-mem-note-from-file.ts";
 import { parseFrontmatter, parseTitleFromContent, textify } from "./lib/mdoc.ts";
 
 dotenv.config({ path: ".env" });
 
-type ParsedArgs =
-  | { mode: "id"; memNoteId: string; route?: string; meta?: Record<string, unknown> }
-  | { mode: "file"; filePath: string; collectionTitles: string[]; route?: string; meta?: Record<string, unknown> };
+type ParsedArgs = { filePath: string; route?: string; meta?: Record<string, unknown> };
 
 function parseArgs(argv: string[]): ParsedArgs {
-  const collectionTitles: string[] = [];
   let filePath: string | undefined;
-  let memNoteId: string | undefined;
   let route: string | undefined;
   let meta: Record<string, unknown> | undefined;
 
@@ -38,12 +28,8 @@ function parseArgs(argv: string[]): ParsedArgs {
         process.exit(1);
       }
     } else if (a === "--collection-title") {
-      const v = argv[++i];
-      if (!v) {
-        console.error("Missing value for --collection-title");
-        process.exit(1);
-      }
-      collectionTitles.push(v);
+      argv[++i];
+      console.warn("--collection-title is ignored (mem.ai sync was removed in Phase 6)");
     } else if (a === "--route") {
       route = argv[++i];
       if (!route) {
@@ -65,37 +51,29 @@ function parseArgs(argv: string[]): ParsedArgs {
     } else if (a.startsWith("-")) {
       console.error(`Unknown option: ${a}`);
       process.exit(1);
-    } else if (memNoteId === undefined && filePath === undefined) {
-      memNoteId = a;
+    } else if (filePath === undefined) {
+      filePath = a;
     } else {
       console.error(`Unexpected argument: ${a}`);
       process.exit(1);
     }
   }
 
-  if (filePath && memNoteId) {
-    console.error("Use either --file <path> or <mem-note-id>, not both");
+  if (!filePath) {
+    console.error(`Usage:
+  pnpm tsx scripts/ingest.ts --file <path> [--route <route>] [--meta <json>]
+  pnpm tsx scripts/ingest.ts <path-to-existing-file> [--route <route>] [--meta <json>]`);
     process.exit(1);
   }
 
-  if (filePath) {
-    return { mode: "file", filePath, collectionTitles, route, meta };
+  const resolved = path.resolve(filePath);
+  if (!existsSync(resolved)) {
+    console.error(`File not found: ${filePath}
+mem.ai note-id ingest was removed in Phase 6. Pass a Git content path instead.`);
+    process.exit(1);
   }
 
-  if (memNoteId) {
-    const maybeFile = path.resolve(memNoteId);
-    if (existsSync(maybeFile)) {
-      return { mode: "file", filePath: maybeFile, collectionTitles, route, meta };
-    }
-    return { mode: "id", memNoteId, route, meta };
-  }
-
-  console.error(`Usage:
-  pnpm tsx scripts/ingest.ts <mem-note-id> [--route <route>] [--meta <json>]
-  pnpm tsx scripts/ingest.ts --file <path> [--collection-title <title>]... [--route <route>] [--meta <json>]
-  pnpm tsx scripts/ingest.ts <path-to-existing-file> [--route <route>] [--meta <json>]
-  (default collection for file modes: ${DEFAULT_MEM_COLLECTION_TITLE})`);
-  process.exit(1);
+  return { filePath: resolved, route, meta };
 }
 
 function extractTitle(content: string): string | undefined {
@@ -138,52 +116,29 @@ const headers: Record<string, string> = {
   ...(authKey ? { Authorization: `Bearer ${authKey}` } : {}),
 };
 
-let postBody: Record<string, unknown>;
+const raw = readFileSync(parsed.filePath, "utf-8");
+const rel = repoRelative(parsed.filePath);
+const isMdoc = rel.endsWith(".mdoc") || raw.startsWith("---");
+const content = isMdoc ? textify(raw) : raw;
+const { attrs } = parseFrontmatter(raw);
+const title =
+  attrs.title || parseTitleFromContent(content, extractTitle(content) ?? path.basename(parsed.filePath));
 
-if (parsed.mode === "file") {
-  const raw = readFileSync(parsed.filePath, "utf-8");
-  const rel = repoRelative(parsed.filePath);
-  const isMdoc = rel.endsWith(".mdoc") || raw.startsWith("---");
-  const content = isMdoc ? textify(raw) : raw;
-  const { attrs } = parseFrontmatter(raw);
-  const title = attrs.title || parseTitleFromContent(content, extractTitle(content) ?? path.basename(parsed.filePath));
+const ingestMeta: Record<string, unknown> = {
+  ...(parsed.meta ?? {}),
+  ...(attrs.legacyFilename
+    ? { inbox_file: attrs.legacyFilename, legacyFilename: attrs.legacyFilename }
+    : {}),
+};
 
-  console.log(`Registering file in mem.ai: ${parsed.filePath}`);
-  let memNoteId: string | undefined;
-  let memSyncError: string | undefined;
-  try {
-    memNoteId = createMemNoteFromFile(parsed.filePath, parsed.collectionTitles);
-    console.log(`mem_note_id: ${memNoteId}`);
-  } catch (e) {
-    memSyncError = (e as Error).message;
-    console.warn(`Warning: mem.ai registration failed, continuing without mem_note_id: ${memSyncError}`);
-  }
-
-  const ingestMeta: Record<string, unknown> = {
-    ...(parsed.meta ?? {}),
-    mem_sync: memNoteId ? "ok" : "failed",
-    ...(memSyncError !== undefined ? { mem_sync_error: memSyncError } : {}),
-    ...(attrs.legacyFilename
-      ? { inbox_file: attrs.legacyFilename, legacyFilename: attrs.legacyFilename }
-      : {}),
-  };
-
-  postBody = {
-    content,
-    ...(memNoteId !== undefined ? { mem_note_id: memNoteId } : {}),
-    ...(title !== undefined ? { title } : {}),
-    ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
-    ingest_meta: ingestMeta,
-    ...(rel.startsWith("content/") ? { content_path: rel, content_sha: sha256(raw) } : {}),
-    ...(attrs.sourceUrl || attrs.url ? { source_url: attrs.sourceUrl || attrs.url } : {}),
-  };
-} else {
-  postBody = {
-    mem_note_id: parsed.memNoteId,
-    ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
-    ...(parsed.meta !== undefined ? { ingest_meta: parsed.meta } : {}),
-  };
-}
+const postBody: Record<string, unknown> = {
+  content,
+  title,
+  ...(parsed.route !== undefined ? { ingest_route: parsed.route } : {}),
+  ingest_meta: ingestMeta,
+  ...(rel.startsWith("content/") ? { content_path: rel, content_sha: sha256(raw) } : {}),
+  ...(attrs.sourceUrl || attrs.url ? { source_url: attrs.sourceUrl || attrs.url } : {}),
+};
 
 console.log(`POST ${ingestUrl}`);
 const res = await fetch(ingestUrl, {

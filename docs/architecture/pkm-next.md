@@ -1,8 +1,9 @@
 # PKM 今後の開発計画
 
-> 日付: 2026-09-15（Phase 2–4 完了反映）  
+> 日付: 2026-09-18（Phase 2–4 完了反映）  
 > 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
 > 設計の正: [pkm-migration.md](./pkm-migration.md)  
+> PKM スタック Phase 2–6。知識の正は Git + Markdoc。配信の正は Supabase。  
 > 次の実装: **Phase 5（MCP）**。
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
@@ -219,16 +220,16 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 
 `apps/mcp`（FastMCP）。Cloud Agent は repo checkout なしで知識に触れる。
 
-- `search_docs` / `get_doc` … 読み取り専用トークンまたは checkout 済み専用
-- `write_clip` / `queue_podcast` … Capture / 内部 API。書き込み用 `GITHUB_TOKEN` を MCP に渡さない
-- `queue_podcast` は Capture の更新（PATCH 相当）が先
+- `search_docs` / `get_doc` … 読み取り専用トークン（`GITHUB_READ_TOKEN`）または checkout 済み専用
+- `write_clip` / `queue_podcast` … Capture API。書き込み用 `GITHUB_TOKEN` を MCP に渡さない
+- `queue_podcast` は Capture の PATCH（Phase 2）を使う
 
 ---
 
 ## 9. Phase 6 — 掃除
 
 - mem 必須パス、旧 inbox CI、`MEM_API_KEY` の本線利用を削除
-- `mem_note_id` 列は履歴として残してよい
+- `mem_note_id` 列は履歴として残す（ingest は `content` 必須。mem からの fetch はしない）
 
 ---
 

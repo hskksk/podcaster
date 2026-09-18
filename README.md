@@ -13,12 +13,12 @@
 ## アーキテクチャ
 
 ```
-外部トリガー（curl / Claude Code / Mem AI）
+外部トリガー（curl / Capture / queued CI）
          │
-         │ POST /functions/v1/ingest  {title, content}
+         │ POST /functions/v1/ingest  {title, content, content_path?}
          ▼
 ┌─────────────────────┐
-│      ingest         │  mem_note_id 検証 → articles / episodes を作成
+│      ingest         │  articles / episodes を作成（Git 本文）
 └────────┬────────────┘
          │ pgflow.start_flow("craftEpisodeSubmit")
          ▼
@@ -71,7 +71,7 @@ podcaster/
 │   │   └── table.ts                # CLI 用テーブル表示ヘルパー
 │   ├── deploy.ts                   # pnpm deploy の実体
 │   ├── gemini-mock-server.ts       # Gemini API 最小 mock サーバー
-│   ├── ingest.ts                   # mem note ID を指定して記事を投入
+│   ├── ingest.ts                   # Git 上の mdoc/md を ingest
 │   ├── podcast-cli.ts              # パイプライン状態確認 CLI
 │   ├── post-test-article.ts        # ローカル動作確認用テスト記事投入
 │   └── seed-config.ts              # cover.png アップロード + podcast_config 初期化
@@ -124,7 +124,7 @@ pnpm pgflow:install
 
 # 3. 環境変数ファイルを作成し API キーを記入
 cp .env.example .env.local
-# → GEMINI_API_KEY と MEM_API_KEY を設定
+# → GEMINI_API_KEY を設定
 
 # 4. Supabase ローカルスタックを起動（Docker が必要）
 supabase start
@@ -153,7 +153,6 @@ pnpm functions:serve &
 別ターミナルで:
 
 ```bash
-MEM_NOTE_ID=<your-mem-note-id> pnpm test:post
 pnpm test:post
 ```
 
@@ -369,7 +368,6 @@ supabase login
 
 ```bash
 GEMINI_API_KEY=<your-gemini-api-key>
-MEM_API_KEY=<your-mem-api-key>
 ```
 
 4. ワンコマンドでデプロイ:
@@ -402,7 +400,7 @@ Apple Podcasts / Overcast / Pocket Casts 等にこの URL を登録して購読�
 ```bash
 curl -X POST https://<ref>.supabase.co/functions/v1/ingest \
   -H "Content-Type: application/json" \
-  -d '{"title": "タイトル", "mem_note_id": "<your-mem-note-id>"}'
+  -d '{"title": "タイトル", "content": "本文"}'
 ```
 
 本番では `pgflow_ensure_workers` が worker を自動起動します。
@@ -423,11 +421,10 @@ GitHub リポジトリの **Settings → Secrets and variables → Actions** で
 | `SUPABASE_DB_PASSWORD` | プロジェクト作成時に設定したDBパスワード |
 | `SUPABASE_PROJECT_REF` | `supabase projects list` で確認（以下の自動登録スクリプトで設定可） |
 | `GEMINI_API_KEY` | `.env` の値（以下の自動登録スクリプトで設定可） |
-| `MEM_API_KEY` | `.env` の値（以下の自動登録スクリプトで設定可） |
 
 ### Secrets の一括登録（オプション）
 
-`SUPABASE_PROJECT_REF` / `GEMINI_API_KEY` / `MEM_API_KEY` の 3 つは以下で自動登録できます（[GitHub CLI](https://cli.github.com/) が必要）:
+`SUPABASE_PROJECT_REF` / `GEMINI_API_KEY` は以下で自動登録できます（[GitHub CLI](https://cli.github.com/) が必要）:
 
 ```bash
 pnpm setup:gh-secrets
@@ -465,14 +462,13 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 
 ## Claude Code スキル
 
-`.claude/podcast-research/SKILL.md` にスキルが定義されています。
+`.claude/skills/podcast-research/SKILL.md` にスキルが定義されています。
 
 ```
 /podcast-research <テーマ>
 ```
 
-と呼び出すと、Claude Code がテーマを深く調査してレポートを作成し、
-`ingest` エンドポイントに自動 POST してパイプラインを起動します。
+と呼び出すと、Claude Code がテーマを深く調査してレポートを `content/docs/`（Wiki 記事）に保存し PR を出します。既定は `podcast: none` で、マージだけでは ingest / TTS は走りません。
 
 例:
 

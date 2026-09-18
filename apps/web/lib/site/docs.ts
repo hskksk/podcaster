@@ -12,7 +12,8 @@ export type PublicDoc = {
   slug: string;
   date: string;
   title: string;
-  markdown: string;
+  /** Raw `index.mdoc` (frontmatter + body). Compiled with Markdoc at build. */
+  source: string;
   sourceUrl?: string;
 };
 
@@ -22,27 +23,29 @@ function docsDir(): string {
 
 export function loadPublicDocs(): PublicDoc[] {
   const root = docsDir();
-  if (!fs.existsSync(root)) return [];
+  if (!fs.existsSync(root)) {
+    console.warn(`[site] content/docs missing at ${root} (cwd=${process.cwd()})`);
+    return [];
+  }
   return fs
     .readdirSync(root, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => {
       const indexPath = path.join(root, e.name, "index.mdoc");
       if (!fs.existsSync(indexPath)) return null;
-      const raw = fs.readFileSync(indexPath, "utf8");
-      const { attrs } = parseFrontmatter(raw);
-      const markdown = textify(raw);
+      const source = fs.readFileSync(indexPath, "utf8");
+      const { attrs } = parseFrontmatter(source);
       const filename = attrs.legacyFilename || `${e.name}.md`;
       const slug = parseSlugFromFilename(filename);
       const date = attrs.publishedAt || parseDateFromFilename(filename);
-      const title = attrs.title || parseTitleFromContent(markdown, slug);
+      const title = attrs.title || parseTitleFromContent(textify(source), slug);
       const doc: PublicDoc = {
         dir: e.name,
         filename,
         slug,
         date,
         title,
-        markdown,
+        source,
       };
       if (attrs.sourceUrl) doc.sourceUrl = attrs.sourceUrl;
       return doc;
