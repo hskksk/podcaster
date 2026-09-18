@@ -539,10 +539,12 @@ plt.show()
 ### Mermaid pie チャート（テキスト定義）
 
 {% diagram type="mermaid" %}
+```mermaid
 pie title Net traffic
     "Direct" : 45
     "Search" : 30
     "Social" : 25
+```
 {% /diagram %}
 
 `mmdc -i chart.mmd -o chart.svg` で SVG 化。ターミナル内インライン表示は chafa 等と組み合わせる。
