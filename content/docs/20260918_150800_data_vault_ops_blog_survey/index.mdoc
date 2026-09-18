@@ -45,6 +45,16 @@ PIT と Bridge は、Raw を直接読ませないための性能層として繰�
 
 したがって見取り図の第一支柱は、Raw を監査と再現の錨にし、解釈・性能・利用者向けの簡潔さは上層で買い、技術時間と業務時間をモデル上で別カラムとして扱い続けることである。ここを省略すると、導入初期は dbt の並列ビルドで速く見えても、ソース追加のたびに mart 内 SQL が増え、SSoT が Business Vault に集約されない、という yasuhisa 氏が adhoc 時代に経験した intermediate 地獄が再発する。第一節の主張が見取り図へ足すのは、Data Vault 運用記事が「モデリングパターン集」ではなく「どの層で真実を固定し、どの層で捨ててよいか」の契約書だ、という読み方である。
 
+| 層 | ブログが強調する役割 | 典型の運用ミス |
+|----|---------------------|----------------|
+| PSA / レイク | 配信ファイルの保全、再処理の保険 | 検証失敗ファイルを捨てて監査不能 |
+| Staging | ハッシュ・hashdiff・硬いルールのみ | ソフトルールの前倒し、LDTS に CURRENT_TIMESTAMP |
+| Raw Vault | insert-only、監査、ソース整合 | BI 直接接続、長大 transform |
+| Business Vault | 再利用ロジック、PIT/Bridge 前提 | Raw と同粒度の全表コピー |
+| 情報マート | 読みやすさ、KPI | BK 未定義の adhoc コピペ |
+
+表は複数出典の共通項を圧縮したものであり、特定プロダクトの推奨構成をそのまま示すものではない。
+
 ## モデリングとパイプラインの罠
 
 Unit of Work（UoW）を破った Link 分割は、運用フェーズで「ソースに無かった関係」が Join によって生成される、という最も厄介なクラスのバグである。Scalefree UoW ウェビナーは、Customer–Store と Customer–Product だけを Link 分割した場合、Store–Product 関係が欠け、再結合時にカーテシアンが生じうる、と具体例を示す。FlowBI 紹介記事（UoW Links ウェビナー）は、AI モデラーが Link を過剰分割するリスクに対し、常に全 Hub 参照を含む UoW Link を Raw に残す「フォールバック」を生成する、と自動化側の防御策を述べる。これは人手モデリングでも同じで、**最初から最小 Link 集合を目指すより、ソース行再構成可能な1本を残す**方が運用安全、という教訓になる。Scalefree の Unit of Work ウェビナー（Michael Olschimke）は、同一ソース行の Hub 参照は Raw Vault では一つの Link にまとめ、分割が必要なら Business Vault で粒度を落とす、分割した場合は Jedi Test でソース行を再構成できるか検証する、と述べる。Data Community フォーラムの Link 粒度議論も、エージェント ID のような属性を Link キーに入れるか Satellite に置くかで、後から複数 Link を再結合すると偽の組合せが生じる、と警告する。Classmethod の Coalesce23 レポート（AutomateDV 担当者）は、ソース主導で全関係を Link 化すると千の Link になりうる、とデータ主導のモデリングの必要性を説く。運用ブログが繰り返すのは、**ER 図の FK 本数 ≠ Raw Vault の Link 本数** という判断で、後者を増やすほど PIT/Bridge と QA の表面积が増える、という経験則である。
@@ -74,6 +84,12 @@ Data Vault は「モデリング手法」だけではなく、ステークホル
 英国 DVUG の事例記事群は、組織側の教訓を補強する。50 First Dates では、1対1ヒアリングだけでは合意がなくソースシステム型 Vault になる、予算のない内部トレーニングは層別（概要・ローカル開発・方法論）に分割し全員が全知である必要はない、外部支援の ROI、と書く。「Things I wish I knew」要旨は、エンドユーザと開発者のトレーニング、未来の変更を予測せずに作る、Business Vault の位置づけの初期混乱、実験と過度な完璧主義の回避、を挙げる。Argenta・Tokio Marine・Indigo AG のケーススタディ（data-community.org）は、全ソースを Vault に入れず機能要件ベースで統合範囲を決め、自動化で time-to-market を短縮した、とまとめる。Scalefree の BA とモデラー協働の記事は、成果物（レポート/KPI）に向かって同室でモデリングし、ソース専門家と業務ユーザの時間を計画的に確保する、と書く。GitHub 上の dv-when スキル（Patrick Cuba）は、コード前に命名規則・ハッシュ方針・DQ 閾値の standards council、一つの use case で Hub/Link/Sat をすべて通す steel thread、mob モデリング、をチェックリスト化する。
 
 日本語圏の Safie 連載は、automate_dv による Hub/Link/Sat 生成の短縮と、Business Vault や特殊 Satellite による運用時の逃げ道、を段階的に示す。Classmethod の dbt 講演レポートは、AutomateDV（旧 dbt Vault）で並列ロードし、導入時の落とし穴を講義する、と紹介する。導入記事に無いが運用で効くのは、**ステップ2（mart 組み立て）だけを新人にやらせない**という yasuhisa 氏の指摘である。Fact/Dimension 組み立ては学習効果が低く、Hub/Link 設計のレビューに時間を使う方が、後の Satellite 爆増を防ぐ。
+
+mashiike スライドが引用する dbt style guide への収束は、Vault 中止後も staging–mart 密結合と命名規約が残る、という意味で第三節の「概念借用」を具体化する。Hard/soft 区分と BK メタデータだけ残し、Hub/Sat 物理表を解体する、というパターンは「失敗」ではなく**コスト関数の再最適化**としてブログ読者に提示されている。
+
+yasuhisa 氏の長所リスト（アジリティ、Same-as Link、LLM 相性、履歴の使いやすさ）は、第三節の継続条件側のチェックリストになる。逆に、複数事業で独立性が高い・モデリングケイパビリティが低い少人数、と同氏が採用見送り例として書く条件は、mashiike 事例と語彙が重なる。データエンジニアリングキャリア論として、両者とも「一度は触れる価値がある」と mashiike/X や yasuhisa 引用で述べ、手法の去就と学習価値を分離している。
+
+DVUG ケーススタディで Mike Magalsky らが強調する「未来を予測せず Vault を作る」は、過度な upfront 正規化を避ける Agile 宣言として読める。Neil Strange の「実験せよ、過度に完璧な最初の目標を避けよ」も同型である。これらは運用記事に独特のトーン——方法論ベンダー由来の自信と、ユーザー側の burn-out 告白——が混ざる理由を説明する。
 
 AutomateDV と dbt エコシステムは、Vault 保守人員が限られる組織では必須に近いが、銀行 BigQuery 事例が書くように完全自動化はプロファイリングとソース品質に阻まれる。Right Triangle の Snowflake Right Start PDF は、単一 user story を1スプリントで End-to-End に見せる PoC 設計を推奨する。成功指標はテーブル数より、reconciliation 合格率とパイプライン時間、と dv-when が示す KPI 例と一致する。
 
