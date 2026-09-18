@@ -100,6 +100,16 @@ Scripts in `scripts/` use `TARGET=local` to connect to the local Supabase stack 
 
 `pnpm tui` launches an [Ink](https://github.com/vadimdemedes/ink) (React) terminal UI. Entry point is `scripts/tui/index.tsx`. Data access goes through `scripts/tui/data/client.ts` (`DataClient`). Pass `--mock` to run with static fixture data (`scripts/tui/data/mock.ts`).
 
+## Skills
+
+Skills live in **`.agents/skills/<name>/`** — that is the single source of truth. `.claude/skills/<name>` is a **symlink** into it so Claude Code picks the same files up:
+
+```bash
+ln -s ../../.agents/skills/<name> .claude/skills/<name>
+```
+
+Never keep a second copy of a skill under `.claude/skills/`. Other agents (Cursor and anything else reading `.agents/`) load the `.agents/` copy, so a duplicated directory silently diverges and the two harnesses run different versions of the same skill.
+
 ## Database Migrations
 
 ### Migration file rules
