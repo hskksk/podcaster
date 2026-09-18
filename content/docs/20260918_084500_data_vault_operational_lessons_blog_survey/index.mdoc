@@ -11,7 +11,7 @@ legacyFilename: 20260918_084500_data_vault_operational_lessons_blog_survey.md
 
 読者が持ち帰るべき見取り図は次のとおりである。DV2.0 を「モデルだけ」で導入すると運用は必ず破綻に近づく。現場が繰り返し書いているのは、**Raw Vault は監査可能な統合層に徹し、分析者には Information Mart（多くはディメンション）だけを見せる**こと、**Staging から Raw までのパターンは生成・自動化し、層ごとの品質テストで止める**こと、**Business Vault はスパースに共通ロジックだけを置く**こと、の三つである。これらは Dan Linstedt 系の方法論そのものより、phData や Kent Graziano（Redgate）、Microsoft Azure Synapse 連載、日本の 10X（yasuhisa）・Safie・Tonamel（mashiike）の記述に共通して現れる。
 
-範囲は 2017〜2026 年に公開された一次に近い現場記事、Scalefree / Redgate / phData / Validatar / data-community.org の運用論、日本語のエンジニアブログと登壇資料とする。Wikipedia 的な DV 概説、ツールのインストール手順のみの記事、Peer-reviewed 論文の理論部分は L3 に回す。ベンダー調査の数値は参考値として扱い、本稿の主張の根拠にはしない。
+範囲は 2017〜2026 年に公開された一次に近い現場記事、Scalefree / Redgate / phData / Validatar / data-community.org の運用論、日本語のエンジニアブログと登壇資料とする。調査では Web 検索を英語・日本語で 15 回以上行い、yasuhisa 氏の長文、Validatar のテスト一覧、Graziano 連載、Safie シリーズ全文に近い取得を優先した。Wikipedia 的な DV 概説、ツールのインストール手順のみの記事、Peer-reviewed 論文の理論部分は L3 に回す。ベンダー調査の数値は参考値として扱い、本稿の主張の根拠にはしない。
 
 枠組みは「層 × 運用コストの時間関数」である。横軸は Staging → Raw Vault → Business Vault → Information Mart のデータの流れ、縦軸はソース追加・履歴再構成・人手モデリング・テスト不足がもたらす保守負荷である。ブログ群は、この格子の**下流（マートと BV）に工数を置く**ことと、**上流（Raw ロード）を機械化する**ことで縦軸の傾きを緩める、と読める。対照的に、mashiike 氏の Tonamel 事例は、データエンジニアが実質一人規模でソースが増えたとき縦軸が急峻になり、2022 冬に Vault 本体をやめた、という反例を同じ格子に載せられる。
 
@@ -30,6 +30,8 @@ legacyFilename: 20260918_084500_data_vault_operational_lessons_blog_survey.md
 Raw Vault を BI 利用者やアナリストのデフォルト接続先にしてはならない、というのが、日本語の長期運用記事と英語圏の方法論ブログのいちばん一致度の高い教訓である。yasuhisa 氏（10X）は、Hub / Link / Satellite を細分化した成果物を直接分析に使うと JOIN が爆発し、ディメンショナルモデリングは「分析者のためのフレームワーク」として Fact / Dimension / Mart 層を別途置く、と明言する。Fact は Link や Transactional Link、Dimension は Satellite の履歴から組み立て、Hub 設計が揃っていれば適合ディメンションとして複数イベントを跨ぐ分析が可能になる、という運用上の分業である。note 上の SceneLive（まっすー氏、2024）も、Medallion の Silver に DV2.0、Gold にスタースキーマを置き、「Silver が Single Source of Truth、Gold が分析用ビュー」と書いており、層の役割分担はツールチェーンが違っても同型である。
 
 英語圏では Kent Graziano の Redgate 連載が同趣旨を体系的に述べる。Business Vault（BV）は Raw Vault（RV）の拡張であり、選択的にソフトビジネスルール・非正規化・計算・クエリ支援（PIT、Bridge 等）を載せる層だが、**BV の主な利用者は SQL に堪能なパワーユーザー**であり、大多数の利用者は Information Mart 経由または BI ツール経由にすべきだ、と第 3 回で断じる。第 4 回では、RV / BV からスタースキーマへ「投影」して Information Mart を作る流れが DV2.0 のデータの旅の終点として位置づけられる。Microsoft Azure Synapse 連載（Delivering Information with Azure Synapse and Data Vault 2.0）も、情報提供は Raw と BV の結合から組み立てるが、**最初は SQL ビューで Information Mart を実装し、性能やコストが問題になって初めて物理化する**ことを推奨する。schema-on-read の利点を活かしつつ、過剰なパイプラインを増やさない、という運用判断がここに書かれている。
+
+Microsoft Synapse 連載は、schema-on-read として Raw エンティティから直接クエリできる、と述べつつ、実務では BV エンティティがレポート用のビジネスルール適用に使われる、と続ける。つまり「技術的には Raw から出せるが、運用上は BV と Mart を経由する」が公式シリーズの立場である。erstudio.com は、複数 ERP の Customer ID 統合例のように、Hub に載せた後に BV で統合する流れを、**変更に強い統合は Raw、意味の確定は BV** として説明する。
 
 Patrick Cuba（AgileData.io ポッドキャスト）の発言は、BV 運用の「痛み」をより率直に表す。BV は何度も「キックした」と語り、理想は BV が最小フットプリントで、可能ならソース側で解決し、共有ビジネスルールの**結果だけ**を BV Link / Satellite に載せる、という分離（ルール定義とアウトカム）を説く。Scalefree の BV 設計記事も、BV は通常仮想化され、必要なエンティティだけをビジネスクリティカルなデータに絞り、drop & recreate 可能、と述べ、RV の厳密な監査可能性と対比する。erstudio.com のガイド（2025 頃）は、ソフトルールを RV に混ぜるとルール変更のたびに Vault 全体を組み直す羽目になる、と警告し、**Query complexity demands abstraction layers** としてマート/BV の存在を運用必須に近い形で書く。
 
@@ -71,6 +73,8 @@ Jaco van der Laan（Medium, Towards Data Engineering）は、RV と BV の境界
 
 Validatar の記事は、失敗の連鎖を明示する。Hub に重複 hash key が入ると、Link と Satellite が扇形に増殖する。Satellite タイムラインが 1 ミリ秒でも overlap すると、point-in-time クエリはエラーなく誤った版を返す。六つの Critical テストは、insert-only 下で「知った上で bad data を載せ続ける」ことを禁止する運用規約として読める。Staging で止める、Hub で止める、Link load 順序（Hub 完了後）を CI で検証する、という三層は、dbt test だけでは不足し、**ロードオーケストレーションの契約**まで含む。
 
+phData の Coalesce 2023 向け GitHub 例（dbt_coalesce_2023_data_vault）は、ClassicModels オープンデータをソースに `dbt build` で通す最小構成として公開されている。アーカイブ済みだが、**テストと build を一コマンドで回す** TDD 文化をサンプル化している。Maximize dbt and Snowflake 記事は、小チームこそ AutomateDV 等のテンプレで統合エラーを減らせる、と述べ、運用初期の人数論と接続する。
+
 phData の Modern Data Platform 記事は、標準から外れるとプロジェクトが unsuccessful になりやすい、と強調する。運用フェーズでは「標準」とは、hash 規約、record source、load date、命名、差分ロードパターンの集合である。手書き SQL 一発で Raw が汚れると、下流の BV / Mart を何度作り直しても信頼は戻らない。Metrics Vault（取り込みメトリクス tier）や Error Mart の概念は、phData / Ovaledge 記事に optional として現れ、**データ本体 QA** と **パイプライン QA** を分ける成熟度指標になる。
 
 Scalefree の CDC × multi-active satellite ウェビナー要約は、ソース PK と Hub ビジネスキーが一致しないとき、multi-active satellite の delta、Link 上 satellite、technical hub + same-as link など**ロード戦略の分岐**を列挙する。運用記事として重要なのは、正解が一つではなく、下流クエリ要件と delta 抽出の形がセットで決まる、という点である。Datavault Builder の議論は、multi-active を乱用すると PIT と下流が複雑化するため、細粒度は Hub を切る、と勧める。いずれも「Satellite を増やせばよい」では運用が閉じない例である。
@@ -96,6 +100,10 @@ PICBE 2024 の業界インタビュー論文（doi:10.2478/picbe-2024-0292）は
 yasuhisa 氏は、Data Vault 採用の見送り条件として、事業が独立していて横断分析需要が低い場合、少人数でモデリングケイパビリティが低い場合、を挙げ、mashiike 氏の X 投稿（ハード/ソフトルール、ビジネスキー議論は残した）を引用する。mashiike 自身は DV2.0 を「モデリング＋アジャイル PM を含むライフサイクル手法」と再定義しており、**やめてもメタデータとプロセス知が残る**、という運用後の資産論もブログ群に含めるべき枝である。
 
 Industry 的には、Ethias（WhereScape 事例）のように自動化でロード週次→日次、チーム 4→18 人、という**自動化が人員スケールとセット**の話もある。反証として、自動化製品を入れても insurer 50 人チームが自動化不足で失速する、という Alex の話がある。人数が多いから成功するのではなく、**同じ絵（end state）を共有し、自動化と vertical slice で遅延フィードバックを短くする**から成功する、という読み方が data-community.org の要約と整合する。
+
+AgileData.org の Question Story 白書（DV2 上の Converge パイプライン）は、PSA でデータを落とさない、Raw → sparse BV → information mart への denormalize という**一つの問いに対する縦切り**をデモと設計レビューで見せる、と要約できる。運用開始後の改善ループ（demo / design review）を組織習慣にする、という点が、ツール記事よりプロセス記事として参照価値がある。
+
+Scalefree の Agile Development 記事は、DV2.0 がモデリングだけでなく方法論とアーキテクチャを含む、と明言し、スプリントレビューとレトロスペクティブを必須とする。Data Vault on its own isn’t a magic fix という Alex の講演要約と、**方法論部分を落とすと運用が破綻する**、という読み方がつながる。
 
 Scalefree の Quick Guide は、エンタープライズ全体を一度にモデルしない。レポート一つ分のソースだけ Raw → BV → mart まで tracer bullet で通す、と書く。Microsoft Azure DevOps 連載は、DV チームは Scrum と同じ 5〜9 人だが、役割は automation engineer / modeler / tester / dashboard designer と細分化する、と述べる。一般化 developer ロールだけでは DWH ツールチェーンが回らない、という指摘は、少人数組織が mashiike 曲線に落ちるメカニズムの説明になる。
 
@@ -142,6 +150,7 @@ DataRebels Kickstart は、CDVP2 研修 3 日 + 7 日 hands-on で vertical slic
 | --- | --- |
 | Validatar, 10 Data Quality Tests Every Data Vault Model Needs | https://www.validatar.com/holistic-data-qa/10-data-quality-tests-every-data-vault-model-needs |
 | phData, Maximize dbt and Snowflake for Data Vault | https://www.phdata.io/blog/maximize-the-power-of-dbt-and-snowflake-to-achieve-efficient-and-scalable-data-vault-solutions/ |
+| phData, dbt_coalesce_2023_data_vault (GitHub) | https://github.com/phdata/dbt_coalesce_2023_data_vault |
 | Safie, automate_dv で実装する DataVault モデリング (2023-08-28) | https://safie.hatenablog.com/entry/2023/08/28/dbtvault%E6%94%B9%E3%82%81automate_dv%E3%81%A7%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8BDataVault%E3%83%A2%E3%83%87%E3%83%AA%E3%83%B3%E3%82%B0 |
 | Roland Bouman, Do we still need to talk about Data Vault 2.0 Hash keys? (2017) | https://rpbouman.blogspot.com/2017/05/do-we-still-need-to-talk-about-data.html |
 | Ignition Data, Data Vault and Enterprise Unique Keys | https://ignition-data.com/blog/data-vault-and-enterprise-unique-keys |
