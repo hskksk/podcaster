@@ -6,6 +6,9 @@
 `references/checklists.md` の「数えられる指標」を出す。目視で見積もらず、
 これを実行して出力をそのまま報告する。終了コードは、未達の指標があれば 1。
 
+本文字数は参考値であり、判定に入れない。短いレポートが悪いわけではない。
+調査の薄さは字数ではなく、付録の「互いに異なる URL の数」で見る。
+
 計測範囲は本文だけである。frontmatter、`{% diagram %}` の中身、
 `## 付録: 出典一覧` 以降は外す。散文の判定から表・箇条書き・見出しも外す。
 """
@@ -133,7 +136,7 @@ def main():
     print(f"\n{path}\n")
     print("本文（付録の出典一覧より前、図を除く）")
     ok = []
-    ok.append(check("本文字数", body_chars, body_chars >= 14000, "目標 20,000（14,000未満は調査を足す）"))
+    check("本文字数", body_chars, True, "参考値。下限はない。短さ自体は欠点ではない")
     ok.append(check("散文の文数", len(sentences), True, ""))
     ok.append(check("一文の平均字数", f"{statistics.mean(lengths):.1f}", 55 <= statistics.mean(lengths) <= 95, "目標 55〜95"))
     ok.append(check("150字を超える文", sum(1 for x in lengths if x > 150), all(x <= 150 for x in lengths), "0 にする"))
