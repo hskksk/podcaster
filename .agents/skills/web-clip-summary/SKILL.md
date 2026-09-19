@@ -1,6 +1,6 @@
 ---
 name: web-clip-summary
-description: Read one web article (URL or pasted text) and write a compact, information-dense Japanese summary clip to content/web-clips/, then create a PR. Compression drops repetition, preamble and promotion — never the specifics: numbers, product names, versions, conditions and limits are carried over verbatim. Headings state the finding, a 骨子 table carries the values, and anything the clipper adds is fenced off from what the article said.
+description: Read one web article (URL or pasted text) and write a compact, information-dense Japanese summary clip to content/web-clips/, then create a PR. What a summary must never lose is the article's skeleton — what it claims, on what evidence, and where the claim stops holding. Numbers, product names and versions are kept verbatim as backing for that skeleton, not in place of it. Headings state the finding, a 骨子 table carries claim/evidence/scope, and anything the clipper adds is fenced off from what the article said.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -24,14 +24,17 @@ metadata:
 
 URL を受け取り、元記事を取得して、`content/web-clips/` に日本語の要約クリップを書く。
 
-このスキルが守るのは一点である。**要約で捨てるのは繰り返しと前置きであって、具体ではない。** 数値・製品名・バージョン・価格・条件・限界は、原文の値のまま持ってくる。字数は減るが、固有名と数値の密度はむしろ上がる。
+このスキルが守るのは一点である。**要約が落としてはいけないのは記事の骨子である。** 何を主張し、なぜそう言えて、どこまで効くのか。この三つが立っていれば、字数が原文の1割でも要約として使える。三つのうちどれかが欠ければ、何字書いても使えない。
 
-1. **一記事一クリップ**: シリーズものでも記事ごとに分ける
-2. **骨子は表、仕組みは散文**: 表に値、本文に理由。同じ文を二度書かない
+数値と固有名は、**骨子を裏付けるために**残す。骨子そのものではない。そして**具体が消えるのは、たいてい骨子をつかめていないことの症状である。** 何を主張した記事か言えないとき、人は「様々な手法が比較されている」と書く。そのとき一緒に名前と数値も落ちる。**順序を間違えない。骨子を先に決めれば、具体は自然に残る。**
+
+1. **骨子を先に決める**: 主張・根拠・効く範囲を一文ずつ書けるまで、本文を書き始めない
+2. **骨子は表、具体は裏付け**: 表に主張と値、本文に理由。同じ文を二度書かない
 3. **見出しが結論を言う**: 目次だけ読んで記事の主張が取れる
-4. **三つの層を混ぜない**: 記事が言ったこと / 記事が引いた出典 / クリップ時に足した補足
-5. **逐語引用は3箇所まで**: 著者の言い回しそのものが情報になる文だけ引く
-6. **保存と PR**: `content/web-clips/` に `index.mdoc` を書き、origin/main ベースの PR を出す（`podcast: none`）
+4. **一記事一クリップ**: シリーズものでも記事ごとに分ける
+5. **三つの層を混ぜない**: 記事が言ったこと / 記事が引いた出典 / クリップ時に足した補足
+6. **逐語引用は3箇所まで**: 著者の言い回しそのものが情報になる文だけ引く
+7. **保存と PR**: `content/web-clips/` に `index.mdoc` を書き、origin/main ベースの PR を出す（`podcast: none`）
 
 **保存先の区別**: 自分で調べて書く深い調査レポートは `content/docs/`（`podcast-research2`）。**既にある一本の記事を読んで畳むのがこのスキル**で、行き先は `content/web-clips/` である。
 
@@ -49,7 +52,7 @@ URL を受け取り、元記事を取得して、`content/web-clips/` に日本�
 
 | 参照 | 役割 | いつ読むか |
 |------|------|-----------|
-| `references/compression.md` | 何を落とし、何を残すか。要約特有の三つの失敗 | **原文を読み終えた直後に必須** |
+| `references/compression.md` | 骨子の取り方と、何を落とし何を残すか。要約特有の失敗 | **原文を読み終えた直後に必須** |
 | `references/structure.md` | クリップの骨格、骨子表、見出し、引用の作法、分量 | **書き始める前に必須** |
 | `references/japanese.md` | 日本語の作法。第1部が直訳調の直し方、第2部が文の整え方 | **必須**（`podcast-research2` と同じ本体を指す） |
 | `references/prose-style.md` | 段落、論の運び、出典の書き方 | 書く・直すとき |
@@ -58,17 +61,27 @@ URL を受け取り、元記事を取得して、`content/web-clips/` に日本�
 
 `japanese.md` と `prose-style.md` は `podcast-research2` の同名ファイルへのシンボリックリンクである。日本語の作法は二つのスキルで同じものを使う。片方だけ直すことがないように、実体はひとつにしてある。
 
-### 要約の三原則
+### 要約の原則
 
-**1. 圧縮は文を減らして作る。具体語を抽象語に置き換えて作らない。**
+**1. 落としてはいけないのは骨子である。**
 
-「3つのキャッシュ戦略を比較している」と書いた時点で、読者は元記事を開き直すことになる。戦略名と数字を書けば、字数はほとんど変わらないまま、クリップが元記事の代わりになる。
+骨子とは、**主張・根拠・効く範囲**の三つである。この三つを一文ずつ書けないなら、まだ要約できる状態にない。字数を削るのは骨子が立ってからで、順序を逆にすると何を削ってよいか分からなくなる。
 
-**2. 記事の存在ではなく、記事の中身を書く。**
+**2. 具体は骨子の裏付けとして残す。抽象語に置き換えない。**
+
+具体だけを守っても要約にはならない。三段階で見る。
+
+- NG（骨子も具体もない）: 「複数のキャッシュ戦略を性能面で比較している」
+- 不足（具体はあるが骨子がない）: 「p99 は LRU 0.8ms、Redis 3.2ms、Memcached 2.9ms」
+- OK: 「**ネットワークを越えるだけで p99 が4倍になる**（LRU 0.8ms / Redis 3.2ms）ので、キャッシュは分散させないほうがよい」
+
+数値を並べただけの2番目は、1番目より情報は多いが読者の判断には使えない。**主張に数値が付いて、初めて裏付けになる。**
+
+**3. 記事の存在ではなく、記事の中身を書く。**
 
 「本記事では〜について解説している」は要約ではない。目次の言い換えである。記事が何を主張し、その根拠が何で、どこまで効くのかを書く。
 
-**3. 原文・原文が引く出典・クリップ側の補足を、表記で分ける。**
+**4. 原文・原文が引く出典・クリップ側の補足を、表記で分ける。**
 
 半年後に読み返したとき、どこまでが記事の主張でどこからが自分の考えかが分からないクリップは使えない。補足は `{% callout type="note" %}` に隔離する。
 
@@ -84,7 +97,7 @@ WebFetch で全文を取る。取得に失敗したら、その旨を伝えて�
 4. **具体の在庫** — 落としてはいけない数値・固有名・バージョン・コマンドの一覧
 5. **落とすもの** — 前置き、宣伝、言い換え、既知の一般論
 
-4 と 5 の切り分けが要約の本体である。`references/compression.md` の表を使う。
+**1〜3 が骨子である。ここが書けていないうちは 4 と 5 に進まない。** 落とすものの判断は骨子が決まってからでないとできない。`references/compression.md` の表を使う。
 
 必要なら周辺を1〜3回だけ検索してよい（記事の日付、著者、記事が引いている論文の実体）。**それ以上は調査であって要約ではない。** 深掘りしたくなったら `podcast-research2` に切り替えるようユーザーに勧める。
 
@@ -178,7 +191,9 @@ python3 .agents/skills/web-clip-summary/measure.py content/web-clips/<dir>/index
 
 `--source-chars` は WebFetch で取った本文の字数である。省くと圧縮率が出ない。
 
-**未達をゼロにしてから進む。出力の数字を書き換えない。** ただし**指標を通すために原文にない数値や固有名を書き足すことは、このスキルで最も重い違反である。** 原文に数値がないなら、具体の密度は未達のまま報告する。続けて `references/checklists.md` の、スクリプトが判定できないテストを見る。
+**未達をゼロにしてから進む。出力の数字を書き換えない。** ただし**指標を通すために原文にない数値や固有名を書き足すことは、このスキルで最も重い違反である。**
+
+**そして、スクリプトは骨子を測れない。** 数値の密度と固有名の数は参考値として出るだけで、合否には入れていない。数字を散らせば通ってしまい、骨子のない要約を止められないためである。骨子に効く指標は「結論を言っている見出し」と「骨子の表」の二つだけで、残りは `references/checklists.md` の目で見るテストが引き受ける。**骨子テストと代替テストは必ず走らせる。**
 
 自己申告は信用されない。同系のスキルでの実測で、エージェントは7指標のうち4つを誤って申告した。
 
