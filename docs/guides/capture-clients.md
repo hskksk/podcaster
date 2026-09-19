@@ -30,7 +30,14 @@
 
 iOS には Mac のような `curl` が無いので、実用的なのは **ショートカット** です。
 
-### 推奨: 共有シート用ショートカット
+### リポジトリのショートカットファイル
+
+共有シート用 **`Podcaster-Capture.shortcut`** を同梱しています（未署名。iOS 15+ では Mac での署名が必要な場合あり）。
+
+- ファイル: [ios/Podcaster-Capture.shortcut](./ios/Podcaster-Capture.shortcut)
+- 取り込み・署名: [ios/README.md](./ios/README.md)
+
+### 手動で作る場合
 
 1. **ショートカット** アプリで新規作成。
 2. **共有シートに表示** をオン（Safari の共有メニューから起動）。
