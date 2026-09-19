@@ -56,6 +56,8 @@ pnpm capture --title "記事" --file page.md --url https://example.com
 # 既定: content/web-clips/{YYYY-MM-DD}-{slug}/index.mdoc 、podcast: none
 ```
 
+Mac / iPhone（Safari・ショートカット・Web Clip）: [docs/guides/capture-clients.md](../../docs/guides/capture-clients.md)
+
 本番は Octokit で `main` に Direct Commit。GitHub API が 2 秒を超えると `202` + `retryable: true`。同じ body を再送すると既存 SHA を返す。
 
 ### ブランチ保護
