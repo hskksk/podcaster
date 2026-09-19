@@ -167,6 +167,20 @@ def main():
     diagrams = re.findall(r"\{% diagram.*?\{% /diagram %\}", text, flags=re.S)
     ok.append(check("diagram をフェンスで包んだか", f"{len(diagrams)}個",
                     all("```" in d for d in diagrams), "包まないと図が出ない"))
+    quad = re.findall(r"\*{3,}", body)
+    ok.append(check("壊れた太字記法", len(quad),
+                    not quad, "`****` は太字にならない。`**` を入れ子にしない"))
+    diagram_bold = [d for d in diagrams if "**" in d]
+    ok.append(check("図のノードの太字記法", len(diagram_bold),
+                    not diagram_bold,
+                    "Mermaid は `**` を解釈しない。強調は <b> を使う"))
+    dup_urls = [
+        u for u in set(re.findall(r"https?://[^\s)>\]]+", appendix))
+        if len(re.findall(re.escape(u), appendix)) > 1
+    ]
+    ok.append(check("付録で重複した URL", len(dup_urls),
+                    not dup_urls,
+                    f"同じ文献を別番号にしている: {dup_urls[:3]}" if dup_urls else "同じ文献を別番号にしない"))
 
     failed = sum(1 for x in ok if not x)
     print(f"\n未達 {failed} 件 / {len(ok)} 指標")
