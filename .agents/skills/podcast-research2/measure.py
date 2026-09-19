@@ -174,13 +174,12 @@ def main():
     ok.append(check("図のノードの太字記法", len(diagram_bold),
                     not diagram_bold,
                     "Mermaid は `**` を解釈しない。強調は <b> を使う"))
-    dup_urls = [
-        u for u in set(re.findall(r"https?://[^\s)>\]]+", appendix))
-        if len(re.findall(re.escape(u), appendix)) > 1
-    ]
-    ok.append(check("付録で重複した URL", len(dup_urls),
-                    not dup_urls,
-                    f"同じ文献を別番号にしている: {dup_urls[:3]}" if dup_urls else "同じ文献を別番号にしない"))
+    entry_urls = re.findall(r"^[-*\s]*(?:\[\d+\]|\d+[.)])\s.*?(https?://[^\s)>\]]+)",
+                            appendix, re.M)
+    redundant = len(entry_urls) - len(set(entry_urls))
+    ok.append(check("同一 URL に割った余分な番号", redundant, redundant == 0,
+                    f"番号 {len(entry_urls)} 件 → 実際の文献 {len(set(entry_urls))} 件。"
+                    "同じページは一度だけ登録し、番号を再利用する"))
 
     failed = sum(1 for x in ok if not x)
     print(f"\n未達 {failed} 件 / {len(ok)} 指標")
