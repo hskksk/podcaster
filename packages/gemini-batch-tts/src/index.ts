@@ -18,6 +18,14 @@
  *      Peak resident memory ≈ `highWaterMark` (default 64 KiB), independent
  *      of audio length.
  *
+ *   3. One job, many requests. A long script can be submitted as several
+ *      `scriptText` chunks (one JSONL line each, keyed `<requestKey>-0001`, …).
+ *      Batch output order is not guaranteed and the `key` lands *after* the
+ *      audio payload, so `fetchBatchTtsAsWav` first indexes the JSONL (byte
+ *      range + head/tail snippet per line, no parsing), sorts the records by
+ *      key, then runs the streaming extractor over each range in turn,
+ *      appending to a single `.pcm`.
+ *
  * REST endpoints used (auth via `x-goog-api-key`). The package talks to the
  * Gemini REST API directly via `fetch` — no `@google/genai` runtime
  * dependency, which keeps the install footprint small and lets us control
@@ -63,7 +71,7 @@ export interface GeminiBatchTtsEndpoints {
 
 export interface GeminiBatchTtsClient {
   apiKey: string;
-  /** Default `"gemini-2.5-flash-preview-tts"`. */
+  /** Default `"gemini-3.1-flash-tts-preview"`. */
   model?: string;
   /** Default `"https://generativelanguage.googleapis.com"`. */
   apiRoot?: string;
@@ -87,13 +95,21 @@ export interface Speaker {
 }
 
 export interface SubmitBatchTtsParams {
-  scriptText: string;
+  /**
+   * One string = one request. An array = one request per element, spoken in
+   * array order (use for chunked long scripts; see `fetchBatchTtsAsWav`).
+   */
+  scriptText: string | readonly string[];
   host: Speaker;
   /** Omit for single-speaker output. */
   cohost?: Speaker;
   /** `display_name` for the batch job. Default `"podcast-tts"`. */
   displayName?: string;
-  /** `key` field for the JSONL request line. Default `"tts-1"`. */
+  /**
+   * `key` field for the JSONL request line. Default `"tts-1"`. With several
+   * chunks the keys are `<requestKey>-0001`, `<requestKey>-0002`, … so that
+   * lexicographic key order is chunk order.
+   */
   requestKey?: string;
   /** Optional dynamic webhook configuration for batch state events. */
   webhookConfig?: {
@@ -107,6 +123,8 @@ export interface SubmitBatchTtsResult {
   batchName: string;
   /** Resource name of the uploaded input JSONL, like `"files/xyz..."`. */
   inputFile: string;
+  /** Number of requests (chunks) in the job. Pass to `fetchBatchTtsAsWav` as `expectedCount`. */
+  requestCount: number;
 }
 
 export interface BatchStatus {
@@ -122,15 +140,19 @@ export interface FetchBatchTtsAsWavParams {
   batchName: string;
   /** Destination `.wav` path. */
   outPath: string;
+  /** When set, fail unless the result holds exactly this many records. */
+  expectedCount?: number;
 }
 
 export interface FetchBatchTtsAsWavResult {
+  /** Number of chunks concatenated into the WAV. */
+  chunkCount: number;
   pcmBytes: number;
   sampleRate: number;
   mimeType: string;
 }
 
-const DEFAULT_MODEL = "gemini-2.5-flash-preview-tts";
+const DEFAULT_MODEL = "gemini-3.1-flash-tts-preview";
 const DEFAULT_API_ROOT = "https://generativelanguage.googleapis.com";
 const DEFAULT_API_VERSION = "v1beta";
 const DEFAULT_HIGH_WATER_MARK = 64 * 1024;
@@ -204,19 +226,24 @@ export async function submitBatchTts(
     });
   }
 
-  const requestLine = JSON.stringify({
-    key: params.requestKey ?? "tts-1",
-    request: {
-      contents: [{ role: "user", parts: [{ text: params.scriptText }] }],
-      generationConfig: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          multiSpeakerVoiceConfig: { speakerVoiceConfigs },
+  const texts = typeof params.scriptText === "string" ? [params.scriptText] : [...params.scriptText];
+  if (texts.length === 0) throw new Error("submitBatchTts: scriptText is empty");
+  const baseKey = params.requestKey ?? "tts-1";
+  const requestLines = texts.map((text, i) =>
+    JSON.stringify({
+      key: texts.length === 1 ? baseKey : `${baseKey}-${String(i + 1).padStart(4, "0")}`,
+      request: {
+        contents: [{ role: "user", parts: [{ text }] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            multiSpeakerVoiceConfig: { speakerVoiceConfigs },
+          },
         },
       },
-    },
-  });
-  const body = Buffer.from(requestLine + "\n", "utf8");
+    }),
+  );
+  const body = Buffer.from(requestLines.join("\n") + "\n", "utf8");
 
   const inputFile = await uploadJsonlFile(client, body, "tts-batch-input.jsonl");
 
@@ -241,7 +268,7 @@ export async function submitBatchTts(
   if (!json.name) {
     throw new Error(`batch create returned no name: ${JSON.stringify(json)}`);
   }
-  return { batchName: json.name, inputFile };
+  return { batchName: json.name, inputFile, requestCount: texts.length };
 }
 
 /**
@@ -360,14 +387,46 @@ export async function fetchBatchTtsAsWav(
 
   try {
     await downloadFileToDisk(client, status.output, jsonlPath);
-    const { mimeType, pcmBytes } = await extractAudioToPcmFile(
-      client,
-      jsonlPath,
-      pcmPath,
-    );
+    const records = await indexJsonlRecords(jsonlPath, resolved(client).highWaterMark);
+    if (params.expectedCount !== undefined && records.length !== params.expectedCount) {
+      throw new Error(
+        `batch output has ${records.length} record(s), expected ${params.expectedCount}`,
+      );
+    }
+    if (records.length === 0) throw new Error("batch SUCCEEDED but the output file is empty");
+    const keys = new Set(records.map((r) => r.key));
+    if (keys.size !== records.length) throw new Error("batch output contains duplicate keys");
+
+    // Chunks are spoken in key order, not in whatever order the API wrote them.
+    records.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+
+    let pcmBytes = 0;
+    let mimeType = "";
+    for (const [i, rec] of records.entries()) {
+      let part;
+      try {
+        part = await extractAudioToPcmFile(client, jsonlPath, pcmPath, {
+          range: { start: rec.start, end: rec.end },
+          append: i > 0,
+        });
+      } catch (err) {
+        throw new Error(
+          `chunk ${i + 1}/${records.length} (key=${rec.key}) has no audio: ${
+            err instanceof Error ? err.message.split("\n")[0] : String(err)
+          } | record starts: ${rec.head.slice(0, 500)}`,
+        );
+      }
+      if (mimeType && parseSampleRate(part.mimeType) !== parseSampleRate(mimeType)) {
+        throw new Error(
+          `chunk key=${rec.key} has mimeType "${part.mimeType}", others have "${mimeType}"`,
+        );
+      }
+      mimeType ||= part.mimeType;
+      pcmBytes += part.pcmBytes;
+    }
     const sampleRate = parseSampleRate(mimeType);
     await writeWavFile(client, params.outPath, pcmPath, pcmBytes, sampleRate, 1, 16);
-    return { pcmBytes, sampleRate, mimeType };
+    return { chunkCount: records.length, pcmBytes, sampleRate, mimeType };
   } finally {
     await rm(work, { recursive: true, force: true });
   }
@@ -392,6 +451,74 @@ export async function downloadFileToDisk(
     Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]),
     createWriteStream(destPath, { highWaterMark }),
   );
+}
+
+export interface JsonlRecord {
+  /** `key` of the batch request, or `line-<n>` when the record carries none. */
+  key: string;
+  /** Inclusive byte range of the record, without the trailing newline. */
+  start: number;
+  end: number;
+  /** First bytes of the record — enough to show an error line. */
+  head: string;
+}
+
+const RECORD_HEAD_BYTES = 4096;
+// `key` is written after the (huge) audio payload; the tail also has to clear
+// usageMetadata / modelVersion / responseId, which can follow the candidates.
+const RECORD_TAIL_BYTES = 2048;
+const KEY_RE = /"key"\s*:\s*"((?:[^"\\]|\\.)*)"/;
+
+/**
+ * Stream-index a JSONL file: byte range of each non-empty line plus its `key`,
+ * found in a head/tail snippet. Never parses (or holds) the audio payload.
+ */
+export async function indexJsonlRecords(
+  jsonlPath: string,
+  highWaterMark = DEFAULT_HIGH_WATER_MARK,
+): Promise<JsonlRecord[]> {
+  const records: JsonlRecord[] = [];
+  let offset = 0; // absolute offset of the next unread byte
+  let start = 0; // start offset of the record being read
+  let head = Buffer.alloc(0);
+  let tail = Buffer.alloc(0);
+
+  const finish = (endExclusive: number) => {
+    if (endExclusive > start) {
+      const text = head.toString("utf8") + "\n" + tail.toString("utf8");
+      const found = KEY_RE.exec(text);
+      records.push({
+        key: found ? found[1] : `line-${records.length}`,
+        start,
+        end: endExclusive - 1,
+        head: head.toString("utf8"),
+      });
+    }
+    head = Buffer.alloc(0);
+    tail = Buffer.alloc(0);
+  };
+
+  for await (const chunk of createReadStream(jsonlPath, { highWaterMark }) as AsyncIterable<Buffer>) {
+    let from = 0;
+    while (from < chunk.length) {
+      const nl = chunk.indexOf(0x0a, from);
+      const to = nl === -1 ? chunk.length : nl;
+      if (to > from) {
+        const piece = chunk.subarray(from, to);
+        if (head.length < RECORD_HEAD_BYTES) {
+          head = Buffer.concat([head, piece.subarray(0, RECORD_HEAD_BYTES - head.length)]);
+        }
+        tail = Buffer.concat([tail, piece]).subarray(-RECORD_TAIL_BYTES);
+      }
+      if (nl === -1) break;
+      finish(offset + nl);
+      start = offset + nl + 1;
+      from = nl + 1;
+    }
+    offset += chunk.length;
+  }
+  finish(offset);
+  return records;
 }
 
 /**
@@ -419,10 +546,16 @@ export async function extractAudioToPcmFile(
   client: GeminiBatchTtsClient,
   jsonlPath: string,
   pcmPath: string,
+  opts: {
+    /** Only scan this inclusive byte range (one JSONL record). Default: whole file. */
+    range?: { start: number; end: number };
+    /** Append to `pcmPath` instead of truncating it. */
+    append?: boolean;
+  } = {},
 ): Promise<{ mimeType: string; pcmBytes: number }> {
   const { highWaterMark } = resolved(client);
-  const reader = createReadStream(jsonlPath, { highWaterMark });
-  const out = createWriteStream(pcmPath, { highWaterMark });
+  const reader = createReadStream(jsonlPath, { highWaterMark, ...opts.range });
+  const out = createWriteStream(pcmPath, { highWaterMark, flags: opts.append ? "a" : "w" });
   const decoder = new TextDecoder();
 
   const NEEDLE_MIME = '"mimeType":"';
