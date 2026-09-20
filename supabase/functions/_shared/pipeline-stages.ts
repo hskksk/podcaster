@@ -16,6 +16,11 @@ import {
   DEFAULT_USER_PROMPT_TEMPLATE,
   generateScriptFromArticle,
 } from "../../../shared/script-generation.ts";
+import {
+  buildTtsPrompt,
+  DEFAULT_TTS_CHUNK_MAX_CHARS,
+  splitTranscriptIntoChunks,
+} from "../../../shared/tts-prompt.ts";
 
 type EpisodeForRss = {
   id: string;
@@ -68,19 +73,6 @@ function resolveSelectedValue(
   }
   const index = Math.floor(Math.random() * options.length);
   return options[index];
-}
-
-function buildToneInstructions(
-  hostName: string,
-  hostTone: string,
-  cohostName: string,
-  cohostTone: string,
-): string {
-  return [
-    "話し方の追加指定:",
-    `- ${hostName}: ${hostTone}`,
-    `- ${cohostName}: ${cohostTone}`,
-  ].join("\n");
 }
 
 function escapeXml(str: string): string {
@@ -380,6 +372,14 @@ function readBatchPollCount(llmResponse: unknown): number {
   return typeof pollCount === "number" && Number.isFinite(pollCount) ? pollCount : 0;
 }
 
+/** Number of TTS requests (chunks) submitted with the batch job; undefined for jobs submitted before chunking. */
+function readBatchRequestCount(llmResponse: unknown): number | undefined {
+  const response = (llmResponse ?? {}) as Record<string, unknown>;
+  const batch = (response.batch ?? {}) as Record<string, unknown>;
+  const count = batch.requestCount;
+  return typeof count === "number" && Number.isInteger(count) && count > 0 ? count : undefined;
+}
+
 export async function startGeneratingAudio(opts: {
   episodeId: string;
   regenerate?: boolean;
@@ -440,7 +440,7 @@ export async function startGeneratingAudio(opts: {
 
     const cfg = await loadConfig();
     const geminiApiRoot = resolveGeminiApiRoot(cfg);
-    const ttsModel = cfg["tts.model"] || "gemini-2.5-flash-preview-tts";
+    const ttsModel = cfg["tts.model"] || "gemini-3.1-flash-tts-preview";
     const selectionMode = normalizeSelectionMode(cfg["tts.selection_mode"]);
     const hostName = cfg["tts.host.name"] || "Host";
     const cohostName = cfg["tts.cohost.name"] || "CoHost";
@@ -461,28 +461,39 @@ export async function startGeneratingAudio(opts: {
       cohostToneOptions,
       cfg["tts.cohost.tone"] || "親しみやすく好奇心のある受け答え",
     );
-    const instructions = cfg["tts.instructions"];
-    const toneInstructions = buildToneInstructions(hostName, hostTone, cohostName, cohostTone);
-    const mergedInstructions = [instructions, toneInstructions]
-      .filter((text): text is string => typeof text === "string" && text.trim().length > 0)
-      .join("\n\n");
     ttsSelection = {
       mode: selectionMode,
       host: { name: hostName, voice: hostVoice, tone: hostTone },
       cohost: { name: cohostName, voice: cohostVoice, tone: cohostTone },
     };
 
-    const scriptWithInstructions = mergedInstructions
-      ? `${mergedInstructions}\n\n${script.content}`
-      : script.content;
+    // Gemini 3.1 TTS loses volume within a long single generation, so the script is
+    // split at speaker turns into ~2 min chunks — one request each, one batch job.
+    const configuredChunkChars = Number(cfg["tts.chunk_max_chars"]);
+    const chunkMaxChars = Number.isFinite(configuredChunkChars) && configuredChunkChars >= 100
+      ? configuredChunkChars
+      : DEFAULT_TTS_CHUNK_MAX_CHARS;
+    const chunkPrompts = splitTranscriptIntoChunks(script.content, {
+      maxChars: chunkMaxChars,
+      speakerNames: [hostName, cohostName],
+    }).map((transcript) =>
+      buildTtsPrompt({
+        instructions: cfg["tts.instructions"],
+        host: { name: hostName, tone: hostTone },
+        cohost: { name: cohostName, tone: cohostTone },
+        transcript,
+      })
+    );
 
     const batchClient = createGeminiBatchTtsClient({
       apiRoot: geminiApiRoot,
       model: ttsModel,
     });
-    console.log(`[audio-start] creating Gemini batch episode_id=${episodeId}`);
+    console.log(
+      `[audio-start] creating Gemini batch episode_id=${episodeId} chunks=${chunkPrompts.length} chunk_max_chars=${chunkMaxChars}`,
+    );
     const batchJob = await submitBatchTts(batchClient, {
-      scriptText: scriptWithInstructions,
+      scriptText: chunkPrompts,
       host: { name: hostName, voice: hostVoice },
       cohost: { name: cohostName, voice: cohostVoice },
       displayName: `podcaster-audio-${episodeId}`,
@@ -497,6 +508,7 @@ export async function startGeneratingAudio(opts: {
         state: "JOB_STATE_RUNNING",
         apiRoot: geminiApiRoot,
         inputFile: batchJob.inputFile,
+        requestCount: batchJob.requestCount,
         createdAt: now,
         lastPolledAt: null,
         pollCount: 0,
@@ -632,7 +644,7 @@ export async function downloadGeneratedAudio(opts: {
     const batchApiRoot = readBatchApiRoot(llmResponse) ?? defaultGeminiApiRoot;
     const batchClient = createGeminiBatchTtsClient({
       apiRoot: batchApiRoot,
-      model: String(cfg["tts.model"] || "gemini-2.5-flash-preview-tts"),
+      model: String(cfg["tts.model"] || "gemini-3.1-flash-tts-preview"),
     });
     const pollCount = readBatchPollCount(llmResponse);
     const polledStatus = await getBatchStatus(batchClient, jobName);
@@ -711,6 +723,7 @@ export async function downloadGeneratedAudio(opts: {
     const fetchedWav = await fetchBatchTtsAsWav(batchClient, {
       batchName: jobName,
       outPath: wavTempPath,
+      expectedCount: readBatchRequestCount(llmResponse),
     });
     const wavStat = await Deno.stat(wavTempPath);
     const rawMime = fetchedWav.mimeType;
@@ -722,7 +735,7 @@ export async function downloadGeneratedAudio(opts: {
       total_tokens: null,
     };
     console.log(
-      `[audio-download] wav ready episode_id=${episodeId} raw_mime=${rawMime} pcm_bytes=${fetchedWav.pcmBytes} wav_bytes=${wavStat.size}`,
+      `[audio-download] wav ready episode_id=${episodeId} raw_mime=${rawMime} chunks=${fetchedWav.chunkCount} pcm_bytes=${fetchedWav.pcmBytes} wav_bytes=${wavStat.size}`,
     );
     console.log(
       `[audio-download] uploading wav episode_id=${episodeId} path=${audioPath} upload_mime=${uploadMime}`,

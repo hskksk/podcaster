@@ -448,7 +448,8 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 | `gemini.api_root` | `https://generativelanguage.googleapis.com` | Gemini API のベースURL |
 | `gemini.api_path` | `/v1beta` | Gemini API のパス（`api_root` と結合して利用） |
 | `download.monitor_interval_seconds` | `60` | `download-monitor` の監視間隔（cron） |
-| `tts.model` | `gemini-2.5-flash-preview-tts` | TTS モデル |
+| `tts.model` | `gemini-3.1-flash-tts-preview` | TTS モデル |
+| `tts.chunk_max_chars` | `800` | 台本をこの文字数（約2分）以下のチャンクに話者の切り替わりで分割し、1つの Batch ジョブ内の別リクエストとして生成する。3.1 は1回の生成が長いと音量が下がるため。省略可（`100` 未満は無視） |
 | `tts.instructions` | *(自然な会話トーンで…)* | TTS への合成指示 |
 | `tts.host.name` | `Host` | ホストのスクリプト上の名前 |
 | `tts.host.voice` | `Charon` | ホストの音声 |

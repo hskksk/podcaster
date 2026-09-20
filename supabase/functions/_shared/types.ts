@@ -61,6 +61,8 @@ export interface PodcastConfigMap {
   "podcast.cover_url": string;
   "tts.model": string;
   "tts.instructions": string;
+  /** Max characters per TTS request; the script is split at speaker turns. Default 800 (~2 min). */
+  "tts.chunk_max_chars"?: number;
   "tts.selection_mode": "fixed" | "random";
   "tts.host.name": string;
   "tts.host.voice": string;
