@@ -35,9 +35,12 @@
         "web:start": "pnpm --filter @podcaster/web start",
         "vercel-build": "pnpm --filter @podcaster/web build",
         "capture": "tsx scripts/capture.ts",
-        "mcp": "pnpm --filter @podcaster/mcp start"
+        "mcp": "pnpm --filter @podcaster/mcp start",
+        "d2:validate": "tsx scripts/d2-validate.ts",
+        "d2:render": "tsx scripts/d2-render.ts"
     },
     "devDependencies": {
+        "@terrastruct/d2": "0.1.33",
         "@hskksk/mem-ai-cli": "latest",
         "@types/node": "^22.0.0",
         "@types/react": "^19.2.14",
