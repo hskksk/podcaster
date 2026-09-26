@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArticleHeader } from "../../../components/ArticleHeader";
+import { ArticlePager } from "../../../components/ArticlePager";
+import { ArticleToc } from "../../../components/ArticleToc";
 import { SiteShell } from "../../../components/SiteShell";
+import { adjacentPublicDocs } from "../../../lib/site/adjacent-docs";
 import { audioForDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
 import { renderMarkdoc } from "../../../lib/site/render-markdoc";
+import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
+import { extractToc } from "../../../lib/site/toc";
 import { textify } from "../../../../../scripts/lib/mdoc";
 
 export const dynamic = "force-static";
@@ -54,7 +60,10 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   const docs = loadPublicDocs();
   const audioMap = await fetchArticleAudioMap();
   const audioUrl = audioForDoc(audioMap, doc.filename);
-  const body = renderMarkdoc(doc.source);
+  const renderSource = mdocBodyForRender(doc.source, doc.title);
+  const body = renderMarkdoc(renderSource);
+  const toc = extractToc(renderSource);
+  const { prev, next } = adjacentPublicDocs(slug);
   const rss = feedUrl();
 
   return (
@@ -63,21 +72,38 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
       feedUrl={rss}
       articleCount={docs.length}
       variant="public"
-      width="article"
+      width="wide"
     >
-      <p className="mb-8 text-sm">
-        <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
-          ← 記事一覧
-        </Link>
-      </p>
-      {doc.date ? <p className="mb-2 text-sm text-muted-fg">{doc.date}</p> : null}
-      {audioUrl ? (
-        <div className="my-8 rounded-xl border border-amber-200/80 bg-amber-50/80 p-4 dark:border-amber-900/50 dark:bg-amber-950/25">
-          <p className="mb-2 text-sm font-semibold text-accent">このエピソードを聴く</p>
-          <audio controls preload="metadata" src={audioUrl} className="w-full" />
-        </div>
-      ) : null}
-      <article className="markdoc">{body}</article>
+      <div className="mx-auto max-w-3xl">
+        <p className="mb-8 text-sm">
+          <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
+            ← 記事一覧
+          </Link>
+        </p>
+        <ArticleHeader
+          title={doc.title}
+          date={doc.date}
+          source={doc.sourceUrl}
+          mdocSource={doc.source}
+        />
+        {audioUrl ? (
+          <div className="mb-10 rounded-xl border border-amber-200/80 bg-amber-50/80 p-4 dark:border-amber-900/50 dark:bg-amber-950/25">
+            <p className="mb-2 text-sm font-semibold text-accent">このエピソードを聴く</p>
+            <audio controls preload="metadata" src={audioUrl} className="w-full" />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+        <article className="markdoc mx-auto min-w-0 max-w-3xl lg:mx-0">{body}</article>
+        <aside className="mx-auto w-full max-w-3xl lg:mx-0">
+          <ArticleToc entries={toc} />
+        </aside>
+      </div>
+
+      <div className="mx-auto max-w-3xl">
+        <ArticlePager prev={prev} next={next} />
+      </div>
     </SiteShell>
   );
 }
