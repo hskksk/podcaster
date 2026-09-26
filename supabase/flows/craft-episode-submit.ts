@@ -58,7 +58,8 @@ export const CraftEpisodeSubmit = new Flow<Input>({
       maxAttempts: 3,
       timeout: 180,
     },
-    async (flowInput) => {
+    async (_deps, ctx) => {
+      const flowInput = await ctx.flowInput;
       if (flowInput.startFrom === "audio") {
         return { episodeId: flowInput.episodeId, skipped: true };
       }

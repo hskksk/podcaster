@@ -189,7 +189,7 @@ metadata:
 
 #### Markdoc
 
-本文は Markdown でよい。数式は `$...$` / `$$`、または `{% math %}`。図は `{% diagram type="mermaid" %}`、注意書きは `{% callout type="note" %}`（このリポジトリの Markdoc タグは `math` / `diagram` / `callout` / `podcastPlayer`）。`podcastPlayer` はスキルから埋め込まない。
+本文は Markdown でよい。数式は `$...$` / `$$`、または `{% math %}`。主張マップ概観図は `{% diagram type="mermaid" %}`（`references/structure.md`）。アーキテクチャ図などは `write-d2-diagram` に従い `{% diagram type="d2" %}` も可。注意書きは `{% callout type="note" %}`（Markdoc タグは `math` / `diagram` / `callout` / `podcastPlayer`）。`podcastPlayer` はスキルから埋め込まない。
 
 **`{% diagram %}` の中身は必ずフェンス付きコードブロックで包む。** 素の行で書くと Markdoc が改行を空白に潰し、Mermaid が構文エラーになって図が出ない。
 

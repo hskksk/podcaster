@@ -66,6 +66,9 @@ importers:
       '@hskksk/mem-ai-cli':
         specifier: latest
         version: 0.2.0
+      '@terrastruct/d2':
+        specifier: 0.1.33
+        version: 0.1.33
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.17

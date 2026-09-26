@@ -2,7 +2,7 @@
 
 > 出典: 添付仕様書「次世代パーソナルナレッジ基盤 要件定義・設計仕様書」v1.0.0（2026-09-13）  
 > 対象リポジトリ: `hskksk/podcaster`  
-> ステータス: Phase 1b 完了。Phase 2 Capture はスタック PR（`POST /api/capture`。TTS は呼ばない）  
+> ステータス: Phase 1b–4 完了。Capture API・Git ingest・Next 公開サイト済み。次は Phase 5（MCP）  
 > 作業計画: [pkm-next.md](./pkm-next.md)  
 > レビュー: 独立エージェント 2 系（仕様適合 + 現行コード突合）。判定は **approve-with-changes**。P0/P1 を本版で閉じた。
 
@@ -454,7 +454,7 @@ inbox/20260815_095800_reverse_tunnel.md
 **実装時に選ぶこと（Phase 1 はブロックしない）**
 
 - Next.js のホスト: **Vercel**（GitHub storage）。Tunnel 配下 Docker / Railway は任意
-- Chrome 拡張 web-clipper の導入時期。Phase 2 は curl / スキル / TUI で FR-02 を満たす
+- Chrome 拡張 web-clipper / 最小 Web UI（`/clip`）の導入時期。Capture API は #87 済み。Mac / iOS 手順は [capture-clients.md](../guides/capture-clients.md)
 - MCP のデプロイ先（別プロセス推奨。Python FastMCP ならランタイム追加）
 
 **やらないこと（この移行の範囲外）**
@@ -481,16 +481,16 @@ inbox/20260815_095800_reverse_tunnel.md
 
 ## 14. 実装状況
 
-Phase 1 完了（#79–#81）:
+| Phase | 内容 | PR |
+|-------|------|-----|
+| 1 | Next.js + Keystatic 骨格 | #79–#81 |
+| 1b | `content/docs` + `content/web-clips` へ物理移動、コンシューマ追随 | #83 |
+| 2 | `POST` / `PATCH /api/capture`、CLI `pnpm capture` | #87 |
+| 3 | `articles.content_path`、`podcast: queued` ingest | #88 |
+| 4 | Next 公開サイト、Pages リダイレクト | #90, #94 |
+| 5 | MCP（`apps/mcp`） | 未着手 |
 
-1. `pnpm-workspace.yaml` に `apps/*`
-2. `apps/web` の Next.js + Keystatic（local は `pnpm web:dev`、Vercel は GitHub storage）
-3. 空の `content/docs`, `content/web-clips`（`.gitkeep` のみ）
-4. GitHub App ウィザードは development で動作。Vercel へ env をコピー済み
-
-`articles/` と `inbox/` は `content/docs` / `content/web-clips` へ移動済み（Phase 1b）。パイプラインコード（`supabase/functions`）は Phase 3 まで変更しない。
-
-Phase 2 Capture は `apps/web/app/api/capture`。手順の残りは [pkm-next.md](./pkm-next.md)。
+Capture の env・ブランチ保護: [apps/web/README.md](../../apps/web/README.md)。Mac / iPhone クライアント: [capture-clients.md](../guides/capture-clients.md)。作業計画の詳細: [pkm-next.md](./pkm-next.md)。
 
 ---
 

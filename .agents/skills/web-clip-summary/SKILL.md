@@ -166,7 +166,7 @@ WebFetch で全文を取る。取得に失敗したら、その旨を伝えて�
 
 #### Markdoc
 
-本文は Markdown でよい。数式は `$...$` / `$$`、または `{% math %}`。図は `{% diagram type="mermaid" %}`、注意書きは `{% callout type="note" %}`（このリポジトリの Markdoc タグは `math` / `diagram` / `callout` / `podcastPlayer`）。`podcastPlayer` はスキルから埋め込まない。
+本文は Markdown でよい。数式は `$...$` / `$$`、または `{% math %}`。図は `{% diagram type="mermaid" %}` または `{% diagram type="d2" %}`（D2 の執筆規約は `write-d2-diagram` スキル）。注意書きは `{% callout type="note" %}`（このリポジトリの Markdoc タグは `math` / `diagram` / `callout` / `podcastPlayer`）。`podcastPlayer` はスキルから埋め込まない。
 
 **図は原文に図があるときだけ描く。** 要約に構造図を足すのは、たいてい字数稼ぎである。
 

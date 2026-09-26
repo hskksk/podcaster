@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Analytics } from "@vercel/analytics/next";
+import { DraftModeBanner } from "../components/DraftModeBanner";
 import { ThemeProvider } from "../components/ThemeProvider";
 import { loadSiteConfig } from "../lib/site/config";
 import { ogImageUrls, siteOpenGraphDefaults } from "../lib/site/open-graph";
@@ -50,7 +51,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <DraftModeBanner />
+          {children}
+        </ThemeProvider>
         <Analytics />
         <script
           dangerouslySetInnerHTML={{

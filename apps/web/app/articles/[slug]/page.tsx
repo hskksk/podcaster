@@ -83,44 +83,44 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
     <>
       <ReadingProgress />
       <SiteShell
-      siteTitle={cfg.siteTitle}
-      feedUrl={rss}
-      articleCount={docs.length}
-      variant="public"
-      width="wide"
-    >
-      <div className="mx-auto max-w-3xl">
-        <p className="mb-8 text-sm">
-          <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
-            ← 記事一覧
-          </Link>
-        </p>
-        <ArticleHeader
-          title={doc.title}
-          date={doc.date}
-          source={doc.sourceUrl}
-          mdocSource={doc.source}
-          coverImageUrl={coverImageUrl}
-        />
-        {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
-      </div>
+        siteTitle={cfg.siteTitle}
+        feedUrl={rss}
+        articleCount={docs.length}
+        variant="public"
+        width="wide"
+      >
+        <div className="mx-auto max-w-3xl">
+          <p className="mb-8 text-sm">
+            <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
+              ← 記事一覧
+            </Link>
+          </p>
+          <ArticleHeader
+            title={doc.title}
+            date={doc.date}
+            source={doc.sourceUrl}
+            mdocSource={doc.source}
+            coverImageUrl={coverImageUrl}
+          />
+          {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
+        </div>
 
-      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-        <article
-          className="markdoc mx-auto min-w-0 max-w-3xl lg:mx-0"
-          data-pagefind-body
-        >
-          {body}
-        </article>
-        <aside className="mx-auto w-full max-w-3xl lg:mx-0">
-          <ArticleToc entries={toc} />
-        </aside>
-      </div>
+        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+          <article
+            className="markdoc mx-auto min-w-0 max-w-3xl lg:mx-0"
+            data-pagefind-body
+          >
+            {body}
+          </article>
+          <aside className="mx-auto w-full max-w-3xl lg:mx-0">
+            <ArticleToc entries={toc} />
+          </aside>
+        </div>
 
-      <div className="mx-auto max-w-3xl">
-        <ArticlePager prev={prev} next={next} />
-      </div>
-    </SiteShell>
+        <div className="mx-auto max-w-3xl">
+          <ArticlePager prev={prev} next={next} />
+        </div>
+      </SiteShell>
     </>
   );
 }
