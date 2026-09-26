@@ -1,13 +1,22 @@
-export const DEFAULT_EPISODE_IMAGE_PROMPT = `Create a single square podcast episode artwork image (no text, no logos, no watermarks).
+/** Appended to every image prompt (including custom DB templates) to steer away from cover-art tropes. */
+export const EPISODE_IMAGE_STYLE_SUFFIX = `Visual requirements:
+- One original editorial illustration (magazine essay / technical blog hero art), not album art, CD cover, podcast cover template, or promotional poster layout.
+- Pick a single clear scene, metaphor, or object study from the themes above; avoid icon collages and keyword soup.
+- Contemporary conceptual illustration: confident composition, soft atmospheric background, polished palette, subtle hand-drawn texture.
+- Wide horizontal canvas (16:9), illustration fills the frame edge-to-edge (no mockup frame, bezel, or drop shadow around the art).
 
-Topic summary:
+Hard constraints: no readable text, letters, numbers, logos, watermarks, or UI chrome. Avoid stock-photo realism, centered emblem with radial glow, and generic neon cyberpunk HUD aesthetics. Avoid human faces unless essential to the metaphor.`;
+
+export const DEFAULT_EPISODE_IMAGE_PROMPT = `Draw a wide horizontal (16:9) insert illustration for a long-form technical article—like an eye-catch figure below the headline, not packaging or cover-art layout.
+
+Article context:
 Title: {{title}}
-Description: {{description}}
+Summary: {{description}}
 
-Article excerpt (for visual themes only):
+Themes to illustrate (choose one coherent concept; do not illustrate every keyword):
 {{excerpt}}
 
-Style: modern editorial illustration, clear focal subject, soft gradient background, suitable as podcast cover and social preview. Avoid readable text and human faces unless essential.`;
+${EPISODE_IMAGE_STYLE_SUFFIX}`;
 
 export function buildEpisodeImagePrompt(opts: {
   title: string;
@@ -16,10 +25,16 @@ export function buildEpisodeImagePrompt(opts: {
   template?: string;
 }): string {
   const template = opts.template?.trim() || DEFAULT_EPISODE_IMAGE_PROMPT;
-  return template
+  const body = template
     .replaceAll("{{title}}", opts.title.trim())
     .replaceAll("{{description}}", opts.description.trim())
-    .replaceAll("{{excerpt}}", opts.articleExcerpt.trim().slice(0, 1200));
+    .replaceAll("{{excerpt}}", opts.articleExcerpt.trim().slice(0, 1200))
+    .trim();
+
+  if (body.includes("not album art, CD cover, podcast cover template")) {
+    return body;
+  }
+  return `${body}\n\n${EPISODE_IMAGE_STYLE_SUFFIX}`;
 }
 
 export function excerptFromArticle(content: string, maxChars = 1200): string {

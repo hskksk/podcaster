@@ -1,7 +1,7 @@
 import { Calendar, Clock, ExternalLink } from "lucide-react";
 import { formatReadingTime, readingTimeMinutes } from "../lib/site/reading-time";
 
-/** Viewport-wide hero (note.com-style) from a 1:1 episode artwork source. */
+/** Viewport-wide hero (note.com-style) from episode artwork. */
 export function ArticleCoverHero(props: { src: string; title: string }) {
   return (
     <figure className="relative left-1/2 -mt-10 mb-8 w-screen max-w-[100vw] -translate-x-1/2">
@@ -13,6 +13,7 @@ export function ArticleCoverHero(props: { src: string; title: string }) {
           width={1200}
           height={630}
           fetchPriority="high"
+          decoding="async"
         />
       </div>
     </figure>
@@ -45,8 +46,9 @@ export function ArticleHeader(props: {
     </p>
   );
 
-  const titleBlock = (
-    <>
+  return (
+    <header className="mb-10 border-b border-border/70 pb-8">
+      {metaRow}
       <h1 className="font-serif text-3xl font-semibold leading-tight tracking-tight text-fg sm:text-4xl">
         {props.title}
       </h1>
@@ -63,13 +65,6 @@ export function ArticleHeader(props: {
           </a>
         </p>
       ) : null}
-    </>
-  );
-
-  return (
-    <header className="mb-10 border-b border-border/70 pb-8">
-      {metaRow}
-      {titleBlock}
     </header>
   );
 }

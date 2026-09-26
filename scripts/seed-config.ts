@@ -135,7 +135,7 @@ const defaults: Record<string, unknown> = {
   "download.monitor_interval_seconds": config.download?.monitor_interval_seconds ?? 60,
   "image.enabled": config.image?.enabled ?? true,
   "image.model": config.image?.model ?? "gemini-3.1-flash-image",
-  "image.aspect_ratio": config.image?.aspect_ratio ?? "1:1",
+  "image.aspect_ratio": config.image?.aspect_ratio ?? "16:9",
   "image.image_size": config.image?.image_size ?? "1K",
   "image.mime_type": config.image?.mime_type ?? "image/jpeg",
 };
