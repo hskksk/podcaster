@@ -67,8 +67,12 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   if (!doc) notFound();
   const cfg = loadSiteConfig();
   const docs = loadPublicDocs();
-  const audioMap = await fetchArticleAudioMap();
+  const [audioMap, imageMap] = await Promise.all([
+    fetchArticleAudioMap(),
+    fetchArticleImageMap(),
+  ]);
   const audioUrl = audioForPublicDoc(audioMap, doc);
+  const coverImageUrl = imageForPublicDoc(imageMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
   const body = renderMarkdoc(renderSource);
   const toc = extractToc(renderSource);
@@ -96,6 +100,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
             date={doc.date}
             source={doc.sourceUrl}
             mdocSource={doc.source}
+            coverImageUrl={coverImageUrl}
           />
           {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
         </div>
