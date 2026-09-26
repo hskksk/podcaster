@@ -1,7 +1,7 @@
 name: opencode
 
-# /oc-issue  — github-reply (issue コメントのみ、PR なし)
-# /oc, /opencode — 通常（変更があれば PR）
+# 通常（変更があれば PR）: /oc, /opencode
+# 調査用 github-reply: /oci, /oca, /oc-issue, /oc-ask, /opencode-issue, /opencode-ask
 
 on:
   issue_comment:
@@ -18,46 +18,16 @@ jobs:
     if: |
       (
         (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
-        (
-          contains(github.event.comment.body, ' /oc-issue') ||
-          startsWith(github.event.comment.body, '/oc-issue') ||
-          contains(github.event.comment.body, ' /opencode') ||
-          startsWith(github.event.comment.body, '/opencode') ||
-          (
-            (contains(github.event.comment.body, ' /oc') || startsWith(github.event.comment.body, '/oc')) &&
-            !contains(github.event.comment.body, ' /oc-issue') &&
-            !startsWith(github.event.comment.body, '/oc-issue')
-          )
-        )
+        (contains(github.event.comment.body, '/oc') || contains(github.event.comment.body, '/opencode'))
       ) ||
       (
         github.event_name == 'issues' &&
         !github.event.issue.pull_request &&
-        (
-          contains(github.event.issue.body || '', ' /oc-issue') ||
-          startsWith(github.event.issue.body || '', '/oc-issue') ||
-          contains(github.event.issue.body || '', ' /opencode') ||
-          startsWith(github.event.issue.body || '', '/opencode') ||
-          (
-            (contains(github.event.issue.body || '', ' /oc') || startsWith(github.event.issue.body || '', '/oc')) &&
-            !contains(github.event.issue.body || '', ' /oc-issue') &&
-            !startsWith(github.event.issue.body || '', '/oc-issue')
-          )
-        )
+        (contains(github.event.issue.body || '', '/oc') || contains(github.event.issue.body || '', '/opencode'))
       ) ||
       (
         github.event_name == 'pull_request' &&
-        (
-          contains(github.event.pull_request.body || '', ' /oc-issue') ||
-          startsWith(github.event.pull_request.body || '', '/oc-issue') ||
-          contains(github.event.pull_request.body || '', ' /opencode') ||
-          startsWith(github.event.pull_request.body || '', '/opencode') ||
-          (
-            (contains(github.event.pull_request.body || '', ' /oc') || startsWith(github.event.pull_request.body || '', '/oc')) &&
-            !contains(github.event.pull_request.body || '', ' /oc-issue') &&
-            !startsWith(github.event.pull_request.body || '', '/oc-issue')
-          )
-        )
+        (contains(github.event.pull_request.body || '', '/oc') || contains(github.event.pull_request.body || '', '/opencode'))
       )
     runs-on: ubuntu-latest
     permissions:
@@ -71,35 +41,88 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run opencode (github-reply via /oc-issue)
-        if: |
-          (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
-          (contains(github.event.comment.body, ' /oc-issue') || startsWith(github.event.comment.body, '/oc-issue')) ||
-          github.event_name == 'issues' &&
-          (contains(github.event.issue.body || '', ' /oc-issue') || startsWith(github.event.issue.body || '', '/oc-issue')) ||
-          github.event_name == 'pull_request' &&
-          (contains(github.event.pull_request.body || '', ' /oc-issue') || startsWith(github.event.pull_request.body || '', '/oc-issue'))
+      - name: Resolve slash command
+        id: slash
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const REPLY_CMDS = [
+              "/opencode-issue",
+              "/opencode-ask",
+              "/oc-issue",
+              "/oc-ask",
+              "/oci",
+              "/oca",
+            ];
+            const BUILD_CMDS = ["/opencode", "/oc"];
+
+            function triggerBody() {
+              const eventName = context.eventName;
+              if (eventName === "issue_comment" || eventName === "pull_request_review_comment") {
+                return context.payload.comment?.body ?? "";
+              }
+              if (eventName === "issues") {
+                return context.payload.issue?.body ?? "";
+              }
+              if (eventName === "pull_request") {
+                return context.payload.pull_request?.body ?? "";
+              }
+              return "";
+            }
+
+            function hasCmd(body, cmd) {
+              let from = 0;
+              while (from <= body.length) {
+                const i = body.indexOf(cmd, from);
+                if (i === -1) return false;
+                const beforeOk = i === 0 || body[i - 1] === " " || body[i - 1] === "\n";
+                const end = i + cmd.length;
+                const afterOk =
+                  end === body.length ||
+                  body[end] === " " ||
+                  body[end] === "\n" ||
+                  body[end] === "\r";
+                if (beforeOk && afterOk) return true;
+                from = i + 1;
+              }
+              return false;
+            }
+
+            function detectMode(body) {
+              for (const cmd of REPLY_CMDS) {
+                if (hasCmd(body, cmd)) return "reply";
+              }
+              for (const cmd of BUILD_CMDS) {
+                if (hasCmd(body, cmd)) return "build";
+              }
+              return "";
+            }
+
+            const body = triggerBody();
+            const mode = detectMode(body);
+            if (!mode) {
+              core.setFailed("No supported opencode slash command found in trigger text.");
+              return;
+            }
+
+            core.setOutput("mode", mode);
+            core.setOutput("prompt", body);
+
+      - name: Run opencode (github-reply)
+        if: steps.slash.outputs.mode == 'reply'
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
           model: opencode/big-pickle
           agent: github-reply
-          prompt: ${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && github.event.comment.body || github.event_name == 'issues' && github.event.issue.body || github.event_name == 'pull_request' && github.event.pull_request.body || '' }}
+          prompt: ${{ steps.slash.outputs.prompt }}
 
       - name: Run opencode
-        if: |
-          !(
-            (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
-            (contains(github.event.comment.body, ' /oc-issue') || startsWith(github.event.comment.body, '/oc-issue')) ||
-            github.event_name == 'issues' &&
-            (contains(github.event.issue.body || '', ' /oc-issue') || startsWith(github.event.issue.body || '', '/oc-issue')) ||
-            github.event_name == 'pull_request' &&
-            (contains(github.event.pull_request.body || '', ' /oc-issue') || startsWith(github.event.pull_request.body || '', '/oc-issue'))
-          )
+        if: steps.slash.outputs.mode == 'build'
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
           model: opencode/big-pickle
-          prompt: ${{ github.event_name == 'issues' && github.event.issue.body || github.event_name == 'pull_request' && github.event.pull_request.body || '' }}
+          prompt: ${{ (github.event_name == 'issues' || github.event_name == 'pull_request') && steps.slash.outputs.prompt || '' }}
