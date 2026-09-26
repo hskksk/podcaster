@@ -1,15 +1,21 @@
 import { Calendar, Clock, ExternalLink } from "lucide-react";
 import { formatReadingTime, readingTimeMinutes } from "../lib/site/reading-time";
 
-function EpisodeCoverArt(props: { src: string; title: string }) {
+/** Viewport-wide hero (note.com-style) from a 1:1 episode artwork source. */
+function EpisodeCoverHero(props: { src: string; title: string }) {
   return (
-    <img
-      className="size-36 shrink-0 rounded-2xl object-cover shadow-[var(--shadow-card-hover)] ring-1 ring-border/80 sm:size-40 md:size-44"
-      src={props.src}
-      alt={`${props.title} のエピソードカバー`}
-      width={176}
-      height={176}
-    />
+    <figure className="relative left-1/2 mb-8 w-screen max-w-[100vw] -translate-x-1/2">
+      <div className="overflow-hidden bg-muted">
+        <img
+          className="h-[min(56vw,420px)] w-full object-cover object-center sm:h-[380px] md:h-[440px]"
+          src={props.src}
+          alt={`${props.title} のエピソードカバー`}
+          width={1200}
+          height={630}
+          fetchPriority="high"
+        />
+      </div>
+    </figure>
   );
 }
 
@@ -64,18 +70,12 @@ export function ArticleHeader(props: {
   );
 
   return (
-    <header className="mb-10 border-b border-border/70 pb-8">
-      {metaRow}
-      {cover ? (
-        <div className="flex flex-col items-center gap-6 md:flex-row md:items-start md:gap-8">
-          <div className="order-1 shrink-0 md:order-2">
-            <EpisodeCoverArt src={cover} title={props.title} />
-          </div>
-          <div className="order-2 min-w-0 flex-1 md:order-1">{titleBlock}</div>
-        </div>
-      ) : (
-        titleBlock
-      )}
+    <header className="mb-10">
+      {cover ? <EpisodeCoverHero src={cover} title={props.title} /> : null}
+      <div className="border-b border-border/70 pb-8">
+        {metaRow}
+        {titleBlock}
+      </div>
     </header>
   );
 }
