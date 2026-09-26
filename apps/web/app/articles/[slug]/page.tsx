@@ -8,6 +8,9 @@ import { SiteShell } from "../../../components/SiteShell";
 import { adjacentPublicDocs } from "../../../lib/site/adjacent-docs";
 import { audioForDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
+import { articleOpenGraph } from "../../../lib/site/open-graph";
+import { EpisodePlayer } from "../../../components/EpisodePlayer";
+import { ReadingProgress } from "../../../components/ReadingProgress";
 import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
 import { renderMarkdoc } from "../../../lib/site/render-markdoc";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
@@ -46,10 +49,12 @@ export async function generateMetadata({
     .trim()
     .slice(0, 120)
     .replace(/\n+/g, " ");
-  return {
+  return articleOpenGraph({
+    cfg,
     title: doc.title,
     description: desc || cfg.siteDescription,
-  };
+    date: doc.date,
+  });
 }
 
 export default async function ArticlePage({ params }: { params: Promise<Params> }) {
@@ -67,7 +72,9 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   const rss = feedUrl();
 
   return (
-    <SiteShell
+    <>
+      <ReadingProgress />
+      <SiteShell
       siteTitle={cfg.siteTitle}
       feedUrl={rss}
       articleCount={docs.length}
@@ -86,16 +93,16 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
           source={doc.sourceUrl}
           mdocSource={doc.source}
         />
-        {audioUrl ? (
-          <div className="mb-10 rounded-xl border border-amber-200/80 bg-amber-50/80 p-4 dark:border-amber-900/50 dark:bg-amber-950/25">
-            <p className="mb-2 text-sm font-semibold text-accent">このエピソードを聴く</p>
-            <audio controls preload="metadata" src={audioUrl} className="w-full" />
-          </div>
-        ) : null}
+        {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
       </div>
 
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-        <article className="markdoc mx-auto min-w-0 max-w-3xl lg:mx-0">{body}</article>
+        <article
+          className="markdoc mx-auto min-w-0 max-w-3xl lg:mx-0"
+          data-pagefind-body
+        >
+          {body}
+        </article>
         <aside className="mx-auto w-full max-w-3xl lg:mx-0">
           <ArticleToc entries={toc} />
         </aside>
@@ -105,5 +112,6 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
         <ArticlePager prev={prev} next={next} />
       </div>
     </SiteShell>
+    </>
   );
 }

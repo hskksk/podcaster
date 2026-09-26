@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { PublicDoc } from "../lib/site/docs";
+type PagerItem = { slug: string; title: string };
 
 export function ArticlePager(props: {
-  prev: PublicDoc | null;
-  next: PublicDoc | null;
+  prev: PagerItem | null;
+  next: PagerItem | null;
   basePath?: string;
 }) {
   const base = props.basePath ?? "/articles";

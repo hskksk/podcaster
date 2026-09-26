@@ -3,14 +3,23 @@ import type { ReactNode } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "../components/ThemeProvider";
 import { loadSiteConfig } from "../lib/site/config";
+import { ogImageUrls, siteOpenGraphDefaults } from "../lib/site/open-graph";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const cfg = loadSiteConfig();
+  const og = siteOpenGraphDefaults(cfg);
   return {
     title: { default: cfg.siteTitle, template: `%s | ${cfg.siteTitle}` },
     description: cfg.siteDescription,
     robots: { index: true, follow: true },
+    openGraph: og,
+    twitter: {
+      card: "summary_large_image",
+      title: cfg.siteTitle,
+      description: cfg.siteDescription || undefined,
+      images: ogImageUrls(og.images),
+    },
   };
 }
 
