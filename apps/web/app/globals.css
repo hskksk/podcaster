@@ -124,6 +124,10 @@ body {
   @apply border-red-200 bg-red-50 text-red-950 dark:border-red-900/80 dark:bg-red-950/30 dark:text-red-100;
 }
 
+.article-insert-figure {
+  @apply my-0;
+}
+
 .diagram-figure {
   @apply my-8;
 }

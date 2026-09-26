@@ -125,7 +125,7 @@ monitor_interval_seconds = 60
 [image]
 enabled = true
 model = "gemini-3.1-flash-image"
-aspect_ratio = "1:1"
+aspect_ratio = "16:9"
 image_size = "1K"
 mime_type = "image/jpeg"
 
