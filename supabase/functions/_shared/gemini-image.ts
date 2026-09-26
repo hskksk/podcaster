@@ -4,6 +4,8 @@ import type { PodcastConfigMap } from "./types.ts";
 
 const MOCK_API_KEY = "mock-api-key";
 const DEFAULT_GEMINI_API_ROOT = "https://generativelanguage.googleapis.com";
+/** Gemini interactions image response_format only accepts image/jpeg. */
+const GEMINI_IMAGE_RESPONSE_MIME = "image/jpeg";
 
 function resolveApiKey(apiRoot: string): string {
   const envApiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
@@ -37,7 +39,7 @@ function extractImageFromInteraction(interaction: Record<string, unknown>): Imag
   if (outputImage && typeof outputImage === "object") {
     const rec = outputImage as Record<string, unknown>;
     const data = rec.data;
-    const mime = typeof rec.mime_type === "string" ? rec.mime_type : "image/png";
+    const mime = typeof rec.mime_type === "string" ? rec.mime_type : GEMINI_IMAGE_RESPONSE_MIME;
     if (typeof data === "string" && data.length > 0) {
       return { bytes: decodeBase64Image(data), mimeType: mime };
     }
@@ -50,7 +52,7 @@ function extractImageFromInteraction(interaction: Record<string, unknown>): Imag
     const out = item as Record<string, unknown>;
     if (out.type !== "image") continue;
     const data = out.data;
-    const mime = typeof out.mime_type === "string" ? out.mime_type : "image/png";
+    const mime = typeof out.mime_type === "string" ? out.mime_type : GEMINI_IMAGE_RESPONSE_MIME;
     if (typeof data === "string" && data.length > 0) {
       return { bytes: decodeBase64Image(data), mimeType: mime };
     }
@@ -65,8 +67,11 @@ export type EpisodeImageGenerationConfig = {
   mimeType: string;
 };
 
+function normalizeGeminiImageResponseMime(_mime: string | undefined): string {
+  return GEMINI_IMAGE_RESPONSE_MIME;
+}
+
 export function readEpisodeImageConfig(cfg: PodcastConfigMap): EpisodeImageGenerationConfig {
-  const enabled = cfg["image.enabled"];
   const modelRaw = cfg["image.model"];
   const aspectRaw = cfg["image.aspect_ratio"];
   const sizeRaw = cfg["image.image_size"];
@@ -76,7 +81,9 @@ export function readEpisodeImageConfig(cfg: PodcastConfigMap): EpisodeImageGener
     model: typeof modelRaw === "string" && modelRaw.trim() ? modelRaw.trim() : "gemini-3.1-flash-image",
     aspectRatio: typeof aspectRaw === "string" && aspectRaw.trim() ? aspectRaw.trim() : "1:1",
     imageSize: typeof sizeRaw === "string" && sizeRaw.trim() ? sizeRaw.trim() : "1K",
-    mimeType: typeof mimeRaw === "string" && mimeRaw.trim() ? mimeRaw.trim() : "image/png",
+    mimeType: normalizeGeminiImageResponseMime(
+      typeof mimeRaw === "string" ? mimeRaw : undefined,
+    ),
   };
 }
 
