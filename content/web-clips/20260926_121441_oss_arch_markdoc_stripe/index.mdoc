@@ -1,0 +1,312 @@
+---
+title: "OSSアーキテクチャ深掘りシリーズ: Markdoc — Stripe がドキュメントを書くために作った言語と、Stripe Docs でのカスタムタグ運用"
+clippedAt: "2026-09-26T12:14:41.000Z"
+podcast: none
+legacyFilename: 20260926_121441_oss_arch_markdoc_stripe.md
+---
+# OSSアーキテクチャ深掘りシリーズ: Markdoc — Stripe がドキュメントを書くために作った言語と、Stripe Docs でのカスタムタグ運用
+
+> この記事は、ユーザーからの質問「Markdoc は Stripe が作ったものだと思うけど、どんなドキュメントを書くために使っているのか、どういうものをカスタムタグとして定義して使っているのか」に答えるために、一次情報（Stripe の公式ブログ・Markdoc 公式ドキュメント・GitHub Discussions・docs.stripe.com の配信データの実測）を調査してまとめたものである。割り引きは脚注で明示する。
+
+## 1. 概要とプロジェクトのビジョン
+
+**Markdoc**（[markdoc/markdoc](https://github.com/markdoc/markdoc)）は、Stripe が開発した **Markdown ベースのオーサリング（執筆）フレームワーク** である。公式 README は冒頭で「Markdoc はカスタムドキュメントサイトを作るための Markdown ベースのシンタックスとツールチェーン。Stripe の公開ドキュメント（stripe.com/docs）——最大かつ最も複雑なコンテンツサイト——を動かすために設計した」と明言している [^1]。
+
+- 作成者: Stripe（`@markdoc/markdoc` v0.5.10、MIT ライセンス、パッケージ作者は元 Stripe Docs チームの Ryan Paul）[^2]
+- 公開: 2022年5月に npm で公開。同時期にタグ構文のドラフト仕様（[markdoc.dev/spec](https://markdoc.dev/spec)）も公開 [^3]
+- 規模: GitHub 8.5k スター（調査時点: 2026-09-26 実測）。Stripe 内では「以後、社内全体に採用され、数十万行の Markdoc で数千ページを書いた」と公式に説明されている [^4]
+
+### 何を解決するために作られたか
+
+Markdoc の公式ブログ「How Stripe builds interactive docs with Markdoc」（2022-09-13）[^3] が設計動機を明確に語っている。要点は次の通り。
+
+| 課題 | 説明 |
+|------|------|
+| 旧プラットフォームのコード・コンテンツ混在 | 旧ドキュメント基盤は Ruby + Sinatra + ERB テンプレートのモノリスで、HTML・Markdown・Ruby・ERB ヘルパーがコンテンツ内に自由に混在していた。数百ページ規模に成長した時点で品質・保守性が崩壊し、「コンテンツ執筆がソフトウェア開発になってしまった」 |
+| Markdown だけの限界 | Markdown はフラットで複雑な構造・階層を表現できず、ページロジック・変数・条件分岐・コンテンツ再利用のようなテンプレート機能がない。Stripe の製品ドキュメントのようなリッチコンテンツには不十分 |
+| 追求した解 | **コードとコンテンツを分離し、境界に規律を強制する** オーサリングフォーマット。ページを開放的なアプリケーションにする代わりに、スタイルとプログラミングに制約を課し、「定規（prescriptive rails）」の上でコンテンツを拡張できるようにした |
+
+つまり Markdoc は「インタラクティブなドキュメント（アプリのような docs）を、書き手がコードを混ぜずに表現できるようにする」ための言語である。Stripe Docs の実際の UX 例として、公式ブログは以下を挙げている [^3]:
+
+- コードサンプルに **ユーザー自身の API テストキーを注入**（コピー&ペーストでそのまま動く）
+- チェックリスト・折りたたみセクションなどのクライアントサイドインタラクティブ性
+- ユーザーの所在地や利用している Stripe 機能に応じた **条件付きコンテンツ表示**
+
+### ターゲット
+
+- 一次ターゲットは Stripe 内のテクニカルライターとエンジニア（ドキュメントの書き手）
+- OSS としては「カスタムドキュメントサイトを作りたいすべての開発者」向けに MIT で公開。Next.js プラグイン（`@markdoc/next.js`）、言語サーバー（`@markdoc/language-server`）、スターター（[markdoc-starter](https://github.com/markdoc/markdoc-starter)）も公式提供
+
+## 2. システムアーキテクチャ
+
+### 全体フロー
+
+Markdoc コアは **パース → 変換 → レンダーの 3 フェーズ** で構成される [^5]。
+
+```
+Markdoc テキスト
+  │  Markdoc.parse()
+  ▼
+AST（Abstract Syntax Tree）        ← 位置情報・エラーを持つ機械可読データ
+  │  Markdoc.validate()（任意）     ← スキーマ検証
+  │  Markdoc.transform(ast, config)
+  ▼
+RenderableTree（レンダリング可能木）← 変数は解決済みの値に置換される
+  │  Markdoc.renderers.react() / html() / 独自レンダラー
+  ▼
+React 要素 / HTML 文字列 / その他任意出力
+```
+
+各フェーズの内容 [^5]:
+
+1. **Parse**: 文字列を AST に変換。AST ノードは `walk()` などの走査 API と位置情報（行番号）を持つ
+2. **Transform**: AST を再帰的に走査し、node/tag スキーマ定義に従って renderable tree を生成。**変数の解決** もこの段階で行われ、すべて静的なスカラー値に置換される。renderable tree はシリアライズ可能で、目次の計算やクライアントへの転送に使える
+3. **Render**: renderable tree を最終出力へ変換。ビルトインの `react`（動的）・`html`（文字列）に加え、`reactStatic`（JS コードへトランスパイルする静的 React レンダラー）があり、独自レンダラーも関数として作れる [^3]
+
+### 内部実装
+
+- パーサーは JavaScript で、**markdown-it をトークナイザとして利用**（唯一の直接依存）。Markdoc 独自タグ構文のパースロジックは **peg.js グラマーから生成** され、markdown-it プラグインとして統合されている [^3][^6]
+- レンダリングは markdown-it に頼らず **独自のレンダリングアーキテクチャ** を持つ。これは独自タグと複数出力フォーマット対応のため [^3]
+- AST は JSON にシリアライズしてキャッシュ可能。Stripe の本番ドキュメントプラットフォームは実行時のインメモリ AST キャッシュを持ち、ビルド時に AST をシリアライズしてランタイムパースをなくす方向も検討していた（2022年時点の記述）[^3]
+- Stripe Docs は動的 React レンダラーを使っており、ドキュメントページは **レンダリング済みの Markdoc renderable tree（JSON）として配信される**（§4.3 の実測参照）
+
+### 拡張モデル: Tags / Nodes / Functions / Attributes
+
+Markdoc の拡張点は次の 4 種類で、すべて `config` オブジェクト経由で登録する [^7][^8][^9][^10]:
+
+| 拡張点 | 定義内容 | 用途 |
+|--------|---------|------|
+| **Tag** | `render`（出力名）・`attributes`（型つき属性）・`children`（許容子ノード）・`transform`・`validate`・`selfClosing` | Markdown 中の `{% tag %}` に任意の React コンポーネントや HTML 要素をマッピング |
+| **Node** | CommonMark の各ノード型（heading, fence, link, table など）の上書き定義 | 見出しに自動 ID 付与、fence の属性追加など。カスタム構文を使わずにレンダリングだけ差し替え可能 |
+| **Function** | `transform(parameters)` を持つユーティリティ | `{% if includes($countries, "JP") %}` のような文書内条件式（変数参照 `$` はこの記事内では特に変換されない前提で記述） |
+| **Attribute 型** | `validate(value, config)` を持つカスタム属性クラス | 属性値のカスタム検証（例: `https://` で始まる URL 強制） |
+
+タグ定義の例（公式ドキュメントの `callout` タグ）[^7]:
+
+```js
+// ./schema/Callout.markdoc.js
+export const callout = {
+  render: 'Callout',
+  children: ['paragraph', 'tag', 'list'],
+  attributes: {
+    type: {
+      type: String,
+      default: 'note',
+      matches: ['caution', 'check', 'note', 'warning'],
+      errorLevel: 'critical'
+    },
+    title: { type: String }
+  }
+};
+```
+
+ビルトインは **タグが 4 種（`if` / `else` / `table` / `partial`）、関数が 6 種（`equals` / `and` / `or` / `not` / `default` / `debug`）** のみ [^7][^9]。この意図的な小ささが Stripe の設計哲学である（§3）。
+
+### 検証（Validation）
+
+`Markdoc.validate(ast, config)` は、構文エラー（閉じタグ欠落など）に加え、スキーマレベルの検証を行う [^11]:
+
+- 属性の型・`matches`・required 検証
+- タグ/ノード定義に書けるカスタム `validate` 関数による子ノードの構造検証
+- カスタム属性型による値検証
+
+### 周辺ツール
+
+- **`@markdoc/next.js`**: Next.js 用ローダープラグイン。`/markdoc/` ディレクトリに `tags.js` / `nodes.js` / `functions.js` / `config.js` を置くとスキーマとして自動読み込み。frontmatter は YAML（`$markdoc.frontmatter` 変数でアクセス可）。`@markdoc/next.js/tags` には `head` / `link` / `script` タグがビルトイン提供 [^12]
+- **言語サーバー（@markdoc/language-server）**: 公式 VS Code 拡張。スキーマ読み込みによるタグ・属性オートコンプリート、スキーマ検証のインライン表示、partial へのジャンプ/参照検索、フォーマッタ、frontmatter のルート定義に基づくリンク補完など [^13]。Markdown と区別するため `.markdoc` / `.markdoc.md` / `.mdoc` の拡張子を推奨
+- **プレイグラウンド**: [markdoc.dev/sandbox](https://markdoc.dev/sandbox)（`?mode=ast` / `?mode=transform` で中間表現を可視化）
+
+## 3. 設計思想と開発の原則
+
+Markdoc の思想は公式ブログ [^3] と Overview [^14] に一貫して現れている。Stripe Docs に携わった Stripe 社員（duncanma-stripe）が GitHub Discussions で残した運用上の説明も重要な補助線になる [^15][^16]。
+
+### 原則 1: コードとコンテンツの分離、境界での規律
+
+「ページを開放的なアプリケーションにせず、スタイルとプログラミングに制約を課す」。「新しい機能の表面積を小さく保ち、少数の高度に合成可能なプリミティブで必要なすべてを表現する」[^3]。旧 ERB 基盤の失敗（コンテンツ執筆がソフトウェア開発化した）への直接の対抗案である。
+
+### 原則 2: 意図的に「入れない」機能で保守性を守る
+
+- **ループ（for）を入れない**: ドキュメント内での手続き的コンテンツ生成を避け、外に出させてカプセル化させる
+- **変数代入を入れない**: コンテンツを完全にステートレスに保ち、バグの種類を一つ丸ごと排除する [^3]
+
+truthy 判定も JavaScript と異なり `undefined` / `null` / `false` のみが falsey とされる [^7]。
+
+### 原則 3: 宣言的フォーマット＝ドキュメントをデータとして扱う
+
+Markdoc は完全に宣言的なので、ドキュメントは **AST というデータ** になる [^3]。Stripe はこれを活かして:
+
+- 特定文字列を含むコードブロックの検出、callout 内見出しの検出などを正規表現ではなく AST で実施
+- AST ベースの **自動リファクタリングツール** を構築し、全コンテンツへの大規模編集を find-and-replace より頑健に実施
+- スキーマのカスタム `validate` で **リンク検証**（全内部リンクが有効なルートを指すこと）や **見出しレベルのスタイル規定** を CI で強制
+- CI での検証に加え、内部 VS Code 拡張でタイプ中にリアルタイム検証 [^3]
+
+### 原則 4: レンダリングからの完全な非依存
+
+コンテンツは出力技術に完全に非依存。HTML 文字列、React、（コミュニティによる）Vue・Svelte への出力が可能で、将来的にネイティブモバイルアプリや PDF への展開も妨げない。Stripe 内では Write the Docs カンファレンスのスライド生成にまで使われた [^3]。
+
+### 原則 5: 開発者体験（DX）と書き手体験（AX）の両立
+
+markdoc.dev トップページは「DX と同等に AX（authoring experience）を提供する」を掲げる [^4]。Stripe 内のライターの証言として、ブログには「必要な新しいコンポーネントはデザイナーとエンジニアが作ってくれる。書き手は docs コンテンツの作業に集中できる」「折りたたみ、aside、タブ、複数言語コードサンプルなどがフルパレットとして揃っている」という引用がある [^3]。
+
+### 運用上の選択（Stripe 社員の Discussion 発言より）
+
+- **内部ドキュメントも Markdoc だが別システム**: 別のコンポーネントセット、別の更新ワークフロー [^15]
+- **内部ドキュメントの保管先は二分**: エンジニアがコードと一緒に管理したい小さな部分はモノレポ、残りは **ブラウザフロントエンド付きのデータベースバックエンドの Markdoc CMS** に保管 [^15]
+- **API リファレンスは生成コンテンツ**: ソースコードのコメント/構造から生成し、上書きも可能。生成物は現在はチェックインされている [^15][^16]。初期（2022）は「API リファレンスはカスタム（React フロントエンド + Ruby バックエンド）で、Markdoc はナラティブドキュメントのみ。リファレンスにも中間ステップとして導入する計画」だった [^16]
+- ドキュメントをコードと同じリポジトリに置く利点は「タグの実装を React コンポーネントの変更と密に紐づけられる」こと、欠点は「ドキュメントだけの変更でもコードデプロイと同じレビュー/デプロイパイプラインを通る摩擦」だと自己分析している [^15]
+
+## 4. Stripe は Markdoc をどんなドキュメントに使っているか
+
+### 4.1 ナラティブドキュメント（stripe.com/docs 世代）
+
+Markdoc の一次の用途は **Stripe の製品ドキュメント（ナラティブ docs）** である。公式ブログの設計上の説明に加え、初期の GitHub Discussion でも「今はナラティブドキュメント（stripe.com/docs）でのみ使っていて、リファレンスにも広げる計画」と述べられている [^16]。Markdoc コア公開（2022年5月）の前に、Stripe はナラティブドキュメントの全コンテンツを Markdoc に移行し終えていたと説明している [^3]。
+
+コンテンツの置き場所は **モノレポ内にチェックイン** されている（`Partial` タグの `file` 属性が `payments/elements/partials/llm-checkout-sessions-recommendation.md` のようなパスを参照する形で再利用されている）[^17]。
+
+ドキュメント上の UX として、Stripe は「docs はアプリケーションのように感じるべき」という方針で以下を実現している [^3]:
+
+- **テストキー注入**: コードサンプルに読者自身のテストキーを埋め込む
+- **条件分岐**: ページの一部を読者の状態（サーバー言語、クライアントフレームワーク、機能トグルなど）で出し分ける
+- **インタラクティブ要素**: チェックリスト、折りたたみ、タブ、複数言語コードサンプル
+
+### 4.2 ドキュメントの「バリアント」としての条件付きコンテンツ
+
+Stripe Docs の特徴的な機能が **1 ページ複数バリアント** である。たとえば「Accept a payment」ページは URL クエリ（`?payment-ui=checkout&ui=stripe-hosted` など）で出力が切り替わり、Markdown 出力の「Index」セクションはバリアントごとの URL を列挙する [^18]。これは Page/Selector 系タグ + `prefs` 属性で実装されている（§5.2）。
+
+### 4.3 API リファレンス（docs.stripe.com 現行）——実測
+
+2026年9月26日時点の実測で、現在の **docs.stripe.com は全ページが Markdoc で配信されている**。
+
+- API リファレンス（例: `docs.stripe.com/api/charges/object`）の HTML ペイロードには、サーバー側で変換済みの **Markdoc renderable tree（`$$mdtype: Tag/Node` の JSON）が埋め込まれている** [^19]
+- API リファレンスページの検索インデックスにも `algolia:article-format` = `markdoc` が付与されている（ナラティブページと同じ形式）[^20]
+- ページフッターに「Powered by Markdoc」のリンクが常設表示されている [^19]
+- 2022年の Discussion で「API リファレンスは生成コンテンツで、Markdoc を中間表現にする計画」と述べられていたが [^16]、現在は **API リファレンスも生成された Markdoc として配信される** 段階まで進んでいる [^19]
+
+また、Stripe は **LLM/AI 向けに全ページの `.md` 出力** を用意しており（`docs.stripe.com/payments/quickstart.md` など）、Markdown 互換フォーマットである Markdoc を採用した副次的効果としても機能している [^21]。このプレーンテキスト出力では、タブやバリアントが見出しとコードブロックにフラット化され、API リファレンスではパラメータリストと生 JSON サンプルにフラット化される。
+
+内部ドキュメントも含めると、Markdoc の採用範囲は「外部の製品ドキュメント + API リファレンス（生成）+ 内部ドキュメント（git 管理分と CMS 分）」と極めて広い [^15]。
+
+## 5. Stripe Docs で定義されているカスタムタグ（実測カタログ）
+
+ここからが質問の中核である。**Stripe は Markdoc 自体のタグ実装を公開していない**（「Stripe 固有の部分が多く、今のところ公開の予定はない」と mantism-stripe は答えている [^22]）。しかし、Stripe Docs はページをレンダリング済み Markdoc renderable tree として配信しているため [^19]、**実際に配信されているタグを観測することはできる**。以下は 2026-09-26 に docs.stripe.com の複数ページ（quickstart、accept-a-payment、how-checkout-works、testing、radar/rules、api/charges/object、api/events/types、connect/onboarding、terminal/features/connect、checkout、payment-methods/integration-options ほか）を実際に取得して集計した結果である。
+
+### 5.1 ビルトインタグの使用
+
+- `Partial`: 全ページで大量使用。`file` 属性で `payments/accept-a-payment/web/partials/01-set-up-...md` のようなパスの partial を読み込む。quickstart では 35 ページ分のステップを partial 化したものが 35 回登場 [^17]
+- `if` / `else`: 配信済み木では条件分岐は解決済みのため直接観測できないが、Step タグの `when`/`unless` 属性（後述）が条件分岐の実装である
+- `table`: `Table` / `TableCell` / `TableRow` / `TableHeaderCell` / `thead` / `tbody` として観測（`type: striped` などの属性も確認）[^17]
+
+### 5.2 ナラティブドキュメントのカスタムタグ
+
+**インタラクティブ/構造系:**
+
+| タグ | 実測での属性 | 説明 |
+|------|------------|------|
+| `Heading` | `level`, `anchored`, `toc`, `id` | 見出し。`anchored` でアンカーリンク、`toc` で目次への登録を制御 [^17] |
+| `Section` | `id`, `preview`, `badges`, `collapsable`, `optional`, `title`, `toc` | 折りたたみ可能なセクション。`badges` に "Client-side" / "Server-side" / "No code" を付けられる [^17] |
+| `TabGroup` / `Tab` | `selector`, `experimentalSticky`, `items`; Tab: `id`, `title` | 汎用タブ。`selector: tabs` で状態を共有 [^17] |
+| `CodeTabGroup` / `CodeTab` | `pref: lang`, `items`; CodeTab: `id`, `title` | 言語タブ（pref 機構で状態共有）[^17] |
+| `CodeBlock` | `language`, `filename`, `numbered`, `downloadOnly`, `showIntellisenseTooltips`, `showPlusMinus`, `highlights{default,add,remove}` | 317 連続登場するほどの主力タグ。行ハイライト（add/remove）は diff 表示用 [^17] |
+| `Callout` | `type: note/caution/mistake/regional`, `title` | 注意書き。`mistake`（誤解を招く記述への注記）、`regional`（地域固有の注意）は Stripe 独自の拡張 [^17] |
+| `Page` / `PageSelector` / `AdvancedPageSelector` | `prefs{payment-ui, ui, platform, ...}`, `title`, `badge`; selector は `defaultValue` | ページバリアント機構。同一ファイル内に複数バリアントを書き、URL クエリで切り替える [^17] |
+| `Aside` | `title`, `wide` | サイド説明。API リファレンスでは `clipHeight` も使用 [^17] |
+| `SeeAlso` | `title`, `level` | 「次のステップ」リンクリスト [^17] |
+| `Glossary` | `term` | 用語集タームへのインライン参照。ホバーで定義が表示される（例: `sca`, `cvc`, `checkout-session`）[^17] |
+| `Badge` | `color: gray/blurple/yellow`, `label`, `release: public-preview/private-preview` | 「Recommended」「Deprecated」「Private preview」等のバッジ [^17] |
+| `Icon` / `ChartIcon` / `ChartIconGroup` | Icon: `type: checkmark/negative/overflow`, `color`, `size`, `alt`; ChartIcon: `icon: circle`, `color` | 表の中の対応可否表示など。ChartIconGroup は「Low/Medium/High」のような視覚的レベル表現 [^17] |
+| `Image` / `ImageGroup` / `Video` | Image: `src`, `alt`, `ignoreAltTextRecommendation`; Video: `src`, `type`, `controls` | 画像・動画。Video は mp4 を docs CDN から配信 [^17] |
+| `Diagram` | `type: sequence`, `description`, `elements[]` | **シーケンス図タグ**。`elements` に `sequenceActor`（`id`, `heading`, `index`, `color`, `rows`）と `sequenceAction`（`text`, `row`, `from`, `to`）をとり、React Flow ベースのインタラクティブ図を生成。ブログで公表された `diagram`/`node`/`edge` タグの現行系譜（内部限定・非公開と公式に回答）[^17][^22] |
+| `Superscript` / `Footnote` | — | 表の脚注マーカーとその本文 [^17] |
+| `PreviewAccess` | `name: elements_betas_preview`, `heading`, `description` | プレビュー機能への参加申請フォーム [^17] |
+| `HeroSection` / `CardGroup` / `BlockCard` / `ImageGroup` | `title`, `linkHref`, `imageSrc` など | ランディング的なページ先頭部とカードグリッド（`docs.stripe.com/payments/checkout` 等）[^17] |
+| `PlaintextOnly` / `PlaintextHidden` | `isIntegrationSummary` | `.md` プレーンテキスト出力の制御（内容を保持/隠蔽）[^17] |
+| `CustomizabilityTooltip` / `DocsButton` | `text`; `type`, `variant`, `href`, `icon` | UI カスタマイズ性のツールチップとドキュメント用ボタン [^17] |
+
+**コード生成・個人化系（Stripe の特徴が最も強い部分）:**
+
+| タグ | 実測での属性 | 説明 |
+|------|------------|------|
+| `ApiKey` | `type: secret`, `apiKey`, `value` | コード内の秘密鍵プレースホルダー。サインインすると読者自身のテストキーが注入される（未サインインでは公開サンプルキー）[^17] |
+| `CodegenSnippet` | `generatedCodeBlocks[{lang, generatedCode{...}}]`, `codegenError`, `overriddenCodeBlock` | OpenAPI 仕様から生成したコードスニペット。`generatedCode` には `"$$TEST_KEY_REPLACE_ME$$"` のようなプレースホルダーが含まれる [^17] |
+| `highlight` | `type: default`, `value` | コード内の強調スライス（Step と連動）[^17] |
+| `Step` / `StepSection` | `id`, `when{server: node,...}`, `unless{client: next}`, `heading`, `paragraphs` | **条件付きステップ**。quickstart では `server`（node/python/go/ruby/java/php/dotnet）× `client`（react/html/next）× `toggle`（customize, automatic-tax, adaptive-pricing, customer-creation, save-payment-method 等）の 3 軸でコンテンツを出し分ける [^17] |
+| `File` | `language`, `filename`, `downloadOnly`, `steps[]` | 統合ビルダー内のファイルタブ。`steps` はコードと説明ステップのマッピング [^17] |
+| `Chunk` | `id`, `key`, `language`, `steps[]`, `chunks[]`, `when`, `unless` | ファイルをステップごとの断片に分解。説明パネルとコードビューの同期を実現 [^17] |
+| `Command` | `text`, `type: copy` | コピーボタン付きコマンド表示 [^17] |
+| `RunServerCommand` | `route`, `serverEnvs{python:{FLASK_APP}}` | アプリ実行コマンドの生成 [^17] |
+| `IntegrationBuilder` / `IntegrationBuilderDemo` | `type: custom-checkout`, `settings`, `textGuideHref`, `hideNoCode` | **統合ビルダー**。左に説明、右にエディタ/プレビューがある Stripe Docs 独自の双形式。JSON authored React アプリから Markdoc オーサリングへ移行した対象 [^3][^17] |
+| `AppearancePicker` / `PricePicker` / `TestCards` | `type: default`, `allowPriceData` | 読者が UI 見た目・価格データ・テストカードを選べるピッカー [^17] |
+| `Identifier` | `type: connectedAccount`, `value`, `lang` | コード内プレースホルダー識別子（`{{CONNECTED_ACCOUNT_ID}}` など）[^17] |
+| `RadarText` | `type: attribute/string/red/amber/green` | Radar ルール構文の色分け（`Block` は red、`Review` は amber、`Allow` は green、属性は別色）[^17] |
+| `CardNumber` | `number`, `copyable`, `type: card` | テストカード番号のコピー可能な表示（154 回登場）[^17] |
+| `SepaTestAccountTable` | `entries[{country, numbers}]` | SEPA テストアカウント一覧の専用テーブル [^17] |
+| `ComplexityCallout` / `ComplexityCalloutRow` / `ComplexityRating` | `rating: 1-3`, `color: blurple`; Row: `title` | 統合難易度の視覚化（Integration effort / Integration type / UI customization）[^17] |
+| `Endpoint` / `EndpointList` / `Event` / `Returns` / `CodingWord` / `LocalizedCurrencySymbol` | `method`, `path`, `link`, `title`; `event`, `link`; `divider`; `word: raises/...` | ナラティブや API リファレンスで使う意味的マークアップ。`LocalizedCurrencySymbol` は金額表記の通貨記号を動的レンダリング [^17] |
+
+**API リファレンス生成系（OpenAPI 由来の生成 Markdoc）:**
+
+| タグ | 実測での属性 | 説明 |
+|------|------------|------|
+| `ApiSection` | `route`, `title`, `badges`, `anchor`, `redirects`, `v2` | API リファレンスのセクション単位 [^19] |
+| `ElementList` / `Element` | `title: Attributes`, `secondaryFieldsTitle: More attributes`; Element: `elementType: field/parameter`, `name`, `type`, `labels{nullable, required, expandable...}`, `lessCommon`, `badge_text` | **パラメータ・フィールド定義の本体**。charges/object の 1 ページに 563 個の field と 72 個の parameter。「More attributes」で稀なフィールドを折りたたみ [^19] |
+| `EnumValue` / `EnumValuesList` | `name` | enum 値の列挙 [^19] |
+| `Fence` | `copyable`, `plaintext`, `pref: server`, `flavor: resources/services`, `language: curl`, `theme` | リファレンス用コードフェンス（API レスポンス例は `copyable: false`）[^19] |
+| `CodeLine` | `tokens[]`（CSS 変数によるトークン色指定）, `numbered` | リファレンスコードの行単位レンダリング（1 ページ 1063 行分）[^19] |
+| `ApirefCodeTab` / `ApirefCodegenSnippet` / `ApiCodeResponse` | `id: curl__resources`, `cliCommand`, `endpoint`, `method` | リファレンス用コードタブ（curl/CLI/ruby/python/php/java/go/dotnet）と生成スニペット、レスポンス例 [^19] |
+| `RunnableIdentifier` | `type: charge`, `value`, `tokenColor`, `__md_code_plaintext` | コード内の `{{CHARGE_ID}}` のような実行可能識別子。クリックで実際のリソース ID に置換可能 [^19] |
+| `ApiSectionCsat` | — | API ページの満足度アンケート [^19] |
+
+なお `Paragraph` / `Link` / `InlineCode` / `strong` / `em` / `span` は Markdown ノード相当であり、`renderable tree` 上ではタグとして表現される（例: `InlineCode` は `$$markdoc:type: node` を持つ [^19]）。
+
+### 5.3 観測から分かるタグ設計の傾向
+
+1. **責務の分割が極めて細かい**: テストカード（`CardNumber`）、キー注入（`ApiKey`）、ルール構文の色分け（`RadarText`）など、単一のコンポーネント＋検証スキーマとして定義される
+2. **コンテンツの宣言的ピースとロジック（prefs / when / unless）の分離**: 同じ Markdoc ファイルに複数バリアントを書ける。この機構は page selector + `prefs` + `when`/`unless` という属性ベースの設計で、ループ・代入の不在を補う
+3. **生成コンテンツも Markdoc に流し込む**: API リファレンスは OpenAPI 由来の構造化タグ（`Element` など）で表現される。Stripe は「生成 Markdoc をチェックインする」運用と、それを上書き可能にする運用の併用を明かしている [^15][^16]
+4. **検証が前提**: `Callout.type` が `matches` で制限される公式例と同様に [^7]、実測でも type 値は note/caution/mistake/regional に収束しており、スキーマによる統制が効いている
+
+## 6. まとめと学び
+
+- **どんなドキュメントに使っているか**: Stripe は Markdoc を「製品ドキュメント（ナラティブ）→ API リファレンス（生成 Markdoc）→ 内部ドキュメント（git + CMS）」と採用範囲を広げ、現在は docs.stripe.com の全ページが Markdoc 系で配信されている [^3][^15][^19]
+- **どういうカスタムタグか**: 小さなビルトイン（`if/else/table/partial` + 6 関数）の上に、(a) 見出し/セクション/タブ/コードブロックのような汎用構造タグ、(b) ApiKey 注入・CodegenSnippet・統合ビルダー・ページバリアントのような Stripe 固有のドメインタグ、(c) API リファレンス生成のための ElementList/Element 系タグを自前で定義して使っている [^7][^17][^19]
+- **学び 1: 「入れない」機能の明示**。ループと変数代入を欠かせないことで、コンテンツはステートレスに保たれ、AST ベースの検証・リファクタリングが可能になる。拡張はタグという「境界での規律」で行う
+- **学び 2: ドキュメントはデータ**。検証（CI とエディタ）・一括リファクタ・複数出力への再利用は、正規表現ではなく AST を信頼した実装によって初めて数百ページ規模で回る
+- **学び 3: AX の制度設計**。新しいインタラクティブ要素は「エンジニアが React コンポーネントを、スキーマを添えて作る」ことでライターに宣言的インターフェースとして開放される。これは設計パターンとして「コンテンツチームとフロントエンドチームの明確な分業」を可能にする
+- **本プロジェクトへの示唆**: podcaster の `content/` の Markdoc 運用（`{% callout %}` 等のスキル用規約）は、Stripe のように「タグごとに render・attributes 型・matches・errorLevel をスキーマ化し、CI で validate を走らせる」方向に寄せると、TTS/ingest パイプライン前の品質ゲートとして機能させられる
+
+## 参考リンク
+
+- [markdoc/markdoc（GitHub README）](https://github.com/markdoc/markdoc) — 一次出典 [^1]
+- [How Stripe builds interactive docs with Markdoc（stripe.dev/blog, 2022-09-13, Ryan Paul）](https://stripe.dev/blog/markdoc) — 設計思想・実装の一次出典 [^3]
+- [Markdoc 公式ドキュメント: Tags / Nodes / Functions / Render / Validation / Partials / Frontmatter](https://markdoc.dev/docs/overview) [^5][^7][^8][^9]
+- [Markdoc tag syntax specification（markdoc.dev/spec）](https://markdoc.dev/spec) [^6]
+- [Using Markdoc with Next.js](https://markdoc.dev/docs/nextjs) [^12]
+- [markdoc/language-server（GitHub）](https://github.com/markdoc/language-server) [^13]
+- [GitHub Discussion #50: Does Stripe use Markdoc for the API reference](https://github.com/markdoc/markdoc/discussions/50) [^16]
+- [GitHub Discussion #359: react diagram（diagram タグは内部限定・非公開の回答）](https://github.com/markdoc/markdoc/discussions/359) [^22]
+- [GitHub Discussion #448: Internal vs external documentation（duncanma-stripe の運用説明）](https://github.com/markdoc/markdoc/discussions/448) [^15]
+- [GitHub Discussion #449: API markdoc の例（生成 Markdoc + カスタム React コンポーネントの回答）](https://github.com/markdoc/markdoc/discussions/449)
+- [docs.stripe.com 実測データ（2026-09-26 取得）](https://docs.stripe.com/payments/quickstart) — renderable tree・プレーンテキスト出力の観測 [^17][^19]
+
+[^1]: markdoc/markdoc README「We designed Markdoc to power Stripe's public docs, our largest and most complex content site.」
+[^2]: package.json（markdoc/markdoc main ブランチ）: `@markdoc/markdoc` v0.5.10, MIT, author Ryan Paul, peerDependencies に react（optional）。
+[^3]: https://stripe.dev/blog/markdoc（stripe.com/blog/markdoc は stripe.dev へリダイレクトする）
+[^4]: markdoc.dev トップページ「Since then, we have adopted it across the company, writing hundreds of thousands of lines of Markdoc to create thousands of pages」
+[^5]: https://markdoc.dev/docs/render（parse/transform/render の 3 フェーズ、walk、reactStatic）
+[^6]: https://markdoc.dev/spec（タグ・アノテーション・変数・関数の正式ドラフト仕様）
+[^7]: https://markdoc.dev/docs/tags（ビルトインタグ 4 種、callout 例、タグオプション一覧、falsey 定義）
+[^8]: https://markdoc.dev/docs/nodes（ビルトインノード一覧、heading の transform 例）
+[^9]: https://markdoc.dev/docs/functions（ビルトイン関数 6 種、includes/uppercase カスタム例）
+[^10]: https://markdoc.dev/docs/attributes（アノテーション構文、カスタム属性型）
+[^11]: https://markdoc.dev/docs/validation（validate 関数、カスタム validate/attribute 型）
+[^12]: https://markdoc.dev/docs/nextjs（@markdoc/next.js、schema ディレクトリ、frontmatter、ビルトイン Next.js タグ）
+[^13]: https://github.com/markdoc/language-server（言語サーバー機能一覧、拡張子規約）
+[^14]: https://markdoc.dev/docs/overview（"designed internally at Stripe"、markdown-it + pegjs の内部実装説明）
+[^15]: https://github.com/markdoc/markdoc/discussions/448（内部 docs の CMS、モノレポ運用、生成コンテンツのチェックイン）
+[^16]: https://github.com/markdoc/markdoc/discussions/50（「ナラティブ docs でのみ使用、リファレンスへ拡大計画」の初期回答）
+[^17]: 2026-09-26 実測: docs.stripe.com/payments/quickstart、/payments/accept-a-payment、/payments/checkout/how-checkout-works、/payments/checkout、/testing、/radar/rules、/connect/onboarding、/terminal/features/connect、/payments/payment-methods/integration-options の埋め込み renderable tree（`$$mdtype` フィールド）を取得・集計した結果。
+[^18]: 2026-09-26 実測: docs.stripe.com/payments/accept-a-payment.md の Index セクション（バリアント URL の列挙）。
+[^19]: 2026-09-26 実測: docs.stripe.com/api/charges/object、/api/charges/create、/api/events/types の埋め込み renderable tree の集計。
+[^20]: 2026-09-26 実測: ページ head の `algolia:article-format` meta（`markdoc`）。
+[^21]: 2026-09-26 実測: docs.stripe.com/payments/quickstart.md 等のプレーンテキスト出力（キー置換 `<<YOUR_SECRET_KEY>>`、テストカード表など）。
+[^22]: https://github.com/markdoc/markdoc/discussions/359（「diagram/node/edge タグは Stripe 内部向け機能で、公開されていない。実装はある程度 Stripe 固有」と mantism-stripe の回答）
