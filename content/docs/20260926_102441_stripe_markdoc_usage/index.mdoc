@@ -1,0 +1,370 @@
+---
+title: "Stripeが作ったMarkdoc：どんなドキュメントに、どんなカスタムタグで書いているのか"
+publishedAt: 2026-09-26
+podcast: none
+legacyFilename: 20260926_102441_stripe_markdoc_usage.md
+---
+
+# Stripeが作ったMarkdoc：どんなドキュメントに、どんなカスタムタグで書いているのか
+
+## 概要
+
+Markdoc（マークドック）は、Stripeが自社の公開ドキュメント（docs.stripe.com、旧 stripe.com/docs）のために社内設計し、2022年5月に MIT ライセンスでオープンソース化した Markdown ベースのオーサリングフレームワークである。Markdown を基底に「タグ」「アノテーション」「変数補間」の3種類の構文拡張を加え、ドキュメントを単なる説明書ではなく「アプリケーションのように」振る舞わせることを最大の目的としている。Stripe のドキュメントのフッターには現在も "Powered by Markdoc" の表示があり、GitHub リポジトリの README には "we designed Markdoc to power Stripe's public docs, our largest and most complex content site" と明記されている。markdoc.dev トップページは採用状況を "hundreds of thousands of lines of Markdoc"・"thousands of pages" と表現する。
+
+利用者が特に知りたい次の2点に答えるのが本レポートの目標である。
+
+1. **StripeはどんなドキュメントをMarkdocで書いているのか**。対象はプロダクトドキュメント全体、つまり API ガイド、クイックスタート、チュートリアル、チェックリスト、旧「Integration Builder」のようなカスタマイズ型統合ガイドである。読者のテスト API キーをコードサンプルに注入する、地域や契約機能に応じて内容を出し分ける、チェックリストの進捗をクライアント側で持たせるなど、パーソナライズとインタラクションを持つドキュメント運用が特徴である。
+2. **どのカスタムタグを定義して使っているのか**。公式ブログで確認できるのは、注記枠の `{% callout %}`、React Flow ベースのインタラクティブ図を組む `{% diagram %}` / `{% node %}` / `{% edge %}`、見出しにページ内アンカーIDを与える `{% #セクションID %}` アノテーション、そしてビルトインの `{% if %}` / `{% table %}` / `{% partial %}` である。タブ切替・折りたたみ・チェックリスト・多言語コードサンプルについても「カスタムタグが React コンポーネントを出力する」方式で実装されていると明言されているが、内部のタグ名それ自体は公開ソースに現れていない。docs.stripe.com の `.md` エクスポートではタグがフラット化されるため名前を読み取れない。この「確認できるもの／確認できないもの」の区別は本稿で明示的に保つ。
+
+骨子を表にまとめる。
+
+| 項目 | 内容 | 主な根拠 |
+| --- | --- | --- |
+| 何のために作った | コンテンツとコードを分離しつつ、インタラクティブでパーソナライズされたドキュメントを書けるため。旧世代（Ruby + ERB）の破綻が起点 | stripe.dev ブログ "How Stripe builds interactive docs with Markdoc"（2022-09-13、以下「公式ブログ」） |
+| どんなドキュメントに使う | Stripe 公開ドキュメント全般。ガイド・クイックスタート・APIリファレンス・チェックリスト。社内全体に拡大し数千ページ規模 | 公式ブログ、markdoc.dev、docs.stripe.com フッター |
+| 確認できるカスタムタグ | `callout`、`diagram`/`node`/`edge`、`code` 系の構成要素、見出しアノテーション。ビルトインの `if/else`、`table`、`partial` | 公式ブログ本文の例示コード |
+| その他の実装機能 | タブ切替・折りたたみ・チェックリスト・多言語コードサンプル。タグ名は非公開だが「タグ → React コンポーネント」方式が明言されている | 公式ブログ |
+| アーキテクチャ | markdown-it トークナイザ＋ peg.js 由来のタグパーサ＋独自レンダリング層（HTML / 静的React / 動的React）。AST はキャッシュ可 | 公式ブログ "Under the hood"、markdoc.dev docs |
+| 比較対象 | MDX は docs as code、Markdoc は docs as data。AsciiDoc は 2017 年検証で不採用 | markdoc.dev FAQ |
+
+## 背景・歴史
+
+### レガシー平台：Ruby + ERB モノリスの失敗
+
+Stripe の旧ドキュメント基盤は、ERB テンプレートと Sinatra ルーティングで構築されたモノリシックな Ruby アプリケーションだった。コンテンツには HTML、Markdown、Ruby コード、ERB ヘルパーが自由に混在し、読者ごとのプログラム的調整（例：自分のテストキーをコード例に流し込む）は自然にできた。しかしコンテンツが数百ページに達したとき、深刻な保守性の問題が顕在化した。執筆が実質的にソフトウェア開発化し、コードレビューという技術的審査の負荷が書く速度と参加容易性を損なった。コードが本文に混ざることで、読み手・書き手の双方に内容の理解と安全な操作が難しくなる副作用も指摘されている。この経験が、後の Markdoc の中心的判断——「ページを無制限のアプリケーションとして扱わない」「境界に規律を課す」——を生んだ。
+
+### 2017年：AsciiDoc ベース PoC による最初の近代化
+
+Markdoc 公式 FAQ によると、コンテンツ形式の近代化に着手したのは 2017 年で、最初の実験は Ruby 製の Asciidoctor を使ったコンセプト検証だった。AsciiDoc は技術文書向けの成熟したマークアップで、拡張性を流用すれば Markdoc と似たことは多くできた。しかし、Markdown ほど普及しておらず技術者・ライターに馴染みが薄いこと、ネストした箇条書きに多重アスタリスクを要求する一方で空白を非有意とする思想、区切りブロックのネストに区切り線の長さを変えるという直観に反する記法があることなどが摩擦として挙げられている。結果として、Stripe が選んだ基盤は Markdown だった。
+
+この歴史から、Markdoc は「AsciiDoc の良い点（AST 解析・構造化・拡張性）を、Markdown の普遍性と引き換えに再設計したもの」と理解できる。FAQ は AsciiDoc を「我々が Markdoc を設計し始めたときの大きな着想源」と位置づけており、機能面での親戚関係を認めている。
+
+### 2020年：Write the Docs で構想を公表
+
+2020年8月、Stripe Docs Product チームのライター・エンジニアである Ryan Paul が Write the Docs Portland 2020 で "Documentation as an application: enabling interactive content that is tailored to the user" を講演した。要旨は次のとおりである。
+
+- リッチなドキュメント体験への投資は、ユーザーの成功とスピードアップにつながる
+- 地理的位置やログインアカウントの属性に基づいてコンテンツを動的に調整し、必要な情報だけを選択的に見せる
+- コードをコンテンツから分離したまま、宣言的な形式でユーザー固有のカスタマイズ・クライアント側インタラクション・深い静的解析を支える
+- ドキュメントをアプリケーションとして捉え、表側の体験と内部のオーサリングツールを同時に改善する
+
+YouTube 版の節構成も明確で：Legacy Architecture（5:18）、Why Not Markdown?（10:46）、Markdoc Syntax（14:15）、Machine Readability（14:43）、React Integration（22:42）、Why React?（25:11）、Handling Ruby Logic（26:54）。この時点で「Markdown ベース・機械可読・React 連携・レガシー Ruby ロジックの置換」という骨組みは確定していた。
+
+### 2022年：オープンソース化とエコシステム構築
+
+2022年5月に MIT ライセンスで公開し、npm パッケージ `@markdoc/markdoc` を出荷した（GitHub リポジトリの作成は 2022-05-09、Star 数は 8,000 超を確認した時点での値）。同時期に公式ドキュメントサイト markdoc.dev、Next.js 用プラグイン `@markdoc/next.js`、スターターリポジトリ `markdoc/markdoc-starter`、そして VS Code 拡張が整備された。9月には公式ブログ記事と、タグ構文のドラフト仕様（Version 0.1.0 Draft、著者 Ryan Paul）を出版した。仕様の位置づけは「サードパーティ製パーサが Markdoc タグ構文を取り込みやすくするための規約」であり、現時点で形式的に固定されているのは「タグ構文」だけである。将来は AST の JSON 表現も規格化したいという言及が FAQ にある。
+
+この仕様の存在は、Markdoc が「特定ライブラリの私有構文」ではなく「他実装を許す形式規格」として開かれていることを示す意図的な選択である。実際、Redocly や Read the Docs が Markdoc を学習・ホスティング対象として取り込むなど、エコシステムの入口が広がっている。
+
+## 核となる概念
+
+### 設計思想：docs as data、コードとコンテンツの分離
+
+Markdoc の根幹は「ドキュメントをデータとして扱う」ことにある。Markdown は読み書きが容易で普遍的だが、構造の表現力が低く、条件分岐・変数・再利用といった機能を持たない。一方、MDX は JavaScript や JSX をドキュメントに直接埋め込めるが、その代償として執筆がプログラミング化する。Stripe はこの対立軸で「docs as data」を選び、内容の自由度を落とす代わりに、安全に機械処理できる形式を取った。
+
+達成手段として、根本的な拡張は3種しかない：**タグ**（`{% foo %}...{% /foo %}`）、**アノテーション**（見出しや既存 Markdown 要素への `{% #id %}` 形式の付加情報）、**変数補間**（`{% $foo.bar %}`）。意図的に持たせていないのは **ループ**（繰り返し）と **変数代入** である。公式ブログはこれを「保守性を守るために捨てた機能こそが設計の要」と述べる。ループを禁じることで「ドキュメント内で手続き的な生成をしない」ことを正常化し、その種の処理はシステムの外へ出させる。変数代入を禁じることで、ドキュメントを完全にステートレスに保ち、潜在バグの一クラスをそもそも存在させない。この特性のため Markdoc はリファクタリングツールや静的解析と相性がよい。
+
+### 3種の構文拡張
+
+Markdoc が CommonMark へ加える拡張は多種多様ではなく、次の3系統に集約できる。
+
+#### タグ
+
+`{% タグ名 属性 /%}` または `{% タグ名 属性 %} ... {% /タグ名 %}` の形で書く。属性は `quote`（文字列）、`identifier`（識別子）、`number`、`boolean`、`variable`、`function`、`arrow` 型をとり得る。タグはネスト可能で、インデントは常套手段のひとつ。Markdoc コアは4種のビルトインタグを内蔵する：
+
+- `if` / `else`：条件分岐によるコンテンツの出し分け
+- `table`：リスト記法で構成するエスケープ不要のリッチテーブル（行・列の跨ぎも指定可）
+- `partial`：別ファイル（Markdown/Markdoc）の内容を取り込む `{% partial file="header.md" /%}`
+
+#### アノテーション
+
+見出しや段落などの既存 Markdown 要素に宣言的にメタ情報を付す構文である。実務上もっとも頻用されるのは **見出しアノテーション** `# 見出し {% #anchor-id %}` で、これによって「Markdown 標準の自動生成スラッグとは別の、安定した非自然言語ID」を与えられる。Stripe のドキュメント内相互リンクは `#checkout-create_checkout_session-ui_mode` のような安定ID＋パスの組で行われ、本文は`.md`エクスポートでもリンク解決できる（quickstart.md では `...create.md#create_checkout_session-ui_mode` という形の内部リンクが多数見つかった。換言すれば、この安定ID戦略は docs の機械可読性と深い相互リンク性を下支えしている）。
+
+#### 変数補間
+
+`{% $frontmatter.title %}` のような形で、ドキュメント内部の値（フロントマター、環境変数、実行時コンテキスト）を本文に流し込む。Markdoc は変数参照は許すが代入は許さない。値は着信側のスキーマ（`variables` 設定）で解決され、読み取り専用である。
+
+### ビルトインと拡張の棲み分け
+
+Markdoc コアが提供するのは単純な通用語彙とレンダリング機構である。すでに述べた `if/else`、`table`、`partial` はコアに内蔵された「情報表現のプリミティブ」であり、`callout` のような視覚的コンポーネントは各サイトが独自にスキーマ定義する「項目特化の拡張」である。つまり「文体・語彙はコアが持つ、ビジュアルとAPI はスキーマ側が持つ」という棲み分けが明確になっている。
+
+### コンフィグとカスタムタグの定義方法
+
+カスタムタグは、JavaScript オブジェクトとしてタグ・スキーマを定義するのが基本である。公式 docs に倣い、注記枠タグ `callout` を自分で定義する例を示す。
+
+```js
+export const callout = {
+  render: 'Callout',
+  children: ['paragraph', 'tag', 'list'],
+  attributes: {
+    type: {
+      type: String,
+      default: 'note',
+      matches: ['caution', 'check', 'note', 'warning'],
+      errorLevel: 'critical'
+    },
+    title: { type: String }
+  }
+};
+```
+
+この `callout` を `config.tags` に登録し、レンダリング時に `Callout` という React コンポーネントを `components` マップに束ねるだけで、ドキュメント内で `{% callout type="info" %}...{% /callout %}` が使える。設計上重要なのは次の点である。
+
+- **属性型制約**：`type: String` や `matches: [...]` で許容値を絞り、`required`・`default`・`errorLevel` が設定できる。`errorLevel: 'critical'` を指定すると検証エラーが CI を落とせる。
+- **子要素制約**：`children: ['paragraph', 'tag', 'list']` のように、タグの子にできるノード型・タグの種類を直列に列挙する。これは Markdown に近い構造を保つための重要な抑止力である。
+- **カスタム属性型**：文字列・論理値などの基本型に加え、`validate` 関数を持つクラスを渡せば独自ルールで検査できる（例：URL が `https://` で始まることを強制する `ImageSrc` 型）。
+- **関数値**：属性値に関数（`{% foo(a, b) %}` 形式や矢印関数）を渡す仕組みもあり、標準ライブラリとして `contains()`、`startsWith()`、`upperCase()` などが用意されている。実行環境側でカスタム関数も登録できる。
+
+### 3つのレンダラ
+
+Markdoc のレンダリングは3方式を公式ビルトインで提供し、それらを構成するモジュール性が長所である。
+
+- **HTML 文字列レンダラ**：プレーンな HTML 文字列を生成。SSR や Web Components 統合に使える
+- **静的 React レンダラ**：React 要素を JS ソースにトランスパイルする。Webpack ローダや静的ビルドと相性が良い
+- **動的 React レンダラ**：実行時に変換後のノード木を React 要素木へ変換する
+
+Stripe は自社のドキュメント平台で **動的 React レンダラ** を採用しているが、これは内部実装の選択であって仕様上の必須事項ではない。モジュール性は「同じ Markdoc ソースから将来 PDF やモバイルアプリ用の出力をつくれる」ことを意味し、公式ブログも「コンテンツの表現方法とは完全に疎結合」と強調する。実際、Ryan Paul は 2020 年の Write the Docs 講演のスライド資料を Markdoc 自身で作ったと明言している。
+
+### パース・変換のパイプライン
+
+Row の処理は次の段階を踏む。
+
+1. **トークン化**：markdown-it がトークナイザとして動き、CommonMark 範囲を相当のトークンへ変換する。タグ構文 ` {% ... %}` は peg.js 文法から生成されたパーサで解析される。このパーサは markdown-it プラグインとして結合されている。
+2. **AST 生成**：トークン列を「タグ・ノード・変数・文字列」という AST ノードに構造化する。
+3. **変数解決**：`variables` 設定に基づき、AST 内の変数参照を値に置換する。ここで初めて動的な値が挿入される。
+4. **変換**：`transform` が AST を再帰的に走査し、ノード・タグのスキーマ定義に基づいてレンダリング可能なノード木へ生成し直す。
+5. **レンダリング**：レンダラがノード木を HTML / React / その他の出力へ変換する。
+
+この設計により、**AST を JSON としてシリアライズしキャッシュできる**。公式ブログは「実行時パースを排除するため、ビルド時に AST をシリアライズする方式への移行を検討している」と述べており、これは静的サイト生成やエッジ配信と相性がよい。
+
+### スキーマ検証
+
+スキーマは検証にも使われる。`Markdoc.validate(ast, config)` は次を確認する：
+
+- 閉じタグがないなど構文上の誤り
+- 属性の型・必須性・許容値
+- 子要素に許可されていないノード・タグ
+- スキーマ定義内のカスタム `validate` 関数
+
+Stripe 社内では CI で validate を回し、さらに内部向け VS Code 拡張がエディタ上でリアルタイムの検証エラーを見せていた（後述の拡張は公開版として発展した）。これにより「書き手がスキーマに違反する書き方をした瞬間に文句が言える」体制を成立させている。Stripe はこの仕組みを内部に留めず、しかしパブリック拡張も積極的に受け入れている。
+
+## Stripeのドキュメント：何を・どう書いているか
+
+### ドキュメントの役割と体験
+
+Stripe のプロダクトドキュメントは「ユーザーマニュアルではなくアプリケーションとして振る舞う」ことを設計目標に置く。読者のテスト API キーをコードサンプルに注入する、チェックリストの進捗をクライアント側で管理する、折りたたみセクションで情報の密度を調整する、所在地や契約機能に応じて内容を出し分ける——これらは従来の静的な説明文書にはない挙動で、公式ブログはこれらを「摩擦を減らし、開発者の成功に寄与する」と説明する。
+
+ドキュメントの実際の用途を探索的に整理すると、次の4系統に分けられる。ここは検証可能な痕跡に基づく整理であり、公式の分類ではない点に注意する。
+
+1. **ガイド／チュートリアル系**：段階的な手順書として「Payment Intents・Checkout」の流れを、多層的な構造で展開する。クイックスタートは手続きを複数の側面から示し、クライアント（React / HTML 等）とサーバー言語（Node / Ruby / Python / PHP / Java / Go / .NET）の両面でバリエーションが分岐し、タブ UI に表現される。
+2. **API リファレンス系**：パラメータやオブジェクトの説明が体系的に網羅され、深い相互リンクで構成される。
+3. **チェックリスト／Go Live 系**：読者が段階を踏むための中間ツールである。
+4. **ドキュメント以外への転用**：開発者向け技術ブログ stripe.dev も Markdoc で書かれており（frontmatter に `type: 'Blog'` 等を確認できる）、ドキュメント以外にもフォーマットが転用されていること、会社全体への拡大が実際に起こっていることの傍証になる。
+
+（注意：上の分類は docs の構造に基づく解釈で、公式の分類は存在しない。一次資料は「ガイド・API リファレンス・チェックリスト・統合ビルダー」を挙げるに留まる。）
+
+### レガシー時代の課題への答え
+
+Markdoc が解こうとした課題は、(a) タブ切替・折りたたみ・チェックリストのようなリッチ表現を、(b) コードレビューと同等の負荷を書き手に課せずに、(c) 説明文の読みやすさを保ったまま、(d) あとから機械処理できる形で実現することである。公式ブログは、旧 Integration Builder という React アプリ＋JSON 作業が、Markdoc への移行で技術ライターの保守可能な形式へ変わったと明言している。この「複雑なリッチ機能を、書き手にやさしい宣言的インターフェースへ出し直す」という型が、Stripe Docs における Markdoc の重要な利用パターンである。
+
+書き手の声として、公式ブログの引用が有効である。"I like Markdoc because it lets us still do anything we want with code in the docs without bogging down the content authoring experience. If we need some new component, designers and engineers can whip that up." この引用が示す通り、Stripe Docs のダイヤグラムを含むリッチ UI は「デザイン・エンジニアが部品を作る」「ライターはタグで使う」分業で支えられている。
+
+### 書きやすさと検証体制
+
+書き手の体験（AX）に関連して、次の機能が挙げられている：
+
+- **スキーマ検証**：CI で validate を回し、書き手がタグや属性を誤って書いたら作成時に即座に指摘される。さらに社内 VS Code 拡張で入力中のエラー表示も実現している
+- **リンク検証**：ドキュメント内リンクが実在するルートを指していることを検証する（publish 前のデッドリンク検出）。リンク解決は見出し ID アノテーションと連動していると考えられる
+- **構造スタイルの強制**：特定の箇所での見出しレベルなど、構造に関わるスタイル規則を schema で強制する
+
+この体制は、「書き手は Markdown の延長として書ける」「エンジニアが部品を用意する」「自動検証が安全網になる」という3階層で機能する。書き手が個別のコンポーネント実装を学ばなくても、共通の部品によって一定以上の品質と一貫性が保たれる。
+
+### AST・静的解析の活用
+
+AST による静的解析は Stripe Docs の重要な応用であり、公式ブログは具体的に次を説明している。
+
+- 「特定の文字列を含むコードブロックを全部見つける」「callout 内に入れ子になった見出しを見つける」処理を、正規表現や文字列スクレイピングではなく AST で行う
+- AST ベースの自動リファクタリングツールを開発し、find-and-replace より堅牢に文書全体の複雑な編集を可能にしている
+- リンク検証をはじめとする検証は、本文中の全リンクを走査する
+
+Markdoc が意図的に持たせなかったループ・変数代入のおかげで、ドキュメントが完全にステートレスに保たれる点は、こうした解析と最適化を後押ししている。{% if %} のような条件分岐があっても、生成されうる分岐を静的に把握しやすい。
+
+## カスタムタグのカタログ：確認できるものと確認できないもの
+
+本章が本レポートの核心である。Stripe の内部実装そのものは非公開であり、外部から確認できるのは次の3つの証拠である。
+
+1. 公式ブログのコード例（2022年）
+2. markdoc.dev の汎用例（`callout` など）
+3. docs.stripe.com から供給される `.md` エクスポート（タグがフラット化された結果物）
+
+### 確認できるもの
+
+#### callout（注記枠）
+
+公式ブログに `{% callout type="info" %}` の形で実例がある。markdoc.dev ドキュメントは `caution / check / note / warning` を許容する属性値の制約まで示している。スキーマ定義の例は「`type` 属性の既定値 `note`、`matches` による許容リスト、`title` 属性」であり、React コンポーネントへのマッピングは `render: 'Callout'` で行う。
+
+#### diagram / node / edge（インタラクティブ図）
+
+React Flow を基盤に、Stripe 内で定義したタグ群である。公式ブログの例は次のとおりである。
+
+```md
+{% diagram type="sequence" description="Usage-based billing" %}
+{% node #customer icon="customer" %}
+Customer
+{% /node %}
+{% node #typographic icon="platform" %}
+Typographic
+{% /node %}
+{% node #stripe icon="stripe" %}
+Stripe
+{% /node %}
+{% edge from="customer" to="typographic" %}
+Select plan
+{% /edge %}
+{% edge from="typographic" to="typographic" %}
+Create [usage records](/docs/api/usage_records)
+{% /edge %}
+{% /diagram %}
+```
+
+ポイントは次のとおりである。
+
+- 静的な画像の代わりに React Flow で図を描くため、インタラクション・クリック可能リンク・普遍的なスタイル変更・多言語化が可能になる
+- `node` タグの `#customer` のような注記は前述のアノテーション構文と同じもので、図の要素へ安定IDを付与する用途でもアノテーションが使われる
+- ラベル部分には Markdown（リンク記法を含む）がそのまま書ける。つまりタグ内は「生テキスト」ではなく Markdoc コンテンツとして解析される
+
+#### 見出しアノテーション（`{% #id %}`）
+
+ブログはまさに見出しで使っている：`# This is a heading {% #section %}`。タブや図の部品にも `#customer` のようなstable IDを与える用途に見える。`docs.stripe.com/api/payment_intents/create.md` のリンクは `#checkout-create_checkout_session-ui_mode` のような ID を伴い、見出しだけでなく `api` ドキュメントのパラメータ単位に ID を与えている（例：`create_checkout_session-ui_mode`）。一言で言えば、Stripe の相互リンクの実態は「パス＋安定ID」である。
+
+#### ビルトインタグの使用
+
+- **conditional**: `{% if $condition %} ... {% /if %}` の形。何が実行時に評価されるかは設計上の実装の詳細であり、一般公開はされていない
+- **table**: `docs.stripe.com` には CommonMark 式の縦棒テーブルと Markdoc 独自のリスト式テーブルの両方が見える。quickstart.md のテストカード表はパイプ表記で出荷されている。リスト式テーブルはエスケープが不要でリッチな内容を入れやすい利点があるが、`.md` エクスポートではパイプ表記に正規化されて出力される
+- **partial**: 公式ドキュメントに頻出するものではないが、Stripe Docs 内部では共通化に使われていると考えられる（公開情報から間接的に推測される。規模拡大後に必要になるもの）
+
+### 確認できないけど実装されていること
+
+公式ブログは、タブ切替・折りたたみ・チェックリスト・多言語コードサンプルが「カスタムタグ → React コンポーネント」で実装されていると明言している。しかしタグ名そのものを特定できるだけの公開情報は存在しない。docs.stripe.com の API リファレンスや quickstart の `.md` 版を解析した結果、次のことが分かった。
+
+- `{% ... %}` タグ表記は `.md` 版の出力から完全に消えている（quickstart.md、payment_intents/create.md を対象に `{%` を grep して 0 件）
+- タブ切替（例：Node / Ruby / Python / PHP / Java / Go / .NET のインストール手順）は `#### npm`、`#### Terminal`、`#### pip` などの見出し列にフラット化されている
+- HTML と React の言語バリアントも同じ見出しの反復として現れる（quickstart.md で `### Initialize Checkout` が2回出現するなど）
+- コードサンプル中の `{{PRICE_ID}}`、`{{CHECKOUT_MODE}}`、`<<YOUR_SECRET_KEY>>` は Stripe 独自のプレースホルダ仕組みであり、Markdoc 変数ではない（`{% $... %}` 形式でのものは見つからない）
+- 一部コードブロックで `\#` エスケープや `~~~` フェンスが混在しており、複数の変換経路があることが分かる
+
+まとめると、Stripe Docs のリッチな UI（コードエディタ、コピー機能、言語切替タブ、折りたたみ、プレビュー統合、ダッシュボードキー注入）は React コンポーネントとしてStripe 内に存在し、Markdoc タグ経由で書き手から使えるが、その「タグ名」は外部に漏れないのが現状である。第三者は markdoc.dev の標準的な例（callout・table など）を参考に独自実装する形になる。
+
+### 第三者が直面した課題：タグ標準の不在
+
+タグ名が実装依存であることの帰結が、Markdoc に公式機能として「タグの標準ライブラリ」が存在しないことである。Redocly の評価記事も「Markdoc には公式認定のタグライブラリはない」としている。一般に「汎用タグ」（callout・tabs・snippet など）は各プロジェクトが自前で定義する前提であり、Markdoc は「枠組み（パーサ・スキーマ検証・レンダラ）」だけを統一している。Stripe 社内タグの命名や設計慣行は非公開情報として残る。
+
+## 内部実装の技術
+
+### パーサ構成
+
+Markdoc のパーサは JavaScript で書かれ、markdown-it に構築されている。markdown-it に依存するのはこの1つだけで、典型的な Markdown 互換トークナイザである。タグ構文（` {% ... %}`）の解析は peg.js（実際にはそのフォーク）から生成した PEG 文法ベースのパーサで行われ、markdown-it へのプラグインとして組み合わされている。HTML への変換は markdown-it を使わない。代わりに PAT（パース後 AST）→変数解決→変換→レンダリングという独自パイプラインをもつ。
+
+Markdoc は markdown-it を「使い捨てのトークン化装置」に留め、マークアップ処理を全面置き換えている。これにより ` {% ... %}` タグの解析と React 出力の共存が可能になっている。
+
+### スキーマの型と制約
+
+タグ定義で指定できる属性型は、`String`、`Number`、`Boolean`、`JSON`、`Object`、`Array` などの基底型のほかに、文字列の列挙制約や独自 `validate` 関数を持つクラス型を許す。この点が、タグが「生の React のプロパティ」ではなく「検証済みの宣言的インターフェース」になる理由である。Redocly はこの点を「構成の自由度が高い一方、タグの実装が各プロジェクトの責任になる」と要約する。
+
+### レンダリング最適化
+
+公式ブログは「実行時パースコストを減らすため、ビルド時に AST をシリアライズしてキャッシュする方向に移行したい」と述べていた。付随的な最適化として、Markdown 標準では宣言値（JSON）と React コンポーネントの紐付けを静的にする工夫が考えられる。Node.js 環境では markdown-it と AST 生成をビルド時に行い、ブラウザ側にはレンダリング後の React 要素だけを届ける構成が典型である。Stripe 社内では現在も動的 React レンダラを使い、既述の通り実行時にノード木を React 要素へ変換している。
+
+### VS Code 拡張と言語サーバ
+
+Stripe は公式 VS Code 拡張 "Markdoc language support"（言語サーバ markdoc/language-server）を公開している。機能は次のとおりである。
+
+- Markdoc タグ構文のシンタックスハイライト
+- スキーマに基づくタグ名・属性値のオートコンプリート
+- フロントマターの` routing` 設定に基づくリンク補完
+- partial タグや document リンクから対応ファイルを開く・見る・参照一覧を得る
+- ブロックレベルタグの範囲の code folding
+- Markdoc ビルトイン formatter によるフォーマット
+- スキーマに対する検証エラーのインライン表示
+- 書式の壊れたタグ構文や、閉じタグ不整合のエラー表示
+- テンプレートから新規 .markdoc ファイルを作成する機能
+
+このレベルのオーサリング支援は、単なる構文ハイライトに留まらず、スキーマ駆動の IDE と考えるべきものである。Stripe の利用方式（CI＋エディタの二重の検証）が提案型の書き手体験として機能している。Microsoft Visual Studio Marketplace で 148,000 インストール（当該調査時点）が付いている。
+
+### markdown-it 依存と互換性
+
+Markdoc は CommonMark のスーパーセットを指向するが、一部の機能は意図的に落としている：setext 見出しは不採用（`lheading` ルールを無効化）、インデントによるコードブロックはデフォルトで無効にし，構造の深さを示すために任意のインデントを許す `allowIndentation` オプションを提供（実験的）。将来的には制限の緩い Markdown の方言（例：`>` 引用を削除など）も検討されている。CommonMark 互換を保ちつつ、長期的には「より規範的・曖昧性の少ない方言」への分岐をもくろむ姿勢が FAQ に明記されている。
+
+## 他社事例・エコシステム
+
+### Next.js プラグイン
+
+`@markdoc/next.js` により、Next.js 内で `.md`・`.mdoc` をページとして使える。mode を `static` にすると `getStaticProps` の結果を用いてビルド時に事前レンダリングする。さらに `tokenizerOptions.allowComments` を有効にすると `<!-- ... -->` コメントが可能になる。組み込みタグとして `comment / head / link / script` が提供され、たとえば `{% script src="https://js.stripe.com/v3" /%}` のように Next.js の Script コンポーネントをタグで使える。タグ定義は `markdoc/tags/*.markdoc.js` という命名規約でディレクトリに置けば拾われる。
+
+### 採用事例
+
+Theirstack のデータでは約17社が Markdoc を採用しているとされる。GitHub の公式 discussion には次のような声が集まっている。
+
+- **Appwrite**：ドキュメント・ブログ・チュートリアル一式を Markdoc で構築（2024-05）
+- **SolidJS カスタムレンダラ採用**：ドキュメントサイトとマーケットプレイス項目に、SolidJS レンダラ併用（2024-05）
+- **Tinybird**：Next.js 上に再構築した際、MDX との比較で「コードとドキュメントを分離する哲学」を評価して Markdoc を採用し、未知のユースケースに推奨することはない（2025 前後）
+
+小型〜中規模の使用例としては Redocly や Read the Docs（2024年以降 Markdoc プロジェクトのホスティング対応）、Vue・Svelte など他フレームワーク向けのコミュニティ実装（Vue は `vue-markdoc`、Svelte は `svelte-markdoc`）もある。ただし大規模採用として定番化したのは Redocly 等のツールチェーンと Stripe 自身を除いて、分散した状況とみられている。
+
+### MDX との比較
+
+Markdoc の公式 FAQ は MDX 問題をこうまとめる。
+
+- MDX は JavaScript・JSX を Markdown に埋め込める（docs as code）。「多機能だが、内容がコード並みに複雑化しやすい」。
+- Markdoc はコードとコンテンツを厳格に分離する（docs as data）。「機能面では MDX に劣るが、編集者がコードレビューの負荷を負わずに済み、その場しのぎのハックや手続き的生成によるバグを構造的に防げる」。
+- 静的解析・検証・変換の観点では、Markdoc の宣言的な木構造は JS AST より軽く、依存も少ない。
+
+Tinybird は docs の再構築でこの比較を実際に行い、Markdoc は宣言的構文・コードとドキュメントの分離・React 非依存を利点に挙げた一方、コミュニティの小ささと将来性へのリスクを懸念した。最終的に Tinybird は Markdoc を選んだ（进一步地、次世代ツールチェーンへの期待込みである）。かたや mdxtopdf.com のような MDX 促成の文脈では「MDX の動的・インタラクティブ能力と巨大コミュニティを評価して MDX を選ぶ」立場もあり、この比較は2013年以降も継続する「両論併記」の状況である。
+
+### Redocly・Read the Docs の取り組み
+
+Redocly は Markdoc を学習コンテンツとして整備し、テクニカルライター向けに「採用判断のためのガイド」を公開している。その中で Redocly は Markdoc を「技術文書の進化」と評価しつつ、複雑性・性能・既存ワークフローとの統合・学習曲線を考慮せずに採用しないよう注意を促している。Read the Docs は Node.js 22 用ビルド環境で Next.js プラグインから静的 HTML を生成する構成で Markdoc プロジェクトをホスト可能にした。
+
+## 最新動向・未解決問題
+
+### npm パッケージの現在
+
+Markdoc コアは継続的に保守されており、比較的最近のリリース（0.5.7）では次のような変更が含まれる。
+
+- 表構文の検証エラー位置の精度向上
+- `validate()` の返す location/line 情報の拡充
+- ビルド出力のターゲットが ES2020 から ES2022+ へ更新（esbuild 0.13 → 0.25）
+- `Markdoc.format` の `orderedListMode` オプション追加
+
+バージョン番号は 0.x 台で、1.0 には至っていない。今後、タグ構文仕様に加えて「AST の JSON 表現」の規格化が進むかが観察ポイントである。Strict Markdown 方言（CommonMark と並存する、より規範的な派生）も官方は構想として挙げているが、実現の見通しは明言されていない。
+
+### AI・LLM 関連の接点
+
+Stripe Docs は AI エージェント向けの配信を強化している（`/llms.txt` の整備、`.md` エクスポート UI、エージェント向け指示セクション）。Markdoc の AST 解析性は、コード変更の検知、リンク破損の検知、AI 向けの構造化出力などと相性が良く、LLM 向け docs の生成や検証で基盤フォーマットとして分を発揮する可能性を残している。一方、LLM エージェントの指示には Markdoc 特有のタグ知識が必要になりがちで、これが広い採用の障害にならない保証はない。
+
+## 関連トピック
+
+- **MDX / MDX vs Markdoc**：React エコシステムの主流との関係。興味があれば docs as code vs docs as data の対比を深掘りすると理解が深まる。
+- **AsciiDoc / Asciidoctor**：Markdoc が意識した先人の試み。TLS 側にも類似思想を持つ（TS/JSX 非依存の宣言的拡張）。
+- **docs as code / docs as data**：DORA 型ツールチェーンや CI/CD との相性など。
+- **Docusaurus / Starlight / Nextra**：Markdoc の対抗馬としてのドキュメント静的サイトジェネレータ。
+- **Write the Docs**：ドキュメント・エンジニアリングのコミュニティ。Ryan Paul の講演は技術的背景の一次情報。
+- **docs.stripe.com の `.md` エクスポートと LLM 指示**：docs を機械可読に供給する現代的な手法。
+
+## 参考リンク
+
+- Stripe 公式ブログ "How Stripe builds interactive docs with Markdoc"（2022-09-13、Ryan Paul）<br><https://stripe.dev/blog/markdoc>
+- Markdoc 公式サイト（markdoc.dev）・公式ドキュメント・FAQ・タグ構文仕様<br><https://markdoc.dev/>
+- Markdoc GitHub（コアリポジトリ・README・types.ts・リリース）<br><https://github.com/markdoc/markdoc>
+- Markdoc VS Code 拡張・言語サーバ（Visual Studio Marketplace）<br><https://marketplace.visualstudio.com/items?itemName=Stripe.markdoc-language-support>
+- Write the Docs Portland 2020・Ryan Paul 講演要旨・YouTube 版<br><https://www.youtube.com/watch?v=aLVvSyenA6s>
+- Stripe Docs（docs.stripe.com、`.md` エクスポート、llms.txt）<br><https://docs.stripe.com/payments/quickstart.md>
+- markdoc/markdoc discussion（採用企業の声・エディターサポート）<br><https://github.com/markdoc/markdoc/discussions/203>
+- Next.js プラグイン `@markdoc/next.js`<br><https://markdoc.dev/docs/nextjs>
+- Redocly "Evaluating Markdoc for your documentation"（2025-05-28）<br><https://redocly.com/learn/markdoc/evaluating-markdoc>
+- Tinybird "We rebuilt our docs from scratch. It was worth it."（MDX vs Markdoc の比較）<br><https://www.tinybird.co/blog/new-docs>
+- mdxtopdf.com "MDX vs Markdoc: Why We Choose MDX for Dynamic Documentation"（2025-03-04）<br><https://mdxtopdf.com/blog/mdx-vs-markdoc>
+- Read the Docs の Markdoc ホスティングガイド<br><https://docs.readthedocs.com/platform/latest/intro/markdoc.html>
+- CommonMark 議論（2022-09、Markdoc の紹介スレッド）<br><https://talk.commonmark.org/t/markdoc-a-markdown-based-document-format-and-framework-from-stripe/4286>
+- Theirstack（採用企業一覧の参照）<br><https://theirstack.com/en/technology/markdoc>
+- npm @markdoc/markdoc（0.5.7 の メタデータ等）<br><https://www.npmjs.com/package/@markdoc/markdoc>
