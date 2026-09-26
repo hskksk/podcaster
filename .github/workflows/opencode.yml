@@ -1,5 +1,9 @@
 name: opencode
 
+# Reply-only (no PR): include phrases such as
+#   issueにコメント / コメントのみ / PRを作らない / comment on the issue
+# or trigger with only `/oc` / `/opencode` (summarize thread).
+
 on:
   issue_comment:
     types: [created]
@@ -53,10 +57,68 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run opencode
+      - name: Detect reply-only mode
+        id: mode
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const eventName = context.eventName;
+            const commentBody = context.payload.comment?.body ?? "";
+            const issueBody = context.payload.issue?.body ?? "";
+            const prBody = context.payload.pull_request?.body ?? "";
+
+            let triggerBody = "";
+            if (eventName === "issue_comment" || eventName === "pull_request_review_comment") {
+              triggerBody = commentBody;
+            } else if (eventName === "issues") {
+              triggerBody = issueBody;
+            } else if (eventName === "pull_request") {
+              triggerBody = prBody;
+            }
+
+            const trimmed = triggerBody.trim();
+            const lower = triggerBody.toLowerCase();
+
+            const replyOnly =
+              /^\/oc$/i.test(trimmed) ||
+              /^\/opencode$/i.test(trimmed) ||
+              /issue\s*に\s*コメント/i.test(triggerBody) ||
+              /イシューにコメント/i.test(triggerBody) ||
+              /コメント(?:のみ|だけ)/i.test(triggerBody) ||
+              /(?:^|\s)(?:comment|reply)\s+(?:on|to)\s+(?:the\s+)?issue/i.test(lower) ||
+              /PR(?:を|は)?(?:作らない|不要|いらない)/i.test(triggerBody) ||
+              /\bno\s+pr\b/i.test(lower);
+
+            core.setOutput("reply_only", replyOnly ? "true" : "false");
+
+            const replyPrefix =
+              "REPLY-ONLY MODE: Answer in the GitHub issue thread only. " +
+              "Do NOT modify files, commit, push, or open a pull request. " +
+              "Read-only investigation is OK.\n\nUser request:\n";
+
+            if (replyOnly) {
+              core.setOutput("prompt", `${replyPrefix}${triggerBody}`);
+            } else if (eventName === "issues" || eventName === "pull_request") {
+              core.setOutput("prompt", triggerBody);
+            } else {
+              core.setOutput("prompt", "");
+            }
+
+      - name: Run opencode (reply on issue, no PR)
+        if: steps.mode.outputs.reply_only == 'true'
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
           model: opencode/big-pickle
-          prompt: ${{ github.event_name == 'issues' && github.event.issue.body || github.event_name == 'pull_request' && github.event.pull_request.body || '' }}
+          agent: github-reply
+          prompt: ${{ steps.mode.outputs.prompt }}
+
+      - name: Run opencode
+        if: steps.mode.outputs.reply_only != 'true'
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        with:
+          model: opencode/big-pickle
+          prompt: ${{ steps.mode.outputs.prompt }}
