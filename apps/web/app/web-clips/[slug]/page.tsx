@@ -6,16 +6,20 @@ import { ArticlePager } from "../../../components/ArticlePager";
 import { ArticleToc } from "../../../components/ArticleToc";
 import { ReadingProgress } from "../../../components/ReadingProgress";
 import { SiteShell } from "../../../components/SiteShell";
-import { adjacentWebClips } from "../../../lib/site/adjacent-web-clips";
+import { adjacentWebClipsForRequest } from "../../../lib/site/adjacent-web-clips";
+import {
+  loadPublicWebClipForRequest,
+  loadPublicWebClipsForRequest,
+} from "../../../lib/site/content-for-request";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { renderMarkdoc } from "../../../lib/site/render-markdoc";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
 import { extractToc } from "../../../lib/site/toc";
-import { loadPublicWebClip, loadPublicWebClips } from "../../../lib/site/web-clips";
+import { loadPublicWebClips } from "../../../lib/site/web-clips";
 import { textify } from "../../../../../scripts/lib/mdoc";
 
-export const dynamic = "force-static";
+export const dynamic = "auto";
 export const revalidate = false;
 export const dynamicParams = false;
 
@@ -38,7 +42,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const clip = loadPublicWebClip(slug);
+  const clip = await loadPublicWebClipForRequest(slug);
   if (!clip) return { title: "Not found" };
   const cfg = loadSiteConfig();
   const desc = textify(clip.source)
@@ -60,14 +64,14 @@ export async function generateMetadata({
 
 export default async function WebClipPage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
-  const clip = loadPublicWebClip(slug);
+  const clip = await loadPublicWebClipForRequest(slug);
   if (!clip) notFound();
   const cfg = loadSiteConfig();
-  const clips = loadPublicWebClips();
+  const clips = await loadPublicWebClipsForRequest();
   const renderSource = mdocBodyForRender(clip.source, clip.title);
   const body = renderMarkdoc(renderSource);
   const toc = extractToc(renderSource);
-  const { prev, next } = adjacentWebClips(slug);
+  const { prev, next } = await adjacentWebClipsForRequest(slug);
   const rss = feedUrl();
 
   return (
