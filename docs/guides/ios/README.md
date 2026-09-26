@@ -1,57 +1,129 @@
-# Podcaster Capture — iOS ショートカット
+# Podcaster Capture — iOS ショートカットの作り方
 
-Safari の **共有シート** から `POST /api/capture` へ送る未署名ショートカットです。
+iOS 15 以降、**未署名の `.shortcut` ファイルは端末に追加できません**。リポジトリからファイルを配布するのではなく、**iPhone / iPad の「ショートカット」アプリで自分で作る**（作ったものは Apple が署名済み）のが確実です。
 
-## ファイル
+API の共通仕様: [capture-clients.md](../capture-clients.md)
 
-| ファイル | 説明 |
-|----------|------|
-| [Podcaster-Capture.shortcut](./Podcaster-Capture.shortcut) | 共有シート用（Web ページ → web-clips） |
+---
 
-再生成: `python3 scripts/generate-capture-shortcut.py`
+## 前提
 
-## 取り込み方
+- Vercel に `CAPTURE_API_TOKEN` が設定済み
+- Capture の URL: `https://<your-host>/api/capture`（ベース URL に `/api/capture` を付ける）
 
-### A. iPhone / iPad（Files から）
+---
 
-1. この `.shortcut` を端末に保存（AirDrop、GitHub の **Download raw**、iCloud Drive など）。
-2. **設定 → ショートカット → 詳細** で **未署名ショートカットを許可**（表示名は OS バージョンで多少異なる）。
-3. **ファイル** アプリで `.shortcut` をタップ → **ショートカットに追加**。
-4. インポート時に **ベース URL** と **CAPTURE_API_TOKEN** を入力（Vercel の `CAPTURE_API_TOKEN` と同じ値）。
-5. ショートカット編集画面で **共有シートに表示** がオンか確認。
+## 1. 新規ショートカット
 
-**iOS 15 以降**では Apple の署名が必要な場合があります。そのときは **B（Mac で署名）** を使ってください。
+1. **ショートカット** アプリ → **＋** → **新規ショートカット**
+2. 名前を **Podcaster Capture** などに変更
+3. **ⓘ（詳細）** を開く:
+   - **共有シートに表示**: オン
+   - **受け取る入力**: **Safari の Web ページ**（必要なら **URL** も追加）
+   - **画像** など不要な型はオフ
 
-### B. Mac で署名してから配る（推奨）
+---
 
-```bash
-# Mac のショートカット CLI（Xcode Command Line Tools 付属）
-shortcuts sign --mode anyone \
-  --input docs/guides/ios/Podcaster-Capture.shortcut \
-  --output ~/Desktop/Podcaster-Capture-signed.shortcut
-```
+## 2. アクションを上から順に追加
 
-署名済みファイルを iPhone に AirDrop → 追加。
+UI の文言は iOS のバージョンで少し違います。近い名前を選んでください。
 
-### C. import URL（ホストした raw ファイル）
+### 2.1 設定（最初の 2 ブロック）
 
-```text
-shortcuts://import-shortcut/?url=https%3A%2F%2Fraw.githubusercontent.com%2Fhskksk%2Fpodcaster%2Fmain%2Fdocs%2Fguides%2Fios%2FPodcaster-Capture.shortcut&name=Podcaster%20Capture
-```
+| 順 | アクション | 内容 |
+|----|------------|------|
+| 1 | **テキスト** | `https://YOUR-VERCEL-HOST`（末尾スラッシュなし。自分の本番 URL に書き換える） |
+| 2 | **テキスト** | `YOUR_CAPTURE_API_TOKEN`（Vercel の `CAPTURE_API_TOKEN` と同じ） |
 
-`main` をマージしたブランチ名に差し替えてください。未署名のため端末によっては A / B と同様の制限があります。
+トークンを毎回聞きたい場合は、2 番目を **入力を要求**（テキスト、パスワード形式）に差し替えてもよい。
 
-## 使い方
+### 2.2 Safari ページから取り出す
 
-1. Safari でページを開く。
-2. **共有** → **Podcaster Capture**。
-3. 結果（JSON）が表示されれば成功。`202` のときは [capture-clients.md](../capture-clients.md) のとおり同じ内容を再送。
+**ショートカット入力**（共有シートから渡された Web ページ）を使う。
 
-## セキュリティ
+| 順 | アクション | 設定 |
+|----|------------|------|
+| 3 | **Safari の Web ページの詳細を取得** | 詳細: **名前** または **ページのタイトル** |
+| 4 | **Safari の Web ページの詳細を取得** | 詳細: **URL** または **ページの URL** |
+| 5 | **Web ページの記事を取得** または **Web ページの内容を取得** | 入力: **ショートカット入力** |
 
-- トークンはショートカット内に保存されます（GitHub 公開 repo のファイル自体にはトークンを書き込まないこと）。
-- 端末紛失時は Vercel で `CAPTURE_API_TOKEN` をローテーション。
+本文が空に近いサイトでは、5 を省略し、後の辞書の `content` に **タイトル + 改行 + URL** を **テキスト** で組み立ててもよい（Keystatic で後から追記）。
 
-## テキストだけ送りたい
+### 2.3 JSON 用の辞書
 
-別途ショートカットを複製し、先頭を **共有されたテキスト** 入力に差し替えるか、Mac では `pnpm capture` を使う（[capture-clients.md](../capture-clients.md)）。
+| 順 | アクション | キーと値 |
+|----|------------|----------|
+| 6 | **辞書** | 次の 5 キー（値は変数をタップして挿入） |
+
+| キー | 値 |
+|------|-----|
+| `title` | 手順 3 の出力（ページタイトル） |
+| `content` | 手順 5 の出力（記事本文） |
+| `url` | 手順 4 の出力（URL） |
+| `collection` | 文字列 `web-clips` |
+| `podcast` | 文字列 `none` |
+
+### 2.4 Capture API に POST
+
+| 順 | アクション | 設定 |
+|----|------------|------|
+| 7 | **URL の内容を取得** | 下表 |
+
+| 項目 | 値 |
+|------|-----|
+| URL | **テキスト** で `\`（手順 1 のテキスト）\`/api/capture` を組み立て（変数「テキスト」を挿入 + 固定文字 `/api/capture`） |
+| メソッド | **POST** |
+| ヘッダ | **新規辞書** または 2 行追加 |
+| ヘッダ `Content-Type` | `application/json` |
+| ヘッダ `Authorization` | **テキスト** `\`Bearer \`（手順 2 のテキスト）\`` |
+| リクエスト本文 | **JSON** |
+| JSON の中身 | 手順 6 の **辞書** を指定 |
+
+「リクエスト本文」で **辞書** を選べない場合は、**詳細** を開き **本文の種類 → JSON** にし、フィールドを手動で 5 個追加しても同じ（`title` / `content` / `url` / `collection` / `podcast`）。
+
+### 2.5 結果を表示
+
+| 順 | アクション | 設定 |
+|----|------------|------|
+| 8 | **結果を表示** または **通知を表示** | 入力: 手順 7 の **URL の内容** |
+
+成功時は JSON（`ok`, `path`, `sha` など）。`202` と `retryable` のときは同じページでもう一度共有 → 実行（[capture-clients.md](../capture-clients.md) 参照）。
+
+---
+
+## 3. 使い方
+
+1. Safari でページを開く
+2. **共有** → **Podcaster Capture**
+3. 結果を確認
+
+**ホーム画面に追加**: ショートカットの **ⓘ → ホーム画面に追加**（Safari 共有の方が一般的）。
+
+---
+
+## 4. テキストだけ送る（別ショートカット）
+
+1. 受け取る入力を **テキスト** のみに
+2. 手順 3–5 の代わりに **ショートカット入力** を `content` に
+3. `title` は **テキスト** の先頭行、または **入力を要求**
+
+---
+
+## 5. 別端末・家族へ渡す
+
+自分で作ったショートカットは **共有 → リンクをコピー**（iCloud）で配れる。相手も **ショートカットに追加** するだけ（相手側で API URL / トークンを書き換える）。
+
+公開 GitHub repo に **トークン入りショートカットをコミットしない**。
+
+---
+
+## 6. セキュリティ
+
+- トークンは端末内のショートカットに保存される（Git への書き込み権相当）
+- 紛失時は Vercel で `CAPTURE_API_TOKEN` をローテーションし、ショートカット内のトークンも更新
+
+---
+
+## 7. Cloudflare Access
+
+Keystatic 全体を Access で守っている場合、Capture だけ Bypass / Service Token にする（[pkm-migration.md](../../architecture/pkm-migration.md) NFR-04）。ショートカットのヘッダに Service Token 用の追加ヘッダが必要になる。

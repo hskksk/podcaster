@@ -28,31 +28,16 @@
 
 ## iPhone（Safari から投入）
 
-iOS には Mac のような `curl` が無いので、実用的なのは **ショートカット** です。
+iOS には Mac のような `curl` が無いので、**ショートカット** を端末上で自作する（iOS 15+ では未署名 `.shortcut` ファイルのインポートは実質不可）。
 
-### リポジトリのショートカットファイル
+**手順（アクション単位）**: [ios/README.md](./ios/README.md)
 
-共有シート用 **`Podcaster-Capture.shortcut`** を同梱しています（未署名。iOS 15+ では Mac での署名が必要な場合あり）。
+要点:
 
-- ファイル: [ios/Podcaster-Capture.shortcut](./ios/Podcaster-Capture.shortcut)
-- 取り込み・署名: [ios/README.md](./ios/README.md)
-
-### 手動で作る場合
-
-1. **ショートカット** アプリで新規作成。
-2. **共有シートに表示** をオン（Safari の共有メニューから起動）。
-3. 入力を **Safari の Web ページ** または **URL** として受け取る。
-4. 変数を組み立てる（例）:
-   - `title` … ページ名（「Safari ページから取得」など）
-   - `url` … 現在の URL
-   - `content` … 本文テキスト（Reader 相当が取れない場合は `title` + URL だけでも可。後から Keystatic で追記）
-5. **URL の内容を取得** → **JSON** で `POST`:
-   - URL: `https://<your-vercel-host>/api/capture`
-   - ヘッダ: `Authorization: Bearer <CAPTURE_API_TOKEN>`、`Content-Type: application/json`
-   - 本文: `{"title":"…","content":"…","url":"…"}`
-6. トークンはショートカット内の **テキスト** または **iCloud キーチェーン** に保存（端末紛失時は Vercel でトークンをローテーション）。
-
-**メモだけ**送りたいときは、入力を **テキスト** にして同じ POST を組む。
+- Safari **共有シート** から起動
+- ページの **タイトル・URL・本文** を辞書に入れ `collection: web-clips`, `podcast: none`
+- **URL の内容を取得** で `POST`、ヘッダ `Authorization: Bearer <CAPTURE_API_TOKEN>`
+- トークンはショートカット内のテキスト（端末紛失時は Vercel でローテーション）
 
 ### Cloudflare Access を使っている場合
 
