@@ -49,7 +49,7 @@ pnpm web:github
    `https://<production-domain>/api/keystatic/github/oauth/callback`  
    （Preview ごとに URL を足す必要はない — 下記プロキシを有効にする場合）
 5. **Preview でも `/keystatic` にログインしたい場合**（Auth.js の `redirectProxyUrl` と同じ考え方）:
-   - Production / Preview / Development すべてに `NEXT_PUBLIC_MAIN_URL=https://<production-domain>`（末尾スラッシュなし）  
+   - Production / Preview / Development すべてに `NEXT_PUBLIC_SITE_URL=https://<production-domain>`（末尾スラッシュなし。公開サイト用と同じ値）  
      または `KEYSTATIC_OAUTH_PROXY_URL=https://<production-domain>/api/keystatic/github/oauth/callback`
    - `KEYSTATIC_SECRET` は Production と Preview で **同一**（Preview だけ別 secret にしない）
 6. Redeploy。`/keystatic` で GitHub ログイン（この repo への write 権限が必要）

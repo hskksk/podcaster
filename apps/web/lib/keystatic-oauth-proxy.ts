@@ -93,9 +93,10 @@ export function oauthProxyCallbackUrl(): string | null {
   if (explicit) {
     return explicit.replace(/\/$/, "");
   }
-  const main = process.env.NEXT_PUBLIC_MAIN_URL?.trim();
-  if (!main) return null;
-  return `${main.replace(/\/$/, "")}${KEYSTATIC_GITHUB_OAUTH_CALLBACK_PATH}`;
+  const site =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.NEXT_PUBLIC_MAIN_URL?.trim();
+  if (!site) return null;
+  return `${site.replace(/\/$/, "")}${KEYSTATIC_GITHUB_OAUTH_CALLBACK_PATH}`;
 }
 
 export function oauthProxyEnabled(): boolean {
