@@ -614,16 +614,22 @@ export async function downloadGeneratedAudio(opts: {
     const cfg = await loadConfig();
     const defaultGeminiApiRoot = resolveGeminiApiRoot(cfg);
 
-    const { data: pendingAudio, error: pendingErr } = await db
+    const { data: pendingAudios, error: pendingErr } = await db
       .from("audio_files")
       .select("id, script_id, llm_response, batch_name")
       .eq("episode_id", episodeId)
       .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
     if (pendingErr) throw new Error(`Failed to load pending audio job: ${pendingErr.message}`);
-    if (!pendingAudio) throw new Error(`Pending audio job not found for episode: ${episodeId}`);
+
+    const pendingAudio = requestedBatchName
+      ? pendingAudios?.find((audio) => audio.batch_name === requestedBatchName) ??
+        pendingAudios?.find((audio) => readBatchJobName(audio.llm_response ?? null) === requestedBatchName)
+      : pendingAudios?.[0];
+    if (!pendingAudio) {
+      const batchDetail = requestedBatchName ? ` for batch ${requestedBatchName}` : "";
+      throw new Error(`Pending audio job not found for episode: ${episodeId}${batchDetail}`);
+    }
     pendingAudioId = pendingAudio.id;
 
     const llmResponse = (pendingAudio.llm_response ?? {}) as Record<string, unknown>;
