@@ -1,0 +1,22 @@
+/* Keystatic Admin polish — selectors are best-effort across @keystatic releases. */
+
+@media (min-width: 1280px) {
+  .keystatic-live-preview-panel {
+    display: block !important;
+  }
+
+  /* Leave room for the fixed preview iframe on wide viewports. */
+  body:has(.keystatic-live-preview-panel) {
+    padding-right: min(42vw, 520px);
+  }
+}
+
+/* Prose column in content layout (markdoc field). */
+body[data-keystatic] main {
+  max-width: 100%;
+}
+
+body[data-keystatic] [contenteditable="true"] {
+  line-height: 1.65;
+  font-size: 1.02rem;
+}
