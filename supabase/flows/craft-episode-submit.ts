@@ -1,7 +1,7 @@
 import { Flow } from "@pgflow/dsl";
 import { generateScript } from "../tasks/generateScript.ts";
-import { generateEpisodeImage } from "../tasks/generateEpisodeImage.ts";
 import { startGenerateAudio } from "../tasks/startGenerateAudio.ts";
+import { generateEpisodeImage } from "../tasks/generateEpisodeImage.ts";
 
 type Input = {
   episodeId: string;
@@ -35,23 +35,6 @@ export const CraftEpisodeSubmit = new Flow<Input>({
   )
   .step(
     {
-      slug: "generateEpisodeImage",
-      dependsOn: ["generateScript"],
-      maxAttempts: 3,
-      timeout: 180,
-    },
-    async (flowInput) => {
-      if (flowInput.startFrom === "audio") {
-        return { episodeId: flowInput.episodeId, skipped: true };
-      }
-      return await generateEpisodeImage({
-        episodeId: flowInput.episodeId,
-        regenerate: flowInput.startFrom === "image" || flowInput.regenerate === true,
-      });
-    },
-  )
-  .step(
-    {
       slug: "generateAudioStart",
       dependsOn: ["generateScript"],
       maxAttempts: 3,
@@ -65,6 +48,23 @@ export const CraftEpisodeSubmit = new Flow<Input>({
       return await startGenerateAudio({
         episodeId: flowInput.episodeId,
         regenerate: flowInput.regenerate,
+      });
+    },
+  )
+  .step(
+    {
+      slug: "generateEpisodeImage",
+      dependsOn: ["generateScript"],
+      maxAttempts: 3,
+      timeout: 180,
+    },
+    async (flowInput) => {
+      if (flowInput.startFrom === "audio") {
+        return { episodeId: flowInput.episodeId, skipped: true };
+      }
+      return await generateEpisodeImage({
+        episodeId: flowInput.episodeId,
+        regenerate: flowInput.startFrom === "image" || flowInput.regenerate === true,
       });
     },
   );
