@@ -1,44 +1,38 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArticleHeader } from "../../../components/ArticleHeader";
-import { ArticlePager } from "../../../components/ArticlePager";
-import { ArticleToc } from "../../../components/ArticleToc";
-import { ReadingProgress } from "../../../components/ReadingProgress";
-import { SiteShell } from "../../../components/SiteShell";
-import { adjacentWebClips } from "../../../lib/site/adjacent-web-clips";
-import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
-import { articleOpenGraph } from "../../../lib/site/open-graph";
-import { renderMarkdoc } from "../../../lib/site/render-markdoc";
-import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
-import { extractToc } from "../../../lib/site/toc";
-import { loadPublicWebClip, loadPublicWebClips } from "../../../lib/site/web-clips";
-import { textify } from "../../../../../scripts/lib/mdoc";
+import { notFound, redirect } from "next/navigation";
+import { ArticleHeader } from "../../../../components/ArticleHeader";
+import { ArticlePager } from "../../../../components/ArticlePager";
+import { ArticleToc } from "../../../../components/ArticleToc";
+import { ReadingProgress } from "../../../../components/ReadingProgress";
+import { SiteShell } from "../../../../components/SiteShell";
+import { adjacentWebClipsForRequest } from "../../../../lib/site/adjacent-web-clips";
+import {
+  loadPublicWebClipForRequest,
+  loadPublicWebClipsForRequest,
+} from "../../../../lib/site/content-for-request";
+import { feedUrl, loadSiteConfig } from "../../../../lib/site/config";
+import { getDraftPreviewContext } from "../../../../lib/site/draft-context";
+import { articleOpenGraph } from "../../../../lib/site/open-graph";
+import { renderMarkdoc } from "../../../../lib/site/render-markdoc";
+import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
+import { extractToc } from "../../../../lib/site/toc";
+import { textify } from "../../../../../../scripts/lib/mdoc";
 
-export const dynamic = "force-static";
-export const revalidate = false;
-export const dynamicParams = false;
+export const dynamic = "force-dynamic";
 
 type Params = { slug: string };
-
-export async function generateStaticParams() {
-  const clips = loadPublicWebClips();
-  if (clips.length === 0) {
-    throw new Error(
-      `content/web-clips produced 0 clips at build (cwd=${process.cwd()}). ` +
-        "The public site is statically generated like GitHub Pages; the monorepo content/ tree must be visible to `next build`.",
-    );
-  }
-  return clips.map((c) => ({ slug: c.slug }));
-}
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
+  const draft = await getDraftPreviewContext();
+  if (!draft.enabled) return { title: "Preview" };
+
   const { slug } = await params;
-  const clip = loadPublicWebClip(slug);
+  const clip = await loadPublicWebClipForRequest(slug);
   if (!clip) return { title: "Not found" };
   const cfg = loadSiteConfig();
   const desc = textify(clip.source)
@@ -58,16 +52,22 @@ export async function generateMetadata({
   };
 }
 
-export default async function WebClipPage({ params }: { params: Promise<Params> }) {
+export default async function PreviewWebClipPage({ params }: { params: Promise<Params> }) {
+  const draft = await getDraftPreviewContext();
+  if (!draft.enabled) {
+    const { slug } = await params;
+    redirect(`/web-clips/${encodeURIComponent(slug)}`);
+  }
+
   const { slug } = await params;
-  const clip = loadPublicWebClip(slug);
+  const clip = await loadPublicWebClipForRequest(slug);
   if (!clip) notFound();
   const cfg = loadSiteConfig();
-  const clips = loadPublicWebClips();
+  const clips = await loadPublicWebClipsForRequest();
   const renderSource = mdocBodyForRender(clip.source, clip.title);
   const body = renderMarkdoc(renderSource);
   const toc = extractToc(renderSource);
-  const { prev, next } = adjacentWebClips(slug);
+  const { prev, next } = await adjacentWebClipsForRequest(slug);
   const rss = feedUrl();
 
   return (
@@ -106,7 +106,7 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
         </div>
 
         <div className="mx-auto max-w-3xl">
-          <ArticlePager prev={prev} next={next} basePath="/web-clips" />
+          <ArticlePager prev={prev} next={next} basePath="/preview/web-clips" />
         </div>
       </SiteShell>
     </>

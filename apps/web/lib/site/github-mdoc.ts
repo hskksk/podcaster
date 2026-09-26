@@ -89,7 +89,12 @@ export async function resolvePublicPathForEntry(
     ? await readMdocFromGithub(collection, entryDir, ref, token)
     : readLocalMdoc(collection, entryDir);
   if (!source) return null;
-  return collection === "docs"
-    ? `/articles/${publicDocFromMdocSource(entryDir, source).slug}`
-    : `/web-clips/${publicWebClipFromMdocSource(entryDir, source).slug}`;
+  const slug =
+    collection === "docs"
+      ? publicDocFromMdocSource(entryDir, source).slug
+      : publicWebClipFromMdocSource(entryDir, source).slug;
+  if (ref) {
+    return collection === "docs" ? `/preview/articles/${slug}` : `/preview/web-clips/${slug}`;
+  }
+  return collection === "docs" ? `/articles/${slug}` : `/web-clips/${slug}`;
 }
