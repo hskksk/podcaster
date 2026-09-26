@@ -5,24 +5,20 @@ import { ArticleHeader } from "../../../components/ArticleHeader";
 import { ArticlePager } from "../../../components/ArticlePager";
 import { ArticleToc } from "../../../components/ArticleToc";
 import { SiteShell } from "../../../components/SiteShell";
-import { adjacentPublicDocsForRequest } from "../../../lib/site/adjacent-docs";
-import {
-  loadPublicDocForRequest,
-  loadPublicDocsForRequest,
-} from "../../../lib/site/content-for-request";
+import { adjacentPublicDocs } from "../../../lib/site/adjacent-docs";
 import { audioForPublicDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { fetchArticleImageMap, imageForPublicDoc } from "../../../lib/site/episode-images";
 import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { EpisodePlayer } from "../../../components/EpisodePlayer";
 import { ReadingProgress } from "../../../components/ReadingProgress";
-import { loadPublicDocs } from "../../../lib/site/docs";
+import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
 import { renderMarkdoc } from "../../../lib/site/render-markdoc";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
 import { extractToc } from "../../../lib/site/toc";
 import { textify } from "../../../../../scripts/lib/mdoc";
 
-export const dynamic = "auto";
+export const dynamic = "force-static";
 export const revalidate = false;
 export const dynamicParams = false;
 
@@ -45,7 +41,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const doc = await loadPublicDocForRequest(slug);
+  const doc = loadPublicDoc(slug);
   if (!doc) return { title: "Not found" };
   const cfg = loadSiteConfig();
   const imageMap = await fetchArticleImageMap();
@@ -67,59 +63,59 @@ export async function generateMetadata({
 
 export default async function ArticlePage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
-  const doc = await loadPublicDocForRequest(slug);
+  const doc = loadPublicDoc(slug);
   if (!doc) notFound();
   const cfg = loadSiteConfig();
-  const docs = await loadPublicDocsForRequest();
+  const docs = loadPublicDocs();
   const audioMap = await fetchArticleAudioMap();
   const audioUrl = audioForPublicDoc(audioMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
   const body = renderMarkdoc(renderSource);
   const toc = extractToc(renderSource);
-  const { prev, next } = await adjacentPublicDocsForRequest(slug);
+  const { prev, next } = adjacentPublicDocs(slug);
   const rss = feedUrl();
 
   return (
     <>
       <ReadingProgress />
       <SiteShell
-      siteTitle={cfg.siteTitle}
-      feedUrl={rss}
-      articleCount={docs.length}
-      variant="public"
-      width="wide"
-    >
-      <div className="mx-auto max-w-3xl">
-        <p className="mb-8 text-sm">
-          <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
-            ← 記事一覧
-          </Link>
-        </p>
-        <ArticleHeader
-          title={doc.title}
-          date={doc.date}
-          source={doc.sourceUrl}
-          mdocSource={doc.source}
-        />
-        {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
-      </div>
+        siteTitle={cfg.siteTitle}
+        feedUrl={rss}
+        articleCount={docs.length}
+        variant="public"
+        width="wide"
+      >
+        <div className="mx-auto max-w-3xl">
+          <p className="mb-8 text-sm">
+            <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
+              ← 記事一覧
+            </Link>
+          </p>
+          <ArticleHeader
+            title={doc.title}
+            date={doc.date}
+            source={doc.sourceUrl}
+            mdocSource={doc.source}
+          />
+          {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
+        </div>
 
-      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-        <article
-          className="markdoc mx-auto min-w-0 max-w-3xl lg:mx-0"
-          data-pagefind-body
-        >
-          {body}
-        </article>
-        <aside className="mx-auto w-full max-w-3xl lg:mx-0">
-          <ArticleToc entries={toc} />
-        </aside>
-      </div>
+        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+          <article
+            className="markdoc mx-auto min-w-0 max-w-3xl lg:mx-0"
+            data-pagefind-body
+          >
+            {body}
+          </article>
+          <aside className="mx-auto w-full max-w-3xl lg:mx-0">
+            <ArticleToc entries={toc} />
+          </aside>
+        </div>
 
-      <div className="mx-auto max-w-3xl">
-        <ArticlePager prev={prev} next={next} />
-      </div>
-    </SiteShell>
+        <div className="mx-auto max-w-3xl">
+          <ArticlePager prev={prev} next={next} />
+        </div>
+      </SiteShell>
     </>
   );
 }
