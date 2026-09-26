@@ -122,5 +122,12 @@ api_path = "/v1beta"
 [download]
 monitor_interval_seconds = 60
 
+[image]
+enabled = true
+model = "gemini-3.1-flash-image"
+aspect_ratio = "1:1"
+image_size = "1K"
+mime_type = "image/png"
+
 [tui.markdown]
 math_label = "ᵐ"

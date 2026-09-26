@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteShell } from "../../../components/SiteShell";
 import { audioForDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
+import { imageForDoc, fetchArticleImageMap } from "../../../lib/site/episode-images";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
 import { renderMarkdoc } from "../../../lib/site/render-markdoc";
@@ -34,6 +35,11 @@ export async function generateMetadata({
   const doc = loadPublicDoc(slug);
   if (!doc) return { title: "Not found" };
   const cfg = loadSiteConfig();
+  const imageMap = await fetchArticleImageMap();
+  const episodeImage = imageForDoc(imageMap, doc.filename);
+  const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  const fallbackOg = siteOrigin ? `${siteOrigin}/${cfg.coverImage}` : `/${cfg.coverImage}`;
+  const ogImage = episodeImage ?? fallbackOg;
   const desc = textify(doc.source)
     .replace(/^#.*$/m, "")
     .replace(/[#*`[\]]/g, "")
@@ -43,6 +49,17 @@ export async function generateMetadata({
   return {
     title: doc.title,
     description: desc || cfg.siteDescription,
+    openGraph: {
+      title: doc.title,
+      description: desc || cfg.siteDescription,
+      images: [{ url: ogImage, width: 1024, height: 1024, alt: doc.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: doc.title,
+      description: desc || cfg.siteDescription,
+      images: [ogImage],
+    },
   };
 }
 
