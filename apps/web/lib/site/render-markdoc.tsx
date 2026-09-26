@@ -4,11 +4,13 @@ import Markdoc from "@markdoc/markdoc";
 import React, { type ReactNode } from "react";
 import { Callout } from "../../components/markdoc/Callout";
 import { Diagram } from "../../components/markdoc/Diagram";
+import { Fence } from "../../components/markdoc/Fence";
+import { Heading } from "../../components/markdoc/Heading";
 import { Math } from "../../components/markdoc/Math";
 import { PodcastPlayer } from "../../components/markdoc/PodcastPlayer";
 import schema from "../../markdoc/config";
 
-const components = { Math, Diagram, Callout, PodcastPlayer };
+const components = { Math, Diagram, Callout, PodcastPlayer, Fence, Heading };
 
 export function renderMarkdoc(source: string): ReactNode {
   const ast = Markdoc.parse(source);
