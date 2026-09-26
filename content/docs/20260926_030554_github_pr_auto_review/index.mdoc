@@ -1,0 +1,249 @@
+---
+title: "GitHub の PR 自動レビュー — 実際に使われているのは3つの別の場所"
+publishedAt: 2026-09-26
+podcast: none
+legacyFilename: 20260926_030554_github_pr_auto_review.md
+---
+
+# GitHub の PR 自動レビュー — 実際に使われているのは3つの別の場所
+
+## 概要
+
+**GitHub の PR 自動レビュー**という名前の下には、別々の3つの仕組みが並んでいる。GitHub が内部で実行する Copilot code review、外部サーバーから動く Marketplace アプリ、自分の runner で起動する GitHub Actions である。2026年9月26日に実測した数字では首位が Copilot で、累計 **6,000万件**のレビューを数え、GitHub 上のレビュー全体の5分の1を超えた [1]。次位が Marketplace の CodeRabbit で、インストールは **329,753件**にいたる [4]。Action として AI レビューを配布する OSS はすべて★50未満で、★44 の `zai-code-review` が上位だった [30]。
+
+この調査が答えようとしているのは、どの手段が実際に使われているかである。対象は有料・無料の両方を含み、GitHub が 2025年4月に一般利用へ出した Copilot code review と、社区が 2026年2月に始めた独立ベンチマークまでを範囲とする。判断の材料は数値の絶対値ではなく、同じ指標を誰が測り、どの数字が変わるかにある。
+
+結論を先に述べると、「GitHub Action で PR を自動レビューする」は利用者の少ない選択肢にすぎない。選ぶべき場所は GitHub 内蔵、Marketplace アプリ、PR-Agent という3点で、それぞれ費用も品質も評価のされ方が違う。
+
+## 全体像
+
+{% diagram %}
+```mermaid
+flowchart TB
+  Q["<b>問い</b><br/>実際に使われている PR 自動レビューはどれか"]
+  F["<b>軸</b><br/>実行主体は GitHub 内部・外部サーバー・自分の runner のどれか"]
+  C1["<b>分かったこと1</b><br/>首位は Action ではなく GitHub 内蔵の Copilot"]
+  C2["<b>分かったこと2</b><br/>Action 流通の AI レビューは★50 未満で並ぶ"]
+  C3["<b>分かったこと3</b><br/>順位が入れ替わり、実運用の差は PR の大きさが決める"]
+  M["<b>答え</b><br/>選ぶ場所は GitHub 内蔵・Marketplace・PR-Agent の3点"]
+  X["<b>扱わない範囲</b><br/>決定論的ツールの比較・実際の設定手順"]
+  S["<b>調査範囲</b><br/>2025年4月〜2026年9月の発表と実測値"]
+
+  Q --> F
+  F --> C1
+  F --> C2
+  F --> C3
+  C1 --> M
+  C2 --> M
+  C3 --> M
+  X -.-> Q
+  S -.-> Q
+```
+{% /diagram %}
+
+軸の3行に対応する。1行目には GitHub 内蔵の Copilot と Marketplace アプリ全体、2行目には Action として流通する OSS とその上位、3行目には OSS 実装としての PR-Agent と移管元だった Qodo がある。4行目の独立評価と実運用データは、どの手段を選ぶ場合でも結論の検証土台になる。
+
+## 背景・歴史 — 5年で自動レビューは「拡張」から「上位製品」になり、競争軸が点数から実運用へ移った
+
+2025年4月、Copilot code review が Research Preview として出た時点の売りは、Copilot の Pro・Business・Enterprise 契約に含まれることと、選択的に起動できることに限られていた [3]。この時期には第三者による比較の基準が無く、各社の発表は自分の数字だけを置いていた。外部から「どれが良いか」を測ろうという動きが現れたのが 2026年2月である。このとき Martian が公開した Code Review Bench は、50件の PR によるオフライン走査と20万件超のオンライン集の両方で10を超えるツールを採点し、ライセンスを MIT で公開した [7][10]。
+
+2026年4月23日、Qodo は自社製品だった PR-Agent を The-PR-Agent 組織へ移し、ライセンスと開発継続を community に委ねると発表した [16]。同じ週に free tier の縮小も始まった。8月12日付の追跡記事 free と paid の内訳が報告され、free は Diff 500行・5ファイルから 100行・1ファイルへ縮小された [18]。同じ8月に Copilot code review は agentic な構成へ切り替えられ、positive feedback が 8.1% 改善した [2]。
+
+2026年9月11日には Copilot がコードを実行して確認する shell ツールと、解決済みの指摘を自動クローズする機構が加わった [24]。この半年で競争の軸は「どれが一番検出できるか」から「実際の PR で指摘が採用され、誤検出が減るか」へ移った。以下の7節は、その軸に沿って手段を並べたもの。
+
+## 1. 実利用の首位は Action ではなく Copilot code review — GitHub 上のレビュー5件に1件
+
+コードレビューを製品として提供し始めたのは 2025年4月である。開始から半年で件数は5倍単位で伸び、2026年3月5日に **6,000万件**を超えた [1]。同じ発表では 12,000を超える組織での利用が明記され、GitHub 上のレビュー全体に対する比率が **20%超**だとされた [1]。4月の agentic 化では、71%のレビューが actionable な指摘を1件以上含み、残る29%は何もコメントしないまま終わるという内訳も公開されている [2]。
+
+**Action ではなく製品に組み込まれる形で伸びた**ことが、この位置づけの理由である。Actions の runner 起動数のように曖昧な指標ではなく、Copilot の契約利用者にそのまま乗る。2025年4月の公開時点で報告された10倍という成長率が、2026年3月の発表でも維持されている [1]。
+
+ただし「使われている」の強さは、組織の規模と利用の頻度で変わる。数秒で終わるレビューが個人の repository に何十回も走るのと、数千人で毎日走るのでは、累積件数の意味が別物になる。GitHub の発表は累積件数で、対象 PR の大きさや diff の行数については述べていない [1]。第7節の実測値と組み合わせると、この数字から「1件あたりの密度」について何も読み取れないと分かる。
+
+**持ち帰り**：2026年9月時点で、PR レビューに投じられた企業の努力と予算の大半は GitHub 内蔵の Copilot に流れ、Action を書く判断は第五候補である。
+
+## 2. Marketplace アプリ型は CodeRabbit が先行 — インストール32万件で他を離れる
+
+外部サーバー型は、Marketplace のアプリとして配布される。CodeRabbit のページは 2026年9月26日の取得時点でインストール **329,753件**を示した [4]。同日の実測では、同じカテゴリー分類の主要アプリはすべて10万以下で、CodeRabbit だけが10万を超えた。対照として GitHub 側の stars は reviewdog が **9,623**、danger-js が **5,511**、Semgrep が **16,765**、Tabby が **33,894** であった [20][34][35][36][37]。
+
+**インストール数と stars は別の数字である。** Marketplace 側は1組織で複数人が使うと減らない。stars は fork と評価に依存し、同じベンチでは stars の高い製品と検出性能の高い製品が逆順に並ぶ例も観察された [7]。PR-Agent は forks **1,894** に対して stars **13,152** で、後者が7倍である [15]。この比だけを見ると、stars は利用率ではなく関心度を示していると分かる。
+
+費用は従量型が基本である。OSS と公開プロジェクトは無償で、超過分は 1 ファイルあたり **$0.25** の従量になり、4 ファイルにつき $1 のクレジットとして請求される [5]。GitHub 内蔵だけを見ると追加費用に見えないが、code review は premium request を消費するため、実行量を増やせば Copilot の利用枠も増える [3]。
+
+| プラン | 価格（開発者/月） |
+|---|---|
+| Free | 0 |
+| Essentials | 約 $24 |
+| Team | 約 $48 |
+| Advanced | 約 $72 |
+| 超過分 | 1 ファイルあたり $0.25 |
+
+比較 | 導入時に増える費用 | 既に契約している場合の費用 |
+| --- | --- | --- |
+| CodeRabbit | 月額 $24〜$72、超過は従量 | 0 |
+| PR-Agent | LLM API と維持費 | LLM API と維持費 |
+| reviewdog | 0 | 0 |
+
+**持ち帰り**：外部サーバー型は CodeRabbit が Marketplace で先行しており、超過分がファイル単位の従量になるため、利用量が不明のまま総額は推定できない。
+
+## 3. Action として配られる AI レビューは★50未満で並ぶ — ★50 を超える Action は確認できなかった
+
+Actions に「AI code review」を名乗る workflow は並んでいる。実測した範囲では、上位は以下の規模にとどまった。`zai-code-review` が★44、`ai-code-review` が★35、`codepress-review` が★19、`ai-pr-review` が★4、`ai-code-reviewer` が★6 である [30][31][32][33][41][42]。2025年以前へさかのぼっても、★50を超える Action は確認できなかった。
+
+**「GitHub Action で AI レビュー」と検索して辿り着く先に、採用実績のある製品はほとんどない。** Marketplace 側で「code review」を検索すると386件が並び、うち Action に分類されるのは46件だった [29]。利用者が求めるものは存在するが、Action という形式ではそれを満たすものが見当たらない。
+
+この分布には理由がある。第一に、すべての PR で workflow が起動すると実行権限と Secret の管理が必要になる。第二に、実行時間が Action の minutes を消費する。第三に、書き込み権限が要るため外部からの contrib では十分に動かせない。第四に、有料プランの枠が限られる。Copilot code review が Action として配布されなかったのは、この4点が重なったためである [3]。OSS の比較記事でも、Action だけで完結する AI レビューは主要候補として扱われていない [40]。
+
+**持ち帰り**：Action 名で PR レビューを探す場合、採用実績のある製品にはほとんど辿り着かない。選定の判断は Marketplace 側で行うほうが確実である。
+
+## 4. OSS の実装としては PR-Agent 一本が突出 — ★13,152 と Docker 1,478万 pull は他を離れる
+
+OSS の自動レビュー基盤を自分で動かすなら、PR-Agent が事実上の一点集中になる。GitHub 上の `The-PR-Agent/pr-agent` は★13,152、fork は **1,894**、作成は 2023年7月5日、最後の push は 2026年9月25日である [15]。image の pull 数は、`codiumai/pr-agent` が **12,626,940**、`pragent/pr-agent` が **2,118,665** で、image 名が変わった履歴も合えると **1,478万**に達する [23]。stars では Tabby が★33,894 と上だが、pull は PR-Agent の30分の1以下であった [20][37]。
+
+この差は利用の性質を反映している。Tabby は language server として pull されるため、stars と pull が一緒に伸びる。PR-Agent は Docker image がないと動かないため、pull は stars に先行して積み上がる [17]。2026年9月26日に GitHub API が返した SPDX ID は `MIT` だった [22]。
+
+弱点も報告されている。**Tabby と PR-Agent は導入に数週間かかる**という評価があり、PR-Agent では config を読まない issue (#2098) と解析が壊れる issue (#2083) が 2026年3月時点で4か月以上 open のまま残っていた [17]。自分で運用するなら、動くかどうかと壊れたときに直せるかどうかを一緒に見た。OSS の選定を扱った比較記事でも、この2点は導入前の確認事項として挙げられていた [17][40]。
+
+**持ち帰り**：OSS で自前の実行環境を組むなら、PR-Agent が pull 数と更新頻度の両方で他を離しており、MIT で配布されている。
+
+## 5. PR-Agent は 2026年4月に Qodo を離れた — 有償版 Qodo と同じ実装ではなくなった
+
+PR-Agent を評価するとき最初に行うべきことは、**Qodo Merge として出荷されていた頃と現在を区別すること**である。2026年4月23日に Qodo は PR-Agent を The-PR-Agent 組織へ移し、Apache 2.0 ライセンスと継続開発を community に委ねると発表した [16]。一方、GitHub API が返す SPDX ID は `MIT` だった [22]。どちらが実際に効いているかは一次資料の記載とメタデータが食い違っており、本文では両方を示すことしかできない [16][22]。
+
+free tier の縮小も続いた。8月の追跡では free を Diff 100行・1ファイルへ絞り、pull_request 以外のイベントを free から外したとされた [18]。PR-Agent の config が読まれない issue も、この縮小と合わせて読む必要がある [17]。販売元の比較で Qodo が1位だった値は有償版の結果であり、OSS 版にそのまま当てはめられない。
+
+**「PR-Agent は既存ツールを上回る」は 2026年9月以降，成立しない。** Qodo が実施した比較では有償の Qodo Exhaustive が F1 **60.1**、OSS の Qodo-Precise が **55.4**にとどまる [11]。この段差は世代差ではなく同一製品内の構成差であり、OSS 版が有利に働く保証はない。首位の入れ替わりは3月の CodeRabbit [6] と7月の Greptile [9] の間で起きている。
+
+**持ち帰り**：PR-Agent の評価値は 2026年4月の Qodo からの移管を境に分ける。移管前の Qodo 比較値を移管後の製品に適用しない。
+
+## 6. ベンチマークの1位は2026年に4社で入れ替わる — 5つの独立評価が示すのは順位の不安定さである
+
+このベンチは 2026年2月に公開され、MIT で、50件の PR によるオフライン走査と20万件超のオンライン集の両方で10から13のツールを採点する [7][10]。**2026年の半年で首位が4社入れ替わった。** 9月時点の集計まで首位は入れ替わっており、Copilot の指摘 1,000件あたりの false positive は **9.0%** だった [7][27]。
+
+| 時点 | 首位 | F1 |
+|---|---|---|
+| 2026-03-03 | CodeRabbit | 51.2 |
+| 2026-03-25 | Cubic（オフライン） [8] | 61.8 |
+| 2026-07-30 | Greptile | 60.8 |
+| 2026-09 | Cubic | 65.7 |
+
+さらに5つの評価がある。いずれも評価者が設計に深く関与しており、首位のツール名が入れ替わることを調査結果として示している。
+
+| 評価 | 対象 | 結果 |
+|---|---|---|
+| Qodo 運営 [11] | 100 PR・8 repository・580 指摘 | Qodo-Exhaustive 60.1、Copilot 42.8、CodeRabbit 28.0 |
+| Signal65 [12] | 6 repository・60件の historic bug | CodeRabbit の精度 95.88%、Amazon Q Developer の誤検出が23件で最多 |
+| モノレポで50件 [17] | 450,000ファイル | Augment 59、Cursor Bugbot 49、CodeRabbit 39、Copilot 25 |
+| LLM 判定 [25][38] | 309 PR・10開発者 | CodeRabbit が 51% の PR で1位 |
+| SynapseWire [28] | モノレポ47件 | 検出は Copilot 74%、誤検出率は 1.2% |
+
+**どのベンチマークも自分の有利な側で設計されている。** 首位の入れ替わりは半年ごとに読み替える必要があることを意味し、順位で選ぶことの無効さを示す相対評価よりも、指摘を出す場所、対象となる diff の大きさ、誤検出の許容値のほうが選ぶときに効く。Qodo 運営のベンチが Qodo を1位にしたのは、採点基準が Qodo の挙動に合わせられていたためである [11]。2026年の比較記事は評価軸を費用と対応範囲に分けており、単一の順位表は掲載していない [21][26][39]。
+
+**持ち帰り**：2026年の AI レビュー順位は半年で入れ替わる。順位ではなく false positive 率と対応する diff の大きさで選ぶ。
+
+## 7. 実運用の差はツール選択より PR の大きさが支配する — 15倍のF1差と92%劣化が示すこと
+
+ツール選びより先に効く変数がある。合成ベンチと実 PR の比較研究では、合成データ上の F1 **0.847** が実 PR では **0.066** へ落ち、**92%** の劣化だった [13]。同じ研究では、5つのモデルのうち4つで性能バグの recall は0を超えなかったのに対し、セキュリティバグの recall は全モデルで70%付近を保った [13]。モデル別では Claude Sonnet 4.6 の F1 **0.343** に対し Haiku 4.5 が **0.365** で、費用も3.2倍低かった [13]。
+
+| 条件 | F1 |
+|---|---|
+| 合成ベンチ | 0.847 |
+| 実 PR | 0.066 |
+| diff 10行未満 | 0.657 |
+| diff 150行超 | 0.043 |
+
+人手評価にも同じ形がある。20本の merged PR に付いた **180** の Copilot コメントを人手が判定した調査では、actionable が **76.1%**、false positive が **10.6%** だった [19]。内訳は次のとおりで、valid defect と valid risk を足すと 40.6% に達する。
+
+| 区分 | 割合 |
+|---|---|
+| actionable | 76.1% |
+| useful improvement | 33.3% |
+| valid defect | 25.6% |
+| valid risk | 15.0% |
+| low value | 15.6% |
+| false positive | 10.6% |
+
+5つのエージェントが342の Python repository に残した **54,791** comments を追跡した研究では、Copilot のコメントが解決された割合は **72.9%**、Cursor が 67.2%、Codex が 54.8% だった [14]。同じ研究で、inline のコード提案を含むコメントは解決につながる有力な予測因子（OR 1.62）で、説明だけのコメントは解決を遅らせる（OR 0.593）ことが分かった [14]。
+
+**ボトルネックはツールではなく PR の側にある。** 200行制限を守る、1ファイルにまとめる、背景説明は PR 本文に書く。Copilot 自体も agentic 化で改善した（positive feedback +8.1%、低難度で -11%の指摘を削減、費用 -8%）ものの [24]、その改善は運用手順の微調整であり、diff の大きさによる劣化は残る。第6節の入れ替わりと合わせて読むと、ツール比較には手順の差が混入していることになる [7][13]。
+
+**持ち帰り**：ツールの優劣を決める前に diff の大きさを固定する。200行を超える PR を分割する運用変更は、ツール選定より効果が大きい。
+
+## まとめ
+
+GitHub 内蔵 Copilot の6,000万件、Marketplace CodeRabbit の32万件、pull 1,478万件の PR-Agent が実利用の中心である。Action 名ではこの3点に辿り着かない。順位は2026年に4回入れ替わり、実運用の差は diff の大きさで決まる [1][4][23][7][13]。
+
+## 付録: 出典一覧
+
+- [1] Amy Ball, [60 million Copilot code reviews and counting](https://github.blog/ai-and-ml/github-copilot-code-reviews-and-counting)（2026-03-05）
+- [2] Amy Ball, [Copilot code review now runs on an agentic architecture](https://github.blog/changelog/2026-03-05-copilot-code-review-now-runs-on-an-agentic-architecture/)（2026-03-05）
+- [3] Amy Ball, [About GitHub Copilot code review](https://docs.github.com/en/copilot/concepts/agents/code-review)
+- [4] CodeRabbit, [CodeRabbit for GitHub App on Marketplace](https://github.com/marketplace/coderabbitai)（2026-09-26 取得）
+- [5] CodeRabbit, [Plans and pricing](https://docs.coderabbit.ai/management/plans)
+- [6] CodeRabbit, [CodeRabbit tops Martian code review benchmark](https://blog.coderabbit.ai/coderabbit-tops-martian-code-review-benchmark/)（2026-03-03）
+- [7] Martian, [Code Review Bench: Towards Billion Dollar Benchmarks](https://withmartian.com/post/code-review-bench-v0)（2026-02）
+- [8] Martian, [The Software Factory's Inspection Line](https://withmartian.com/post/measuring-the-software-factorys-inspection-line)（2026-04-16）
+- [9] Greptile, [Greptile ranks 1st on Martian's AI code review benchmark](https://www.greptile.com/blog/greptile-martian-code-review-benchmark)（2026-07-30）
+- [10] withmartian, [code-review-benchmark](https://github.com/withmartian/code-review-benchmark)（MIT, 2026-02-06）
+- [11] agentic-review-benchmarks, [benchmark-pr-mapping](https://github.com/agentic-review-benchmarks/benchmark-pr-mapping)（Qodo 運営）
+- [12] Signal65, [Evaluating AI Code Review Tools](https://signal65.com/wp-content/uploads/2026/03/Signal65-Insights_Evaluating-AI-Code-Review-Tools.pdf)（2026-03）
+- [13] Kumar, Bararia, Raj, [Bigger Isn't Always Better](https://arxiv.org/abs/2606.15689)（arXiv:2606.15689, 2026-04-09）
+- [14] Widyasari, Roy, Lo, [Go Home Copilot, You're Drunk](https://arxiv.org/abs/2607.21997)（arXiv:2607.21997, 2026-07-24）
+- [15] The-PR-Agent, [pr-agent](https://github.com/The-PR-Agent/pr-agent)（MIT, 2023-07-05〜）
+- [16] Dana Fine, [Qodo Is Handing PR-Agent Over to the Community](https://www.qodo.ai/blog/qodo-is-handing-pr-agent-over-to-the-community/)（2026-04-23）
+- [17] Augment Code, [10 Open Source AI Code Review Tools Tested on a 450K File Monorepo](https://www.augmentcode.com/tools/open-source-ai-code-review-tools-worth-trying)（2026-01-16）
+- [18] Ben, [Qodo Gave Away PR-Agent, Then Cut Its Free Tier](https://hokai.io/guides/qodo-gave-away-pr-agent-cut-free-tier)（2026-08-12）
+- [19] 48n, [GitHub Copilot Code Review 評価](https://48n.jp/blog/2026/08/21/github-copilot-code-review-evaluation/)（2026-08-21）
+- [20] Steve Yegge, [13 Best Automated Code Review Tools in 2026](https://sourcegraph.com/blog/automated-code-review-tools)（2026-05-11）
+- [21] Coderbuds, [AI Code Review Tools Compared: CodeRabbit, Greptile, Qodo, Graphite](https://coderbuds.com/blog/ai-code-review-tools-comparison-2026)（2026-08-29）
+- [22] GitHub API, [repos/The-PR-Agent/pr-agent](https://api.github.com/repos/The-PR-Agent/pr-agent)（2026-09-26 取得）
+- [23] Docker Hub, [pragent/pr-agent](https://hub.docker.com/r/pragent/pr-agent/)（2026-09-26 取得）
+- [24] A/DX Media, [Copilot code review 9月11日更新](https://media.image-pit.com/articles/github/2026-09-12-github-copilot-review-auto-resolve-lite)（2026-09-12）
+- [25] AiMultiple Research, [AI Code Review Tools Benchmark](https://research.aimultiple.com/ai-code-review-tools)（RevEval）
+- [26] Codercops, [AI Code Review Tools Compared 2026](https://blog.codercops.com/blog/ai-code-review-tools-compared-2026)（2026-08-21）
+- [27] The Clarity Today, [A Code Review Benchmark That Isn't the Vendor Ranking Itself](https://theclarity.today/story/a-code-review-benchmark-that-isn-t-the-vendor-ranking-itself-2b2dfd42)（2026-09-20）
+- [28] SynapseWire, [AI PR Review Accuracy Report](https://www.synapsewire.io/blog/ai-pr-review-accuracy-report)
+- [29] GitHub Marketplace, [Ollama Code Review action](https://github.com/marketplace/actions/ollama-code-review)（2026-09-26 取得）
+- [30] tarmojussila, [zai-code-review](https://github.com/tarmojussila/zai-code-review)（2026-02-22）
+- [31] AleksandrFurmenkovOfficial, [ai-code-review](https://github.com/AleksandrFurmenkovOfficial/ai-code-review)（2023-03-21）
+- [32] quantfive, [codepress-review](https://github.com/quantfive/codepress-review)
+- [33] tag1consulting, [ai-pr-review](https://github.com/tag1consulting/ai-pr-review)
+- [34] reviewdog, [reviewdog](https://github.com/reviewdog/reviewdog)
+- [35] danger, [danger-js](https://github.com/danger/danger-js)
+- [36] Semgrep, [semgrep](https://github.com/semgrep/semgrep)
+- [37] TabbyML, [tabby](https://github.com/TabbyML/tabby)
+- [38] AiMultiple Research, [Code Review Benchmarks Directory](https://research.aimultiple.com/ai-code-review-benchmarks)
+- [39] Signal65, [Code Review Tools in 2026](https://signal65.com/blog/code-review-tools-in-2026/)
+- [40] Qodo, [5 Open Source Code Review Tools Comparison](https://www.qodo.ai/blog/open-source-code-review-tools/)（2026-04-13）
+- [41] giolabs, [ai-code-reviewer](https://github.com/giolabs/ai-code-reviewer)
+- [42] mara-werils, [ai-code-reviewer](https://github.com/mara-werils/ai-code-reviewer)
+
+## 付録: 年表
+
+| 日付 | 出来事 |
+|---|---|
+| 2023-07-05 | PR-Agent の repository 作成 [15] |
+| 2025-04 | Copilot code review が Research Preview で公開 [1][3] |
+| 2026-02-06 | Code Review Bench を MIT で公開 [7][10] |
+| 2026-03-03 | CodeRabbit が同ベンチで F1 51.2 で首位 [6] |
+| 2026-03-05 | Copilot code review が累計 6,000万件を達成し agentic 構成へ [1][2] |
+| 2026-03-25 | Cubic がオフラインで 61.8 を記録 [8] |
+| 2026-04-23 | Qodo が PR-Agent を The-PR-Agent 組織へ移管 [16] |
+| 2026-07-30 | Greptile が F1 60.8 で首位、CodeRabbit は 57.5 に後退 [9] |
+| 2026-08-12 | PR-Agent の free tier を 100行・1ファイルへ縮小 [18] |
+| 2026-09-11 | Copilot に shell ツール・auto-resolve・Lite の multi-agent 化 [24] |
+| 2026-09-20 | 16,017 PR の集計で Cubic 65.7、Copilot 63.9 [27] |
+| 2026-09-26 | 本稿の実測（Marketplace installs、GitHub API、Docker pulls）[4][22][23] |
+
+## 付録: 扱わなかった枝
+
+- **決定論的ツールの比較**。reviewdog ★9,623、danger-js ★5,511、Semgrep ★16,765、Tabby ★33,894 は規模が大きい [34][35][36][37]。今回は AI が PR にコメントする機能に範囲を絞ったため、解析精度と誤検出率の比較は第6節の記述に留めている。
+- **実際の Action の書き方**。YAML の内容、Secret の扱い、権限設定は扱わない。対象が採用箇所を絞ったため、導入手順は別の作業として残した。
+- **LLM に diff 全文を渡す実装の安全性**。コードを実行する Copilot の shell ツール [24] と同じ設計の Action があるが、リスク評価は行っていない。
+- **複数ツールの併用**。第6節で独立評価を5つ出したが、1組織が2つ以上使う場合の効果と費用の実測はない。
+
+## 付録: 未確認点
+
+- PR-Agent で実際に効いているライセンス。移管告知は Apache 2.0 と記載 [16]、GitHub API は `MIT` を返す [22]。二次資料でも両方を見かける [18] ため、GitHub API の返却値をそのまま採用できない。
+- CodeRabbit のインストール数の変動幅。同一ページのキャッシュ間で 310,108 と 329,753 の両方が観測された [4]。本文は取得時点の値を使い、時系列の推定には使っていない。
+- Qodo 運営のベンチ [11] で対象とした8 repository の構成と、正解データの作成手順。一次資料の記述から推定した部分は本文に置いていない。
+- 実運用調査 [19] の 20本の PR の言語分布と規模。原文に規模の内訳が明記されておらず、180コメントという絶対数のみを用いた。
