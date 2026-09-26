@@ -4,6 +4,7 @@ import { CollectionIntro } from "../components/CollectionIntro";
 import { HomeArticleList } from "../components/HomeArticleList";
 import { SiteShell } from "../components/SiteShell";
 import { audioForPublicDoc, fetchArticleAudioMap } from "../lib/site/audio";
+import { fetchArticleImageMap, imageForPublicDoc } from "../lib/site/episode-images";
 import { feedUrl, loadSiteConfig } from "../lib/site/config";
 import { loadPublicDocs } from "../lib/site/docs";
 import { articleHref } from "../lib/site/sanitize-content";
@@ -14,13 +15,18 @@ export const revalidate = false;
 export default async function HomePage() {
   const cfg = loadSiteConfig();
   const docs = loadPublicDocs();
-  const audioMap = await fetchArticleAudioMap();
+  const [audioMap, imageMap] = await Promise.all([
+    fetchArticleAudioMap(),
+    fetchArticleImageMap(),
+  ]);
   const rss = feedUrl();
+  const defaultCover = `/${cfg.coverImage}`;
   const cards = docs.map((d) => ({
     slug: d.slug,
     title: d.title,
     date: d.date,
     audioUrl: audioForPublicDoc(audioMap, d),
+    imageUrl: imageForPublicDoc(imageMap, d) ?? defaultCover,
   }));
   const withAudio = cards.filter((c) => c.audioUrl);
   const featured =

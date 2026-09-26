@@ -83,16 +83,31 @@ export function HomeArticleList(props: { articles: ArticleCard[] }) {
                   <li key={a.slug}>
                     <Link
                       href={articleHref(a.slug)}
-                      className="group flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 no-underline shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
+                      className="group flex aspect-square flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface no-underline shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
                     >
-                      <time className="text-xs tabular-nums text-muted-fg">{a.date}</time>
-                      <span className="mt-2 flex-1 font-medium leading-snug text-fg">{a.title}</span>
-                      {a.audioUrl ? (
-                        <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent">
-                          <Headphones className="size-3.5" strokeWidth={1.75} />
-                          聴く
+                      <div className="relative h-1/2 shrink-0 overflow-hidden bg-muted">
+                        {a.imageUrl ? (
+                          <img
+                            src={a.imageUrl}
+                            alt=""
+                            className="size-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : null}
+                      </div>
+                      <div className="flex h-1/2 min-h-0 flex-col p-4">
+                        <time className="text-xs tabular-nums text-muted-fg">{a.date}</time>
+                        <span className="mt-1.5 line-clamp-3 flex-1 text-sm font-medium leading-snug text-fg">
+                          {a.title}
                         </span>
-                      ) : null}
+                        {a.audioUrl ? (
+                          <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-accent">
+                            <Headphones className="size-3.5 shrink-0" strokeWidth={1.75} />
+                            聴く
+                          </span>
+                        ) : null}
+                      </div>
                     </Link>
                   </li>
                 ))}

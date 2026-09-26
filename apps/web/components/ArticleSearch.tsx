@@ -8,6 +8,8 @@ export type ArticleCard = {
   title: string;
   date: string;
   audioUrl?: string;
+  /** Episode artwork or site default cover. */
+  imageUrl?: string;
 };
 
 export function ArticleSearch(props: {
