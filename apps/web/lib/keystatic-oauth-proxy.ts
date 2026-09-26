@@ -17,6 +17,22 @@ type ProxyOAuthState = {
   from: string;
 };
 
+type GithubTokenData = {
+  access_token: string;
+  expires_in: number;
+  refresh_token: string;
+  refresh_token_expires_in: number;
+};
+
+/** Handoff blob: token exchange runs on the stable host, Preview only sets cookies. */
+type ProxyOAuthSession = {
+  v: 1;
+  kind: "session";
+  origin: string;
+  from: string;
+  token: GithubTokenData;
+};
+
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const SALT_LENGTH = 16;
@@ -53,7 +69,7 @@ async function deriveKey(secret: string, salt: Uint8Array): Promise<CryptoKey> {
   );
 }
 
-async function encryptJson(payload: ProxyOAuthState, secret: string): Promise<string> {
+async function encryptPayload(payload: unknown, secret: string): Promise<string> {
   const salt = webcrypto.getRandomValues(new Uint8Array(SALT_LENGTH));
   const iv = webcrypto.getRandomValues(new Uint8Array(IV_LENGTH));
   const key = await deriveKey(secret, salt);
@@ -69,7 +85,7 @@ async function encryptJson(payload: ProxyOAuthState, secret: string): Promise<st
   return base64UrlEncode(full);
 }
 
-async function decryptJson(encrypted: string, secret: string): Promise<ProxyOAuthState | null> {
+async function decryptPayload(encrypted: string, secret: string): Promise<unknown | null> {
   try {
     const decoded = base64UrlDecode(encrypted);
     const salt = decoded.slice(0, SALT_LENGTH);
@@ -77,14 +93,57 @@ async function decryptJson(encrypted: string, secret: string): Promise<ProxyOAut
     const iv = decoded.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
     const value = decoded.slice(SALT_LENGTH + IV_LENGTH);
     const decrypted = await webcrypto.subtle.decrypt({ name: "AES-GCM", iv }, key, value);
-    const parsed = JSON.parse(decoder.decode(decrypted)) as ProxyOAuthState;
-    if (parsed?.v !== 1 || typeof parsed.origin !== "string" || typeof parsed.from !== "string") {
-      return null;
-    }
-    return parsed;
+    return JSON.parse(decoder.decode(decrypted)) as unknown;
   } catch {
     return null;
   }
+}
+
+function parseProxyOAuthState(raw: unknown): ProxyOAuthState | null {
+  if (!raw || typeof raw !== "object") return null;
+  const parsed = raw as ProxyOAuthState;
+  if (parsed.v !== 1 || typeof parsed.origin !== "string" || typeof parsed.from !== "string") {
+    return null;
+  }
+  if ("kind" in parsed) return null;
+  return parsed;
+}
+
+function parseProxyOAuthSession(raw: unknown): ProxyOAuthSession | null {
+  if (!raw || typeof raw !== "object") return null;
+  const parsed = raw as ProxyOAuthSession;
+  if (
+    parsed.v !== 1 ||
+    parsed.kind !== "session" ||
+    typeof parsed.origin !== "string" ||
+    typeof parsed.from !== "string"
+  ) {
+    return null;
+  }
+  const token = parseGithubTokenData(parsed.token);
+  if (!token) return null;
+  return { ...parsed, token };
+}
+
+function parseNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function parseGithubTokenData(raw: unknown): GithubTokenData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const access_token = typeof d.access_token === "string" ? d.access_token : null;
+  const refresh_token = typeof d.refresh_token === "string" ? d.refresh_token : null;
+  const expires_in = parseNumber(d.expires_in);
+  const refresh_token_expires_in =
+    parseNumber(d.refresh_token_expires_in) ?? 15_552_000; /* ~180 days if omitted */
+  if (!access_token || !refresh_token || expires_in === null) return null;
+  return { access_token, refresh_token, expires_in, refresh_token_expires_in };
 }
 
 /** Public site origin used as the GitHub OAuth callback host (Preview でも Production 値). */
@@ -183,10 +242,16 @@ function parseKeystaticFrom(request: Request): string {
   return typeof rawFrom === "string" && keystaticRouteRegex.test(rawFrom) ? rawFrom : "/";
 }
 
-function redirectResponse(location: string, extraHeaders?: [string, string][]): Response {
-  return new Response(null, {
-    status: 307,
-    headers: [...(extraHeaders ?? []), ["Location", location]],
+function redirectResponse(location: string, extraHeaders?: HeadersInit): Response {
+  const headers = new Headers(extraHeaders);
+  headers.set("Location", location);
+  return new Response(null, { status: 307, headers });
+}
+
+function plainErrorResponse(message: string, status: number): Response {
+  return new Response(message, {
+    status,
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
   });
 }
 
@@ -199,7 +264,7 @@ export async function handleProxyGithubLogin(request: Request): Promise<Response
   const from = parseKeystaticFrom(publicReq);
   const origin = requestOrigin(publicReq);
 
-  const state = await encryptJson({ v: 1, origin, from }, secret);
+  const state = await encryptPayload({ v: 1, origin, from }, secret);
   const url = new URL("https://github.com/login/oauth/authorize");
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", proxyCallback);
@@ -211,59 +276,108 @@ export async function handleProxyGithubLogin(request: Request): Promise<Response
  * On the stable deployment: forward GitHub's callback to the Preview URL that
  * started the flow (Auth.js redirectProxyUrl pattern).
  */
+async function exchangeGithubAuthorizationCode(
+  code: string,
+): Promise<{ ok: true; token: GithubTokenData } | { ok: false; message: string }> {
+  const clientId = process.env.KEYSTATIC_GITHUB_CLIENT_ID?.trim();
+  const clientSecret = process.env.KEYSTATIC_GITHUB_CLIENT_SECRET?.trim();
+  const redirectUri = oauthProxyCallbackUrl();
+  if (!clientId || !clientSecret || !redirectUri) {
+    return { ok: false, message: "GitHub OAuth is not configured on this deployment." };
+  }
+
+  const tokenUrl = new URL("https://github.com/login/oauth/access_token");
+  tokenUrl.searchParams.set("client_id", clientId);
+  tokenUrl.searchParams.set("client_secret", clientSecret);
+  tokenUrl.searchParams.set("code", code);
+  tokenUrl.searchParams.set("redirect_uri", redirectUri);
+
+  let tokenRes: Response;
+  try {
+    tokenRes = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, message: `GitHub token request failed: ${msg}` };
+  }
+
+  let body: unknown;
+  try {
+    body = await tokenRes.json();
+  } catch {
+    return { ok: false, message: "GitHub token response was not JSON." };
+  }
+
+  if (!tokenRes.ok) {
+    return {
+      ok: false,
+      message: `GitHub token HTTP ${tokenRes.status}: ${JSON.stringify(body)}`,
+    };
+  }
+
+  if (body && typeof body === "object" && "error" in body) {
+    const rec = body as Record<string, unknown>;
+    const desc = typeof rec.error_description === "string" ? rec.error_description : "";
+    return {
+      ok: false,
+      message: `GitHub OAuth error: ${String(rec.error)}${desc ? `\n${desc}` : ""}`,
+    };
+  }
+
+  const token = parseGithubTokenData(body);
+  if (!token) {
+    return { ok: false, message: `Unexpected GitHub token response: ${JSON.stringify(body)}` };
+  }
+  return { ok: true, token };
+}
+
 export async function handleProxyOAuthCallback(request: Request): Promise<Response | null> {
   if (!isOnOAuthProxyHost(request)) return null;
 
-  const secret = process.env.KEYSTATIC_SECRET!;
+  const secret = process.env.KEYSTATIC_SECRET?.trim();
+  if (!secret) return plainErrorResponse("KEYSTATIC_SECRET is not set.", 503);
+
   const searchParams = new URL(request.url).searchParams;
   const stateParam = searchParams.get("state");
   if (!stateParam) return null;
 
-  const parsed = await decryptJson(stateParam, secret);
+  const parsed = parseProxyOAuthState(await decryptPayload(stateParam, secret));
   if (!parsed) return null;
 
-  const proxyOrigin = requestOrigin(request);
-  if (parsed.origin === proxyOrigin) return null;
+  if (parsed.origin === publicRequestOrigin(request)) return null;
+
+  const errorDescription = searchParams.get("error_description");
+  if (typeof errorDescription === "string") {
+    const returnUrl = new URL(PROXY_RETURN_PATH, parsed.origin);
+    returnUrl.searchParams.set("error_description", errorDescription);
+    return redirectResponse(returnUrl.toString());
+  }
 
   const code = searchParams.get("code");
-  if (!code) return null;
+  if (!code) return plainErrorResponse("Missing OAuth code.", 400);
+
+  const exchanged = await exchangeGithubAuthorizationCode(code);
+  if (!exchanged.ok) {
+    return plainErrorResponse(exchanged.message, 502);
+  }
+
+  const session = await encryptPayload(
+    {
+      v: 1,
+      kind: "session",
+      origin: parsed.origin,
+      from: parsed.from,
+      token: exchanged.token,
+    } satisfies ProxyOAuthSession,
+    secret,
+  );
 
   const returnUrl = new URL(PROXY_RETURN_PATH, parsed.origin);
-  returnUrl.searchParams.set("code", code);
-  returnUrl.searchParams.set("state", stateParam);
-  const error = searchParams.get("error");
-  if (error) returnUrl.searchParams.set("error", error);
-  const errorDescription = searchParams.get("error_description");
-  if (errorDescription) returnUrl.searchParams.set("error_description", errorDescription);
-
+  returnUrl.searchParams.set("session", session);
   return redirectResponse(returnUrl.toString());
 }
-
-const tokenDataSchema = {
-  parse(data: unknown): {
-    access_token: string;
-    expires_in: number;
-    refresh_token: string;
-    refresh_token_expires_in: number;
-  } | null {
-    if (!data || typeof data !== "object") return null;
-    const d = data as Record<string, unknown>;
-    if (
-      typeof d.access_token !== "string" ||
-      typeof d.expires_in !== "number" ||
-      typeof d.refresh_token !== "string" ||
-      typeof d.refresh_token_expires_in !== "number"
-    ) {
-      return null;
-    }
-    return {
-      access_token: d.access_token,
-      expires_in: d.expires_in,
-      refresh_token: d.refresh_token,
-      refresh_token_expires_in: d.refresh_token_expires_in,
-    };
-  },
-};
 
 async function encryptValue(value: string, secret: string): Promise<string> {
   const salt = webcrypto.getRandomValues(new Uint8Array(SALT_LENGTH));
@@ -281,85 +395,68 @@ async function encryptValue(value: string, secret: string): Promise<string> {
   return base64UrlEncode(full);
 }
 
-async function tokenCookieHeaders(
-  tokenData: NonNullable<ReturnType<typeof tokenDataSchema.parse>>,
-  secret: string,
-): Promise<[string, string][]> {
+async function applyTokenCookies(tokenData: GithubTokenData, secret: string): Promise<Headers> {
   const secure = process.env.NODE_ENV === "production";
-  return [
-    [
-      "Set-Cookie",
-      cookie.serialize("keystatic-gh-access-token", tokenData.access_token, {
+  const headers = new Headers();
+  headers.append(
+    "Set-Cookie",
+    cookie.serialize("keystatic-gh-access-token", tokenData.access_token, {
+      sameSite: "lax",
+      secure,
+      maxAge: tokenData.expires_in,
+      expires: new Date(Date.now() + tokenData.expires_in * 1000),
+      path: "/",
+    }),
+  );
+  headers.append(
+    "Set-Cookie",
+    cookie.serialize(
+      "keystatic-gh-refresh-token",
+      await encryptValue(tokenData.refresh_token, secret),
+      {
         sameSite: "lax",
         secure,
-        maxAge: tokenData.expires_in,
-        expires: new Date(Date.now() + tokenData.expires_in * 1000),
+        httpOnly: true,
+        maxAge: tokenData.refresh_token_expires_in,
+        expires: new Date(Date.now() + tokenData.refresh_token_expires_in * 100),
         path: "/",
-      }),
-    ],
-    [
-      "Set-Cookie",
-      cookie.serialize(
-        "keystatic-gh-refresh-token",
-        await encryptValue(tokenData.refresh_token, secret),
-        {
-          sameSite: "lax",
-          secure,
-          httpOnly: true,
-          maxAge: tokenData.refresh_token_expires_in,
-          expires: new Date(Date.now() + tokenData.refresh_token_expires_in * 100),
-          path: "/",
-        },
-      ),
-    ],
-  ];
+      },
+    ),
+  );
+  return headers;
 }
 
-/** Preview-only: exchange the code and set Keystatic session cookies locally. */
+/** Preview: receive encrypted session from stable host and set Keystatic cookies. */
 export async function handleProxyOAuthReturn(request: Request): Promise<Response> {
-  const secret = process.env.KEYSTATIC_SECRET!;
-  const clientId = process.env.KEYSTATIC_GITHUB_CLIENT_ID!;
-  const clientSecret = process.env.KEYSTATIC_GITHUB_CLIENT_SECRET!;
+  try {
+    const secret = process.env.KEYSTATIC_SECRET?.trim();
+    if (!secret) return plainErrorResponse("KEYSTATIC_SECRET is not set.", 503);
 
-  const searchParams = new URL(request.url).searchParams;
-  const errorDescription = searchParams.get("error_description");
-  if (typeof errorDescription === "string") {
-    return new Response(`GitHub OAuth error:\n${errorDescription}`, { status: 400 });
+    const searchParams = new URL(request.url).searchParams;
+    const errorDescription = searchParams.get("error_description");
+    if (typeof errorDescription === "string") {
+      return plainErrorResponse(`GitHub OAuth error:\n${errorDescription}`, 400);
+    }
+
+    const sessionParam = searchParams.get("session");
+    if (typeof sessionParam !== "string") {
+      return plainErrorResponse("Missing OAuth session.", 400);
+    }
+
+    const session = parseProxyOAuthSession(await decryptPayload(sessionParam, secret));
+    const here = publicRequestOrigin(request);
+    if (!session || session.origin !== here) {
+      return plainErrorResponse("Invalid OAuth session.", 400);
+    }
+
+    const headers = await applyTokenCookies(session.token, secret);
+    const fromPath = session.from === "/" ? "" : `/${session.from}`;
+    return redirectResponse(`/keystatic${fromPath}`, headers);
+  } catch (err) {
+    console.error("proxy-return failed:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return plainErrorResponse(`OAuth proxy-return failed: ${msg}`, 500);
   }
-
-  const code = searchParams.get("code");
-  const stateParam = searchParams.get("state");
-  if (typeof code !== "string" || typeof stateParam !== "string") {
-    return new Response("Bad Request", { status: 400 });
-  }
-
-  const parsed = await decryptJson(stateParam, secret);
-  if (!parsed || parsed.origin !== requestOrigin(rewriteRequestForPublicOrigin(request))) {
-    return new Response("Invalid OAuth state", { status: 400 });
-  }
-
-  const tokenUrl = new URL("https://github.com/login/oauth/access_token");
-  tokenUrl.searchParams.set("client_id", clientId);
-  tokenUrl.searchParams.set("client_secret", clientSecret);
-  tokenUrl.searchParams.set("code", code);
-
-  const tokenRes = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { Accept: "application/json" },
-  });
-  if (!tokenRes.ok) {
-    return new Response("Authorization failed", { status: 401 });
-  }
-
-  const tokenData = tokenDataSchema.parse(await tokenRes.json());
-  if (!tokenData) {
-    return new Response("Authorization failed", { status: 401 });
-  }
-
-  const headers = await tokenCookieHeaders(tokenData, secret);
-
-  const fromPath = parsed.from === "/" ? "" : `/${parsed.from}`;
-  return redirectResponse(`/keystatic${fromPath}`, headers);
 }
 
 export function keystaticGithubRouteSuffix(pathname: string): string {
