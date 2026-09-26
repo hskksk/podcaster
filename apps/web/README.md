@@ -19,7 +19,7 @@ pnpm web:dev
 
 記事本文は `@markdoc/next.js`（`mode: "static"`）と同じスキーマ（`apps/web/markdoc/`）で `@markdoc/markdoc` がコンパイルする。Keystatic の正本は `content/docs/{entry}/index.mdoc` なので、プラグインが要求する `app/**/*.mdoc` へは置かない（slug は `legacyFilename`、ディレクトリ名ではない）。
 
-音声プレイヤーとエピソードカバー画像も **ビルド時** に解決する（SSG）。Preview デプロイだけ記事ページを最大 2 分 ISR し、画像生成後も再デプロイなしで追従しやすくしている。
+音声プレイヤーとエピソードカバー画像も **ビルド時** に解決する（SSG）。画像はそのデプロイの `next build` 時点の DB/RSS スナップショット。追従には再デプロイが必要。
 
 1. **推奨**: Vercel の `SUPABASE_PROJECT_REF`（または `NEXT_PUBLIC_SUPABASE_PROJECT_REF`）と `SUPABASE_SERVICE_ROLE_KEY` を **Build** 環境（Production **と Preview**）に含める。
 2. **フォールバック**: サービスロールが無くても、project ref さえあれば公開 RSS（`feed.xml`）から記事タイトル → 音声 URL / `itunes:image` を引く。

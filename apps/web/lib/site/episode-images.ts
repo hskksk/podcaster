@@ -17,11 +17,7 @@ function normalizeTitle(title: string): string {
   return title.trim().toLowerCase();
 }
 
-/** Preview deploys revalidate; production build keeps force-cache. */
 function externalFetchInit(): RequestInit {
-  if (process.env.VERCEL_ENV === "preview") {
-    return { next: { revalidate: 120 } };
-  }
   return { cache: "force-cache" };
 }
 
