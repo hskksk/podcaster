@@ -1,4 +1,7 @@
 import { config, collection, fields } from "@keystatic/core";
+import { KeystaticBrandMark } from "./lib/keystatic/brand-mark";
+import { markdocEditorOptions } from "./lib/keystatic/markdoc-options";
+import { parseSlugForSort } from "./lib/keystatic/slug-sort";
 import { markdocComponents, podcastSelect } from "./lib/markdoc-components";
 import { titleSlugField } from "./lib/slug";
 import { githubRepo, isGithubStorage } from "./lib/storage";
@@ -12,64 +15,70 @@ function storage() {
 
 const markdocField = fields.markdoc({
   label: "Content",
+  description: "本文。見出しは H2 から（タイトルがページ H1）。",
+  options: markdocEditorOptions,
   components: markdocComponents,
 });
 
 export default config({
   storage: storage(),
   ui: {
-    brand: { name: "Podcaster PKM" },
+    brand: {
+      name: "Podcaster PKM",
+      mark: KeystaticBrandMark,
+    },
+    navigation: {
+      ナレッジ: ["docs", "webClips"],
+    },
   },
   collections: {
     docs: collection({
-      label: "Wiki Documents",
+      label: "Wiki",
       slugField: "title",
       path: `content/docs/${"*"}/`,
       format: { contentField: "content" },
       entryLayout: "content",
-      columns: ["podcast", "publishedAt"],
+      columns: ["title", "podcast", "publishedAt"],
+      parseSlugForSort,
       schema: {
         title: fields.slug(titleSlugField),
-        publishedAt: fields.date({ label: "Published Date" }),
-        sourceUrl: fields.text({ label: "Source URL" }),
+        publishedAt: fields.date({
+          label: "Published date",
+          description: "公開サイトの日付表示に使います。",
+        }),
+        sourceUrl: fields.url({
+          label: "Source URL",
+          description: "参照元（任意）。",
+        }),
         podcast: podcastSelect,
-        contentSha: fields.text({
-          label: "Content SHA",
-          description: "Set by queued ingest CI after a successful episode.",
-        }),
-        legacyFilename: fields.text({
-          label: "Legacy filename",
-          description: "Original articles/ basename. Used for Pages URL redirects.",
-        }),
+        contentSha: fields.ignored(),
+        legacyFilename: fields.ignored(),
         content: markdocField,
       },
     }),
     webClips: collection({
-      label: "Web Clips & Notes",
+      label: "Web Clips",
       slugField: "title",
       path: `content/web-clips/${"*"}/`,
       format: { contentField: "content" },
-      columns: ["podcast", "clippedAt"],
+      entryLayout: "content",
+      columns: ["title", "podcast", "clippedAt"],
+      parseSlugForSort,
       schema: {
         title: fields.slug(titleSlugField),
-        url: fields.text({ label: "Source URL" }),
+        url: fields.url({
+          label: "Source URL",
+          description: "クリップ元の URL。",
+          validation: { isRequired: true },
+        }),
         clippedAt: fields.text({
-          label: "Clipped At",
-          description: "ISO-8601 timestamp",
+          label: "Clipped at",
+          description: "ISO-8601（例: 2026-06-09T07:42:19.000Z）。空ならファイル名から推定。",
         }),
         podcast: podcastSelect,
-        contentSha: fields.text({
-          label: "Content SHA",
-          description: "Set by queued ingest CI after a successful episode.",
-        }),
-        legacyFilename: fields.text({
-          label: "Legacy filename",
-          description: "Original inbox/ basename.",
-        }),
-        promotedTo: fields.text({
-          label: "Promoted to",
-          description: "Set to content/docs/{slug} after copy-promote. Do not git mv.",
-        }),
+        contentSha: fields.ignored(),
+        legacyFilename: fields.ignored(),
+        promotedTo: fields.ignored(),
         content: markdocField,
       },
     }),
