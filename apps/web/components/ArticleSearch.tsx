@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { Headphones, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { cn } from "../lib/cn";
-
 export type ArticleCard = {
   slug: string;
   title: string;
@@ -66,41 +64,5 @@ export function ArticleSearch(props: {
         <p className="py-8 text-center text-sm text-muted-fg">該当する記事が見つかりませんでした。</p>
       ) : null}
     </>
-  );
-}
-
-/** @deprecated use ArticleSearch filters in HomeArticleList */
-export function ArticleFilterTabs(props: {
-  value: string;
-  onChange: (v: string) => void;
-  counts: { all: number; audio: number; recent: number };
-}) {
-  const tabs = [
-    { id: "all", label: "すべて", count: props.counts.all },
-    { id: "audio", label: "音声あり", count: props.counts.audio },
-    { id: "recent", label: "90日以内", count: props.counts.recent },
-  ] as const;
-
-  return (
-    <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="記事フィルタ">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          role="tab"
-          aria-selected={props.value === tab.id}
-          onClick={() => props.onChange(tab.id)}
-          className={cn(
-            "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
-            props.value === tab.id
-              ? "border-fg/20 bg-fg text-bg"
-              : "border-border bg-surface text-muted-fg hover:border-fg/15 hover:text-fg",
-          )}
-        >
-          {tab.label}
-          <span className="ml-1.5 tabular-nums opacity-70">{tab.count}</span>
-        </button>
-      ))}
-    </div>
   );
 }

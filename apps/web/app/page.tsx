@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Headphones } from "lucide-react";
-import { ArticleSearch } from "../components/ArticleSearch";
+import { CollectionIntro } from "../components/CollectionIntro";
+import { HomeArticleList } from "../components/HomeArticleList";
 import { SiteShell } from "../components/SiteShell";
-import { audioForDoc, fetchArticleAudioMap } from "../lib/site/audio";
+import { audioForPublicDoc, fetchArticleAudioMap } from "../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../lib/site/config";
 import { loadPublicDocs } from "../lib/site/docs";
 
@@ -18,7 +19,7 @@ export default async function HomePage() {
     slug: d.slug,
     title: d.title,
     date: d.date,
-    audioUrl: audioForDoc(audioMap, d.filename),
+    audioUrl: audioForPublicDoc(audioMap, d),
   }));
   const withAudio = cards.filter((c) => c.audioUrl);
   const featured =
@@ -65,6 +66,7 @@ export default async function HomePage() {
         ) : null
       }
     >
+      <CollectionIntro />
       {featured.length > 0 ? (
         <section className="mb-12">
           <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-fg">
@@ -102,10 +104,10 @@ export default async function HomePage() {
           </div>
         </section>
       ) : null}
-      <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-fg">
-        すべての記事 ({docs.length}件)
+      <h2 className="mb-6 text-xs font-semibold uppercase tracking-widest text-muted-fg">
+        記事アーカイブ · {docs.length} 件
       </h2>
-      <ArticleSearch articles={cards} />
+      <HomeArticleList articles={cards} />
     </SiteShell>
   );
 }
