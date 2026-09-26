@@ -3,11 +3,11 @@ export const EPISODE_IMAGE_STYLE_SUFFIX = `Visual requirements:
 - One original editorial illustration (magazine essay / technical blog hero art), not album art, CD cover, podcast cover template, or promotional poster layout.
 - Pick a single clear scene, metaphor, or object study from the themes above; avoid icon collages and keyword soup.
 - Contemporary conceptual illustration: confident composition, soft atmospheric background, polished palette, subtle hand-drawn texture.
-- Square canvas, illustration fills the frame edge-to-edge (no mockup frame, bezel, or drop shadow around the art).
+- Wide horizontal canvas (16:9), illustration fills the frame edge-to-edge (no mockup frame, bezel, or drop shadow around the art).
 
 Hard constraints: no readable text, letters, numbers, logos, watermarks, or UI chrome. Avoid stock-photo realism, centered emblem with radial glow, and generic neon cyberpunk HUD aesthetics. Avoid human faces unless essential to the metaphor.`;
 
-export const DEFAULT_EPISODE_IMAGE_PROMPT = `Draw a single square bespoke illustration for a long-form technical article. It should look like art an editor commissioned for the article—not packaging or cover-art layout.
+export const DEFAULT_EPISODE_IMAGE_PROMPT = `Draw a wide horizontal (16:9) insert illustration for a long-form technical article—like an eye-catch figure below the headline, not packaging or cover-art layout.
 
 Article context:
 Title: {{title}}

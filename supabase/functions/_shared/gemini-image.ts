@@ -79,7 +79,7 @@ export function readEpisodeImageConfig(cfg: PodcastConfigMap): EpisodeImageGener
 
   return {
     model: typeof modelRaw === "string" && modelRaw.trim() ? modelRaw.trim() : "gemini-3.1-flash-image",
-    aspectRatio: typeof aspectRaw === "string" && aspectRaw.trim() ? aspectRaw.trim() : "1:1",
+    aspectRatio: typeof aspectRaw === "string" && aspectRaw.trim() ? aspectRaw.trim() : "16:9",
     imageSize: typeof sizeRaw === "string" && sizeRaw.trim() ? sizeRaw.trim() : "1K",
     mimeType: normalizeGeminiImageResponseMime(
       typeof mimeRaw === "string" ? mimeRaw : undefined,
