@@ -393,8 +393,38 @@ export async function startGeneratingAudio(opts: {
   let ttsSelection: Record<string, unknown> | null = null;
 
   try {
-    const { error: runningErr } = await db.from("episodes").update({ status: "audio_running" }).eq("id", episodeId);
-    if (runningErr) throw new Error(`Failed to set audio_running: ${runningErr.message}`);
+    const claimableStatuses = ["script_ready", "audio_failed", "audio_ready", "published", "rss_failed"];
+    const { data: claimedEpisode, error: runningErr } = await db
+      .from("episodes")
+      .update({ status: "audio_running" })
+      .eq("id", episodeId)
+      .in("status", claimableStatuses)
+      .select("id")
+      .maybeSingle();
+    if (runningErr) throw new Error(`Failed to claim audio generation: ${runningErr.message}`);
+
+    if (!claimedEpisode) {
+      const { data: currentEpisode, error: currentStatusErr } = await db
+        .from("episodes")
+        .select("status")
+        .eq("id", episodeId)
+        .maybeSingle();
+      if (currentStatusErr || !currentEpisode) {
+        throw new Error(`Episode not found while claiming audio generation: ${episodeId}`);
+      }
+
+      const activeStatuses: string[] = ["audio_running", "audio_generated", "audio_downloading"];
+      if (activeStatuses.includes(currentEpisode.status)) {
+        console.log(
+          `[audio-start] generation already active episode_id=${episodeId} status=${currentEpisode.status}; skipping duplicate`,
+        );
+        return { episodeId };
+      }
+
+      throw new Error(
+        `Cannot start audio generation for episode ${episodeId} with status ${currentEpisode.status}`,
+      );
+    }
 
     const { data: scriptRow, error: scriptErr } = await db
       .from("scripts")
@@ -614,16 +644,22 @@ export async function downloadGeneratedAudio(opts: {
     const cfg = await loadConfig();
     const defaultGeminiApiRoot = resolveGeminiApiRoot(cfg);
 
-    const { data: pendingAudio, error: pendingErr } = await db
+    const { data: pendingAudios, error: pendingErr } = await db
       .from("audio_files")
       .select("id, script_id, llm_response, batch_name")
       .eq("episode_id", episodeId)
       .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
     if (pendingErr) throw new Error(`Failed to load pending audio job: ${pendingErr.message}`);
-    if (!pendingAudio) throw new Error(`Pending audio job not found for episode: ${episodeId}`);
+
+    const pendingAudio = requestedBatchName
+      ? pendingAudios?.find((audio) => audio.batch_name === requestedBatchName) ??
+        pendingAudios?.find((audio) => readBatchJobName(audio.llm_response ?? null) === requestedBatchName)
+      : pendingAudios?.[0];
+    if (!pendingAudio) {
+      const batchDetail = requestedBatchName ? ` for batch ${requestedBatchName}` : "";
+      throw new Error(`Pending audio job not found for episode: ${episodeId}${batchDetail}`);
+    }
     pendingAudioId = pendingAudio.id;
 
     const llmResponse = (pendingAudio.llm_response ?? {}) as Record<string, unknown>;
