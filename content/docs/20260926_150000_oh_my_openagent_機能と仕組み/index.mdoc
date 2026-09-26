@@ -1,0 +1,165 @@
+---
+title: "oh-my-openagent（旧 oh-my-opencode）の機能と仕組み"
+publishedAt: 2026-09-26
+podcast: none
+legacyFilename: 20260926_150000_oh_my_openagent_機能と仕組み.md
+---
+# oh-my-openagent（旧 oh-my-opencode）の機能と仕組み
+
+## 概要
+
+OpenCode は、複数の AI モデルをエージェントとして動かすコーディング環境である。**oh-my-openagent**（OmO）はその上に載るプラグインで、単体のモデルを賢くするというより、役割の違うエージェント・開発ツール・作業の継続機能を組み合わせる。中心にいるメインエージェントが、調査や実装を専門エージェントへ分け、仕事の種類に応じてモデルを選ぶ。
+
+この仕組みの要点は、**役割分担、コードを扱う道具、作業を最後まで進める制御**の三つにある。`ulw` を入力すると並列作業を含む実行モードを呼び出せる一方、計画を先に確認する手順や、最大8人の Team Mode も選べる。ここでは OpenCode 版を中心に、何が標準で動き、どこから設定や外部モデルが必要になるかを説明する。名前の変更と Codex 版の追加が進んでいるため、2026年9月26日時点の公式資料を対象とし、モデル名の全一覧や他製品との性能比較は扱わない。
+
+## 全体像
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart TD
+  Q["<b>問い</b><br/>oh-my-openagent は何を追加するのか"]
+  F["<b>軸</b><br/>役割分担・開発ツール・継続制御を組み合わせる"]
+  C1["<b>分かったこと1</b><br/>メイン役が専門家へ作業を分ける"]
+  C2["<b>分かったこと2</b><br/>仕事の種類からモデルと道具を選ぶ"]
+  C3["<b>分かったこと3</b><br/>計画・継続・チーム作業を制御する"]
+  A["<b>答え</b><br/>単体モデルでなく、開発作業の進め方を拡張する"]
+  X["<b>扱わない範囲</b><br/>Codex 版の全機能・モデル別性能比較"]
+  S["<b>調査範囲</b><br/>公式資料と OpenCode の公式プラグイン仕様、2026年9月時点"]
+
+  Q --> F
+  F --> C1
+  F --> C2
+  F --> C3
+  C1 -->|"分担を成立させる"| C2
+  C2 -->|"実行を支える"| C3
+  C1 --> A
+  C2 --> A
+  C3 --> A
+  Q -.->|"別版のため外す"| X
+  A -.- S
+
+  classDef ask fill:#4F7383,stroke:#33505C,color:#ffffff
+  classDef frame fill:#EEF2F5,stroke:#8FA3B0,color:#14191E
+  classDef claim fill:#FFFFFF,stroke:#416579,color:#14191E
+  classDef map fill:#294960,stroke:#1E3B52,color:#ffffff
+  classDef drop fill:#FFFFFF,stroke:#B3322B,color:#B3322B,stroke-dasharray:5 4
+  classDef scope fill:#FFFFFF,stroke:#8FA3B0,color:#5B6673,stroke-dasharray:2 4
+
+  class Q ask
+  class F frame
+  class C1,C2,C3 claim
+  class A map
+  class X drop
+  class S scope
+```
+{% /diagram %}
+
+エージェントの役割分担がモデルや道具の選択を導き、それらを計画・継続・チームの制御が支える。本文の1〜2は分担と振り分け、3〜4は道具と文脈、5〜7は作業管理と制約を説明する。
+
+## 背景・歴史 — OpenCode の追加設定から、複数ハーネスを扱う製品へ
+
+oh-my-opencode は、OpenCode に専門エージェントや開発ツールをまとめて加えるコミュニティ製プラグインとして知られるようになった。2026年3月の v3.11.0 でプロジェクト名を oh-my-openagent に変更し、名前が単なる OpenCode プラグインを指すのではなく、Sisyphus を中心とする仕組み全体を表すと説明した [11]。
+
+その後は OpenCode 向けの機能を保ちつつ、Codex CLI で使う Light 版と、独立して動く OmO Native のベータ版も案内されるようになった。したがって「oh-my-opencode のプラグイン」という呼び方は旧名としては通じるが、現在の対象を指す名前は oh-my-openagent である。なお、公式資料では移行期間中のパッケージ名や設定名に旧名が残るため、名前と実際に導入するエディションを分けて見る必要がある [1][7]。
+
+版の進み方は一つではなく、確認時点で npm の `oh-my-openagent` は 4.19.4、GitHub の最新リリース欄は v5.0.0-beta.46（2026年9月7日公開）だった。安定版の配布と次期版の開発が並行しているため、機能数や設定名は固定仕様としてではなく、導入する版の公式ガイドで確かめるべきである [12][13]。
+
+## 1. メインエージェント — 調査役と実装役へ仕事を分ける
+
+oh-my-openagent は、**メインエージェント**がユーザーとの会話を続けながら、必要な作業を `task` ツール経由で別のエージェントへ委ねる。よく使う役には、コードを探す `explore`、公式文書や OSS の実装例を調べる `librarian`、計画の抜けを探す `plan-consultant`、計画を審査する `plan-reviewer` がある。調査役には読み取り専用などの権限制限があり、実装役とは区別される [2][3][4][9]。
+
+委任先は、独立した新しいセッションで作業するカテゴリー担当にもできる。担当は結果をメインエージェントへ返すため、複数の調査や実装を並行しても、ユーザーが話す相手は基本的に変わらない。専門家を増やすこと自体が目的ではなく、探索・実装・確認を別々に進められる点が仕組みの中心である [3][4]。
+
+**この節で分かること:** メインエージェントが全仕事を抱えるのではなく、依頼を分けて専門役と協調する [2][3]。
+
+## 2. カテゴリー — 仕事の種類から委任先を選ぶ
+
+委任時には、メインエージェントがモデル名を直接指定する代わりに、`quick` や `visual-engineering`、`ultrabrain` などの**カテゴリー**を選ぶ。カテゴリーには用途・指示・モデルの候補列が設定され、利用できるプロバイダーに応じて候補を切り替える。たとえば、単純な修正は `quick`、画面設計は `visual-engineering`、難しい論理判断は `ultrabrain` に振り分ける [4][6][7]。
+
+この方法では、作業の意図とモデルの選択が別々になる。利用者は「どのモデルを何人に割り当てるか」を毎回考えずに済み、必要なら設定ファイルでカテゴリーやエージェントごとのモデル、フォールバック、プロンプト、権限を上書きできる。ただし自動で使えるのは、OpenCode に接続済みのプロバイダーと、設定された候補の範囲である [4][6][7]。
+
+モデルの選択は一律ではない。役ごと・カテゴリーごとに別のフォールバック列を持つため、探索役は高速モデル、設計や実装はより高性能なモデル、といった割り当てが可能になる。これは費用を必ず下げる保証ではなく、並列実行や再試行が増えればモデルへの呼び出しも増える。実コストは有効にした作業量と各プロバイダーの課金に左右される [4][6]。
+
+**運用で分かったこと:** カテゴリーは仕事の分類であり、モデルとプロバイダーの実際の割り当ては設定・認証状態に依存する [4][6][7]。
+
+## 3. 開発ツール — LSP・AST-Grep・MCP が調査と編集を補う
+
+標準機能として、言語サーバーを使う **LSP** の定義ジャンプ・参照検索・リネーム・診断と、構文を考慮した検索・書き換えをする **AST-Grep** がある。通常の文字列検索や編集だけでは扱いにくいコード上の操作を、専用の道具に分担させる。LSP が使える範囲は、OpenCode 側の言語サーバー設定にも左右される [1][4][8]。
+
+OpenCode 版は、Web 検索の Exa、ライブラリ文書を探す Context7、GitHub コード検索の Grep.app を MCP として提供し、LSP も統合する。これらはプラグインが実行時に追加するため、`opencode mcp list` に通常の MCP 設定と同じ形で現れない場合がある。また、スキルが必要な MCP サーバーを必要時だけ起動する「スキル内蔵 MCP」もあり、常時すべての道具を読み込まない設計を目指している [1][4]。
+
+Hashline は読み取った行に `LINE#ID` の識別子を付け、編集時に行の内容が変わっていないか検証する機能である。古い行情報を元に誤編集する危険を下げるが、現行資料では `hashline_edit: true` を設定するオプトイン機能であり、既定で常に有効とは限らない [1][4][6]。
+
+**この節で分かること:** OMO はモデルへの指示だけでなく、コード位置の特定・診断・構造検索・検証付き編集を補う道具もまとめる [1][4][8]。
+
+## 4. `ulw` — 明示キーワードで実行モードを切り替える
+
+`ulw` または `ultrawork` をプロンプトに含めると、公式資料が **IntentGate** と呼ぶキーワード検出が実行モードの指示を追加する。Team Mode や `hyperplan` にも同様のキーワードがある。しかし、これは依頼の意味を深く分類して「本当の意図」を理解する機能ではない。明示した文字列を正規表現で検出する仕組みであり、それ以外の依頼では通常の動作を続ける [2][4]。
+
+簡単な修正なら通常の依頼として投げ、背景が複雑で説明が難しい作業なら `ulw` を付ける、というのが公式ガイドの使い分けである。計画を先に見たい場合は `/ulw-plan` を使う。プランナーが質問や調査を通じて計画を作り、確認後に `/ulw-execute` で実行する。計画と実装の間に利用者の確認点を設けられる [2][3]。
+
+現行公式資料では、一度に複数の独立した作業を依存関係付きで動かす `mass-ulw` も説明される。単にエージェントを同時に多数起動するのではなく、前工程の結果を待つ作業は後の段階に置く。複数の作業担当同士が途中で連絡しあう必要があれば Team Mode を使う [3][4]。
+
+**この節で分かること:** `ulw` は「なんでも自動で察する」合言葉ではなく、実行方針を明示的に選ぶ入口である [2][3][4]。
+
+## 5. 継続制御 — Todo・Goal・フックが中断と抜けを減らす
+
+長いタスク向けには、Todo の継続を促す仕組み、セッションをまたいで目標を保持する `Goal`、エラーやコンテキスト上限からの回復、コメントの品質確認などがある。これらは会話の指示だけではなく、OpenCode のイベントに反応する**フック**で処理する。モデルが途中で止まりやすい作業を、次の手順へ戻したり、作業状態を引き継いだりする助けになる [1][4][6]。
+
+ただし、すべてが常に動くわけではない。`Goal` は `goal.enabled` が既定で false、Team Mode も既定で無効、Hashline も明示的に有効化する。設定では無効化するフック・エージェント・ツール・スキル・MCP を選べる。導入後は `doctor` コマンドでプラグイン登録、設定、モデル、環境を診断できる [4][6][7]。
+
+フックが作業を促しても、生成物が正しいことまで自動で保証するわけではない。実行結果はテストや診断といった根拠で確かめる必要があり、設定で権限を与えたエージェントがどこまで操作できるかも別途管理する。公式資料も、`AGENTS.md` のような指示ファイルは権限境界を強制する仕組みではないと区別している [4][6][10]。
+
+**運用で分かったこと:** 継続機能は作業を進める補助であり、権限管理や成果物の検証を置き換えない [4][6][10]。
+
+## 6. Team Mode — 共有タスクと連絡手段で並列協調する
+
+通常の `task` 委任では、メイン役が子エージェントに作業を依頼し、結果を受け取る。**Team Mode** ではリード役と最大8人のメンバーが、共有タスクリストやメッセージ用メールボックスを使って並行作業する。各メンバーの状態を確認する12個の `team_*` ツールがあり、必要に応じて tmux で作業画面を並べられる [4][5]。
+
+Team Mode は設定と再起動が必要なオプトイン機能であり、小さな作業のたびに使う前提ではない。公式ガイドが想定するのは、複数工程のリファクタリングや、調査と実装の複数レーンが途中で情報を共有する場面である。メンバーが別のチームを作る入れ子構造はなく、メッセージも同期応答ではない。tmux 表示やメンバーごとの git worktree には、それぞれ必要な環境がある [5]。
+
+この機能の上に `hyperplan`（複数の批評役による計画の検討）や `security-research`（脆弱性調査と PoC 作成を分ける手順）が用意される。Team Mode を有効にしなければ `team_*` ツールは利用できず、Codex 向け Light 版は OpenCode 版と同じエージェント編成やツール群を持つわけではない [1][4][5][7]。
+
+**この節で分かること:** Team Mode は単なるバックグラウンド委任の別名ではなく、共有タスクと連絡手段を持つ別の並列機能である [4][5]。
+
+## 7. 導入条件 — 版・認証・ライセンスを分けて確認する
+
+2026年9月時点では、公式リポジトリの主な対象は OpenCode 版だが、Codex CLI 向け Light 版と OmO Native のベータも並行している。OpenCode 版は公式インストーラーでプラグインとモデル設定を登録し、利用するプロバイダーの認証を行う。したがって「プラグインを追加すれば全モデルが無料で使える」という理解は正しくない。各モデルや外部検索には、利用可能なプロバイダーやサービスが必要になる [1][7]。
+
+OpenCode の一般的なプラグインは JavaScript / TypeScript モジュールとして読み込まれ、イベントフックや独自ツールを追加できる。OMO はその仕組みを使う大規模なプラグインである。第三者プラグインを導入する以上、実行するコード、フック、ツール権限、送信されるデータを確認する必要がある [4][8][10]。
+
+さらに、リポジトリが公開されていることと、OSI 承認のオープンソースライセンスであることは同じではない。現行の `LICENSE.md` は一部の第三者コードを除き Sustainable Use License 1.0 を示し、利用を自社内の業務目的または非商用・個人利用に限る。再配布にも条件がある。商用製品への組み込みや第三者向けサービスでの利用を検討する場合は、導入前にライセンス本文と各依存物のライセンスを確認する必要がある [14]。
+
+**ここまでの要点:** OMO の機能は強力だが、使えるモデルは認証と契約次第であり、Team Mode は任意、ライセンスも一般的な MIT や Apache 2.0 とは異なる [5][7][14]。
+
+## まとめ — 5点
+
+1. **oh-my-openagent は OpenCode の会話相手を作業チームへ拡張するプラグインである。** 中核はメイン役から専門役への委任だ [2][3]。
+2. **エージェントの役割とモデル選択を分ける。** カテゴリーやフォールバック列で仕事を割り振り、接続したプロバイダーから実行先を選ぶ [4][6]。
+3. **コードを扱う専用ツールとコンテキスト連携を追加する。** LSP、AST-Grep、MCP、検証付き編集がその例である [1][4]。
+4. **`ulw` は明示キーワードで動作モードを呼ぶ。** 自然言語から意図を万能に推測する機能ではない [2][4]。
+5. **Team Mode・Goal・Hashline は設定で有効化する機能がある。** 導入時はエディション、認証、権限、SUL-1.0 の条件も確認する [5][6][7][14]。
+
+## 付録: 出典一覧
+
+- [1] code-yeongyu, [oh-my-openagent README（日本語）](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/README.ja.md)（2026年9月26日確認）
+- [2] code-yeongyu, [Overview: What Is Oh My OpenAgent?](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/overview.md)（2026年9月26日確認）
+- [3] code-yeongyu, [Orchestration System Guide](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/orchestration.md)（2026年9月26日確認）
+- [4] code-yeongyu, [Features Reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/features.md)（2026年9月26日確認）
+- [5] code-yeongyu, [Team Mode Guide](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/team-mode.md)（2026年9月26日確認）
+- [6] code-yeongyu, [Configuration Reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md)（2026年9月26日確認）
+- [7] code-yeongyu, [Installation Guide](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/installation.md)（2026年9月26日確認）
+- [8] OpenCode, [Plugins](https://opencode.ai/docs/plugins)（2026年9月25日更新）
+- [9] OpenCode, [Agents](https://opencode.ai/docs/agents)（2026年9月26日確認）
+- [10] OpenCode, [Permissions](https://opencode.ai/docs/permissions)（2026年9月26日確認）
+- [11] code-yeongyu, [Release v3.11.0 — First release as an oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v3.11.0)（2026年3月7日）
+- [12] code-yeongyu, [GitHub Releases](https://github.com/code-yeongyu/oh-my-openagent/releases)（v5.0.0-beta.46、2026年9月7日公開。2026年9月26日確認）
+- [13] code-yeongyu, [oh-my-openagent on npm](https://registry.npmjs.org/oh-my-openagent/latest)（4.19.4、2026年9月26日確認）
+- [14] code-yeongyu, [LICENSE.md — Sustainable Use License 1.0](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/LICENSE.md)（2026年9月26日確認）
+
+## 付録: 扱わなかった枝・未確認点
+
+- Codex Light と OmO Native の全機能・設定は、OpenCode 版との混同を避けるため本文では扱っていない。各版の詳細は [Installation Guide](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/installation.md) と [Features Reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/features.md) を参照。
+- モデルごとの品質・速度・費用の比較は、公式資料に記載された推奨だけでは独立に検証できないため評価していない。
+- `ulw` の実際の完了率やコスト削減率を示す独立した比較試験は、この調査では確認していない。
+- リリースは活発に更新される。本文の版番号は調査日のスナップショットであり、後日の最新版を示すものではない。
