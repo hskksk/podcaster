@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArticleHeader } from "../../../components/ArticleHeader";
+import { ArticlePager } from "../../../components/ArticlePager";
+import { ArticleToc } from "../../../components/ArticleToc";
+import { ReadingProgress } from "../../../components/ReadingProgress";
 import { SiteShell } from "../../../components/SiteShell";
+import { adjacentWebClips } from "../../../lib/site/adjacent-web-clips";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
-import { loadPublicWebClip, loadPublicWebClips } from "../../../lib/site/web-clips";
+import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { renderMarkdoc } from "../../../lib/site/render-markdoc";
+import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
+import { extractToc } from "../../../lib/site/toc";
+import { loadPublicWebClip, loadPublicWebClips } from "../../../lib/site/web-clips";
 import { textify } from "../../../../../scripts/lib/mdoc";
 
 export const dynamic = "force-static";
@@ -40,11 +48,12 @@ export async function generateMetadata({
     .slice(0, 120)
     .replace(/\n+/g, " ");
   return {
-    title: clip.title,
-    description: desc || cfg.siteDescription,
-    // Access is gated by middleware (same GitHub OAuth login as Keystatic);
-    // keep it out of search indexes too, in case the static HTML is ever
-    // reachable.
+    ...articleOpenGraph({
+      cfg,
+      title: clip.title,
+      description: desc || cfg.siteDescription,
+      date: clip.date,
+    }),
     robots: { index: false, follow: false },
   };
 }
@@ -55,26 +64,51 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
   if (!clip) notFound();
   const cfg = loadSiteConfig();
   const clips = loadPublicWebClips();
-  const body = renderMarkdoc(clip.source);
+  const renderSource = mdocBodyForRender(clip.source, clip.title);
+  const body = renderMarkdoc(renderSource);
+  const toc = extractToc(renderSource);
+  const { prev, next } = adjacentWebClips(slug);
   const rss = feedUrl();
 
   return (
-    <div className="public-site">
-      <SiteShell siteTitle={cfg.siteTitle} feedUrl={rss} articleCount={clips.length}>
-        <p className="back-link">
-          <Link href="/">🏠 メインサイト</Link>{" / "}
-          <Link href="/web-clips">Web Clips一覧</Link>
-        </p>
-        {clip.date ? <p className="article-meta">{clip.date}</p> : null}
-        {clip.url ? (
-          <p className="article-meta">
-            <a href={clip.url} target="_blank" rel="noopener noreferrer">
-              🔗 元記事
-            </a>
+    <>
+      <ReadingProgress />
+      <SiteShell
+        siteTitle={cfg.siteTitle}
+        feedUrl={rss}
+        articleCount={clips.length}
+        variant="clips"
+        width="wide"
+      >
+        <div className="mx-auto max-w-3xl">
+          <p className="mb-8 text-sm">
+            <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
+              メインサイト
+            </Link>
+            <span className="text-muted-fg"> / </span>
+            <Link href="/web-clips" className="font-medium text-muted-fg no-underline hover:text-fg">
+              Web Clips
+            </Link>
           </p>
-        ) : null}
-        <article className="markdoc">{body}</article>
+          <ArticleHeader
+            title={clip.title}
+            date={clip.date}
+            source={clip.url}
+            mdocSource={clip.source}
+          />
+        </div>
+
+        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+          <article className="markdoc mx-auto min-w-0 max-w-3xl lg:mx-0">{body}</article>
+          <aside className="mx-auto w-full max-w-3xl lg:mx-0">
+            <ArticleToc entries={toc} />
+          </aside>
+        </div>
+
+        <div className="mx-auto max-w-3xl">
+          <ArticlePager prev={prev} next={next} basePath="/web-clips" />
+        </div>
       </SiteShell>
-    </div>
+    </>
   );
 }

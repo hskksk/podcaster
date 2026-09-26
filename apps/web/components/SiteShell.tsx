@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Lock, Rss } from "lucide-react";
+import { BookOpen, Lock, Rss, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn";
 import { ThemeToggle } from "./ThemeToggle";
@@ -34,6 +34,13 @@ export function SiteHeader(props: {
           >
             <BookOpen className="size-4 shrink-0 opacity-70" strokeWidth={1.75} />
             記事
+          </Link>
+          <Link
+            href="/search"
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-fg no-underline transition-colors hover:bg-muted/80 hover:text-fg"
+          >
+            <Search className="size-4 shrink-0 opacity-70" strokeWidth={1.75} />
+            <span className="hidden sm:inline">検索</span>
           </Link>
           <Link
             href="/web-clips"

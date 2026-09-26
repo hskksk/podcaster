@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
+    "postbuild": "pagefind --site .next/server/app --output-path public/pagefind --force-language ja",
     "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
     "typecheck": "tsc --noEmit"
   },
@@ -35,6 +36,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "pagefind": "^1.5.2",
     "postcss": "^8.5.28",
     "typescript": "^5.7.0"
   }
