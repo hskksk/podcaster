@@ -87,16 +87,31 @@ async function decryptJson(encrypted: string, secret: string): Promise<ProxyOAut
   }
 }
 
+/** Public site origin used as the GitHub OAuth callback host (Preview でも Production 値). */
+export function stableSiteBaseUrl(): string | null {
+  const site =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.NEXT_PUBLIC_MAIN_URL?.trim();
+  if (site) return site.replace(/\/$/, "");
+
+  const vercelProd =
+    process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (vercelProd) {
+    const host = vercelProd.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    return `https://${host}`;
+  }
+  return null;
+}
+
 /** Stable production callback URL registered in the GitHub App. */
 export function oauthProxyCallbackUrl(): string | null {
   const explicit = process.env.KEYSTATIC_OAUTH_PROXY_URL?.trim();
   if (explicit) {
     return explicit.replace(/\/$/, "");
   }
-  const site =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.NEXT_PUBLIC_MAIN_URL?.trim();
-  if (!site) return null;
-  return `${site.replace(/\/$/, "")}${KEYSTATIC_GITHUB_OAUTH_CALLBACK_PATH}`;
+  const base = stableSiteBaseUrl();
+  if (!base) return null;
+  return `${base}${KEYSTATIC_GITHUB_OAUTH_CALLBACK_PATH}`;
 }
 
 export function oauthProxyEnabled(): boolean {
@@ -111,23 +126,39 @@ function hasProxySecrets(): boolean {
   );
 }
 
-export function isVercelPreviewDeployment(): boolean {
-  return process.env.VERCEL_ENV === "preview";
-}
-
 function requestOrigin(request: Request): string {
   return new URL(request.url).origin;
 }
 
-export function isOnOAuthProxyHost(request: Request): boolean {
-  const proxy = oauthProxyCallbackUrl();
-  if (!proxy) return false;
-  return requestOrigin(request) === new URL(proxy).origin;
+export function publicRequestOrigin(request: Request): string {
+  return requestOrigin(rewriteRequestForPublicOrigin(request));
 }
 
-/** Preview deployments use the stable production callback as redirect_uri. */
+export function stableSiteOrigin(): string | null {
+  const callback = oauthProxyCallbackUrl();
+  if (!callback) return null;
+  try {
+    return new URL(callback).origin;
+  } catch {
+    return null;
+  }
+}
+
+export function isOnOAuthProxyHost(request: Request): boolean {
+  const stable = stableSiteOrigin();
+  if (!stable) return false;
+  return publicRequestOrigin(request) === stable;
+}
+
+/**
+ * Use the stable callback whenever the browser host ≠ GitHub 登録ドメイン
+ * (Preview URL, デプロイ固有 URL, 未登録の alias など).
+ */
 export function shouldProxyGithubLogin(request: Request): boolean {
-  return isVercelPreviewDeployment() && oauthProxyEnabled() && !isOnOAuthProxyHost(request);
+  if (!oauthProxyEnabled()) return false;
+  const stable = stableSiteOrigin();
+  if (!stable) return false;
+  return publicRequestOrigin(request) !== stable;
 }
 
 /**

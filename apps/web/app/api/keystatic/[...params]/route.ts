@@ -58,7 +58,11 @@ async function dispatchKeystatic(
   const route = keystaticGithubRouteSuffix(pathname);
 
   if (oauthProxyEnabled()) {
-    if (method === "GET" && shouldProxyGithubLogin(request) && route === "github/login") {
+    if (
+      method === "GET" &&
+      shouldProxyGithubLogin(request) &&
+      (route === "github/login" || route === "github/repo-not-found")
+    ) {
       return handleProxyGithubLogin(request);
     }
     if (method === "GET" && route === "github/oauth/proxy-return") {
