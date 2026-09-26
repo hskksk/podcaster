@@ -1,21 +1,21 @@
 import { Calendar, Clock, ExternalLink } from "lucide-react";
 import { formatReadingTime, readingTimeMinutes } from "../lib/site/reading-time";
 
-function ArticleInsertIllustration(props: { src: string; title: string }) {
+/** Viewport-wide hero (note.com-style) from episode artwork. */
+export function ArticleCoverHero(props: { src: string; title: string }) {
   return (
-    <figure className="article-insert-figure not-prose">
-      <img
-        className="w-full rounded-lg border border-border/50 bg-muted/30 object-cover aspect-[3/2] sm:aspect-[16/10]"
-        src={props.src}
-        alt={`${props.title} の挿絵`}
-        width={960}
-        height={600}
-        loading="eager"
-        decoding="async"
-      />
-      <figcaption className="mt-2.5 text-center text-xs tracking-wide text-muted-fg">
-        記事イメージ（AI生成）
-      </figcaption>
+    <figure className="relative left-1/2 -mt-10 mb-8 w-screen max-w-[100vw] -translate-x-1/2">
+      <div className="overflow-hidden bg-muted">
+        <img
+          className="h-[min(56vw,420px)] w-full object-cover object-center sm:h-[380px] md:h-[440px]"
+          src={props.src}
+          alt={`${props.title} のエピソードカバー`}
+          width={1200}
+          height={630}
+          fetchPriority="high"
+          decoding="async"
+        />
+      </div>
     </figure>
   );
 }
@@ -25,11 +25,8 @@ export function ArticleHeader(props: {
   date?: string;
   source?: string;
   mdocSource: string;
-  /** Episode artwork from Supabase; shown as an article insert illustration. */
-  coverImageUrl?: string;
 }) {
   const minutes = readingTimeMinutes(props.mdocSource);
-  const illustration = props.coverImageUrl?.trim();
 
   const metaRow = props.date ? (
     <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-fg">
@@ -55,13 +52,8 @@ export function ArticleHeader(props: {
       <h1 className="font-serif text-3xl font-semibold leading-tight tracking-tight text-fg sm:text-4xl">
         {props.title}
       </h1>
-      {illustration ? (
-        <div className="mt-8">
-          <ArticleInsertIllustration src={illustration} title={props.title} />
-        </div>
-      ) : null}
       {props.source ? (
-        <p className={illustration ? "mt-6 text-sm" : "mt-4 text-sm"}>
+        <p className="mt-4 text-sm">
           <a
             href={props.source}
             target="_blank"

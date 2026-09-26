@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArticleHeader } from "../../../../components/ArticleHeader";
+import { ArticleCoverHero, ArticleHeader } from "../../../../components/ArticleHeader";
 import { ArticlePager } from "../../../../components/ArticlePager";
 import { ArticleToc } from "../../../../components/ArticleToc";
 import { EpisodePlayer } from "../../../../components/EpisodePlayer";
@@ -92,6 +92,9 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
         variant="public"
         width="wide"
       >
+        {coverImageUrl ? (
+          <ArticleCoverHero src={coverImageUrl} title={doc.title} />
+        ) : null}
         <div className="mx-auto max-w-3xl">
           <p className="mb-8 text-sm">
             <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
@@ -103,7 +106,6 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
             date={doc.date}
             source={doc.sourceUrl}
             mdocSource={doc.source}
-            coverImageUrl={coverImageUrl}
           />
           {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
         </div>
