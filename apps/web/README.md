@@ -52,7 +52,18 @@ pnpm web:github
    - Production / Preview / Development すべてに `NEXT_PUBLIC_SITE_URL=https://<production-domain>`（末尾スラッシュなし。公開サイト用と同じ値）  
      または `KEYSTATIC_OAUTH_PROXY_URL=https://<production-domain>/api/keystatic/github/oauth/callback`
    - `KEYSTATIC_SECRET` は Production と Preview で **同一**（Preview だけ別 secret にしない）
+   - Vercel の **Preview 環境**にも `NEXT_PUBLIC_SITE_URL` と `KEYSTATIC_*` を入れる（Production のみだと Preview は Keystatic 標準 OAuth になり、Preview ホストが `redirect_uri` になって GitHub が止める）
+   - token exchange は **本番（stable）callback** 側で 1 回だけ実行し、Preview の `proxy-return` には暗号化 session だけ渡す（code の二重使用を防ぐ）
 6. Redeploy。`/keystatic` で GitHub ログイン（この repo への write 権限が必要）
+
+### GitHub が「redirect_uri is not associated…」と止めるとき
+
+GitHub は **authorize リクエストの `redirect_uri` クエリ**が、GitHub App に登録した Callback URL と **1 文字でも違う**とこの画面になる（Preview でログイン開始して callback だけ本番、という構成自体はプロキシ有効時は問題ない）。
+
+1. GitHub App → **User authorization callback URL** が次と **完全一致** か確認:  
+   `https://podcaster-pied.vercel.app/api/keystatic/github/oauth/callback`（`NEXT_PUBLIC_SITE_URL` + 上記パス）
+2. Preview デプロイで `/keystatic` からログイン → ブラウザが GitHub に飛んだあとの URL 内 `redirect_uri=` をデコードし、登録 URL と同じか確認（Preview ホストが入っていたら **OAuth プロキシが動いていない**）
+3. PR #147 相当のコードが Preview にデプロイされているか、`KEYSTATIC_SECRET` / `KEYSTATIC_GITHUB_*` が Preview 環境変数にあるか確認
 
 Vercel 上では `NEXT_PUBLIC_VERCEL_ENV` があるので storage は自動的に `github` になる。`NODE_ENV` では切り替えない。
 
