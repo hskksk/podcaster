@@ -1,10 +1,9 @@
 ---
-title: "GitHub の PR 自動レビュー — 実際に使われているのは3つの別の場所"
+title: GitHub の PR 自動レビュー — 実際に使われているのは3つの別の場所
 publishedAt: 2026-09-26
-podcast: none
+podcast: queued
 legacyFilename: 20260926_030554_github_pr_auto_review.md
 ---
-
 # GitHub の PR 自動レビュー — 実際に使われているのは3つの別の場所
 
 ## 概要
@@ -17,7 +16,7 @@ legacyFilename: 20260926_030554_github_pr_auto_review.md
 
 ## 全体像
 
-{% diagram %}
+{% diagram type="mermaid" %}
 ```mermaid
 flowchart TB
   Q["<b>問い</b><br/>実際に使われている PR 自動レビューはどれか"]
@@ -69,19 +68,43 @@ flowchart TB
 
 費用は従量型が基本である。OSS と公開プロジェクトは無償で、超過分は 1 ファイルあたり **$0.25** の従量になり、4 ファイルにつき $1 のクレジットとして請求される [5]。GitHub 内蔵だけを見ると追加費用に見えないが、code review は premium request を消費するため、実行量を増やせば Copilot の利用枠も増える [3]。
 
-| プラン | 価格（開発者/月） |
-|---|---|
-| Free | 0 |
-| Essentials | 約 $24 |
-| Team | 約 $48 |
-| Advanced | 約 $72 |
-| 超過分 | 1 ファイルあたり $0.25 |
+{% table %}
+- プラン
+- 価格（開発者/月）
+---
+- Free
+- 0
+---
+- Essentials
+- 約 $24
+---
+- Team
+- 約 $48
+---
+- Advanced
+- 約 $72
+---
+- 超過分
+- 1 ファイルあたり $0.25
+{% /table %}
 
-比較 | 導入時に増える費用 | 既に契約している場合の費用 |
-| --- | --- | --- |
-| CodeRabbit | 月額 $24〜$72、超過は従量 | 0 |
-| PR-Agent | LLM API と維持費 | LLM API と維持費 |
-| reviewdog | 0 | 0 |
+{% table %}
+- 比較
+- 導入時に増える費用
+- 既に契約している場合の費用
+---
+- CodeRabbit
+- 月額 $24〜$72、超過は従量
+- 0
+---
+- PR-Agent
+- LLM API と維持費
+- LLM API と維持費
+---
+- reviewdog
+- 0
+- 0
+{% /table %}
 
 **持ち帰り**：外部サーバー型は CodeRabbit が Marketplace で先行しており、超過分がファイル単位の従量になるため、利用量が不明のまま総額は推定できない。
 
@@ -119,22 +142,55 @@ free tier の縮小も続いた。8月の追跡では free を Diff 100行・1�
 
 このベンチは 2026年2月に公開され、MIT で、50件の PR によるオフライン走査と20万件超のオンライン集の両方で10から13のツールを採点する [7][10]。**2026年の半年で首位が4社入れ替わった。** 9月時点の集計まで首位は入れ替わっており、Copilot の指摘 1,000件あたりの false positive は **9.0%** だった [7][27]。
 
-| 時点 | 首位 | F1 |
-|---|---|---|
-| 2026-03-03 | CodeRabbit | 51.2 |
-| 2026-03-25 | Cubic（オフライン） [8] | 61.8 |
-| 2026-07-30 | Greptile | 60.8 |
-| 2026-09 | Cubic | 65.7 |
+{% table %}
+- 時点
+- 首位
+- F1
+---
+- 2026-03-03
+- CodeRabbit
+- 51.2
+---
+- 2026-03-25
+- Cubic（オフライン） [8]
+- 61.8
+---
+- 2026-07-30
+- Greptile
+- 60.8
+---
+- 2026-09
+- Cubic
+- 65.7
+{% /table %}
 
 さらに5つの評価がある。いずれも評価者が設計に深く関与しており、首位のツール名が入れ替わることを調査結果として示している。
 
-| 評価 | 対象 | 結果 |
-|---|---|---|
-| Qodo 運営 [11] | 100 PR・8 repository・580 指摘 | Qodo-Exhaustive 60.1、Copilot 42.8、CodeRabbit 28.0 |
-| Signal65 [12] | 6 repository・60件の historic bug | CodeRabbit の精度 95.88%、Amazon Q Developer の誤検出が23件で最多 |
-| モノレポで50件 [17] | 450,000ファイル | Augment 59、Cursor Bugbot 49、CodeRabbit 39、Copilot 25 |
-| LLM 判定 [25][38] | 309 PR・10開発者 | CodeRabbit が 51% の PR で1位 |
-| SynapseWire [28] | モノレポ47件 | 検出は Copilot 74%、誤検出率は 1.2% |
+{% table %}
+- 評価
+- 対象
+- 結果
+---
+- Qodo 運営 [11]
+- 100 PR・8 repository・580 指摘
+- Qodo-Exhaustive 60.1、Copilot 42.8、CodeRabbit 28.0
+---
+- Signal65 [12]
+- 6 repository・60件の historic bug
+- CodeRabbit の精度 95.88%、Amazon Q Developer の誤検出が23件で最多
+---
+- モノレポで50件 [17]
+- 450,000ファイル
+- Augment 59、Cursor Bugbot 49、CodeRabbit 39、Copilot 25
+---
+- LLM 判定 [25][38]
+- 309 PR・10開発者
+- CodeRabbit が 51% の PR で1位
+---
+- SynapseWire [28]
+- モノレポ47件
+- 検出は Copilot 74%、誤検出率は 1.2%
+{% /table %}
 
 **どのベンチマークも自分の有利な側で設計されている。** 首位の入れ替わりは半年ごとに読み替える必要があることを意味し、順位で選ぶことの無効さを示す相対評価よりも、指摘を出す場所、対象となる diff の大きさ、誤検出の許容値のほうが選ぶときに効く。Qodo 運営のベンチが Qodo を1位にしたのは、採点基準が Qodo の挙動に合わせられていたためである [11]。2026年の比較記事は評価軸を費用と対応範囲に分けており、単一の順位表は掲載していない [21][26][39]。
 
@@ -144,23 +200,47 @@ free tier の縮小も続いた。8月の追跡では free を Diff 100行・1�
 
 ツール選びより先に効く変数がある。合成ベンチと実 PR の比較研究では、合成データ上の F1 **0.847** が実 PR では **0.066** へ落ち、**92%** の劣化だった [13]。同じ研究では、5つのモデルのうち4つで性能バグの recall は0を超えなかったのに対し、セキュリティバグの recall は全モデルで70%付近を保った [13]。モデル別では Claude Sonnet 4.6 の F1 **0.343** に対し Haiku 4.5 が **0.365** で、費用も3.2倍低かった [13]。
 
-| 条件 | F1 |
-|---|---|
-| 合成ベンチ | 0.847 |
-| 実 PR | 0.066 |
-| diff 10行未満 | 0.657 |
-| diff 150行超 | 0.043 |
+{% table %}
+- 条件
+- F1
+---
+- 合成ベンチ
+- 0.847
+---
+- 実 PR
+- 0.066
+---
+- diff 10行未満
+- 0.657
+---
+- diff 150行超
+- 0.043
+{% /table %}
 
 人手評価にも同じ形がある。20本の merged PR に付いた **180** の Copilot コメントを人手が判定した調査では、actionable が **76.1%**、false positive が **10.6%** だった [19]。内訳は次のとおりで、valid defect と valid risk を足すと 40.6% に達する。
 
-| 区分 | 割合 |
-|---|---|
-| actionable | 76.1% |
-| useful improvement | 33.3% |
-| valid defect | 25.6% |
-| valid risk | 15.0% |
-| low value | 15.6% |
-| false positive | 10.6% |
+{% table %}
+- 区分
+- 割合
+---
+- actionable
+- 76.1%
+---
+- useful improvement
+- 33.3%
+---
+- valid defect
+- 25.6%
+---
+- valid risk
+- 15.0%
+---
+- low value
+- 15.6%
+---
+- false positive
+- 10.6%
+{% /table %}
 
 5つのエージェントが342の Python repository に残した **54,791** comments を追跡した研究では、Copilot のコメントが解決された割合は **72.9%**、Cursor が 67.2%、Codex が 54.8% だった [14]。同じ研究で、inline のコード提案を含むコメントは解決につながる有力な予測因子（OR 1.62）で、説明だけのコメントは解決を遅らせる（OR 0.593）ことが分かった [14]。
 
@@ -219,20 +299,46 @@ GitHub 内蔵 Copilot の6,000万件、Marketplace CodeRabbit の32万件、pull
 
 ## 付録: 年表
 
-| 日付 | 出来事 |
-|---|---|
-| 2023-07-05 | PR-Agent の repository 作成 [15] |
-| 2025-04 | Copilot code review が Research Preview で公開 [1][3] |
-| 2026-02-06 | Code Review Bench を MIT で公開 [7][10] |
-| 2026-03-03 | CodeRabbit が同ベンチで F1 51.2 で首位 [6] |
-| 2026-03-05 | Copilot code review が累計 6,000万件を達成し agentic 構成へ [1][2] |
-| 2026-03-25 | Cubic がオフラインで 61.8 を記録 [8] |
-| 2026-04-23 | Qodo が PR-Agent を The-PR-Agent 組織へ移管 [16] |
-| 2026-07-30 | Greptile が F1 60.8 で首位、CodeRabbit は 57.5 に後退 [9] |
-| 2026-08-12 | PR-Agent の free tier を 100行・1ファイルへ縮小 [18] |
-| 2026-09-11 | Copilot に shell ツール・auto-resolve・Lite の multi-agent 化 [24] |
-| 2026-09-20 | 16,017 PR の集計で Cubic 65.7、Copilot 63.9 [27] |
-| 2026-09-26 | 本稿の実測（Marketplace installs、GitHub API、Docker pulls）[4][22][23] |
+{% table %}
+- 日付
+- 出来事
+---
+- 2023-07-05
+- PR-Agent の repository 作成 [15]
+---
+- 2025-04
+- Copilot code review が Research Preview で公開 [1][3]
+---
+- 2026-02-06
+- Code Review Bench を MIT で公開 [7][10]
+---
+- 2026-03-03
+- CodeRabbit が同ベンチで F1 51.2 で首位 [6]
+---
+- 2026-03-05
+- Copilot code review が累計 6,000万件を達成し agentic 構成へ [1][2]
+---
+- 2026-03-25
+- Cubic がオフラインで 61.8 を記録 [8]
+---
+- 2026-04-23
+- Qodo が PR-Agent を The-PR-Agent 組織へ移管 [16]
+---
+- 2026-07-30
+- Greptile が F1 60.8 で首位、CodeRabbit は 57.5 に後退 [9]
+---
+- 2026-08-12
+- PR-Agent の free tier を 100行・1ファイルへ縮小 [18]
+---
+- 2026-09-11
+- Copilot に shell ツール・auto-resolve・Lite の multi-agent 化 [24]
+---
+- 2026-09-20
+- 16,017 PR の集計で Cubic 65.7、Copilot 63.9 [27]
+---
+- 2026-09-26
+- 本稿の実測（Marketplace installs、GitHub API、Docker pulls）[4][22][23]
+{% /table %}
 
 ## 付録: 扱わなかった枝
 
