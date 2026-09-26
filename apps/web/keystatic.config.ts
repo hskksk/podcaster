@@ -40,6 +40,8 @@ export default config({
       entryLayout: "content",
       columns: ["title", "podcast", "publishedAt"],
       parseSlugForSort,
+      previewUrl: `/preview/start?collection=docs&entry={slug}&branch={branch}`,
+      template: "content/keystatic-templates/new-wiki/index.mdoc",
       schema: {
         title: fields.slug(titleSlugField),
         publishedAt: fields.date({
@@ -64,6 +66,8 @@ export default config({
       entryLayout: "content",
       columns: ["title", "podcast", "clippedAt"],
       parseSlugForSort,
+      previewUrl: `/preview/start?collection=webClips&entry={slug}&branch={branch}`,
+      template: "content/keystatic-templates/new-web-clip/index.mdoc",
       schema: {
         title: fields.slug(titleSlugField),
         url: fields.url({

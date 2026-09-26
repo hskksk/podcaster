@@ -5,20 +5,24 @@ import { ArticleHeader } from "../../../components/ArticleHeader";
 import { ArticlePager } from "../../../components/ArticlePager";
 import { ArticleToc } from "../../../components/ArticleToc";
 import { SiteShell } from "../../../components/SiteShell";
-import { adjacentPublicDocs } from "../../../lib/site/adjacent-docs";
+import { adjacentPublicDocsForRequest } from "../../../lib/site/adjacent-docs";
+import {
+  loadPublicDocForRequest,
+  loadPublicDocsForRequest,
+} from "../../../lib/site/content-for-request";
 import { audioForPublicDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { fetchArticleImageMap, imageForPublicDoc } from "../../../lib/site/episode-images";
 import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { EpisodePlayer } from "../../../components/EpisodePlayer";
 import { ReadingProgress } from "../../../components/ReadingProgress";
-import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
+import { loadPublicDocs } from "../../../lib/site/docs";
 import { renderMarkdoc } from "../../../lib/site/render-markdoc";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
 import { extractToc } from "../../../lib/site/toc";
 import { textify } from "../../../../../scripts/lib/mdoc";
 
-export const dynamic = "force-static";
+export const dynamic = "auto";
 export const revalidate = false;
 export const dynamicParams = false;
 
@@ -41,7 +45,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const doc = loadPublicDoc(slug);
+  const doc = await loadPublicDocForRequest(slug);
   if (!doc) return { title: "Not found" };
   const cfg = loadSiteConfig();
   const imageMap = await fetchArticleImageMap();
@@ -63,16 +67,16 @@ export async function generateMetadata({
 
 export default async function ArticlePage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
-  const doc = loadPublicDoc(slug);
+  const doc = await loadPublicDocForRequest(slug);
   if (!doc) notFound();
   const cfg = loadSiteConfig();
-  const docs = loadPublicDocs();
+  const docs = await loadPublicDocsForRequest();
   const audioMap = await fetchArticleAudioMap();
   const audioUrl = audioForPublicDoc(audioMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
   const body = renderMarkdoc(renderSource);
   const toc = extractToc(renderSource);
-  const { prev, next } = adjacentPublicDocs(slug);
+  const { prev, next } = await adjacentPublicDocsForRequest(slug);
   const rss = feedUrl();
 
   return (

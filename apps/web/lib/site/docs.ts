@@ -3,9 +3,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import { getRepoRoot } from "../repo-root";
-import { parseDateFromFilename, parseSlugFromFilename } from "../../../../scripts/lib/article-slug";
-import { parseFrontmatter, parseTitleFromContent, textify } from "../../../../scripts/lib/mdoc";
-import { sanitizePublicSlug, sanitizePublicText } from "./sanitize-content";
+import { publicDocFromMdocSource } from "./mdoc-public";
 
 export type PublicDoc = {
   dir: string;
@@ -35,22 +33,7 @@ export function loadPublicDocs(): PublicDoc[] {
       const indexPath = path.join(root, e.name, "index.mdoc");
       if (!fs.existsSync(indexPath)) return null;
       const source = fs.readFileSync(indexPath, "utf8");
-      const { attrs } = parseFrontmatter(source);
-      const filename = attrs.legacyFilename || `${e.name}.md`;
-      const slug = sanitizePublicSlug(parseSlugFromFilename(filename), e.name);
-      const date = attrs.publishedAt || parseDateFromFilename(filename);
-      const rawTitle = attrs.title || parseTitleFromContent(textify(source), slug);
-      const title = sanitizePublicText(rawTitle);
-      const doc: PublicDoc = {
-        dir: e.name,
-        filename,
-        slug,
-        date,
-        title,
-        source,
-      };
-      if (attrs.sourceUrl) doc.sourceUrl = attrs.sourceUrl;
-      return doc;
+      return publicDocFromMdocSource(e.name, source);
     })
     .filter((a): a is PublicDoc => a !== null)
     .sort((a, b) => b.filename.localeCompare(a.filename, "en"));
