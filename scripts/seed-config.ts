@@ -137,7 +137,7 @@ const defaults: Record<string, unknown> = {
   "image.model": config.image?.model ?? "gemini-3.1-flash-image",
   "image.aspect_ratio": config.image?.aspect_ratio ?? "1:1",
   "image.image_size": config.image?.image_size ?? "1K",
-  "image.mime_type": config.image?.mime_type ?? "image/png",
+  "image.mime_type": config.image?.mime_type ?? "image/jpeg",
 };
 
 if (config.generator.system_instruction) {
