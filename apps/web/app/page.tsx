@@ -3,7 +3,7 @@ import { Headphones } from "lucide-react";
 import { CollectionIntro } from "../components/CollectionIntro";
 import { HomeArticleList } from "../components/HomeArticleList";
 import { SiteShell } from "../components/SiteShell";
-import { audioForDoc, fetchArticleAudioMap } from "../lib/site/audio";
+import { audioForPublicDoc, fetchArticleAudioMap } from "../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../lib/site/config";
 import { loadPublicDocs } from "../lib/site/docs";
 
@@ -19,7 +19,7 @@ export default async function HomePage() {
     slug: d.slug,
     title: d.title,
     date: d.date,
-    audioUrl: audioForDoc(audioMap, d.filename),
+    audioUrl: audioForPublicDoc(audioMap, d),
   }));
   const withAudio = cards.filter((c) => c.audioUrl);
   const featured =

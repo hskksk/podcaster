@@ -1,4 +1,5 @@
 import { highlightCode } from "../../lib/site/shiki";
+import { Diagram } from "./Diagram";
 
 export async function Fence(props: {
   language?: string;
@@ -7,6 +8,9 @@ export async function Fence(props: {
 }) {
   const code = (props.content ?? props.children ?? "").replace(/\n$/, "");
   const lang = props.language || "plaintext";
+  if (lang === "mermaid" || lang === "d2") {
+    return <Diagram type={lang === "d2" ? "d2" : "mermaid"} source={code} />;
+  }
   const html = await highlightCode(code, lang);
   return (
     <div
