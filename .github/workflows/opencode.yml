@@ -2,6 +2,9 @@ name: opencode
 
 # 通常（変更があれば PR）: /oc, /opencode
 # 調査用 github-reply: /oci, /oca, /oc-issue, /oc-ask, /opencode-issue, /opencode-ask
+#
+# トリガー権限: OWNER / MEMBER / COLLABORATOR のコメント、または write 以上のコラボレーターが
+# Issue/PR 本文を編集した場合。追加ログインは repo variable OPENCODE_TRIGGER_ALLOWLIST（カンマ区切り）。
 
 on:
   issue_comment:
@@ -20,19 +23,15 @@ jobs:
       (
         (
           (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
-          github.event.comment.author_association == 'OWNER' &&
-          github.event.comment.user.type != 'Bot' &&
           (contains(github.event.comment.body, '/oc') || contains(github.event.comment.body, '/opencode'))
         ) ||
         (
           github.event_name == 'issues' &&
           !github.event.issue.pull_request &&
-          github.event.sender.login == github.repository_owner &&
           (contains(github.event.issue.body || '', '/oc') || contains(github.event.issue.body || '', '/opencode'))
         ) ||
         (
           github.event_name == 'pull_request' &&
-          github.event.sender.login == github.repository_owner &&
           (contains(github.event.pull_request.body || '', '/oc') || contains(github.event.pull_request.body || '', '/opencode'))
         )
       )
@@ -51,8 +50,54 @@ jobs:
       - name: Resolve slash command
         id: slash
         uses: actions/github-script@v7
+        env:
+          OPENCODE_TRIGGER_ALLOWLIST: ${{ vars.OPENCODE_TRIGGER_ALLOWLIST }}
         with:
           script: |
+            const ALLOWLIST = (process.env.OPENCODE_TRIGGER_ALLOWLIST || "")
+              .split(/[, \n]+/)
+              .map((s) => s.trim().replace(/^@/, ""))
+              .filter(Boolean);
+            const TRUSTED_COMMENT_ASSOC = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
+            const TRUSTED_REPO_PERMS = new Set(["admin", "maintain", "write"]);
+
+            function isAllowlisted(login) {
+              return Boolean(login && ALLOWLIST.includes(login));
+            }
+
+            function commentActorAuthorized(comment) {
+              if (!comment?.user || comment.user.type === "Bot") return false;
+              if (isAllowlisted(comment.user.login)) return true;
+              return TRUSTED_COMMENT_ASSOC.has(comment.author_association);
+            }
+
+            async function senderActorAuthorized(login) {
+              if (!login) return false;
+              if (isAllowlisted(login)) return true;
+              if (login === context.repo.owner) return true;
+              try {
+                const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  username: login,
+                });
+                return TRUSTED_REPO_PERMS.has(data.permission);
+              } catch (error) {
+                if (error.status === 404) return false;
+                throw error;
+              }
+            }
+
+            async function triggerActorAuthorized(eventName, payload) {
+              if (eventName === "issue_comment" || eventName === "pull_request_review_comment") {
+                return commentActorAuthorized(payload.comment);
+              }
+              if (eventName === "issues" || eventName === "pull_request") {
+                return senderActorAuthorized(payload.sender?.login);
+              }
+              return false;
+            }
+
             const REPLY_CMDS = [
               "/opencode-issue",
               "/opencode-ask",
@@ -132,6 +177,13 @@ jobs:
             const mode = detectMode(body, eventName);
             if (!mode) {
               core.info("No opencode slash command in trigger text; skipping OpenCode run.");
+              core.setOutput("mode", "skip");
+              return;
+            }
+
+            const authorized = await triggerActorAuthorized(eventName, context.payload);
+            if (!authorized) {
+              core.info("Trigger actor is not authorized for opencode; skipping OpenCode run.");
               core.setOutput("mode", "skip");
               return;
             }
