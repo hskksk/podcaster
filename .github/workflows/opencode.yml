@@ -3,6 +3,17 @@ name: opencode
 # 通常（変更があれば PR）: /oc, /opencode
 # 調査用 github-reply: /oci, /oca, /oc-issue, /oc-ask, /opencode-issue, /opencode-ask
 #
+# モデル（省略時 opencode/big-pickle = Big Pickle / Zen 無料）:
+#   /oc --model kimi-k3
+#   /oc model:opencode-go/kimi-k3
+#   /oc opencode/kimi-k2.5
+#   /oc big-pickle
+# Go 系は model ID のみでも可（例: /oc --model glm-5.3-flash → opencode-go/glm-5.3-flash）
+#
+# Secrets:
+#   OPENCODE_API_KEY     — OpenCode Zen（Big Pickle および opencode/*）
+#   OPENCODE_GO_API_KEY  — OpenCode Go サブスク（opencode-go/*）
+#
 # トリガー権限: OWNER / MEMBER / COLLABORATOR のコメント、または write 以上のコラボレーターが
 # Issue/PR 本文を編集した場合。追加ログインは repo variable OPENCODE_TRIGGER_ALLOWLIST（カンマ区切り）。
 
@@ -60,6 +71,23 @@ jobs:
               .filter(Boolean);
             const TRUSTED_COMMENT_ASSOC = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
             const TRUSTED_REPO_PERMS = new Set(["admin", "maintain", "write"]);
+
+            const DEFAULT_MODEL = "opencode/big-pickle";
+            const MODEL_ALIASES = {
+              "big-pickle": DEFAULT_MODEL,
+              pickle: DEFAULT_MODEL,
+            };
+            const ALLOWED_MODEL = /^(opencode|opencode-go)\/[a-z0-9][a-z0-9._-]*$/i;
+            const ALL_CMDS = [
+              "/opencode-issue",
+              "/opencode-ask",
+              "/oc-issue",
+              "/oc-ask",
+              "/oci",
+              "/oca",
+              "/opencode",
+              "/oc",
+            ];
 
             function isAllowlisted(login) {
               return Boolean(login && ALLOWLIST.includes(login));
@@ -172,6 +200,90 @@ jobs:
               return "";
             }
 
+            function normalizeModelId(raw) {
+              const token = raw.trim().replace(/^["']|["']$/g, "");
+              if (!token) return DEFAULT_MODEL;
+              const alias = MODEL_ALIASES[token.toLowerCase()];
+              if (alias) return alias;
+              if (token.includes("/")) {
+                if (!ALLOWED_MODEL.test(token)) {
+                  core.warning(`Invalid model "${token}"; using ${DEFAULT_MODEL}.`);
+                  return DEFAULT_MODEL;
+                }
+                return token;
+              }
+              if (/^[a-z0-9][a-z0-9._-]*$/i.test(token)) {
+                return `opencode-go/${token}`;
+              }
+              core.warning(`Invalid model "${token}"; using ${DEFAULT_MODEL}.`);
+              return DEFAULT_MODEL;
+            }
+
+            function findTriggerLine(body, eventName) {
+              const isComment =
+                eventName === "issue_comment" || eventName === "pull_request_review_comment";
+              const working = isComment ? body : stripNonTriggerSections(body);
+              const lines = working.split(/\r?\n/);
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                for (const cmd of ALL_CMDS) {
+                  if (isComment) {
+                    if (hasCmdInText(line, cmd)) return line;
+                  } else if (trimmed === cmd || trimmed.startsWith(`${cmd} `)) {
+                    return trimmed;
+                  }
+                }
+              }
+              return "";
+            }
+
+            function looksLikeModelToken(token) {
+              if (!token || token.startsWith("@") || token.startsWith("#")) return false;
+              if (MODEL_ALIASES[token.toLowerCase()]) return true;
+              if (token.includes("/")) return ALLOWED_MODEL.test(token);
+              return /^[a-z0-9][a-z0-9._-]*$/i.test(token);
+            }
+
+            function parseModelFromBody(body, eventName) {
+              const cmdLine = findTriggerLine(body, eventName);
+              if (!cmdLine) {
+                return { model: DEFAULT_MODEL, prompt: body };
+              }
+
+              let model = DEFAULT_MODEL;
+              let cleanedLine = cmdLine;
+
+              const flagMatch = cmdLine.match(/(?:^|\s)(?:--model|-m|model:)\s+(\S+)/i);
+              if (flagMatch) {
+                model = normalizeModelId(flagMatch[1]);
+                cleanedLine = cmdLine
+                  .replace(/(?:^|\s)(?:--model|-m|model:)\s+\S+/i, "")
+                  .replace(/\s{2,}/g, " ")
+                  .trim();
+              } else {
+                for (const cmd of ALL_CMDS) {
+                  const escaped = cmd.replace(/\//g, "\\/");
+                  const re = new RegExp(`(${escaped})\\s+(\\S+)`, "i");
+                  const match = cmdLine.match(re);
+                  if (match && looksLikeModelToken(match[2])) {
+                    model = normalizeModelId(match[2]);
+                    cleanedLine = cmdLine.replace(re, "$1").replace(/\s{2,}/g, " ").trim();
+                    break;
+                  }
+                }
+              }
+
+              if (cleanedLine === cmdLine) {
+                return { model, prompt: body };
+              }
+
+              const prompt = body.includes(cmdLine)
+                ? body.replace(cmdLine, cleanedLine)
+                : body;
+              return { model, prompt };
+            }
+
             const eventName = context.eventName;
             const body = triggerBody();
             const mode = detectMode(body, eventName);
@@ -188,16 +300,20 @@ jobs:
               return;
             }
 
+            const { model, prompt } = parseModelFromBody(body, eventName);
+            core.info(`OpenCode model: ${model}`);
             core.setOutput("mode", mode);
-            core.setOutput("prompt", body);
+            core.setOutput("prompt", prompt);
+            core.setOutput("model", model);
 
       - name: Run opencode (github-reply)
         if: steps.slash.outputs.mode == 'reply'
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
         with:
-          model: opencode/big-pickle
+          model: ${{ steps.slash.outputs.model }}
           agent: github-reply
           prompt: ${{ steps.slash.outputs.prompt }}
 
@@ -206,6 +322,7 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
         with:
-          model: opencode/big-pickle
+          model: ${{ steps.slash.outputs.model }}
           prompt: ${{ (github.event_name == 'issues' || github.event_name == 'pull_request') && steps.slash.outputs.prompt || '' }}
