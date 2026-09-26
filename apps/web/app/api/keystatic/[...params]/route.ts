@@ -3,6 +3,15 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import config from "../../../../keystatic.config";
 import { hasGithubAppCreds } from "../../../../lib/github-app";
+import {
+  handleProxyGithubLogin,
+  handleProxyOAuthCallback,
+  handleProxyOAuthReturn,
+  keystaticGithubRouteSuffix,
+  oauthProxyEnabled,
+  rewriteRequestForPublicOrigin,
+  shouldProxyGithubLogin,
+} from "../../../../lib/keystatic-oauth-proxy";
 import { getRepoRoot } from "../../../../lib/repo-root";
 import { isGithubStorage } from "../../../../lib/storage";
 
@@ -37,22 +46,50 @@ function shouldServeGithubSetupWizard() {
   return isGithubStorage() && !hasGithubAppCreds();
 }
 
+function toKeystaticRequest(request: NextRequest): Request {
+  return rewriteRequestForPublicOrigin(request);
+}
+
+async function dispatchKeystatic(
+  request: NextRequest,
+  method: "GET" | "POST",
+): Promise<Response> {
+  const pathname = request.nextUrl.pathname;
+  const route = keystaticGithubRouteSuffix(pathname);
+
+  if (oauthProxyEnabled()) {
+    if (method === "GET" && shouldProxyGithubLogin(request) && route === "github/login") {
+      return handleProxyGithubLogin(request);
+    }
+    if (method === "GET" && route === "github/oauth/proxy-return") {
+      return handleProxyOAuthReturn(request);
+    }
+    if (method === "GET" && route === "github/oauth/callback") {
+      const proxied = await handleProxyOAuthCallback(request);
+      if (proxied) return proxied;
+    }
+  }
+
+  const ksRequest = toKeystaticRequest(request);
+  return method === "GET" ? handlers().GET(ksRequest) : handlers().POST(ksRequest);
+}
+
 export async function GET(request: NextRequest) {
   if (shouldServeGithubSetupWizard()) {
     if (process.env.NODE_ENV === "development") {
-      return handlers().GET(request);
+      return handlers().GET(toKeystaticRequest(request));
     }
     return missingGithubAppResponse();
   }
-  return handlers().GET(request);
+  return dispatchKeystatic(request, "GET");
 }
 
 export async function POST(request: NextRequest) {
   if (shouldServeGithubSetupWizard()) {
     if (process.env.NODE_ENV === "development") {
-      return handlers().POST(request);
+      return handlers().POST(toKeystaticRequest(request));
     }
     return missingGithubAppResponse();
   }
-  return handlers().POST(request);
+  return dispatchKeystatic(request, "POST");
 }

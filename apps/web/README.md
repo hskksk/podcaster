@@ -45,9 +45,14 @@ pnpm web:github
    - `CAPTURE_API_TOKEN`（クリップ用 Bearer。ingest / Gemini には届かない）
    - `CAPTURE_GITHUB_TOKEN` または `GITHUB_TOKEN`（Contents: write。Keystatic OAuth とは別）
 
-4. GitHub App の Callback URL に  
-   `https://<vercel-domain>/api/keystatic/github/oauth/callback` があることを確認
-5. Redeploy。`/keystatic` で GitHub ログイン（この repo への write 権限が必要）
+4. GitHub App の Callback URL には **本番ドメインだけ** を登録する:  
+   `https://<production-domain>/api/keystatic/github/oauth/callback`  
+   （Preview ごとに URL を足す必要はない — 下記プロキシを有効にする場合）
+5. **Preview でも `/keystatic` にログインしたい場合**（Auth.js の `redirectProxyUrl` と同じ考え方）:
+   - Production / Preview / Development すべてに `NEXT_PUBLIC_SITE_URL=https://<production-domain>`（末尾スラッシュなし。公開サイト用と同じ値）  
+     または `KEYSTATIC_OAUTH_PROXY_URL=https://<production-domain>/api/keystatic/github/oauth/callback`
+   - `KEYSTATIC_SECRET` は Production と Preview で **同一**（Preview だけ別 secret にしない）
+6. Redeploy。`/keystatic` で GitHub ログイン（この repo への write 権限が必要）
 
 Vercel 上では `NEXT_PUBLIC_VERCEL_ENV` があるので storage は自動的に `github` になる。`NODE_ENV` では切り替えない。
 
