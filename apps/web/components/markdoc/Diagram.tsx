@@ -4,8 +4,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { childDiagramSource } from "../../lib/markdoc-text";
 
-export function Diagram(props: { type?: string; children?: ReactNode }) {
-  const src = childDiagramSource(props.children).trim();
+export function Diagram(props: { type?: string; source?: string; children?: ReactNode }) {
+  const src = (props.source ?? childDiagramSource(props.children)).trim();
   const kind = props.type === "d2" ? "d2" : "mermaid";
   const containerRef = useRef<HTMLDivElement>(null);
   const salt = useId().replace(/:/g, "");

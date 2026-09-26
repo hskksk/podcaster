@@ -1,6 +1,7 @@
 import "server-only";
 
 import { projectRef } from "./config";
+import type { PublicDoc } from "./docs";
 
 function supabaseUrl(): string {
   if (process.env.SUPABASE_URL) return process.env.SUPABASE_URL.replace(/\/$/, "");
@@ -69,4 +70,28 @@ export function imageForDoc(
 ): string | undefined {
   const base = filename.split("/").pop() ?? filename;
   return map.get(filename) ?? map.get(base);
+}
+
+function normalizeTitle(title: string): string {
+  return title.trim().toLowerCase();
+}
+
+export function imageForPublicDoc(
+  map: Map<string, string>,
+  doc: Pick<PublicDoc, "filename" | "slug" | "dir" | "title">,
+): string | undefined {
+  const candidates = [
+    doc.filename,
+    doc.filename.split("/").pop(),
+    doc.slug,
+    doc.dir,
+    `content/docs/${doc.dir}/index.mdoc`,
+    `title:${normalizeTitle(doc.title)}`,
+  ];
+  for (const k of candidates) {
+    if (!k) continue;
+    const hit = map.get(k);
+    if (hit) return hit;
+  }
+  return undefined;
 }
