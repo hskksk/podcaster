@@ -18,6 +18,7 @@ export interface Episode {
   mem_note_id?: string;
   title: string;
   description: string;
+  image_url?: string | null;
   status:
     | "ingested"
     | "script_running"
@@ -78,4 +79,10 @@ export interface PodcastConfigMap {
   "gemini.api_root"?: string;
   "gemini.api_path"?: string;
   "download.monitor_interval_seconds"?: number;
+  "image.enabled"?: boolean;
+  "image.model"?: string;
+  "image.aspect_ratio"?: string;
+  "image.image_size"?: string;
+  "image.mime_type"?: string;
+  "image.prompt_template"?: string;
 }

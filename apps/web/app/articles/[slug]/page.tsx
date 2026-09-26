@@ -8,6 +8,7 @@ import { SiteShell } from "../../../components/SiteShell";
 import { adjacentPublicDocs } from "../../../lib/site/adjacent-docs";
 import { audioForPublicDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
+import { fetchArticleImageMap, imageForPublicDoc } from "../../../lib/site/episode-images";
 import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { EpisodePlayer } from "../../../components/EpisodePlayer";
 import { ReadingProgress } from "../../../components/ReadingProgress";
@@ -43,6 +44,8 @@ export async function generateMetadata({
   const doc = loadPublicDoc(slug);
   if (!doc) return { title: "Not found" };
   const cfg = loadSiteConfig();
+  const imageMap = await fetchArticleImageMap();
+  const episodeImage = imageForPublicDoc(imageMap, doc);
   const desc = textify(doc.source)
     .replace(/^#.*$/m, "")
     .replace(/[#*`[\]]/g, "")
@@ -54,6 +57,7 @@ export async function generateMetadata({
     title: doc.title,
     description: desc || cfg.siteDescription,
     date: doc.date,
+    imageUrl: episodeImage,
   });
 }
 

@@ -29,8 +29,14 @@ export function articleOpenGraph(props: {
   title: string;
   description: string;
   date?: string;
+  /** Episode artwork; falls back to site cover when omitted. */
+  imageUrl?: string;
 }): Metadata {
   const og = siteOpenGraphDefaults(props.cfg);
+  const imageOverride = props.imageUrl?.trim();
+  const images = imageOverride
+    ? [{ url: imageOverride, width: 1024, height: 1024, alt: props.title }]
+    : og.images;
   return {
     title: props.title,
     description: props.description,
@@ -40,12 +46,13 @@ export function articleOpenGraph(props: {
       title: props.title,
       description: props.description,
       publishedTime: props.date,
+      images,
     },
     twitter: {
       card: "summary_large_image",
       title: props.title,
       description: props.description,
-      images: ogImageUrls(og.images),
+      images: ogImageUrls(images),
     },
   };
 }

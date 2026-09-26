@@ -21,11 +21,21 @@ import {
   DEFAULT_TTS_CHUNK_MAX_CHARS,
   splitTranscriptIntoChunks,
 } from "../../../shared/tts-prompt.ts";
+import {
+  buildEpisodeImagePrompt,
+  excerptFromArticle,
+} from "../../../shared/episode-image-prompt.ts";
+import {
+  generateEpisodeImageWithGemini,
+  isEpisodeImageEnabled,
+  storageExtensionForMime,
+} from "./gemini-image.ts";
 
 type EpisodeForRss = {
   id: string;
   title: string;
   description: string;
+  image_url: string | null;
   mem_note_id: string | null;
   created_at: string;
   published_at: string | null;
@@ -103,11 +113,18 @@ function buildRssFeed(
       const af = ep.audio_files.find((a) => a.storage_path)!;
       const audioUrl = `${storageUrl}/${af.storage_path}`;
       const articleTitle = ep.articles?.title ?? "";
+      const episodeImagePath = ep.image_url?.trim();
+      const episodeImageUrl = episodeImagePath
+        ? (episodeImagePath.startsWith("http") ? episodeImagePath : `${storageUrl}/${episodeImagePath.replace(/^\//, "")}`)
+        : "";
+      const itunesImageLine = episodeImageUrl
+        ? `\n      <itunes:image href="${escapeXml(episodeImageUrl)}" />`
+        : "";
       return `    <item>
       <title>${escapeXml(ep.title)}</title>
       <description>${escapeXml(ep.description)}</description>
       <pubDate>${toRfc2822(ep.published_at || ep.created_at)}</pubDate>
-      <enclosure url="${escapeXml(audioUrl)}" length="0" type="${af.mime_type}" />
+      <enclosure url="${escapeXml(audioUrl)}" length="0" type="${af.mime_type}" />${itunesImageLine}
       <guid isPermaLink="false">${escapeXml(ep.id)}</guid>
       <podcaster:articleTitle><![CDATA[${articleTitle}]]></podcaster:articleTitle>
     </item>`;
@@ -283,6 +300,102 @@ export async function runGenerateScriptStage(opts: {
       duration_ms: Date.now() - startMs,
     });
     throw err;
+  }
+}
+
+export async function runGenerateEpisodeImageStage(opts: {
+  episodeId: string;
+  regenerate?: boolean;
+}): Promise<{ episodeId: string; skipped?: boolean; imagePath?: string }> {
+  const db = createSupabaseClient();
+  const episodeId = opts.episodeId;
+  const regenerate = opts.regenerate === true;
+  const startMs = Date.now();
+  let memNoteId: string | null = null;
+  let articleId: string | null = null;
+
+  try {
+    const cfg = await loadConfig();
+    if (!isEpisodeImageEnabled(cfg)) {
+      return { episodeId, skipped: true };
+    }
+
+    const { data: episode, error: episodeErr } = await db
+      .from("episodes")
+      .select("id, article_id, title, description, image_url, mem_note_id")
+      .eq("id", episodeId)
+      .maybeSingle();
+    if (episodeErr || !episode) throw new Error(`Episode not found: ${episodeId}`);
+    memNoteId = episode.mem_note_id ?? null;
+    articleId = episode.article_id ?? null;
+
+    if (episode.image_url?.trim() && !regenerate) {
+      return { episodeId, skipped: true, imagePath: episode.image_url };
+    }
+    if (!episode.article_id) {
+      throw new Error(`Episode ${episodeId} has no article_id`);
+    }
+
+    const { data: article, error: articleErr } = await db
+      .from("articles")
+      .select("title, content")
+      .eq("id", episode.article_id)
+      .single();
+    if (articleErr || !article) throw new Error(`Article not found: ${episode.article_id}`);
+
+    const promptTemplate = typeof cfg["image.prompt_template"] === "string"
+      ? cfg["image.prompt_template"]
+      : undefined;
+    const prompt = buildEpisodeImagePrompt({
+      title: episode.title || article.title || "Untitled",
+      description: episode.description || "",
+      articleExcerpt: excerptFromArticle(article.content),
+      template: promptTemplate,
+    });
+
+    const generated = await generateEpisodeImageWithGemini(prompt, cfg);
+    const ext = storageExtensionForMime(generated.mimeType);
+    const storagePath = `episodes/${episodeId}/cover.${ext}`;
+
+    const { error: uploadErr } = await db.storage
+      .from("podcast")
+      .upload(storagePath, generated.bytes, {
+        contentType: generated.mimeType,
+        upsert: true,
+        cacheControl: "3600",
+      });
+    if (uploadErr) throw new Error(`Episode image upload failed: ${uploadErr.message}`);
+
+    const { error: updateErr } = await db
+      .from("episodes")
+      .update({ image_url: storagePath })
+      .eq("id", episodeId);
+    if (updateErr) throw new Error(`Episode image_url update failed: ${updateErr.message}`);
+
+    await writeLog(db, {
+      queue_name: "",
+      message_id: null,
+      article_id: articleId,
+      episode_id: episodeId,
+      mem_note_id: memNoteId,
+      status: "success",
+      duration_ms: Date.now() - startMs,
+    });
+    return { episodeId, imagePath: storagePath };
+  } catch (err) {
+    console.error(`[episode-image] stage failure episode_id=${episodeId}`, err);
+    await writeLog(db, {
+      queue_name: "",
+      message_id: null,
+      ...(articleId ? { article_id: articleId } : {}),
+      episode_id: episodeId,
+      mem_note_id: memNoteId,
+      status: "failure",
+      error_message: String(err),
+      duration_ms: Date.now() - startMs,
+    });
+    // Non-fatal: podcast + web fall back to default cover when image_url is null.
+    return { episodeId, skipped: true };
   }
 }
 
@@ -867,7 +980,7 @@ export async function runUpdateRssStage(opts: {
     const cfg = await loadConfig();
     const { data: episodes, error: fetchErr } = await db
       .from("episodes")
-      .select("id, title, description, mem_note_id, created_at, published_at, audio_files(storage_path, mime_type), articles(title)")
+      .select("id, title, description, image_url, mem_note_id, created_at, published_at, audio_files(storage_path, mime_type), articles(title)")
       .in("status", ["audio_ready", "published", "rss_failed"])
       .order("created_at", { ascending: false });
     if (fetchErr) throw new Error(`Episodes fetch failed: ${fetchErr.message}`);

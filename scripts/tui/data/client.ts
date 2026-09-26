@@ -136,7 +136,7 @@ export class DataClient {
   }
 
   async requeue(
-    type: "script" | "audio" | "rss",
+    type: "script" | "audio" | "rss" | "image",
     id: string,
     options?: RequeueOptions,
   ): Promise<ClientActionResult> {
@@ -148,10 +148,15 @@ export class DataClient {
 
     const msg: Record<string, unknown> = {
       episodeId: id,
-      startFrom: type,
       trigger: "manual",
     };
-    if (options?.regenerate) msg.regenerate = true;
+    if (type === "image") {
+      msg.startFrom = "image";
+      msg.regenerate = true;
+    } else {
+      msg.startFrom = type;
+      if (options?.regenerate) msg.regenerate = true;
+    }
     const flowSlug = type === "rss" ? "craftEpisodeDownload" : "craftEpisodeSubmit";
 
     const { error } = await this.db

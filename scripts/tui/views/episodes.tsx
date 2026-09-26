@@ -165,6 +165,25 @@ export const EpisodesView: React.FC<Props> = ({
         });
         return;
       }
+      if (input === 'i') {
+        openConfirm({
+          title: 'Regenerate episode artwork',
+          message:
+            `Regenerate 1:1 cover image only (script/audio unchanged).\n` +
+            `Published feeds: run Ctrl+Y RSS afterward to refresh feed.xml.\n\n` +
+            `${ep.title}\nepisode_id: ${ep.id}`,
+          onConfirm: async () => {
+            const r = await client.requeue('image', ep.id);
+            if (!r.success) {
+              showToast(r.error ?? 'Regenerate image failed', 'error');
+              return;
+            }
+            showToast('Image regeneration queued', 'success');
+            await onRefresh();
+          }
+        });
+        return;
+      }
       if (input === 'd') {
         openConfirm({
           title: 'Download audio',
@@ -300,7 +319,7 @@ export const EpisodesView: React.FC<Props> = ({
       <Box flexGrow={1} minWidth={0} borderStyle="single" paddingX={1} flexDirection="column" borderColor={focus === 'detail' ? "cyan" : "gray"}>
         <Box borderStyle="single" justifyContent="center" flexShrink={0} borderColor={focus === 'detail' ? "cyan" : "gray"}>
           <Text bold color={focus === 'detail' ? "cyan" : "white"}>
-            DETAIL {focus === 'detail' ? '● j/k │ p play / s stop │ Ctrl+S script / A audio / Y rss / G regen-script / R regen-audio / D download' : ''}
+            DETAIL {focus === 'detail' ? '● j/k │ p play / s stop │ Ctrl+S script / A audio / Y rss / G regen-script / R regen-audio / I regen-image / D download' : ''}
           </Text>
         </Box>
         {selectedEpisode ? (

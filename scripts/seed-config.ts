@@ -71,6 +71,14 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
   download?: {
     monitor_interval_seconds?: number;
   };
+  image?: {
+    enabled?: boolean;
+    model?: string;
+    aspect_ratio?: string;
+    image_size?: string;
+    mime_type?: string;
+    prompt_template?: string;
+  };
 };
 
 // Upload cover image to Storage
@@ -125,6 +133,11 @@ const defaults: Record<string, unknown> = {
   "gemini.api_root": geminiApiRoot,
   "gemini.api_path": geminiApiPath,
   "download.monitor_interval_seconds": config.download?.monitor_interval_seconds ?? 60,
+  "image.enabled": config.image?.enabled ?? true,
+  "image.model": config.image?.model ?? "gemini-3.1-flash-image",
+  "image.aspect_ratio": config.image?.aspect_ratio ?? "1:1",
+  "image.image_size": config.image?.image_size ?? "1K",
+  "image.mime_type": config.image?.mime_type ?? "image/png",
 };
 
 if (config.generator.system_instruction) {
@@ -132,6 +145,9 @@ if (config.generator.system_instruction) {
 }
 if (config.generator.prompt_template) {
   defaults["generator.prompt_template"] = config.generator.prompt_template;
+}
+if (config.image?.prompt_template) {
+  defaults["image.prompt_template"] = config.image.prompt_template;
 }
 
 const deprecatedConfigKeys = [
