@@ -2,9 +2,9 @@ import { Calendar, Clock, ExternalLink } from "lucide-react";
 import { formatReadingTime, readingTimeMinutes } from "../lib/site/reading-time";
 
 /** Viewport-wide hero (note.com-style) from a 1:1 episode artwork source. */
-function EpisodeCoverHero(props: { src: string; title: string }) {
+export function ArticleCoverHero(props: { src: string; title: string }) {
   return (
-    <figure className="relative left-1/2 mb-8 w-screen max-w-[100vw] -translate-x-1/2">
+    <figure className="relative left-1/2 -mt-10 mb-8 w-screen max-w-[100vw] -translate-x-1/2">
       <div className="overflow-hidden bg-muted">
         <img
           className="h-[min(56vw,420px)] w-full object-cover object-center sm:h-[380px] md:h-[440px]"
@@ -24,11 +24,8 @@ export function ArticleHeader(props: {
   date?: string;
   source?: string;
   mdocSource: string;
-  /** 1:1 episode artwork from Supabase when available. */
-  coverImageUrl?: string;
 }) {
   const minutes = readingTimeMinutes(props.mdocSource);
-  const cover = props.coverImageUrl?.trim();
 
   const metaRow = props.date ? (
     <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-fg">
@@ -70,12 +67,9 @@ export function ArticleHeader(props: {
   );
 
   return (
-    <header className="mb-10">
-      {cover ? <EpisodeCoverHero src={cover} title={props.title} /> : null}
-      <div className="border-b border-border/70 pb-8">
-        {metaRow}
-        {titleBlock}
-      </div>
+    <header className="mb-10 border-b border-border/70 pb-8">
+      {metaRow}
+      {titleBlock}
     </header>
   );
 }
