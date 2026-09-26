@@ -133,6 +133,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      cookie:
+        specifier: ^1.0.2
+        version: 1.1.1
       lucide-react:
         specifier: ^1.48.0
         version: 1.48.0(react@19.2.5)
