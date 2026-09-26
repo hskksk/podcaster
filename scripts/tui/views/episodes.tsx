@@ -165,7 +165,7 @@ export const EpisodesView: React.FC<Props> = ({
         });
         return;
       }
-      if (input === 'i') {
+      if (input === 'i' || input === 'I') {
         openConfirm({
           title: 'Regenerate episode artwork',
           message:
