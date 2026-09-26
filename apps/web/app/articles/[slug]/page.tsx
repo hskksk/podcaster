@@ -19,7 +19,8 @@ import { extractToc } from "../../../lib/site/toc";
 import { textify } from "../../../../../scripts/lib/mdoc";
 
 export const dynamic = "force-static";
-export const revalidate = false;
+/** Preview: pick up episode art after async generation without a full redeploy. */
+export const revalidate = process.env.VERCEL_ENV === "preview" ? 120 : false;
 export const dynamicParams = false;
 
 type Params = { slug: string };
