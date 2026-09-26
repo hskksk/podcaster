@@ -53,7 +53,7 @@ pnpm web:github
      または `KEYSTATIC_OAUTH_PROXY_URL=https://<production-domain>/api/keystatic/github/oauth/callback`
    - `KEYSTATIC_SECRET` は Production と Preview で **同一**（Preview だけ別 secret にしない）
    - Vercel の **Preview 環境**にも `NEXT_PUBLIC_SITE_URL` と `KEYSTATIC_*` を入れる（Production のみだと Preview は Keystatic 標準 OAuth になり、Preview ホストが `redirect_uri` になって GitHub が止める）
-   - token exchange は **本番（stable）callback** 側で 1 回だけ実行し、Preview の `proxy-return` には暗号化 session だけ渡す（code の二重使用を防ぐ）
+   - 本番 callback は `code` を Preview の `proxy-return` に転送し、**token exchange は Preview 側**で 1 回だけ（`redirect_uri` は本番 URL）
 6. Redeploy。`/keystatic` で GitHub ログイン（この repo への write 権限が必要）
 
 ### GitHub が「redirect_uri is not associated…」と止めるとき

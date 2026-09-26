@@ -189,6 +189,22 @@ function requestOrigin(request: Request): string {
   return new URL(request.url).origin;
 }
 
+/** Canonical origin for OAuth state (protocol + host, lowercase). */
+export function normalizeOrigin(origin: string): string | null {
+  try {
+    const u = new URL(origin);
+    return `${u.protocol}//${u.hostname.toLowerCase()}${u.port ? `:${u.port}` : ""}`;
+  } catch {
+    return null;
+  }
+}
+
+export function originsMatch(expected: string, actual: string): boolean {
+  const a = normalizeOrigin(expected);
+  const b = normalizeOrigin(actual);
+  return a !== null && b !== null && a === b;
+}
+
 export function publicRequestOrigin(request: Request): string {
   return requestOrigin(rewriteRequestForPublicOrigin(request));
 }
@@ -225,14 +241,21 @@ export function shouldProxyGithubLogin(request: Request): boolean {
  * Keystatic builds redirect_uri from request.url; without this, OAuth breaks on serverless.
  */
 export function rewriteRequestForPublicOrigin(request: Request): Request {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  if (!forwardedHost || !forwardedProto) return request;
+  const forwardedHost =
+    request.headers.get("x-forwarded-host") ??
+    request.headers.get("x-vercel-forwarded-host") ??
+    request.headers.get("host");
+  const forwardedProto =
+    request.headers.get("x-forwarded-proto") ??
+    (forwardedHost?.includes("localhost") || forwardedHost?.startsWith("127.0.0.1")
+      ? "http"
+      : "https");
+  if (!forwardedHost) return request;
 
   const url = new URL(request.url);
-  url.hostname = forwardedHost.split(",")[0]?.trim() ?? forwardedHost;
+  const host = forwardedHost.split(",")[0]?.trim() ?? forwardedHost;
+  url.host = host;
   url.protocol = forwardedProto.includes(":") ? forwardedProto : `${forwardedProto}:`;
-  url.port = "";
   return new Request(url.toString(), request);
 }
 
@@ -262,7 +285,7 @@ export async function handleProxyGithubLogin(request: Request): Promise<Response
   const proxyCallback = oauthProxyCallbackUrl()!;
   const publicReq = rewriteRequestForPublicOrigin(request);
   const from = parseKeystaticFrom(publicReq);
-  const origin = requestOrigin(publicReq);
+  const origin = normalizeOrigin(requestOrigin(publicReq)) ?? requestOrigin(publicReq);
 
   const state = await encryptPayload({ v: 1, origin, from }, secret);
   const url = new URL("https://github.com/login/oauth/authorize");
@@ -346,7 +369,7 @@ export async function handleProxyOAuthCallback(request: Request): Promise<Respon
   const parsed = parseProxyOAuthState(await decryptPayload(stateParam, secret));
   if (!parsed) return null;
 
-  if (parsed.origin === publicRequestOrigin(request)) return null;
+  if (originsMatch(parsed.origin, publicRequestOrigin(request))) return null;
 
   const errorDescription = searchParams.get("error_description");
   if (typeof errorDescription === "string") {
@@ -358,24 +381,10 @@ export async function handleProxyOAuthCallback(request: Request): Promise<Respon
   const code = searchParams.get("code");
   if (!code) return plainErrorResponse("Missing OAuth code.", 400);
 
-  const exchanged = await exchangeGithubAuthorizationCode(code);
-  if (!exchanged.ok) {
-    return plainErrorResponse(exchanged.message, 502);
-  }
-
-  const session = await encryptPayload(
-    {
-      v: 1,
-      kind: "session",
-      origin: parsed.origin,
-      from: parsed.from,
-      token: exchanged.token,
-    } satisfies ProxyOAuthSession,
-    secret,
-  );
-
+  // Forward code to Preview (short URL). Token exchange runs on Preview with redirect_uri.
   const returnUrl = new URL(PROXY_RETURN_PATH, parsed.origin);
-  returnUrl.searchParams.set("session", session);
+  returnUrl.searchParams.set("code", code);
+  returnUrl.searchParams.set("state", stateParam);
   return redirectResponse(returnUrl.toString());
 }
 
@@ -426,7 +435,82 @@ async function applyTokenCookies(tokenData: GithubTokenData, secret: string): Pr
   return headers;
 }
 
-/** Preview: receive encrypted session from stable host and set Keystatic cookies. */
+async function resolveProxyReturnContext(
+  request: Request,
+  secret: string,
+): Promise<
+  | { ok: true; from: string; token: GithubTokenData }
+  | { ok: false; status: number; message: string }
+> {
+  const searchParams = new URL(request.url).searchParams;
+  const here = publicRequestOrigin(request);
+
+  const sessionParam = searchParams.get("session");
+  if (typeof sessionParam === "string") {
+    const raw = await decryptPayload(sessionParam, secret);
+    if (!raw) {
+      return {
+        ok: false,
+        status: 400,
+        message:
+          "Could not decrypt OAuth session (check KEYSTATIC_SECRET matches Production).\n",
+      };
+    }
+    const session = parseProxyOAuthSession(raw);
+    if (!session) {
+      return { ok: false, status: 400, message: "OAuth session payload was invalid.\n" };
+    }
+    if (!originsMatch(session.origin, here)) {
+      return {
+        ok: false,
+        status: 400,
+        message: `OAuth session origin mismatch.\nexpected: ${session.origin}\nactual:   ${here}\n`,
+      };
+    }
+    return { ok: true, from: session.from, token: session.token };
+  }
+
+  const code = searchParams.get("code");
+  const stateParam = searchParams.get("state");
+  if (typeof code !== "string" || typeof stateParam !== "string") {
+    return {
+      ok: false,
+      status: 400,
+      message:
+        "Missing OAuth parameters (need session= or code= and state=).\n" +
+        "If Production and Preview are on different commits, redeploy both from the same PR.\n",
+    };
+  }
+
+  const rawState = await decryptPayload(stateParam, secret);
+  if (!rawState) {
+    return {
+      ok: false,
+      status: 400,
+      message:
+        "Could not decrypt OAuth state (check KEYSTATIC_SECRET matches Production).\n",
+    };
+  }
+  const state = parseProxyOAuthState(rawState);
+  if (!state) {
+    return { ok: false, status: 400, message: "OAuth state payload was invalid.\n" };
+  }
+  if (!originsMatch(state.origin, here)) {
+    return {
+      ok: false,
+      status: 400,
+      message: `OAuth state origin mismatch.\nexpected: ${state.origin}\nactual:   ${here}\n`,
+    };
+  }
+
+  const exchanged = await exchangeGithubAuthorizationCode(code);
+  if (!exchanged.ok) {
+    return { ok: false, status: 502, message: exchanged.message };
+  }
+  return { ok: true, from: state.from, token: exchanged.token };
+}
+
+/** Preview: complete OAuth and set Keystatic session cookies locally. */
 export async function handleProxyOAuthReturn(request: Request): Promise<Response> {
   try {
     const secret = process.env.KEYSTATIC_SECRET?.trim();
@@ -438,19 +522,13 @@ export async function handleProxyOAuthReturn(request: Request): Promise<Response
       return plainErrorResponse(`GitHub OAuth error:\n${errorDescription}`, 400);
     }
 
-    const sessionParam = searchParams.get("session");
-    if (typeof sessionParam !== "string") {
-      return plainErrorResponse("Missing OAuth session.", 400);
+    const ctx = await resolveProxyReturnContext(request, secret);
+    if (!ctx.ok) {
+      return plainErrorResponse(ctx.message, ctx.status);
     }
 
-    const session = parseProxyOAuthSession(await decryptPayload(sessionParam, secret));
-    const here = publicRequestOrigin(request);
-    if (!session || session.origin !== here) {
-      return plainErrorResponse("Invalid OAuth session.", 400);
-    }
-
-    const headers = await applyTokenCookies(session.token, secret);
-    const fromPath = session.from === "/" ? "" : `/${session.from}`;
+    const headers = await applyTokenCookies(ctx.token, secret);
+    const fromPath = ctx.from === "/" ? "" : `/${ctx.from}`;
     return redirectResponse(`/keystatic${fromPath}`, headers);
   } catch (err) {
     console.error("proxy-return failed:", err);
