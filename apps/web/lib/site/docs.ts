@@ -5,6 +5,7 @@ import path from "node:path";
 import { getRepoRoot } from "../repo-root";
 import { parseDateFromFilename, parseSlugFromFilename } from "../../../../scripts/lib/article-slug";
 import { parseFrontmatter, parseTitleFromContent, textify } from "../../../../scripts/lib/mdoc";
+import { sanitizePublicSlug, sanitizePublicText } from "./sanitize-content";
 
 export type PublicDoc = {
   dir: string;
@@ -36,9 +37,10 @@ export function loadPublicDocs(): PublicDoc[] {
       const source = fs.readFileSync(indexPath, "utf8");
       const { attrs } = parseFrontmatter(source);
       const filename = attrs.legacyFilename || `${e.name}.md`;
-      const slug = parseSlugFromFilename(filename);
+      const slug = sanitizePublicSlug(parseSlugFromFilename(filename), e.name);
       const date = attrs.publishedAt || parseDateFromFilename(filename);
-      const title = attrs.title || parseTitleFromContent(textify(source), slug);
+      const rawTitle = attrs.title || parseTitleFromContent(textify(source), slug);
+      const title = sanitizePublicText(rawTitle);
       const doc: PublicDoc = {
         dir: e.name,
         filename,

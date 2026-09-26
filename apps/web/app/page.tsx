@@ -6,6 +6,7 @@ import { SiteShell } from "../components/SiteShell";
 import { audioForPublicDoc, fetchArticleAudioMap } from "../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../lib/site/config";
 import { loadPublicDocs } from "../lib/site/docs";
+import { articleHref } from "../lib/site/sanitize-content";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -76,7 +77,7 @@ export default async function HomePage() {
             {featured.map((a, i) => (
               <Link
                 key={a.slug}
-                href={`/articles/${encodeURIComponent(a.slug)}`}
+                href={articleHref(a.slug)}
                 className={
                   i === 0
                     ? "group flex flex-col justify-end rounded-[var(--radius-card)] border border-border bg-gradient-to-br from-muted/80 to-surface p-6 no-underline shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-card-hover)] md:col-span-2 md:min-h-[180px]"

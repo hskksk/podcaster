@@ -10,6 +10,7 @@ import {
   type ArticleFilter,
 } from "../lib/site/article-list-utils";
 import { cn } from "../lib/cn";
+import { articleHref } from "../lib/site/sanitize-content";
 import type { ArticleCard } from "./ArticleSearch";
 
 const tabs: { id: ArticleFilter; label: string }[] = [
@@ -81,7 +82,7 @@ export function HomeArticleList(props: { articles: ArticleCard[] }) {
                 {g.items.map((a) => (
                   <li key={a.slug}>
                     <Link
-                      href={`/articles/${encodeURIComponent(a.slug)}`}
+                      href={articleHref(a.slug)}
                       className="group flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 no-underline shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
                     >
                       <time className="text-xs tabular-nums text-muted-fg">{a.date}</time>

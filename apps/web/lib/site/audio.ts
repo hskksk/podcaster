@@ -40,12 +40,14 @@ function articleJoin(row: { articles: ArticleJoin | ArticleJoin[] | null }): Art
 }
 
 function decodeXml(s: string): string {
+  // Decode &amp; last to avoid double-unescaping (CodeQL js/double-escaping).
   return s
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&amp;/g, "&");
 }
 
 function tagText(block: string, tag: string): string | undefined {
@@ -73,6 +75,7 @@ async function fetchArticleAudioMapFromRss(rssUrl: string): Promise<Map<string, 
       const enc = item.match(/<enclosure[^>]+url="([^"]+)"/i);
       if (!enc?.[1]) continue;
       const audio = decodeXml(enc[1]);
+      if (!/^https?:\/\//i.test(audio)) continue;
       const articleTitle = tagText(item, "podcaster:articleTitle");
       const episodeTitle = tagText(item, "title");
       for (const t of [articleTitle, episodeTitle]) {
