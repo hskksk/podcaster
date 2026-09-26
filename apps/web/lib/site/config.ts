@@ -53,8 +53,38 @@ export function loadSiteConfig(): SiteConfig {
   };
 }
 
+let podcastSupabaseRefCache: string | undefined;
+
+/** Optional `[podcast] supabase_project_ref` in config.toml when env is unset (SSG audio/RSS). */
+function podcastSupabaseRefFromToml(): string {
+  if (podcastSupabaseRefCache !== undefined) return podcastSupabaseRefCache;
+  podcastSupabaseRefCache = "";
+  const tomlPath = path.join(getRepoRoot(), "config.toml");
+  if (!fs.existsSync(tomlPath)) return podcastSupabaseRefCache;
+  const raw = fs.readFileSync(tomlPath, "utf8");
+  let inPodcast = false;
+  for (const line of raw.split(/\r?\n/)) {
+    if (/^\[podcast\]/.test(line)) {
+      inPodcast = true;
+      continue;
+    }
+    if (/^\s*\[/.test(line)) {
+      inPodcast = false;
+      continue;
+    }
+    if (!inPodcast) continue;
+    const m = line.match(/^supabase_project_ref\s*=\s*"?([^"#]+)"?/);
+    if (m?.[1]) podcastSupabaseRefCache = m[1].trim();
+  }
+  return podcastSupabaseRefCache;
+}
+
 export function projectRef(): string {
-  return (process.env.SUPABASE_PROJECT_REF || process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF || "").trim();
+  return (
+    process.env.SUPABASE_PROJECT_REF ||
+    process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF ||
+    podcastSupabaseRefFromToml()
+  ).trim();
 }
 
 export function feedUrl(): string {

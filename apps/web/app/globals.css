@@ -64,15 +64,18 @@ body {
 }
 
 /* Shiki-injected code blocks */
-.markdoc pre.shiki {
+.markdoc pre.shiki,
+.markdoc .shiki {
   overflow-x: auto;
+  margin: 0;
   padding: 1rem 1.25rem;
   font-size: 0.875rem;
   line-height: 1.6;
   background: var(--color-muted) !important;
 }
 
-.dark .markdoc pre.shiki {
+.dark .markdoc pre.shiki,
+.dark .markdoc .shiki {
   background: #0c0a09 !important;
 }
 

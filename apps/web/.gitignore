@@ -2,3 +2,4 @@
 out/
 *.tsbuildinfo
 .vercel
+public/pagefind/
