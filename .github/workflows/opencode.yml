@@ -16,6 +16,7 @@ on:
 jobs:
   opencode:
     if: |
+      !contains(fromJSON('["cursor[bot]","github-actions[bot]","opencode-agent[bot]"]'), github.actor) &&
       (
         (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
         (contains(github.event.comment.body, '/oc') || contains(github.event.comment.body, '/opencode'))
@@ -70,7 +71,13 @@ jobs:
               return "";
             }
 
-            function hasCmd(body, cmd) {
+            function stripNonTriggerSections(body) {
+              return body
+                .replace(/<!--[\s\S]*?-->/g, "")
+                .replace(/```[\s\S]*?```/g, "");
+            }
+
+            function hasCmdInText(body, cmd) {
               let from = 0;
               while (from <= body.length) {
                 const i = body.indexOf(cmd, from);
@@ -88,20 +95,38 @@ jobs:
               return false;
             }
 
-            function detectMode(body) {
+            function hasCmdAtLineStart(body, cmd) {
+              for (const line of body.split(/\r?\n/)) {
+                const trimmed = line.trim();
+                if (trimmed === cmd || trimmed.startsWith(`${cmd} `)) {
+                  return true;
+                }
+              }
+              return false;
+            }
+
+            function detectMode(rawBody, eventName) {
+              const isComment =
+                eventName === "issue_comment" || eventName === "pull_request_review_comment";
+              const body = isComment ? rawBody : stripNonTriggerSections(rawBody);
+              const matches = (cmd) =>
+                isComment ? hasCmdInText(body, cmd) : hasCmdAtLineStart(body, cmd);
+
               for (const cmd of REPLY_CMDS) {
-                if (hasCmd(body, cmd)) return "reply";
+                if (matches(cmd)) return "reply";
               }
               for (const cmd of BUILD_CMDS) {
-                if (hasCmd(body, cmd)) return "build";
+                if (matches(cmd)) return "build";
               }
               return "";
             }
 
+            const eventName = context.eventName;
             const body = triggerBody();
-            const mode = detectMode(body);
+            const mode = detectMode(body, eventName);
             if (!mode) {
-              core.setFailed("No supported opencode slash command found in trigger text.");
+              core.info("No opencode slash command in trigger text; skipping OpenCode run.");
+              core.setOutput("mode", "skip");
               return;
             }
 
