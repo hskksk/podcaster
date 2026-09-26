@@ -1,7 +1,7 @@
 import "server-only";
 
 import { webcrypto } from "node:crypto";
-import cookie from "cookie";
+import { serialize as serializeCookie } from "cookie";
 
 /** Same path Keystatic uses for GitHub OAuth completion. */
 export const KEYSTATIC_GITHUB_OAUTH_CALLBACK_PATH = "/api/keystatic/github/oauth/callback";
@@ -409,7 +409,7 @@ async function applyTokenCookies(tokenData: GithubTokenData, secret: string): Pr
   const headers = new Headers();
   headers.append(
     "Set-Cookie",
-    cookie.serialize("keystatic-gh-access-token", tokenData.access_token, {
+    serializeCookie("keystatic-gh-access-token", tokenData.access_token, {
       sameSite: "lax",
       secure,
       maxAge: tokenData.expires_in,
@@ -419,7 +419,7 @@ async function applyTokenCookies(tokenData: GithubTokenData, secret: string): Pr
   );
   headers.append(
     "Set-Cookie",
-    cookie.serialize(
+    serializeCookie(
       "keystatic-gh-refresh-token",
       await encryptValue(tokenData.refresh_token, secret),
       {
