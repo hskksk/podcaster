@@ -58,20 +58,26 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   const rss = feedUrl();
 
   return (
-    <div className="public-site">
-      <SiteShell siteTitle={cfg.siteTitle} feedUrl={rss} articleCount={docs.length}>
-        <p className="back-link">
-          <Link href="/">← 記事一覧</Link>
-        </p>
-        {doc.date ? <p className="article-meta">{doc.date}</p> : null}
-        {audioUrl ? (
-          <div className="podcast-player">
-            <p>🎧 このエピソードを聴く</p>
-            <audio controls preload="metadata" src={audioUrl} />
-          </div>
-        ) : null}
-        <article className="markdoc">{body}</article>
-      </SiteShell>
-    </div>
+    <SiteShell
+      siteTitle={cfg.siteTitle}
+      feedUrl={rss}
+      articleCount={docs.length}
+      variant="public"
+      width="article"
+    >
+      <p className="mb-8 text-sm">
+        <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
+          ← 記事一覧
+        </Link>
+      </p>
+      {doc.date ? <p className="mb-2 text-sm text-muted-fg">{doc.date}</p> : null}
+      {audioUrl ? (
+        <div className="my-8 rounded-xl border border-amber-200/80 bg-amber-50/80 p-4 dark:border-amber-900/50 dark:bg-amber-950/25">
+          <p className="mb-2 text-sm font-semibold text-accent">このエピソードを聴く</p>
+          <audio controls preload="metadata" src={audioUrl} className="w-full" />
+        </div>
+      ) : null}
+      <article className="markdoc">{body}</article>
+    </SiteShell>
   );
 }

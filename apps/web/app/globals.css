@@ -1,373 +1,144 @@
-html, body { margin: 0; }
-body { background: #f7f8fc; }
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
-/* Ported from archive/web/template.html (GitHub Pages). */
-    *, *::before, *::after { box-sizing: border-box; }
+@custom-variant dark (&:where(.dark, .dark *));
 
-    .public-site {
-      font-family: "Noto Sans JP", sans-serif;
-      font-size: 16px;
-      line-height: 1.8;
-      color: #1a1a1a;
-      background: #f7f8fc;
-      margin: 0;
-      padding: 0 16px;
-    }
+@theme {
+  --font-sans: "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Noto Serif JP", ui-serif, Georgia, serif;
 
-    /* ── Header ── */
-    .site-header {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px 0 16px;
-      border-bottom: 1px solid #e0e0e0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .site-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: #1a1a1a;
-      text-decoration: none;
-    }
-    .rss-link {
-      font-size: 0.85rem;
-      color: #e07b00;
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .rss-link:hover { text-decoration: underline; }
-    .site-nav {
-      font-size: 0.85rem;
-      display: flex;
-      gap: 16px;
-    }
-    .site-nav a {
-      color: #1a1a1a;
-      text-decoration: none;
-    }
-    .site-nav a:hover { text-decoration: underline; }
+  --color-bg: #fafaf9;
+  --color-surface: #ffffff;
+  --color-fg: #1c1917;
+  --color-muted: #f5f5f4;
+  --color-muted-fg: #78716c;
+  --color-border: #e7e5e4;
+  --color-accent: #b45309;
+  --color-accent-fg: #ffffff;
+  --color-link: #44403c;
 
-    /* ── Hero section ── */
-    .hero {
-      max-width: 800px;
-      margin: 32px auto 0;
-      padding: 0 0 32px;
-      border-bottom: 1px solid #e0e0e0;
-      display: flex;
-      align-items: center;
-      gap: 28px;
-      flex-wrap: wrap;
-    }
-    .hero-cover {
-      width: 120px;
-      height: 120px;
-      border-radius: 16px;
-      object-fit: cover;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-      flex-shrink: 0;
-    }
-    .hero-body { flex: 1; min-width: 200px; }
-    .hero-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      margin: 0 0 8px;
-      line-height: 1.4;
-    }
-    .hero-desc {
-      font-size: 0.88rem;
-      color: #555;
-      margin: 0 0 16px;
-      line-height: 1.6;
-    }
-    .hero-subscribe {
-      display: inline-block;
-      background: #e07b00;
-      color: #fff;
-      padding: 8px 18px;
-      border-radius: 6px;
-      font-size: 0.88rem;
-      text-decoration: none;
-      font-weight: 600;
-      transition: background 0.15s;
-    }
-    .hero-subscribe:hover { background: #c96900; }
+  --shadow-card: 0 1px 2px rgb(28 25 23 / 0.04), 0 4px 16px rgb(28 25 23 / 0.06);
+  --shadow-card-hover: 0 4px 24px rgb(28 25 23 / 0.1);
 
-    /* ── Main content ── */
-    main {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 32px 0 48px;
-    }
+  --radius-card: 0.75rem;
+}
 
-    /* ── Section title ── */
-    .section-title {
-      font-size: 0.85rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #888;
-      margin: 0 0 16px;
-    }
+.dark {
+  --color-bg: #0c0a09;
+  --color-surface: #1c1917;
+  --color-fg: #fafaf9;
+  --color-muted: #292524;
+  --color-muted-fg: #a8a29e;
+  --color-border: #44403c;
+  --color-accent: #f59e0b;
+  --color-accent-fg: #1c1917;
+  --color-link: #d6d3d1;
 
-    /* ── Featured section ── */
-    .featured-section { margin-bottom: 40px; }
-    .featured-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 12px;
-    }
-    .featured-card {
-      background: linear-gradient(135deg, #fff8f0 0%, #fffcf8 100%);
-      border: 1px solid #f0d8b0;
-      border-radius: 10px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      transition: box-shadow 0.15s, transform 0.15s;
-    }
-    .featured-card:hover {
-      box-shadow: 0 4px 16px rgba(224,123,0,0.15);
-      transform: translateY(-2px);
-    }
-    .featured-card .card-date { font-size: 0.75rem; color: #b07000; }
-    .featured-card .card-title { color: #b85c00; }
-    .featured-card .card-audio { color: #e07b00; }
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.2), 0 4px 16px rgb(0 0 0 / 0.35);
+  --shadow-card-hover: 0 8px 32px rgb(0 0 0 / 0.45);
+}
 
-    /* ── Search box ── */
-    .search-box { margin-bottom: 20px; }
-    .search-box input {
-      width: 100%;
-      padding: 10px 14px;
-      font-size: 0.9rem;
-      border: 1px solid #d0d0d0;
-      border-radius: 8px;
-      font-family: inherit;
-      background: #fff;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .search-box input:focus {
-      outline: none;
-      border-color: #1a5fa8;
-      box-shadow: 0 0 0 3px rgba(26,95,168,0.12);
-    }
-    .no-results {
-      color: #888;
-      padding: 16px 0;
-      font-size: 0.9rem;
-      display: none;
-    }
+html {
+  scroll-behavior: smooth;
+}
 
-    /* ── Article card grid ── */
-    .article-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 16px;
-      margin-top: 8px;
-    }
-    .article-card {
-      background: #fff;
-      border: 1px solid #e8e8e8;
-      border-radius: 10px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      transition: box-shadow 0.15s, transform 0.15s;
-    }
-    .article-card:hover {
-      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-      transform: translateY(-2px);
-    }
-    .card-date {
-      font-size: 0.76rem;
-      color: #999;
-      font-variant-numeric: tabular-nums;
-    }
-    .card-title {
-      font-size: 0.93rem;
-      color: #1a5fa8;
-      text-decoration: none;
-      font-weight: 600;
-      line-height: 1.45;
-      flex: 1;
-    }
-    .card-title:hover { text-decoration: underline; }
-    .card-audio {
-      font-size: 0.78rem;
-      color: #e07b00;
-      text-decoration: none;
-      margin-top: auto;
-    }
-    .card-audio:hover { text-decoration: underline; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
 
-    /* ── Article page ── */
-    .back-link { margin-bottom: 24px; font-size: 0.9rem; }
-    .article-meta { color: #888; font-size: 0.88rem; margin-bottom: 8px; }
+/* Markdoc article body */
+.markdoc {
+  @apply prose prose-stone max-w-none dark:prose-invert;
+  @apply prose-headings:font-serif prose-headings:font-semibold prose-headings:tracking-tight;
+  @apply prose-a:text-link prose-a:font-medium prose-a:no-underline hover:prose-a:underline;
+  @apply prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:before:content-none prose-code:after:content-none;
+  @apply prose-pre:rounded-xl prose-pre:border prose-pre:border-border prose-pre:bg-muted;
+}
 
-    .podcast-player {
-      background: #fff8f0;
-      border: 1px solid #f0d8b0;
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin: 24px 0 32px;
-    }
-    .podcast-player p {
-      margin: 0 0 8px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #b85c00;
-    }
-    .podcast-player audio { width: 100%; }
+.markdoc pre code {
+  background: transparent;
+  padding: 0;
+}
 
-    /* ── Typography ── */
-    h1 { font-size: 1.6rem; line-height: 1.4; margin-bottom: 4px; }
-    h2 { font-size: 1.25rem; margin-top: 2em; }
-    h3 { font-size: 1.05rem; margin-top: 1.6em; }
-    a { color: #1a5fa8; }
-    code {
-      font-family: "Menlo", "Consolas", monospace;
-      font-size: 0.85em;
-      background: #f0f0f0;
-      padding: 2px 5px;
-      border-radius: 3px;
-    }
-    pre {
-      background: #f4f4f4;
-      padding: 16px;
-      border-radius: 6px;
-      overflow-x: auto;
-    }
-    pre code { background: none; padding: 0; }
-    /* Mermaid renders with the light "neutral" theme, so keep its canvas light
-       in both color schemes and let the SVG scroll on narrow screens. */
-    pre.mermaid {
-      background: #ffffff;
-      border: 1px solid #e0e0e0;
-      text-align: center;
-      line-height: normal;
-    }
-    pre.mermaid svg { max-width: 100%; height: auto; }
-    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-    th, td { border: 1px solid #d0d0d0; padding: 8px 12px; text-align: left; }
-    th { background: #f0f0f0; font-weight: 600; }
-    blockquote {
-      border-left: 4px solid #d0d0d0;
-      margin: 0;
-      padding-left: 16px;
-      color: #555;
-    }
-    .math-display { overflow-x: auto; margin: 1.2em 0; }
-    .callout {
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin: 1.2em 0;
-    }
-    .callout-note { background: #eef6ff; border: 1px solid #c5ddf5; }
-    .callout-warning { background: #fff8e8; border: 1px solid #f0d8b0; }
-    .callout-error { background: #fff1f0; border: 1px solid #f0c0b8; }
+/* Shiki-injected code blocks */
+.markdoc pre.shiki {
+  overflow-x: auto;
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  background: var(--color-muted) !important;
+}
 
-    .diagram-figure {
-      margin: 1.6em 0;
-      padding: 0;
-    }
-    .diagram {
-      display: flex;
-      justify-content: center;
-      overflow-x: auto;
-      min-height: 2rem;
-    }
-    .diagram svg {
-      max-width: 100%;
-      height: auto;
-    }
-    .diagram-error {
-      margin: 8px 0 0;
-      font-size: 0.85rem;
-      color: #b42318;
-    }
-    .diagram-source {
-      margin-top: 8px;
-      font-size: 0.8rem;
-    }
+.dark .markdoc pre.shiki {
+  background: #0c0a09 !important;
+}
 
-    /* ── Footer ── */
-    .site-footer {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px 0 40px;
-      border-top: 1px solid #e0e0e0;
-      color: #999;
-      font-size: 0.8rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .site-footer a { color: #999; text-decoration: none; }
-    .site-footer a:hover { text-decoration: underline; }
+.markdoc pre.mermaid {
+  @apply border border-border bg-surface text-center;
+  line-height: normal;
+}
 
-    /* ── Responsive ── */
-    @media (max-width: 600px) {
-      .hero { gap: 16px; }
-      .hero-cover { width: 88px; height: 88px; }
-    }
+.markdoc pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
 
-    /* ── Dark mode ── */
-    @media (prefers-color-scheme: dark) {
-      .public-site { background: #111827; color: #e5e7eb; }
-      .site-title { color: #e5e7eb; }
-      .site-header { border-color: #374151; }
-      .hero { border-color: #374151; }
-      .hero-cover { box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
-      .hero-desc { color: #9ca3af; }
-      .hero-subscribe { background: #d97706; }
-      .hero-subscribe:hover { background: #b45309; }
+.markdoc .math-display {
+  overflow-x: auto;
+  margin: 1.25em 0;
+}
 
-      .section-title { color: #6b7280; }
+.markdoc table {
+  @apply w-full text-sm;
+}
 
-      .featured-card {
-        background: linear-gradient(135deg, #1c1408 0%, #1f2937 100%);
-        border-color: #4a3520;
-      }
-      .featured-card:hover { box-shadow: 0 4px 16px rgba(217,119,6,0.2); }
-      .featured-card .card-date { color: #d97706; }
-      .featured-card .card-title { color: #fbbf24; }
-      .featured-card .card-audio { color: #fbbf24; }
+.markdoc th,
+.markdoc td {
+  @apply border border-border px-3 py-2;
+}
 
-      .search-box input { background: #1f2937; border-color: #374151; color: #e5e7eb; }
-      .search-box input:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(147,197,253,0.12); }
-      .no-results { color: #6b7280; }
+.markdoc th {
+  @apply bg-muted font-semibold;
+}
 
-      .article-card { background: #1f2937; border-color: #374151; }
-      .article-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
-      .card-date { color: #6b7280; }
-      .card-title { color: #93c5fd; }
-      .card-audio { color: #fbbf24; }
+/* Callouts (Markdoc component) */
+.callout {
+  @apply my-6 rounded-xl border px-4 py-3 text-sm leading-relaxed;
+}
 
-      .podcast-player { background: #1c1408; border-color: #4a3520; }
-      .podcast-player p { color: #fbbf24; }
+.callout-note {
+  @apply border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100;
+}
 
-      h1, h2, h3 { color: #f3f4f6; }
-      a { color: #93c5fd; }
-      code { background: #374151; color: #e5e7eb; }
-      pre { background: #1f2937; }
-      pre.mermaid { background: #ffffff; border-color: #4b5563; }
-      th { background: #374151; }
-      th, td { border-color: #4b5563; }
-      blockquote { border-color: #4b5563; color: #9ca3af; }
+.callout-warning {
+  @apply border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/80 dark:bg-amber-950/30 dark:text-amber-100;
+}
 
-      .diagram-error { color: #fca5a5; }
+.callout-error {
+  @apply border-red-200 bg-red-50 text-red-950 dark:border-red-900/80 dark:bg-red-950/30 dark:text-red-100;
+}
 
-      .article-meta { color: #6b7280; }
-      .back-link a { color: #93c5fd; }
+.diagram-figure {
+  @apply my-8;
+}
 
-      .site-footer { border-color: #374151; color: #6b7280; }
-      .site-footer a { color: #6b7280; }
-    }
+.diagram {
+  @apply flex justify-center overflow-x-auto;
+  min-height: 2rem;
+}
+
+.diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-error {
+  @apply mt-2 text-sm text-red-600 dark:text-red-400;
+}
+
+.diagram-source {
+  @apply mt-2 text-xs text-muted-fg;
+}

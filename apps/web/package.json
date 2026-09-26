@@ -15,12 +15,17 @@
     "@markdoc/markdoc": "^0.5.9",
     "@markdoc/next.js": "^0.5.0",
     "@octokit/rest": "^22.0.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/typography": "^0.5.20",
     "@terrastruct/d2": "0.1.33",
     "@vercel/analytics": "^2.0.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.48.0",
     "mermaid": "11",
     "next": "15.1.11",
     "react": "19.2.5",
-    "react-dom": "19.2.5"
+    "react-dom": "19.2.5",
+    "tailwindcss": "^4.3.3"
   },
   "engines": {
     "node": "22.x"
@@ -29,6 +34,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.28",
     "typescript": "^5.7.0"
   }
 }
