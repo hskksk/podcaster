@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ArticleSearch } from "../../components/ArticleSearch";
 import { SiteShell } from "../../components/SiteShell";
 import { feedUrl, loadSiteConfig } from "../../lib/site/config";
@@ -26,6 +27,9 @@ export default async function WebClipsPage() {
   return (
     <div className="public-site">
       <SiteShell siteTitle={cfg.siteTitle} feedUrl={rss} articleCount={clips.length}>
+        <p className="back-link">
+          <Link href="/">← メインサイト</Link>
+        </p>
         <p className="section-title">Web Clips ({clips.length}件)</p>
         <ArticleSearch
           articles={cards}
