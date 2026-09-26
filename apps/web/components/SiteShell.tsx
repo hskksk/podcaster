@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Lock, Rss, Search } from "lucide-react";
+import { BookOpen, Lock, Rss, Search, Settings2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn";
 import { ThemeToggle } from "./ThemeToggle";
@@ -53,6 +53,13 @@ export function SiteHeader(props: {
           >
             <Lock className="size-4 shrink-0 opacity-70" strokeWidth={1.75} />
             Web Clips
+          </Link>
+          <Link
+            href="/keystatic"
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-fg no-underline transition-colors hover:bg-muted/80 hover:text-fg"
+          >
+            <Settings2 className="size-4 shrink-0 opacity-70" strokeWidth={1.75} />
+            <span className="hidden sm:inline">管理</span>
           </Link>
           {props.feedUrl ? (
             <a
