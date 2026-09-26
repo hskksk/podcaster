@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { githubRepo } from "./lib/storage";
 
 const GH_ACCESS_TOKEN_COOKIE = "keystatic-gh-access-token";
+const WEB_CLIPS_RETURN_COOKIE = "web-clips-return-to";
 
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
@@ -10,7 +11,14 @@ export async function middleware(req: NextRequest) {
     return webClipsGate(req);
   }
 
-  return keystaticBasicAuth(req);
+  const response = keystaticBasicAuth(req);
+  if (response.status !== 200) return response;
+
+  if (pathname === "/keystatic" || pathname.startsWith("/keystatic/")) {
+    return (await returnToRequestedWebClips(req)) ?? response;
+  }
+
+  return response;
 }
 
 /**
@@ -31,14 +39,50 @@ async function webClipsGate(req: NextRequest): Promise<NextResponse> {
   if (!hasGithubAppCreds) return NextResponse.next();
 
   const token = req.cookies.get(GH_ACCESS_TOKEN_COOKIE)?.value;
-  if (!token) return NextResponse.redirect(new URL("/keystatic", req.url));
-
   const owner = githubRepo.split("/")[0];
-  if (!(await isRepoOwner(token, owner))) {
-    return NextResponse.redirect(new URL("/keystatic", req.url));
+  if (token && (await isRepoOwner(token, owner))) {
+    const response = NextResponse.next();
+    response.cookies.delete(WEB_CLIPS_RETURN_COOKIE);
+    return response;
   }
 
-  return NextResponse.next();
+  const response = NextResponse.redirect(new URL("/keystatic", req.url));
+  // Return to the requested clip after the Keystatic OAuth callback.
+  response.cookies.set(WEB_CLIPS_RETURN_COOKIE, req.nextUrl.pathname + req.nextUrl.search, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 10 * 60,
+  });
+  return response;
+}
+
+async function returnToRequestedWebClips(req: NextRequest): Promise<NextResponse | null> {
+  const returnTo = req.cookies.get(WEB_CLIPS_RETURN_COOKIE)?.value;
+  const token = req.cookies.get(GH_ACCESS_TOKEN_COOKIE)?.value;
+  if (!returnTo || !token) return null;
+
+  let target: URL;
+  try {
+    target = new URL(returnTo, req.url);
+  } catch {
+    return null;
+  }
+
+  if (
+    target.origin !== req.nextUrl.origin ||
+    (target.pathname !== "/web-clips" && !target.pathname.startsWith("/web-clips/"))
+  ) {
+    return null;
+  }
+
+  const owner = githubRepo.split("/")[0];
+  if (!(await isRepoOwner(token, owner))) return null;
+
+  const response = NextResponse.redirect(target);
+  response.cookies.delete(WEB_CLIPS_RETURN_COOKIE);
+  return response;
 }
 
 async function isRepoOwner(token: string, owner: string): Promise<boolean> {

@@ -19,6 +19,10 @@ const repoRoot = fs.existsSync(path.join(repoRootCandidate, "pnpm-workspace.yaml
 const nextConfig: NextConfig = {
   transpilePackages: ["@keystatic/core", "@keystatic/next"],
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdoc"],
+  webpack: (config) => {
+    config.experiments = { ...config.experiments, asyncWebAssembly: true };
+    return config;
+  },
   async redirects() {
     return [
       {

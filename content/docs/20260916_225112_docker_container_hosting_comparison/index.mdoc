@@ -1,8 +1,9 @@
 ---
 title: "Dockerコンテナを安くホスティングするサービス比較（PaaS・VPS・セルフホスト）"
 publishedAt: 2026-09-16
-podcast: none
-legacyFilename: "20260916_225112_docker_container_hosting_comparison.md"
+podcast: published
+legacyFilename: 20260916_225112_docker_container_hosting_comparison.md
+contentSha: 8e45f0d1b459d74f8a10f3cca7d5a3b591ca0aa46150878688496a58687b18b5
 ---
 # Dockerコンテナを安くホスティングするサービス比較（PaaS・VPS・セルフホスト）
 
@@ -34,20 +35,40 @@ AWS Fargate やマネージドKubernetesは便利だが、**常時1コンテナ�
 
 ### ホスティング方式の4分類
 
-| 分類 | 代表 | あなたが担うこと | 典型コスト感 |
-| --- | --- | --- | --- |
-| マネージドPaaS | Railway, Render, Fly.io | イメージ/Repo、環境変数、スケール設定 | 月 $5〜40（小規模常時） |
-| サーバーレスコンテナ | Cloud Run, Scaleway SC | コンテナ定義、同時実行・最小インスタンス | 低トラフィックは安い、常時はVPSより高いことも |
-| VPS + オーケストレーション補助 | Kamal, Coolify, Dokku | OS更新、Docker、バックアップ、監視 | VPS代 + 自分の工数 |
-| 素のVPS + Compose | Hetzner, OVH, DO Droplet | 上記すべて + リバースプロキシ/SSL | 最安のインフラ代、工数最大 |
+{% table %}
+- 分類
+- 代表
+- あなたが担うこと
+- 典型コスト感
+---
+- マネージドPaaS
+- Railway, Render, Fly.io
+- イメージ/Repo、環境変数、スケール設定
+- 月 $5〜40（小規模常時）
+---
+- サーバーレスコンテナ
+- Cloud Run, Scaleway SC
+- コンテナ定義、同時実行・最小インスタンス
+- 低トラフィックは安い、常時はVPSより高いことも
+---
+- VPS + オーケストレーション補助
+- Kamal, Coolify, Dokku
+- OS更新、Docker、バックアップ、監視
+- VPS代 + 自分の工数
+---
+- 素のVPS + Compose
+- Hetzner, OVH, DO Droplet
+- 上記すべて + リバースプロキシ/SSL
+- 最安のインフラ代、工数最大
+{% /table %}
 
 ### 課金の「落とし穴」
 
 1. **Egress（下り転送）**: Fly.io は NA/EU で $0.02/GB、APAC で $0.04/GB、インド/アフリカで $0.12/GB と地域差が大きい。Render はワークスペース帯域超過で $0.15/GB。Railway は $0.05/GB 程度。
-2. **常時稼働 vs スリープ**: Render 無料枠は約15分アイドルでスピンダウン。Koyeb 無料インスタンスは1時間無通信で scale-to-zero。
-3. **PostgreSQL**: Fly.io のマネージド Postgres（MPG）は最安でも **約 $38/月** と高い。自前 Postgres コンテナは **約 $3.5/月** 相当の計算資源だが **バックアップ・フェイルオーバーは自己責任**。
-4. **IPv4**: Fly.io は専用IPv4 **$2/月**。Cloudflare Tunnel や IPv6-only VPS では回避可能。
-5. **PaaSの「プラン料」**: Koyeb は Pro **$29/月** がデフォルトになりがちで、無料 compute だけでは足りない（FAQ上、Starter へダウングレードが必要）。
+1. **常時稼働 vs スリープ**: Render 無料枠は約15分アイドルでスピンダウン。Koyeb 無料インスタンスは1時間無通信で scale-to-zero。
+1. **PostgreSQL**: Fly.io のマネージド Postgres（MPG）は最安でも **約 $38/月** と高い。自前 Postgres コンテナは **約 $3.5/月** 相当の計算資源だが **バックアップ・フェイルオーバーは自己責任**。
+1. **IPv4**: Fly.io は専用IPv4 **$2/月**。Cloudflare Tunnel や IPv6-only VPS では回避可能。
+1. **PaaSの「プラン料」**: Koyeb は Pro **$29/月** がデフォルトになりがちで、無料 compute だけでは足りない（FAQ上、Starter へダウングレードが必要）。
 
 ---
 
@@ -77,21 +98,61 @@ AWS Fargate やマネージドKubernetesは便利だが、**常時1コンテナ�
 
 ### シナリオA: 個人ブログ + 小さなAPI（常時稼働、DBはSQLite or 外部Neon）
 
-| 候補 | 月額目安 | メリット | デメリット |
-| --- | --- | --- | --- |
-| Hetzner CX23 + Compose | €3.49（≈600円前後） | 4GB RAM、EU 20TB転送込み | EUレイテンシ、自分でOS管理 |
-| Fly.io 512MB Machine | ~$3.3 | デプロイ簡単、HTTPS | 東京リージョンは転送単価やや高め |
-| Railway Hobby | ~$6〜10 | Git連携が速い | 従量で上限読みにくい |
-| Oracle Always Free A1 | $0 | 12GBまでARM | 容量不足・ARMビルド・開設難 |
+{% table %}
+- 候補
+- 月額目安
+- メリット
+- デメリット
+---
+- Hetzner CX23 + Compose
+- €3.49（≈600円前後）
+- 4GB RAM、EU 20TB転送込み
+- EUレイテンシ、自分でOS管理
+---
+- Fly.io 512MB Machine
+- ~$3.3
+- デプロイ簡単、HTTPS
+- 東京リージョンは転送単価やや高め
+---
+- Railway Hobby
+- ~$6〜10
+- Git連携が速い
+- 従量で上限読みにくい
+---
+- Oracle Always Free A1
+- $0
+- 12GBまでARM
+- 容量不足・ARMビルド・開設難
+{% /table %}
 
 ### シナリオB: 日本ユーザー向け SaaS（Web + Postgres、常時）
 
-| 候補 | 月額目安 | メリット | デメリット |
-| --- | --- | --- | --- |
-| ConoHa VPS 2GB（36ヶ月） | ¥698 | Dockerテンプレ、国内DC | 2GBは複数コンテナでタイト |
-| さくら VPS 2G（石狩年払い） | ¥1,594/月換算 | SSD 100GB、CPU多め | 海外展開弱い |
-| Vultr 東京 2GB | $12 | 海外VPSの日本DC | サポート英語 |
-| Render Web $7 + Postgres $7 | ~$14+ | マネージドDB | 帯域超過注意 |
+{% table %}
+- 候補
+- 月額目安
+- メリット
+- デメリット
+---
+- ConoHa VPS 2GB（36ヶ月）
+- ¥698
+- Dockerテンプレ、国内DC
+- 2GBは複数コンテナでタイト
+---
+- さくら VPS 2G（石狩年払い）
+- ¥1,594/月換算
+- SSD 100GB、CPU多め
+- 海外展開弱い
+---
+- Vultr 東京 2GB
+- $12
+- 海外VPSの日本DC
+- サポート英語
+---
+- Render Web $7 + Postgres $7
+- ~$14+
+- マネージドDB
+- 帯域超過注意
+{% /table %}
 
 ### シナリオC: 複数マイクロサービス（3コンテナ、開発者1人）
 
@@ -115,13 +176,13 @@ AWS Fargate やマネージドKubernetesは便利だが、**常時1コンテナ�
 
 - **強み**: 秒課金VM、多リージョン、低 egress（NA/EU）、TCP/UDP、ボリューム。
 - **弱み**: マネージドDB高い、2024年以降新規無料枠なし、学習曲線（flyctl）。
-- **目安**: shared-cpu-1x 256MB 常時 **~$2/月**、512MB **~$3.3/月**、1GB **~$5.9/月**。
+- **目安**: shared-cpu-1x 256MB 常時 **\~$2/月**、512MB **\~$3.3/月**、1GB **\~$5.9/月**。
 
 #### Railway
 
 - **強み**: DX、モノレポ、DB/Redis 同梱しやすい。
 - **弱み**: Hobby $5 クレジットは常時512MBを30日回し切れないことが多い（**実質 $10〜20/月** 想定が安全）。
-- **目安**: 512MB 常時 **~$6〜9/月**。
+- **目安**: 512MB 常時 **\~$6〜9/月**。
 
 #### Render
 
@@ -131,7 +192,7 @@ AWS Fargate やマネージドKubernetesは便利だが、**常時1コンテナ�
 
 #### Koyeb
 
-- **強み**: 無料 Web 1サービス（512MB/0.1 vCPU、FR or DC）、Eco インスタンス **~$1.61/月** から。
+- **強み**: 無料 Web 1サービス（512MB/0.1 vCPU、FR or DC）、Eco インスタンス **\~$1.61/月** から。
 - **弱み**: 無料は1時間アイドルでゼロスケール、Worker不可、Pro $29 が初期選択されやすい。
 - **注意**: Mistral 買収後も FAQ 上無料枠は存続（2026年時点）だが pricing ページは有料中心。
 
@@ -197,18 +258,62 @@ AWS Fargate やマネージドKubernetesは便利だが、**常時1コンテナ�
 
 ※税・為替除く、2026年9月調査の概算。実請求はトラフィック・ストレージで変動。
 
-| ランク | 構成 | 月額概算 | 運用工数 |
-| --- | --- | --- | --- |
-| 1 | Oracle Always Free A1（自前Docker） | $0 | 高（可用性・開設） |
-| 2 | Hetzner CX23 + Compose | €3.5 | 中〜高 |
-| 3 | OVH VPS-1 Docker | ~€4.5 inc VAT | 中〜高 |
-| 4 | Fly.io 512MB + 自前DBコンテナ | ~$8〜11 | 中 |
-| 5 | ConoHa 1GB Docker（長期契約） | ¥468 | 中 |
-| 6 | Railway / Render 小規模PaaS | $6〜15 | 低 |
-| 7 | Vultr 2GB 東京 + Compose | $12 | 中 |
-| 8 | さくら 2GB + Compose | ¥1,594〜1,738 | 中 |
-| 9 | Fly.io + Managed Postgres | $42+ | 低〜中 |
-| 10 | Cloud Run 常時相当 | $50+ | 低（GCP知識） |
+{% table %}
+- ランク
+- 構成
+- 月額概算
+- 運用工数
+---
+- 1
+- Oracle Always Free A1（自前Docker）
+- $0
+- 高（可用性・開設）
+---
+- 2
+- Hetzner CX23 + Compose
+- €3.5
+- 中〜高
+---
+- 3
+- OVH VPS-1 Docker
+- ~€4.5 inc VAT
+- 中〜高
+---
+- 4
+- Fly.io 512MB + 自前DBコンテナ
+- ~$8〜11
+- 中
+---
+- 5
+- ConoHa 1GB Docker（長期契約）
+- ¥468
+- 中
+---
+- 6
+- Railway / Render 小規模PaaS
+- $6〜15
+- 低
+---
+- 7
+- Vultr 2GB 東京 + Compose
+- $12
+- 中
+---
+- 8
+- さくら 2GB + Compose
+- ¥1,594〜1,738
+- 中
+---
+- 9
+- Fly.io + Managed Postgres
+- $42+
+- 低〜中
+---
+- 10
+- Cloud Run 常時相当
+- $50+
+- 低（GCP知識）
+{% /table %}
 
 ---
 
@@ -246,11 +351,11 @@ AWS Fargate やマネージドKubernetesは便利だが、**常時1コンテナ�
 ## 最新動向・未解決問題
 
 1. **Oracle Always Free の上限厳格化**（2026年8月）：2 OCPU / 12GB 超過インスタンスは削除対象。既存ユーザーは要リサイズ。
-2. **Fly.io Managed Postgres** の登場で「DBもFlyに」は高額路線と安価DIY路線が二極化。
-3. **Koyeb × Mistral** 買収：無料枠の将来改定リスク（現時点 FAQ では維持）。
-4. **Railway 無料プラン再登場**（$1/月クレジット等）— 常時稼働には依然不足。
-5. **IPv4 枯渇と追加課金**：各社で専用IP $2〜5/月。Cloudflare Tunnel / Tailscale Funnel で回避する運用が増加。
-6. **ARM VPS（Ampere）** のコスパ — Oracle、Hetzner CAX、Apple Silicon 開発者のクロスビルド `$ docker build --platform linux/amd64` 問題。
+1. **Fly.io Managed Postgres** の登場で「DBもFlyに」は高額路線と安価DIY路線が二極化。
+1. **Koyeb × Mistral** 買収：無料枠の将来改定リスク（現時点 FAQ では維持）。
+1. **Railway 無料プラン再登場**（$1/月クレジット等）— 常時稼働には依然不足。
+1. **IPv4 枯渇と追加課金**：各社で専用IP $2〜5/月。Cloudflare Tunnel / Tailscale Funnel で回避する運用が増加。
+1. **ARM VPS（Ampere）** のコスパ — Oracle、Hetzner CAX、Apple Silicon 開発者のクロスビルド `$ docker build --platform linux/amd64` 問題。
 
 ---
 
@@ -266,10 +371,10 @@ AWS Fargate やマネージドKubernetesは便利だが、**常時1コンテナ�
 ## 推奨まとめ（「安く済ませたい」読者向け）
 
 1. **とにかく金をかけない**: Oracle Always Free（成功すれば最強）→ 失敗したら **Hetzner CX23（€3.49）** または **OVH VPS-1**。
-2. **日本・日本語・請求書**: **ConoHa 1GB（¥468/月、36ヶ月）** で Docker テンプレ。メモリに余裕を持たせるなら **2GB ¥698**。
-3. **運用時間を買う（PaaS）**: 常時小さめなら **Fly.io**、Git/deploy 体験なら **Railway**、請求の読みやすさなら **Render**。
-4. **Heroku 代替で Compose 資産がある**: **Coolify on 4GB VPS**（Hetzner/OVH/ConoHa）が **月€5〜¥700** 帯でPaaS相当UI。
-5. **Rails/コンテナ1アプリに集中**: **Kamal + €5 VPS** — 37signals 実績、ゼロダウンタイム。
+1. **日本・日本語・請求書**: **ConoHa 1GB（¥468/月、36ヶ月）** で Docker テンプレ。メモリに余裕を持たせるなら **2GB ¥698**。
+1. **運用時間を買う（PaaS）**: 常時小さめなら **Fly.io**、Git/deploy 体験なら **Railway**、請求の読みやすさなら **Render**。
+1. **Heroku 代替で Compose 資産がある**: **Coolify on 4GB VPS**（Hetzner/OVH/ConoHa）が **月€5〜¥700** 帯でPaaS相当UI。
+1. **Rails/コンテナ1アプリに集中**: **Kamal + €5 VPS** — 37signals 実績、ゼロダウンタイム。
 
 いずれも **バックアップ（ボリューム + DB dump）** と **セキュリティ更新（OS, Docker CE）** を自分で設計しない限り、「安い＝リスクを自分が持つ」ことに変わりはない。安さと安心のバランスでは、**VPS €5 + 外部マネージドDB無料枠** または **Render $7 Web のみ + Neon free** が2026年時点の「コスパのスイートスポット」として現れる。
 
@@ -279,13 +384,37 @@ AWS Fargate やマネージドKubernetesは便利だが、**常時1コンテナ�
 
 VPS代は共通でも、**デプロイ体験** で工数が変わる。2025年時点の国内解説では次の整理が一般的である。
 
-| 項目 | Dokku | Coolify | Dokploy |
-| --- | --- | --- | --- |
-| 歴史・安定性 | 10年超、本番実績最大 | 2023〜急成長、UI完成度高 | 2024〜、CI/CD内蔵 |
-| 操作 | CLI（git push 風） | Web UI + Git | Web UI、ロールバック強い |
-| マルチサーバー | 基本1台 | 複数SSHサーバー可 | 複数ノード対応 |
-| 日本語情報 | 多い | 少なめ | 非常に少ない |
-| 向く人 | シンプルさ・枯れた技術 | 中小チームの自社PaaS | モダンUI好き |
+{% table %}
+- 項目
+- Dokku
+- Coolify
+- Dokploy
+---
+- 歴史・安定性
+- 10年超、本番実績最大
+- 2023〜急成長、UI完成度高
+- 2024〜、CI/CD内蔵
+---
+- 操作
+- CLI（git push 風）
+- Web UI + Git
+- Web UI、ロールバック強い
+---
+- マルチサーバー
+- 基本1台
+- 複数SSHサーバー可
+- 複数ノード対応
+---
+- 日本語情報
+- 多い
+- 少なめ
+- 非常に少ない
+---
+- 向く人
+- シンプルさ・枯れた技術
+- 中小チームの自社PaaS
+- モダンUI好き
+{% /table %}
 
 **コスト例（ガジェットコンパス試算）**: VPS **¥715/月（2GB）** + ツール自体はオープンソース無料 → 年間 **¥8,580〜** 程度。同等をAWS/GCPのマネージドコンテナだけで組むと **年3〜9万円** 高くなるケースが多い、というのが「VPS Docker 再評価」の根拠になる。
 
@@ -299,14 +428,28 @@ VPS代は共通でも、**デプロイ体験** で工数が変わる。2025年�
 
 静的ファイルを **アプリコンテナから直接配信** すると、PaaS/VPS いずれも転送量課金や上限に当たる。月 **100GB** 配信の例（NA/EU 想定）:
 
-| プラットフォーム | 超過分の目安 |
-| --- | --- |
-| Fly.io | 100GB × $0.02 ≈ **$2**（無料枠なし、全量課金に近い） |
-| Railway | 100GB × $0.05 ≈ **$5** |
-| Render | プラン込み帯域を超えた分 × **$0.15** — 超過時は高い |
-| Hetzner EU | **20TB 込み** — 実質 **$0** |
-| OVH | **無制限転送**（帯域速度キャップあり）— 超過料金なし |
-| Cloudflare R2 + CDN | ストレージ・egress 設計次第で **アプリサーバー転送を回避** |
+{% table %}
+- プラットフォーム
+- 超過分の目安
+---
+- Fly.io
+- 100GB × $0.02 ≈ **$2**（無料枠なし、全量課金に近い）
+---
+- Railway
+- 100GB × $0.05 ≈ **$5**
+---
+- Render
+- プラン込み帯域を超えた分 × **$0.15** — 超過時は高い
+---
+- Hetzner EU
+- **20TB 込み** — 実質 **$0**
+---
+- OVH
+- **無制限転送**（帯域速度キャップあり）— 超過料金なし
+---
+- Cloudflare R2 + CDN
+- ストレージ・egress 設計次第で **アプリサーバー転送を回避**
+{% /table %}
 
 **教訓**: 画像・PDF・ポッドキャスト音声など **大きい静的資産** は Object Storage + CDN に逃がし、Docker で動かすのは **API と動的HTML** に限定すると、Fly/Railway でも請求が読みやすくなる。
 
@@ -317,11 +460,11 @@ VPS代は共通でも、**デプロイ体験** で工数が変わる。2025年�
 安いVPSほど **「マネージドがやってくれていたこと」** が全部露出する。
 
 1. **SSH**: 鍵認証のみ、root ログイン禁止、`fail2ban` または `sshguard`。
-2. **ファイアウォール**: UFW で 22/80/443 のみ。ConoHa は **セキュリティグループ** でアプリポートを明示許可。
-3. **Docker**: 非 root ユーザー運用、`docker.sock` を Coolify 以外に晒さない。
-4. **更新**: `unattended-upgrades` + 月1回の再起動ウィンドウ。
-5. **バックアップ**: ボリュームのスナップショット（Hetzner/OVH/DO）+ `pg_dump` を S3/R2 へ。
-6. **監視**: Uptime Kuma を同じVPSに載せるか、Better Stack / Hetrix 無料枠。
+1. **ファイアウォール**: UFW で 22/80/443 のみ。ConoHa は **セキュリティグループ** でアプリポートを明示許可。
+1. **Docker**: 非 root ユーザー運用、`docker.sock` を Coolify 以外に晒さない。
+1. **更新**: `unattended-upgrades` + 月1回の再起動ウィンドウ。
+1. **バックアップ**: ボリュームのスナップショット（Hetzner/OVH/DO）+ `pg_dump` を S3/R2 へ。
+1. **監視**: Uptime Kuma を同じVPSに載せるか、Better Stack / Hetrix 無料枠。
 
 PaaS では **0〜1番** が省略できるが、代わりに **ベンダーロックイン** と **従量の不透明さ** を引き受ける。
 
@@ -329,13 +472,31 @@ PaaS では **0〜1番** が省略できるが、代わりに **ベンダーロ�
 
 ## マイグレーションの現実
 
-| From | To（安さ重視） | 注意 |
-| --- | --- | --- |
-| Heroku | Render / Railway | `heroku.yml` → Dockerfile 化 |
-| Heroku | Fly.io | `fly.toml`、ボリュームで永続化 |
-| 単一VPS Compose | Kamal | レジストリ必須、proxy 設定 |
-| 単一VPS Compose | Coolify | Git 連携に移行、DB ワンクリック |
-| AWS ECS/Fargate | Hetzner + Compose | VPC/NAT/ALB コスト削減が主目的 |
+{% table %}
+- From
+- To（安さ重視）
+- 注意
+---
+- Heroku
+- Render / Railway
+- `heroku.yml` → Dockerfile 化
+---
+- Heroku
+- Fly.io
+- `fly.toml`、ボリュームで永続化
+---
+- 単一VPS Compose
+- Kamal
+- レジストリ必須、proxy 設定
+---
+- 単一VPS Compose
+- Coolify
+- Git 連携に移行、DB ワンクリック
+---
+- AWS ECS/Fargate
+- Hetzner + Compose
+- VPC/NAT/ALB コスト削減が主目的
+{% /table %}
 
 **ダウンタイム最小**: Kamal / Coolify の Blue-Green、Fly の `fly deploy` ヘルスチェック、Render のゼロダウンタイム deploy（有料プラン機能に依存）。
 
@@ -359,16 +520,16 @@ TopInsight 等の横断比較では **Linode/Akamai** は **東京リージョ�
 
 ## よくある質問（FAQ）
 
-**Q. Docker「ホスティング」と Kubernetes の違いは？**  
+**Q. Docker「ホスティング」と Kubernetes の違いは？**\
 A. 本レポートの「安く」は **1〜3コンテナ** 前提。K8s（DOKS/GKE）はコントロールプレーン無料でも **ワーカーノード2台** で月 $20〜 超えがち。最初は Compose / Kamal / PaaS で足りる。
 
-**Q. 512MB VPS で Postgres + Web は可能？**  
+**Q. 512MB VPS で Postgres + Web は可能？**\
 A. 技術的には可能だが **OOM** が頻発。Swap 2GB 追加（Vultr ガイド等）で凌ぐ個人もいるが、本番は **1GB+DB外部** または **2GB以上** を推奨。
 
-**Q. Fly.io と Cloudflare Workers の違い？**  
+**Q. Fly.io と Cloudflare Workers の違い？**\
 A. Workers は V8  isolates で Docker 不可。既存 Dockerfile 資産があるなら Fly/VPS/PaaS。
 
-**Q. 国内最安は ConoHa 468円で確定？**  
+**Q. 国内最安は ConoHa 468円で確定？**\
 A. **長期契約・1GB・単一コンテナ** 条件下では最安クラス。Oracle $0 や Hetzner €3.49 の方が安いが、開設難易度・レイテンシ・サポート言語が異なる。
 
 ---

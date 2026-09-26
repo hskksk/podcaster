@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "github-reply": {
+      "mode": "primary",
+      "description": "Reply on GitHub issues without modifying the repository",
+      "prompt": "You triage and explain GitHub issues. Do not modify files, commit, push, or open pull requests. Your answer is posted as an issue comment by the GitHub Action runner.",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "git status*": "allow",
+          "git log*": "allow",
+          "git diff*": "allow",
+          "git show*": "allow",
+          "grep*": "allow",
+          "rg*": "allow"
+        }
+      }
+    }
+  }
+}

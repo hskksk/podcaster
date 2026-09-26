@@ -168,6 +168,14 @@ function selfTest(): void {
     process.exit(1);
   }
   console.log("ok  blockquote $$ remains dollar");
+  const d2Md = "```d2\nx -> y\n```\n";
+  const d2Mdoc = markdownToMdoc(d2Md);
+  const d2Err = roundtripCheck(d2Md, d2Mdoc, "self-test/d2.md");
+  if (d2Err) {
+    console.error("FAIL d2 fence roundtrip");
+    process.exit(1);
+  }
+  console.log("ok  d2 fence roundtrip");
   console.log(`self-test: ${cases.length} passed`);
 }
 

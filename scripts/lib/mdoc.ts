@@ -1,7 +1,7 @@
 /**
  * Mechanical Markdown ↔ Markdoc conversion for Phase 1b.
  *
- * Convert (md → mdoc body): fence-outside `$`/`$$` and mermaid fences only.
+ * Convert (md → mdoc body): fence-outside `$`/`$$`, mermaid, and d2 fences only.
  * Textify (mdoc → md): strip YAML frontmatter, restore known tags.
  * Code fences and inline code are never rewritten.
  *
@@ -187,8 +187,8 @@ export function markdownToMdoc(md: string): string {
     .map((seg) => {
       if (seg.kind === "inlineCode") return seg.value;
       if (seg.kind === "fence") {
-        if (seg.lang === "mermaid") {
-          return `{% diagram type="mermaid" %}\n${seg.inner}\n{% /diagram %}`;
+        if (seg.lang === "mermaid" || seg.lang === "d2") {
+          return `{% diagram type="${seg.lang}" %}\n${seg.inner}\n{% /diagram %}`;
         }
         return seg.raw;
       }
@@ -228,7 +228,7 @@ function convertMathInText(text: string): string {
 
 const MATH_OPEN_RE = /^\{%\s*math\s+display=(true|false)\s*%\}/;
 const MATH_CLOSE = "{% /math %}";
-const DIAGRAM_OPEN_RE = /^\{%\s*diagram\s+type="mermaid"\s*%\}/;
+const DIAGRAM_OPEN_RE = /^\{%\s*diagram\s+type="(mermaid|d2)"\s*%\}/;
 const DIAGRAM_CLOSE = "{% /diagram %}";
 
 /**
@@ -274,13 +274,14 @@ function restoreTagsInText(text: string): string {
       }
       const diagramOpen = slice.match(DIAGRAM_OPEN_RE);
       if (diagramOpen) {
+        const diagramLang = diagramOpen[1];
         const innerStart = i + diagramOpen[0].length;
         const closeAt = text.indexOf(DIAGRAM_CLOSE, innerStart);
         if (closeAt !== -1) {
           let inner = text.slice(innerStart, closeAt);
           if (inner.startsWith("\n")) inner = inner.slice(1);
           if (inner.endsWith("\n")) inner = inner.slice(0, -1);
-          out += "```mermaid\n" + inner + "\n```";
+          out += "```" + diagramLang + "\n" + inner + "\n```";
           i = closeAt + DIAGRAM_CLOSE.length;
           continue;
         }

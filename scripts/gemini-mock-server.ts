@@ -365,6 +365,21 @@ function readInputFileName(body: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
+/** `key` of every request line in an uploaded batch input JSONL (empty when unknown). */
+function readRequestKeys(inputFile: string | undefined): string[] {
+  const file = inputFile ? mockFiles.get(inputFile) : undefined;
+  if (!file) return [];
+  const keys: string[] = [];
+  for (const line of file.bytes.toString("utf8").split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const key = (JSON.parse(line) as { key?: unknown }).key;
+      if (typeof key === "string") keys.push(key);
+    } catch { /* not JSON: ignore */ }
+  }
+  return keys;
+}
+
 function readWebhookUri(body: Record<string, unknown>): string | undefined {
   const batch = body.batch as Record<string, unknown> | undefined;
   const webhookConfig = (batch?.webhook_config ?? batch?.webhookConfig) as Record<string, unknown> | undefined;
@@ -501,15 +516,22 @@ function createBatchJobResponse(
   }
 
   const outputFileName = `files/mock-batch-output-${randomUUID()}`;
-  const outputLine = JSON.stringify({
-    response: createAudioResponse(audioMock),
-    ...(metadata ? { metadata } : {}),
-  }) + "\n";
+  // One output record per input request, keyed like the real Batch API (`key` after
+  // `response`). Records are written in reverse order because the real API does not
+  // guarantee input order and callers must sort by key.
+  const requestKeys = readRequestKeys(inputFile);
+  const outputLines = (requestKeys.length > 0 ? requestKeys.reverse() : [undefined]).map((key) =>
+    JSON.stringify({
+      response: createAudioResponse(audioMock),
+      ...(key !== undefined ? { key } : {}),
+      ...(metadata ? { metadata } : {}),
+    })
+  );
   mockFiles.set(outputFileName, {
     name: outputFileName,
     mimeType: "application/jsonl",
     displayName: "tts-batch-output.jsonl",
-    bytes: Buffer.from(outputLine, "utf8"),
+    bytes: Buffer.from(outputLines.join("\n") + "\n", "utf8"),
   });
 
   batchJobs.set(jobName, {

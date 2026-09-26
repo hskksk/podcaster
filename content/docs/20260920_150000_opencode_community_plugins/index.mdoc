@@ -1,0 +1,181 @@
+---
+title: "opencode のコミュニティ拡張・プラグイン — 配布・発見・互換性の整い具合"
+publishedAt: 2026-09-20
+podcast: none
+legacyFilename: 20260920_150000_opencode_community_plugins.md
+---
+# opencode のコミュニティ拡張・プラグイン — 配布・発見・互換性の整い具合
+
+## 概要
+
+opencode は、ターミナルで動くオープンソースの AI コーディングエージェントであり、拡張できる部品を「プラグイン」と呼ぶ。プラグインは **npm パッケージ**として公開し、設定に書くかローカルのディレクトリに置くだけで、起動時に読み込まれる [1]。
+
+2026年9月時点で、npm の **opencode-plugin キーワード**を持つパッケージは **1,983本**、月間インストールは **2.1M回**、**69%** が活発にメンテナンスされていると、自動収集のカタログが数えている [4]。ここでは配布・発見・互換性のどこを公式が保証し、どこをコミュニティの道具に任せているかで、エコシステムの整い具合を扱う。
+
+対象は2025年から2026年9月までの公式文書・npm の実データ・コミュニティカタログ・GitHub issue である。個別プラグインの機能レビュー、テーマの見た目、MCP サーバーの中身は扱わない。
+
+## 全体像
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart TD
+  Q["<b>問い</b><br/>opencode の拡張はどこまで作られ、仕組みはどこまで整ったか"]
+  F["<b>軸</b><br/>配布・発見・互換性のどこを公式が保証し、どこをコミュニティの道具に任せるか"]
+  C1["<b>分かったこと1</b><br/>配布の実体は npm の opencode-plugin キーワードで、公式カタログはない"]
+  C2["<b>分かったこと2</b><br/>発見は公式の検収でなく、三つのコミュニティ方式が担う"]
+  C3["<b>分かったこと3</b><br/>互換性は公式が保証せず、破壊的刷新と非標準が残る"]
+  M["<b>答え</b><br/>約2千本・月間2.1M回に達したが、発見と引継ぎはコミュニティと作者任せ"]
+  X["<b>扱わない範囲</b><br/>個別プラグインの機能レビュー・テーマ・MCP サーバー"]
+  S["<b>調査範囲</b><br/>2025〜2026年9月の公式文書・npm・カタログ・issue"]
+
+  Q -->|"どの軸で測るか"| F
+  F --> C1
+  F --> C2
+  F --> C3
+  C1 -.->|"前提になる"| C2
+  C1 -.->|"裏面をなす"| C3
+  C1 --> M
+  C2 --> M
+  C3 --> M
+  Q -.->|"外した枝"| X
+  M -.- S
+
+  classDef ask fill:#4F7383,stroke:#33505C,color:#ffffff
+  classDef frame fill:#EEF2F5,stroke:#8FA3B0,color:#14191E
+  classDef claim fill:#FFFFFF,stroke:#416579,color:#14191E
+  classDef map fill:#294960,stroke:#1E3B52,color:#ffffff
+  classDef drop fill:#FFFFFF,stroke:#B3322B,color:#B3322B,stroke-dasharray:5 4
+  classDef scope fill:#FFFFFF,stroke:#8FA3B0,color:#5B6673,stroke-dasharray:2 4
+
+  class Q ask
+  class F frame
+  class C1,C2,C3 claim
+  class M map
+  class X drop
+  class S scope
+```
+{% /diagram %}
+
+1〜2が C1（配布と規模）、3〜4が C2（発見と重心）、5〜6が C3（互換と非標準）の根拠である。C1 の気軽な配布が、C2 の発見の分散と C3 の移植負担の前提になっている。
+
+## 背景・歴史 — 2025年の API 公開から、約2千本のエコシステムと破壊的刷新まで
+
+opencode は SST が開発を始めたコーディングエージェントで、2026年には Anomaly が運営し、月間利用者 **8M**・GitHub スター約 **172K** に達した [20]。はじめ拡張はローカルの設定ファイルに任せていたが、plugins の仕組みが公開され、TypeScript のモジュールを起動時に読み込む形になった [1]。
+
+転換点は **2025年12月**の oh-my-opencode の公開である。マルチモデル編成とサブエージェントを **1つのプラグイン**で提供し、週間ダウンロード **23,169**、GitHub スター約 **59,000** まで育った [13][14]。この成功が「プラグインでエージェントの能力を足せる」という使われ方を広め、導入記事も相次いだ [22][21]。
+
+同じころ配布の場が広がった。2026年には自動収集の **OpenDock** が、npm の opencode-plugin キーワードを毎日クロールして 1,983本を数えた [4]。一方で **2026年夏**から v2 の提供が始まり、プラグインの API は破壊的変更として刷新された [2]。使い手は近隣のツールも並行して広げており、Claude Code は **284本**の公式プラグインと **2,291本**のコミュニティ市場を持ち、Codex CLI は **Agent Plugins 1.0** という共通規格の実装を始めた [16][19]。
+
+## 1. プラグインの受け入れ口 — 設定の plugin 配列とローカル2ディレクトリ
+
+プラグインを受け入れる場所はふたつあり、npm パッケージを設定に書く方法と、ローカルのディレクトリに置く方法である。公式の文書はこの二通りと明記している [1]。
+
+npm 側の受け入れは、設定の **plugin 配列**にパッケージ名を並べる形である。起動時に **Bun** がこれを解決し、ダウンロードとインストールを自動で行い、`~/.cache/opencode/node_modules/` にキャッシュする [1]。ローカル側は `.opencode/plugins/` と `~/.config/opencode/plugins/` の二つで、プロジェクトをまたいで使う個人的な部品を置く。読み込みの順序は、グローバル設定 → プロジェクト設定 → グローバルディレクトリ → プロジェクトディレクトリの順とされている [1][15]。
+
+プラグインの実体は TypeScript か JavaScript のモジュールで、起動時に開かれるコンテキスト（設定・ログなどの道具）を受け取り、**hooks** と呼ばれる関数の群を返す。ツールを足すときは **tool()** ヘルパーで名前・説明・スキーマを渡す。公開されたプラグインは、この最小の形を npm に置いたものにすぎない [1][15]。
+
+**ここまでで分かること:** 配布の入口は npm とローカル2ディレクトリだけで、登録・審査・検収の段を通過しない [1]。
+
+## 2. 規模の計測 — npm キーワードが1,983本・月間2.1M回を数える
+
+受付けた規模を数えるのは、公式カタログではなく npm のキーワードである。opencode-plugin のタグを付けたパッケージだけが開示の対象になり、公式の機関が同じ一覧を持っていない [1][4]。
+
+自動収集の OpenDock はこのキーワードで npm を毎日クロールし、2026年9月20日時点で 1,983本を掲載する。合計で GitHub スター約 1.2M、月間インストール 2.1M回であり、ACTIVE 1,368本・Stale 599本・Archived 16本の内訳から 69% が活発にメンテされている [4]。掲載は自動で、タグを付ければ翌日に並び、承認の手続きを踏まない。順位は30日間のダウンロード数と7日間のスター増加速度とコミットの活動度を合成した点数で決まる [4]。
+
+カテゴリ別では、Other の 374本を除くと、Tools & Commands 279本、Agent Orchestration 258本、Memory & Context 187本、Model Providers 170本が上位に並ぶ [4]。カタログ自身は**「OpenCode とは無関係」**と断っている [4]。
+
+審査を通さない配布は、安全の保証をどこにも置かない。プラグインは起動時にユーザーの権限で実行され、信頼を確認する仕組み（trusted workspace）がないという指摘が issue #6361 にある [10]。リポジトリに含めた `.opencode/package.json` のライフサイクルスクリプトが `bun install` で実行される #7173 も、同じ「開いたら実行される」問題の仲間である [11]。HTTP サーバを自前で立てるプラグインが、認証なしでコマンド実行を許した事例はセキュリティ勧告として公表された [12]。どれも「プラグインはコードであり、審査がない」から生まれる帰結である [10][11][12]。
+
+**ここまでで分かること:** 規模の数字は、公式の検収ではなく npm のタグが母体になっており、審査を通さずに数へ加わる。安全の確認も同じく本人任せである [4][10][11][12]。
+
+## 3. 発見の三方式 — キュレーション、自動収集、市場が公式の外に並ぶ
+
+プラグインを探す場は三つあり、どれも公式の運営ではない。この点が、公式のマーケットプレイスを持つツールとの違いである。
+
+| 方式 | 運営 | 収載の仕組み | 検収 |
+|---|---|---|---|
+| awesome-opencode | コミュニティ | Pull Request による提案と承認 | 人手の目利き |
+| OpenDock | 個人（qunqin24） | npm タグを毎日クロール | 自動。承認なし |
+| opencode.cafe | コミュニティ | 投稿とモデレーション | 利用者の評価 |
+
+**awesome-opencode** は GitHub で 10.3k スター・881フォークを持つ手編集の一覧で、`data/` 以下の YAML にカテゴリ・説明・リンクを書き、生成物を `dist/` に出す。プラグインのほかテーマ・エージェント・事例・関連リポジトリを並べ、ライセンスは CC0 である [5][21]。**OpenDock** はこの手編集を自動に置き換えたカタログで、前述の1,983本はここから出る [4]。**opencode.cafe** は投稿とディスカッションを中心にした市場であり、認証に Clerk を使い、モデレーションを伴う [6]。
+
+三方式はどれも公式から独立して発見の役割を担い、公式の案内はプラグインの技術文書にとどまる [1]。人手で選ぶか自動で集めるか、承認を置くか置かないかを、読者はカタログごとに見て使い分ける [4][5][6]。検収の層をどこにも置いていないため、プラグインが何をするかは、入れた本人が目検で確かめる他ない。
+
+**ここまでで分かること:** 発見の中心はコミュニティの三方式に分担されており、公式の検収という層が存在しない [4][5][6]。
+
+## 4. エコシステムの重心 — オーケストレーションとハーネスが最多派閥
+
+発見されたプラグインの重心は、単体のツールでなくエージェント編成を担うハーネス側にある。これはカテゴリの件数で観測できる [4]。
+
+OpenDock のカテゴリでは、単機能ツール群の Tools & Commands 279本に次いで、**Agent Orchestration 258本**が2番目に多く、**Memory & Context 187本**・**Model Providers 170本**が続く [4]。この分布は「ツールをひとつ足す」より「エージェントの動きを組み立てる」需要が大きいことを示す。
+
+規模が最大の派閥は **oh-my-opencode** 系である。2025年12月の公開から週間ダウンロード 23,169・スター約 59,000に育ち、カテゴリ/スキル方式やマルチモデル編成、バックグラウンドでのタスク委譲を1本で提供する [13][14]。2026年1月には、サードパーティの OAuth を制限する動きがこのプラグインを理由として挙げられた形が README に残っており、影響の大きさがうかがえる [13]。同じ方向の試みは他にも FlowDeck（25体のエージェント編成）や DCP（ダイナミックなコンテキスト整理）などとして並ぶ [21]。
+
+**ここまでで分かること:** エコシステムの重心は、エージェントの編成・記憶・モデル切替というインフラ層であり、個別ツールは派閥全体の葉にすぎない [4][13][21]。
+
+## 5. 互換性の破壊 — v2 が plugin を plugins に変え、作者へ移植を課す
+
+互換性は一度、破壊的刷新で切られる。v2 の文書は **3つの意図的な破壊的変更**を掲げ、プラグインの API を新方式に切り替えた [2]。
+
+変更の中心は三つである。設定の **plugin が plugins に改名**され、プラグインの実装は V1 の関数エクスポートから、ID と **setup()** を持つ定義オブジェクトへ変わった [2][3]。V1 の実装は V2 では動かず、ファイルを置き直すだけでは足りず、**コードの移植**が必要になる。移行ガイドは V1 の hook と V2 の API の対応表を載せ、ひとつのパッケージで **server() と setup() を両方出す**両対応を示す [3]。
+
+実際に破壊を食う場面は記録されている。V1→V2 の書き換え後に全ユーザープラグインが **SchemaError** で読み込めなかったという報告があり、「V2 の仕様どおり」として閉じられた（#39345）[7]。**{id, server} 形式のプラグインは、黙って読み込まれずログに WARN だけ残る**という形も残る（#42878）[8]。インストールの工夫である重複排除がパッケージのプラグインを落とす項目も立っている（#18518）[9]。
+
+**ここまでで分かること:** 移行の作業はコアの更新ではなく各プラグイン作者の移植にかかっており、エコシステム全体の書き換えが作者任せで残る [2][7][8]。
+
+## 6. 標準の不在 — プラグインの形式は三つに割れ、一本化されない
+
+互換性は v1→v2 の内部だけでなく、隣接ツールとの間でも成立していない。プラグインの形式は **Claude Code / Codex / opencode の三つ**に割れている [18]。
+
+Claude Code は公式の **plugin.json** 形式で、284本の公式プラグインと 2,291本のコミュニティ市場を配る [16][17]。Codex CLI 0.147（2026年8月）は **Agent Plugins 1.0** を最初に実装し、plugin.json・skills/・mcp.json による仕様を、ChatGPT・Cursor・GitHub Copilot・Kiro・VS Code が続く形で広めた [19]。Anthropic はこの規格に参加せず、Google がコアメンテナとなるかたちで進む [19]。2026年3月時点で、三つの形式は相互に動かない [18]。
+
+形式の違いは記事でよく比較されている。Claude Code と Codex のプラグインを並べた比較では、マニフェストの場所やメタデータの書き方が揃わないと指摘される [23]。実際に Claude Code のプラグインを Codex へ移植する手順を書く記事もあり、変換の手間が共通の話題になっている [24]。
+
+opencode は npm パッケージという独自の形式を保ち続ける。公式の文書はクラウドや Claude の仕組みに依存しない設計を掲げ、コミュニティカタログも npm タグを軸にする [1][19]。つまり、エコシステムの入口はどのツールも似ておりながら、部品の形式だけは各社のままである [18][19][24]。
+
+**ここまでで分かること:** プラグインの形式は標準化の途上にあり、大手の採用表明とは裏腹に、一本化はまだ実現していない [18][23][24]。
+
+## まとめ — エコシステムを評価する6点
+
+1. **配布の入口は npm とローカル2ディレクトリ**で、登録・審査の段を踏まない [1]。
+2. **規模は npm のキーワードが数える**。1,983本・月間2.1M回・69% がアクティブである [4]。
+3. **発見はコミュニティの三方式**が担い、公式の検収がない [4][5][6]。
+4. **重心はオーケストレーションとハーネス**にあり、oh-my-opencode 系が最大派閥 [4][13]。
+5. **互換性は破壊的刷新で切られ**、残余作業が作者の移植に残る [2][7][8]。
+6. **形式は Claude Code / Codex / opencode で取り決めが分かれ**、一本化していない [18][23]。
+
+## 付録: 出典一覧
+
+- [1] OpenCode 公式, [Plugins](https://opencode.ai/docs/plugins/)（2026年確認）
+- [2] OpenCode v2 公式, [Migrating to v2](https://opencode.ai/v2/docs/migrate-v1/)（2026年確認）
+- [3] OpenCode v2 公式, [Migrate plugins from V1](https://opencode.ai/v2/docs/build/plugins/migrate-v1)（2026年確認）
+- [4] OpenDock, [opencode plugin directory](https://www.opendock.net)（2026-09-20 更新）
+- [5] Awesome-opencode 運営, [awesome-opencode](https://github.com/awesome-opencode/awesome-opencode)（2026年確認）
+- [6] opencode.cafe, [repository](https://github.com/R44VC0RP/opencode.cafe)（2026年確認）
+- [7] Anomaly, [issue #39345: all user plugins fail with SchemaError](https://github.com/anomalyco/opencode/issues/39345)（2026-07-28）
+- [8] Anomaly, [issue #42878: plugins in {id, server} shape fail silently](https://github.com/anomalyco/opencode/issues/42878)（2026年確認）
+- [9] Anomaly, [issue #18518: plugin dedup drops package plugins](https://github.com/anomalyco/opencode/issues/18518)（2026-03-21）
+- [10] Anomaly, [issue #6361: no trusted workspace](https://github.com/anomalyco/opencode/issues/6361)（2025-12）
+- [11] Anomaly, [issue #7173: .opencode/package.json lifecycle](https://github.com/anomalyco/opencode/issues/7173)（2026-01）
+- [12] Anomaly セキュリティ勧告, [GHSA-vxw4-wv6m-9hhh](https://github.com/anomalyco/opencode/security/advisories/GHSA-vxw4-wv6m-9hhh)（2026-01-12）
+- [13] npm, [oh-my-opencode](https://www.npmjs.com/package/oh-my-opencode)（2026-09時点）
+- [14] Zenn: yamitake, [oh-my-opencode を日本語で使う](https://zenn.dev/yamitake/articles/oh-my-opencode-japanese-guide)（2026年）
+- [15] Qiita: cvusk, [opencode plugins の技術的な構造](https://qiita.com/cvusk/items/cb879d6168a0bf7bb307)（2026年）
+- [16] ClockedCode, [Claude Code plugin marketplace の統計](https://clockedcode.com/blog/claude-code-plugin-marketplace)（2026-08）
+- [17] ice-ice-bear, [Claude Code のマーケットプレイスまとめ](https://ice-ice-bear.github.io/posts/2026-03-20-claude-code-marketplaces/)（2026-03-20）
+- [18] a007, [Three plugins, zero standards](https://a007.ai/quicktakes/2026-03-27-three-plugins-zero-standards/)（2026-03-27）
+- [19] forest-fox, [Codex CLI 0.147 と Agent Plugins](https://forest-fox.com/codex-0-147-agent-plugins-open-standard/)（2026-08）
+- [20] Awesome Agents, [opencode の利用者 8M](https://awesomeagents.ai/news/opencode-8m-users-one-year/)（2026-06）
+- [21] ArceApps, [awesome-opencode のエコシステム概観](https://arceapps.com/blog/awesome-opencode-ecosystem/)（2026-07-26）
+- [22] Zenn: suwash, [AI コーディングエージェント CLI の比較](https://zenn.dev/suwash/articles/agentic-coding-clis_20260807)（2026-08-07）
+- [23] Qiita: nogataka, [Claude Code と Codex の plugin 比較](https://qiita.com/nogataka/items/545148471e8f2b63c9a6)（2026-08-28）
+- [24] Server Works, [Claude Code plugin を Codex に移植する](https://dev.classmethod.jp/articles/publish-claude-code-plugin-to-codex/)（2026年確認）
+
+## 付録: 扱わなかった枝と未確認点
+
+- **個別プラグインの機能レビュー**は本文から外した。形式の共通点を扱い、それぞれの動作の良し悪しは評価しない。
+- **MCP サーバー**はプラグインと別の拡張層であり、その中身や認証方式は扱わない。
+- **oh-my-opencode と Anthropic OAuth 制限の関係**は、プラグインの README の記述に拠る。制限の公式理由を一次資料で確認していない。
+- **OpenDock の母数**は opencode-plugin キーワードの一致が前提である。タグを付けないプラグインは数に入らない。
+- **v2 の正式リリース日**は確認できていない。本文では「2026年夏から提供開始」とし、詳しい日程を書いていない。

@@ -96,6 +96,7 @@ pluginModule.server(input, options)
 中核アーキテクチャは **Prometheus → Atlas → Junior** の三層分離である。
 
 {% diagram type="mermaid" %}
+```mermaid
 flowchart TB
     subgraph Planning["Planning Layer"]
         User["User"]
@@ -132,6 +133,7 @@ flowchart TB
     Atlas -->|delegate_task| Oracle
     Atlas -->|delegate_task| Explore
     Atlas -->|delegate_task| Librarian
+```
 {% /diagram %}
 
 | レイヤー | エージェント | 役割 | モデル例 |

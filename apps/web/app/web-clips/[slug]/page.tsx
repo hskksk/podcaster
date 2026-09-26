@@ -62,7 +62,8 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
     <div className="public-site">
       <SiteShell siteTitle={cfg.siteTitle} feedUrl={rss} articleCount={clips.length}>
         <p className="back-link">
-          <Link href="/web-clips">← Web Clips一覧</Link>
+          <Link href="/">🏠 メインサイト</Link>{" / "}
+          <Link href="/web-clips">Web Clips一覧</Link>
         </p>
         {clip.date ? <p className="article-meta">{clip.date}</p> : null}
         {clip.url ? (
