@@ -214,7 +214,7 @@ NG: ## PIT と Bridge が買うもの      ← 直訳（japanese.md 1.3）
 
 ### 書き方
 
-`{% diagram type="mermaid" %}` を使う。Mermaid はこのリポジトリが読み込んでいる唯一の作図エンジンで、Keystatic の編集画面にも出る。
+`{% diagram type="mermaid" %}` を使う（この節の主張マップ型テンプレートは Mermaid 専用）。公開サイトは Mermaid と D2 の両方を描画する。アーキテクチャ図など D2 の方が向く場合は `write-d2-diagram` スキルに従い `{% diagram type="d2" %}` と ```d2 フェンスを使う。
 
 **中身は必ずフェンス付きコードブロックで包む。** `{% diagram %}` の本体は Markdoc が Markdown として解釈するため、素の行で書くと改行が空白に潰れ、Mermaid が構文エラーになる（図が出ない）。フェンスで包んだときだけ改行がそのまま渡る。
 
