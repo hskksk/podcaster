@@ -19,7 +19,13 @@ pnpm web:dev
 
 記事本文は `@markdoc/next.js`（`mode: "static"`）と同じスキーマ（`apps/web/markdoc/`）で `@markdoc/markdoc` がコンパイルする。Keystatic の正本は `content/docs/{entry}/index.mdoc` なので、プラグインが要求する `app/**/*.mdoc` へは置かない（slug は `legacyFilename`、ディレクトリ名ではない）。
 
-音声プレイヤーもビルド時に Supabase から解決する。Vercel の `SUPABASE_PROJECT_REF` と `SUPABASE_SERVICE_ROLE_KEY` は **Build** 対象に含める（Runtime だけだとプレイヤーが空のまま焼ける）。
+音声プレイヤーも **ビルド時** に解決する（SSG）。
+
+1. **推奨**: Vercel の `SUPABASE_PROJECT_REF`（または `NEXT_PUBLIC_SUPABASE_PROJECT_REF`）と `SUPABASE_SERVICE_ROLE_KEY` を **Build** 環境に含める。
+2. **フォールバック**: サービスロールが無くても、project ref さえあれば公開 RSS（`feed.xml`）から記事タイトル → 音声 URL を引く。
+3. **任意**: リポジトリの `config.toml` に `[podcast] supabase_project_ref = "…"` を書くと env 未設定の CI でも RSS フォールバックが動く。
+
+Runtime だけにキーを置くとプレイヤーは空の HTML のままデプロイされる。
 
 1. GitHub にこのリポジトリを Import するか、`vercel link --repo` してから `vercel deploy`
 2. 一度だけ GitHub App を作る（Keystatic のウィザードは **development でしか動かない**）:

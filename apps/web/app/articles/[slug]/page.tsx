@@ -6,7 +6,7 @@ import { ArticlePager } from "../../../components/ArticlePager";
 import { ArticleToc } from "../../../components/ArticleToc";
 import { SiteShell } from "../../../components/SiteShell";
 import { adjacentPublicDocs } from "../../../lib/site/adjacent-docs";
-import { audioForDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
+import { audioForPublicDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { EpisodePlayer } from "../../../components/EpisodePlayer";
@@ -64,7 +64,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   const cfg = loadSiteConfig();
   const docs = loadPublicDocs();
   const audioMap = await fetchArticleAudioMap();
-  const audioUrl = audioForDoc(audioMap, doc.filename);
+  const audioUrl = audioForPublicDoc(audioMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
   const body = renderMarkdoc(renderSource);
   const toc = extractToc(renderSource);
