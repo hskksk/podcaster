@@ -11,6 +11,7 @@
 //   pnpm cli requeue rss               <episode_id> [--yes]
 //   pnpm cli requeue regenerate-script <episode_id> [--yes]
 //   pnpm cli requeue regenerate-audio  <episode_id> [--yes]
+//   pnpm cli requeue regenerate-image  <episode_id> [--yes]
 //   pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
 //   pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]
 
@@ -73,6 +74,7 @@ function usage(): never {
   pnpm cli requeue rss               <episode_id> [--yes]
   pnpm cli requeue regenerate-script <episode_id> [--yes]
   pnpm cli requeue regenerate-audio  <episode_id> [--yes]
+  pnpm cli requeue regenerate-image  <episode_id> [--yes]
   pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
   pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]`);
   process.exit(1);
@@ -543,8 +545,19 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
       "regenerate-audio",
       yes,
     );
+  } else if (sub === "regenerate-image") {
+    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    if (error) { console.error("Error:", error.message); process.exit(1); }
+    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
+    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
+    await startFlowRecord(
+      "craftEpisodeSubmit",
+      { episodeId: id, startFrom: "image", regenerate: true, trigger: "manual" },
+      "regenerate-image",
+      yes,
+    );
   } else {
-    console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio <id> [--yes]");
+    console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio|regenerate-image <id> [--yes]");
     process.exit(1);
   }
 }
@@ -580,7 +593,7 @@ if (cmd === "list") {
   });
 } else if (cmd === "requeue") {
   if (!sub || !param) {
-    console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio <id> [--yes]");
+    console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio|regenerate-image <id> [--yes]");
     process.exit(1);
   }
   await requeueCmd(sub, param, flagBool("--yes"));
