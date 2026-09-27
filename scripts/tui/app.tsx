@@ -161,9 +161,58 @@ export const App: React.FC<Props> = ({ isMock }) => {
         setUiMode('confirm');
         return;
       }
+
+      const episodeIdArg = (prefix: string): string | null => {
+        const trimmed = line.trim();
+        if (trimmed.toLowerCase() === prefix) return selectedEpisodeId;
+        if (!trimmed.toLowerCase().startsWith(`${prefix} `)) return null;
+        return trimmed.slice(prefix.length).trim() || null;
+      };
+
+      const regenImageId = episodeIdArg('regenerate-image');
+      if (regenImageId !== null) {
+        if (!regenImageId) {
+          setToast({ message: 'No episode id (select in Episodes or: regenerate-image <id>)', tone: 'error' });
+          return;
+        }
+        const ep = data?.episodes?.find((e: { id: string }) => e.id === regenImageId);
+        setConfirmState({
+          title: 'Regenerate episode artwork',
+          message:
+            `Regenerate cover image only.\n\n${ep?.title ?? regenImageId}\nepisode_id: ${regenImageId}`,
+          onConfirm: async () => {
+            const r = await client.requeue('image', regenImageId);
+            if (!r.success) {
+              setToast({ message: r.error ?? 'Regenerate image failed', tone: 'error' });
+              return;
+            }
+            setToast({ message: 'Image regeneration queued', tone: 'success' });
+            await fetchData();
+          }
+        });
+        setUiMode('confirm');
+        return;
+      }
+
+      const downloadArtId = episodeIdArg('download-artwork');
+      if (downloadArtId !== null) {
+        if (!downloadArtId) {
+          setToast({ message: 'No episode id (select in Episodes or: download-artwork <id>)', tone: 'error' });
+          return;
+        }
+        void client.downloadEpisodeImage(downloadArtId).then(r => {
+          if (!r.success) {
+            setToast({ message: r.error ?? 'Download artwork failed', tone: 'error' });
+            return;
+          }
+          setToast({ message: r.path ? `Saved: ${r.path}` : 'Downloaded', tone: 'success' });
+        });
+        return;
+      }
+
       setToast({ message: `Unknown command: ${line}`, tone: 'error' });
     },
-    [fetchData]
+    [client, data?.episodes, fetchData, selectedEpisodeId]
   );
 
   useInput((input, key) => {
