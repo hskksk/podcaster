@@ -37,7 +37,8 @@
         "capture": "tsx scripts/capture.ts",
         "mcp": "pnpm --filter @podcaster/mcp start",
         "d2:validate": "tsx scripts/d2-validate.ts",
-        "d2:render": "tsx scripts/d2-render.ts"
+        "d2:render": "tsx scripts/d2-render.ts",
+        "d2:check": "tsx scripts/d2-check.ts"
     },
     "devDependencies": {
         "@terrastruct/d2": "0.1.33",
