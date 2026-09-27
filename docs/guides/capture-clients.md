@@ -11,7 +11,7 @@
   - `content`（必須、Markdown 可）
   - `url`（任意、元ページ URL）
   - `collection`（任意、既定 `web-clips`）
-  - `podcast`（任意、既定 `none`）
+  - `podcast`（任意。省略時: `web-clips` → `none`、`docs` → `queued`）
 - **CLI（Mac 開発機）**: ルートの `.env` に `CAPTURE_API_TOKEN` と `CAPTURE_API_URL` を置き `pnpm capture --title "..." --file notes.md`
 
 トークンは **Git への書き込み権**に相当する（公開 repo ならクリップ本文も公開される）。端末に平文で置く前提は「個人端末のみ」と割り切る。
@@ -35,7 +35,7 @@ iOS には Mac のような `curl` が無いので、**ショートカット** �
 要点:
 
 - Safari **共有シート** から起動
-- ページの **タイトル・URL・本文** を辞書に入れ `collection: web-clips`, `podcast: none`
+- ページの **タイトル・URL・本文** を辞書に入れ `collection: web-clips`, `podcast: none`（省略可）
 - **URL の内容を取得** で `POST`、ヘッダ `Authorization: Bearer <CAPTURE_API_TOKEN>`
 - トークンはショートカット内のテキスト（端末紛失時は Vercel でローテーション）
 
@@ -56,4 +56,4 @@ Mac に置く Web Clip も、**B と同じ `/clip` ページ**を指すと iPhon
 
 ## ポッドキャストまで載せたいとき
 
-Capture の既定は `podcast: none`。TTS するには frontmatter を `queued` にする（`PATCH /api/capture` または `pnpm capture --patch ...`）。Git 上の `queued` を ingest するのは Phase 3 の `pnpm ingest:queued` / Actions（[pkm-next.md](../architecture/pkm-next.md) §6）。
+Web Clip の既定は `podcast: none`（ナレッジのみ）。Wiki（`collection: docs`）は省略時 `queued` で、`main` マージ後に Actions が ingest し台本・音声・挿絵を生成する。クリップを TTS したいときだけ `queued` を指定。手動 ingest は `pnpm ingest:queued` / Actions（[pkm-next.md](../architecture/pkm-next.md) §6）。

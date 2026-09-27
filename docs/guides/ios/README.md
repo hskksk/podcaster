@@ -61,7 +61,7 @@ UI の文言は iOS のバージョンで少し違います。近い名前を選
 | `content` | 手順 5 の出力（記事本文） |
 | `url` | 手順 4 の出力（URL） |
 | `collection` | 文字列 `web-clips` |
-| `podcast` | 文字列 `none` |
+| `podcast` | 文字列 `none`（Web Clip 省略時の API 既定。Wiki 向け ingest は `collection: docs` + `queued`） |
 
 ### 2.4 Capture API に POST
 

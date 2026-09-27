@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { captureTokenFromEnv, captureTokenOk } from "../../../lib/capture/auth";
 import {
+  defaultPodcastFlag,
   isCollection,
   isPodcastFlag,
   parseFrontmatter,
@@ -135,12 +136,13 @@ export async function POST(req: Request) {
   const url = typeof parsed.url === "string" ? parsed.url.trim() : undefined;
   const slugOverride = typeof parsed.slug === "string" ? parsed.slug : undefined;
   const collectionRaw = typeof parsed.collection === "string" ? parsed.collection : "web-clips";
-  const podcastRaw = typeof parsed.podcast === "string" ? parsed.podcast : "none";
   if (!isCollection(collectionRaw)) return new Response("Invalid collection", { status: 400 });
+  const collection = collectionRaw;
+  const podcastRaw =
+    typeof parsed.podcast === "string" ? parsed.podcast : defaultPodcastFlag(collection);
   if (!isPodcastFlag(podcastRaw)) return new Response("Invalid podcast flag", { status: 400 });
 
-  // Capture never starts TTS. queued is allowed for later Phase 3 Actions, not the default.
-  const collection = collectionRaw;
+  // Capture does not call ingest directly. podcast: queued is picked up by ingest-queued on main.
   const podcast = podcastRaw;
   const slug = datedSlug(title, slugOverride);
   const mdoc = buildMdoc({ title, content, url, collection, podcast });

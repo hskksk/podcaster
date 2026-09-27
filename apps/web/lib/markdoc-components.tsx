@@ -104,15 +104,28 @@ export const markdocComponents = {
   }),
 };
 
-export const podcastSelect = fields.select({
+const podcastOptions = [
+  { label: "Queued", value: "queued" },
+  { label: "None", value: "none" },
+  { label: "Published", value: "published" },
+  { label: "Skipped", value: "skipped" },
+] as const;
+
+export const podcastSelectDocs = fields.select({
   label: "Podcast",
   description:
-    "none = ナレッジのみ。queued は GitHub Actions が ingest し、成功後 published に書き戻します。",
-  options: [
-    { label: "None", value: "none" },
-    { label: "Queued", value: "queued" },
-    { label: "Published", value: "published" },
-    { label: "Skipped", value: "skipped" },
-  ],
+    "queued（Wiki 既定）= main マージ後に GitHub Actions が ingest（台本・音声・挿絵）し、成功後 published に書き戻します。none = ナレッジのみ。",
+  options: [...podcastOptions],
+  defaultValue: "queued",
+});
+
+export const podcastSelectWebClips = fields.select({
+  label: "Podcast",
+  description:
+    "none（Web Clip 既定）= ナレッジのみ。queued にすると main マージ後に ingest（台本・音声・挿絵）します。",
+  options: [...podcastOptions],
   defaultValue: "none",
 });
+
+/** @deprecated Use podcastSelectDocs or podcastSelectWebClips */
+export const podcastSelect = podcastSelectDocs;

@@ -61,3 +61,8 @@ export function isPodcastFlag(value: string): value is PodcastFlag {
 export function isCollection(value: string): value is CaptureCollection {
   return value === "web-clips" || value === "docs";
 }
+
+/** Wiki (docs) defaults to ingest; web-clips stay knowledge-only unless explicitly queued. */
+export function defaultPodcastFlag(collection: CaptureCollection): PodcastFlag {
+  return collection === "docs" ? "queued" : "none";
+}
