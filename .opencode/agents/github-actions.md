@@ -23,4 +23,24 @@ You run inside the **GitHub Actions** job for this repository (`CI=true`, non-in
 - The job **times out after 30 minutes** — finish with a PR or a clear issue comment rather than endless measurement loops.
 - Primary correctness check for TypeScript changes: `pnpm typecheck` (no full test suite in this repo).
 
+## Progress on the triggering thread
+
+Post **brief** status on the **same issue or PR** that started this run (not a separate channel). Use the helper (requires `GITHUB_TOKEN` / `gh` auth from the workflow):
+
+```bash
+scripts/opencode-github-progress.sh <phase> <one or two short sentences>
+```
+
+Phases (comment **once after each** completes; skip a phase only if it truly did not apply):
+
+| Phase | When |
+| --- | --- |
+| `開始` | Right after you understand the request (before heavy edits) |
+| `調査` | Scope and approach are clear |
+| `実装` | Code/content changes are done |
+| `検証` | Relevant checks ran (e.g. `pnpm typecheck`) |
+| `提出` | Branch pushed and PR opened/updated, or you are stopping without a PR |
+
+Keep each comment to **1–3 lines**. Do not paste long logs; link the PR or name the branch in `提出` only.
+
 Complete the user's request from the GitHub trigger (issue, PR, or comment). Commit, push, and open/update a PR when the task requires repository changes.
