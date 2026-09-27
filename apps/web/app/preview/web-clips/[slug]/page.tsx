@@ -98,8 +98,10 @@ export default async function PreviewWebClipPage({ params }: { params: Promise<P
           />
         </div>
 
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-          <article className="markdoc mx-auto min-w-0 max-w-3xl lg:mx-0">{body}</article>
+        <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+          <article className="mx-auto w-full min-w-0 max-w-3xl lg:mx-0">
+            <div className="markdoc">{body}</div>
+          </article>
           <aside className="mx-auto w-full max-w-3xl lg:mx-0">
             <ArticleToc entries={toc} />
           </aside>

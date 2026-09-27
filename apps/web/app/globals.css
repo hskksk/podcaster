@@ -44,6 +44,7 @@ html {
 
 body {
   margin: 0;
+  overflow-x: clip;
   font-family: var(--font-sans);
   background: var(--color-bg);
   color: var(--color-fg);
@@ -51,7 +52,7 @@ body {
 
 /* Markdoc article body */
 .markdoc {
-  @apply prose prose-stone max-w-none dark:prose-invert;
+  @apply prose prose-stone max-w-none min-w-0 dark:prose-invert;
   @apply prose-headings:font-serif prose-headings:font-semibold prose-headings:tracking-tight;
   @apply prose-a:text-link prose-a:font-medium prose-a:no-underline hover:prose-a:underline;
   @apply prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:before:content-none prose-code:after:content-none;
@@ -94,13 +95,18 @@ body {
   margin: 1.25em 0;
 }
 
-.markdoc table {
-  @apply w-full text-sm;
+.markdoc-table-wrap {
+  @apply -mx-1 my-6 min-w-0 max-w-full overflow-x-auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.markdoc-table-wrap table {
+  @apply w-full min-w-max text-sm;
 }
 
 .markdoc th,
 .markdoc td {
-  @apply border border-border px-3 py-2;
+  @apply border border-border px-3 py-2 align-top;
 }
 
 .markdoc th {
@@ -125,7 +131,7 @@ body {
 }
 
 .diagram-figure {
-  @apply my-8;
+  @apply my-8 min-w-0 max-w-full;
 }
 
 .diagram {
