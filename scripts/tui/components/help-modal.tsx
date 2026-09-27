@@ -33,7 +33,7 @@ export const HelpModal: React.FC = () => {
         <Text dimColor>Inbox (list): i = ingest content/web-clips|docs mdoc │ h/l / arrows │ Tab │ j/k</Text>
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>Commands: reload │ target local │ target remote │ demo confirm (see palette with :)</Text>
+        <Text dimColor>Commands: reload │ regenerate-image [id] │ download-artwork [id] │ target local │ target remote │ demo confirm</Text>
       </Box>
     </Box>
   );

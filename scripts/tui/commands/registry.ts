@@ -26,6 +26,16 @@ export const PALETTE_COMMANDS: PaletteCommand[] = [
     id: 'demo confirm',
     description: 'Open dummy confirm modal (Phase 1)',
     keywords: ['confirm', 'modal', 'test']
+  },
+  {
+    id: 'regenerate-image',
+    description: 'Regenerate episode artwork (optional episode id; uses Episodes selection)',
+    keywords: ['image', 'cover', 'artwork', 'regen']
+  },
+  {
+    id: 'download-artwork',
+    description: 'Download episode artwork to ./downloads (optional episode id; uses Episodes selection)',
+    keywords: ['image', 'cover', 'download']
   }
 ];
 
