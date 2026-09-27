@@ -403,6 +403,25 @@ export const App: React.FC<Props> = ({ isMock }) => {
                     }
                   });
                 }}
+                onRegenerateImageRequest={episodeId => {
+                  const ep = data.episodes.find((e: { id: string; title?: string }) => e.id === episodeId);
+                  openConfirm({
+                    title: 'Regenerate episode artwork',
+                    message:
+                      `Regenerate 1:1 cover image only (script/audio unchanged).\n` +
+                      `Published feeds: run Ctrl+Y RSS afterward to refresh feed.xml.\n\n` +
+                      `${ep?.title ?? episodeId}\nepisode_id: ${episodeId}`,
+                    onConfirm: async () => {
+                      const r = await client.requeue('image', episodeId);
+                      if (!r.success) {
+                        showToast(r.error ?? 'Regenerate image failed', 'error');
+                        return;
+                      }
+                      showToast('Image regeneration queued', 'success');
+                      await fetchData();
+                    }
+                  });
+                }}
               />
             )}
             {view === 'episodes' && (

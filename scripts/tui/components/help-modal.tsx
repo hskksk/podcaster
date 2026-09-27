@@ -27,7 +27,7 @@ export const HelpModal: React.FC = () => {
       </Box>
       <Box marginTop={1} flexDirection="column">
         <Text bold color="cyan">Data actions (confirm + toast)</Text>
-        <Text dimColor>Pipeline (lane focused): Ctrl+A — Requeue audio for selected card</Text>
+        <Text dimColor>Pipeline (lane focused): Ctrl+A — Requeue audio │ Ctrl+I/i — Regenerate artwork</Text>
         <Text dimColor>Episodes (detail): p play / s stop / Ctrl+S script / Ctrl+A audio / Ctrl+Y rss / Ctrl+G regen-script / Ctrl+R regen-audio / Ctrl+I|i regen-image / Ctrl+D audio download / Ctrl+U artwork download</Text>
         <Text dimColor>Audio (main focused): i detail │ p play │ s stop │ Ctrl+D download │ Ctrl+A requeue</Text>
         <Text dimColor>Inbox (list): i = ingest content/web-clips|docs mdoc │ h/l / arrows │ Tab │ j/k</Text>
