@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Post a short progress comment on the GitHub issue/PR that triggered opencode.
+# Phases: 開始, 調査, 下書きPR, 実装, 検証, 提出
 # Usage: scripts/opencode-github-progress.sh <phase> <message...>
 set -euo pipefail
 

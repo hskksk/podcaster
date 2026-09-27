@@ -18,7 +18,8 @@ name: opencode
 # Issue/PR 本文を編集した場合。追加ログインは repo variable OPENCODE_TRIGGER_ALLOWLIST（カンマ区切り）。
 #
 # /oc build: github-actions エージェントが scripts/opencode-github-progress.sh で
-# 開始・調査・実装・検証・提出の区切りごとにトリガー Issue/PR へ短いコメントを付ける。
+# 開始・調査・下書きPR・実装・検証・提出の区切りごとにトリガー Issue/PR へ短いコメントを付ける。
+# 検証完了前でも下書き PR を早めに上げ、別 run / 別エージェントが引き継げるようにする。
 
 on:
   issue_comment:
