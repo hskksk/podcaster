@@ -227,6 +227,19 @@ Create [usage records](/docs/api/usage_records)
 {% /diagram %}
 ```
 
+本サイトは Stripe 独自の `diagram` / `node` / `edge` タグ（React Flow）を実装していない。上記は Markdoc ソースの引用であり、読者向けには同じ node / edge 関係を Mermaid で概略表示する。
+
+{% diagram type="mermaid" %}
+```mermaid
+sequenceDiagram
+  participant Customer
+  participant Typographic
+  participant Stripe
+  Customer->>Typographic: Select plan
+  Typographic->>Typographic: Create usage records
+```
+{% /diagram %}
+
 ポイントは次のとおりである。
 
 - 静的な画像の代わりに React Flow で図を描くため、インタラクション・クリック可能リンク・普遍的なスタイル変更・多言語化が可能になる
