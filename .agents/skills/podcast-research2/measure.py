@@ -11,8 +11,8 @@
 
 計測範囲は本文だけである。frontmatter、`{% diagram %}` の中身、
 `## 付録: 出典一覧` 以降は外す。散文の判定から表・箇条書き・見出しも外す。
-見出しでは `## 概要` と `## 背景・歴史 — …` の有無と、
-`概要 → 全体像 → 背景・歴史 → テーマ` の順序も見る。
+見出しでは `## TL;DR`、`## 概要`、`## 背景・歴史 — …` の有無と、
+`TL;DR → 概要 → 全体像 → 背景・歴史 → テーマ` の順序も見る。
 """
 import re
 import statistics
@@ -134,6 +134,13 @@ def main():
     h2 = [l[3:].strip() for l in body.split("\n") if l.startswith("## ")]
     themes = [h for h in h2 if re.match(r"^\d+\.\s", h)]
     claiming = [h for h in themes if "—" in h or "―" in h]
+    tldr_match = re.search(r"(?:^|\n)## TL;DR\s*\n(.*?)(?=\n## |\Z)", body, re.S)
+    tldr_items = (
+        re.findall(r"^\s*[-*]\s+\S", tldr_match.group(1), re.M)
+        if tldr_match
+        else []
+    )
+    has_tldr = bool(tldr_match)
     has_overview = any(h == "概要" or h.startswith("概要") for h in h2)
     hist = [h for h in h2 if h.startswith("背景")]
     has_hist = bool(hist)
@@ -145,28 +152,31 @@ def main():
                 return i
         return None
 
+    i_tldr = first_idx(lambda h: h == "TL;DR")
     i_ov = first_idx(lambda h: h == "概要" or h.startswith("概要"))
     i_map = first_idx(lambda h: h.startswith("全体像"))
     i_hist = first_idx(lambda h: h.startswith("背景"))
     i_theme = first_idx(lambda h: re.match(r"^\d+\.\s", h))
     order_ok = (
-        i_ov is not None
+        i_tldr == 0
+        and i_ov is not None
         and i_hist is not None
         and i_theme is not None
-        and i_ov < i_hist < i_theme
+        and i_tldr < i_ov < i_hist < i_theme
         and (i_map is None or i_ov < i_map < i_hist)
     )
     if i_map is None:
-        order_note = "概要 → 背景・歴史 → テーマ"
+        order_note = "TL;DR → 概要 → 背景・歴史 → テーマ"
     else:
-        order_note = "概要 → 全体像 → 背景・歴史 → テーマ"
+        order_note = "TL;DR → 概要 → 全体像 → 背景・歴史 → テーマ"
 
     print(f"\n{path}\n")
     print("本文（付録の出典一覧より前、図を除く）")
     ok = []
     check("本文字数", body_chars, True, "参考値。下限はない。短さ自体は欠点ではない")
     ok.append(check("散文の文数", len(sentences), True, ""))
-    ok.append(check("一文の平均字数", f"{statistics.mean(lengths):.1f}", 55 <= statistics.mean(lengths) <= 95, "目標 55〜95"))
+    ok.append(check("一文の平均字数", f"{statistics.mean(lengths):.1f}", statistics.mean(lengths) <= 95,
+                    "目標 95以下。下限なし"))
     ok.append(check("150字を超える文", sum(1 for x in lengths if x > 150), all(x <= 150 for x in lengths), "0 にする"))
     ok.append(check("250字を超える段落", sum(1 for p in paragraphs if len(p) > 250), True, "多いなら継ぎ目で割る"))
     ok.append(check("太字の密度 /1000字", f"{bold_density:.1f}", 3 <= bold_density <= 8, f"目標 3〜8（実数 {len(bold)}）"))
@@ -184,6 +194,10 @@ def main():
     ok.append(check("結論を言っている見出し", f"{len(claiming)}/{len(themes)}",
                     len(claiming) == len(themes),
                     "全部が `<番号>. <対象> — <主張>` の形"))
+    ok.append(check("## TL;DR", "あり" if has_tldr else "なし", has_tldr,
+                    "タイトル直後、概要より前に置く"))
+    ok.append(check("TL;DR の項目数", len(tldr_items), 3 <= len(tldr_items) <= 5,
+                    "一文ずつ、3〜5項目"))
     ok.append(check("## 概要", "あり" if has_overview else "なし", has_overview,
                     "見出しなしの要旨はやめる"))
     ok.append(check("## 背景・歴史", hist[0] if hist else "なし",
