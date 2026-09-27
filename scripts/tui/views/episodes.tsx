@@ -4,6 +4,10 @@ import SelectInput from 'ink-select-input';
 import { Article, AudioFile, Episode, Script, PodcastConfig } from '../data/types.js';
 import { DataClient } from '../data/client.js';
 import { matchesTextFilter } from '../utils/text-filter.js';
+import {
+  episodeImagePublicUrl,
+  isEpisodeImageEnabled,
+} from '../utils/episode-image.js';
 import type { OpenConfirmPayload } from '../confirm-types.js';
 import type { ToastTone } from '../components/toast.js';
 
@@ -165,7 +169,7 @@ export const EpisodesView: React.FC<Props> = ({
         });
         return;
       }
-      if (input === 'i') {
+      if (input === 'i' || input === 'I') {
         openConfirm({
           title: 'Regenerate episode artwork',
           message:
@@ -192,6 +196,21 @@ export const EpisodesView: React.FC<Props> = ({
             const r = await client.downloadAudio(ep.id);
             if (!r.success) {
               showToast(r.error ?? 'Download failed', 'error');
+              return;
+            }
+            showToast(r.path ? `Saved: ${r.path}` : 'Downloaded', 'success');
+          }
+        });
+        return;
+      }
+      if (input === 'u' || input === 'U') {
+        openConfirm({
+          title: 'Download episode artwork',
+          message: `Download cover image to ./downloads\n${ep.title}\n${ep.image_url ?? '(no image_url yet)'}`,
+          onConfirm: async () => {
+            const r = await client.downloadEpisodeImage(ep.id);
+            if (!r.success) {
+              showToast(r.error ?? 'Download artwork failed', 'error');
               return;
             }
             showToast(r.path ? `Saved: ${r.path}` : 'Downloaded', 'success');
@@ -243,7 +262,13 @@ export const EpisodesView: React.FC<Props> = ({
   const scriptTotalTokens = extractTotalTokens(script?.llm_usage);
   const articleSummary = summarizeArticle(selectedEpisode, selectedArticle);
   const audioTotalTokens = extractTotalTokens(selectedAudio?.llm_usage);
-  const pipelineNodes = selectedEpisode ? buildPipelineNodes(selectedEpisode.status) : [];
+  const imageEnabled = isEpisodeImageEnabled(config);
+  const artworkPublicUrl = selectedEpisode
+    ? episodeImagePublicUrl(selectedEpisode.image_url, config)
+    : null;
+  const pipelineNodes = selectedEpisode
+    ? buildPipelineNodes(selectedEpisode.status, selectedEpisode.image_url, imageEnabled)
+    : [];
   const visibleScript = scriptLines.slice(scrollOffset, scrollOffset + limit);
 
   useEffect(() => {
@@ -319,7 +344,7 @@ export const EpisodesView: React.FC<Props> = ({
       <Box flexGrow={1} minWidth={0} borderStyle="single" paddingX={1} flexDirection="column" borderColor={focus === 'detail' ? "cyan" : "gray"}>
         <Box borderStyle="single" justifyContent="center" flexShrink={0} borderColor={focus === 'detail' ? "cyan" : "gray"}>
           <Text bold color={focus === 'detail' ? "cyan" : "white"}>
-            DETAIL {focus === 'detail' ? '● j/k │ p play / s stop │ Ctrl+S script / A audio / Y rss / G regen-script / R regen-audio / I regen-image / D download' : ''}
+            DETAIL {focus === 'detail' ? '● j/k │ p/s play/stop │ Ctrl+S/A/Y/G/R/I script/audio/rss/regen │ Ctrl+D/U audio/image download' : ''}
           </Text>
         </Box>
         {selectedEpisode ? (
@@ -338,6 +363,23 @@ export const EpisodesView: React.FC<Props> = ({
             <Box marginTop={1} flexShrink={0} flexDirection="column">
               <Text bold color="cyan">ARTICLE SUMMARY</Text>
               <Text color="gray" wrap="truncate-end">{articleSummary}</Text>
+            </Box>
+            <Box marginTop={1} flexShrink={0} flexDirection="column">
+              <Text bold color="cyan">ARTWORK</Text>
+              {!imageEnabled ? (
+                <Text color="gray">Episode images disabled (image.enabled=false)</Text>
+              ) : selectedEpisode.image_url?.trim() ? (
+                <Box flexDirection="column">
+                  <Text color="gray" wrap="truncate-end">Storage: {selectedEpisode.image_url}</Text>
+                  {artworkPublicUrl ? (
+                    <Text color="gray" wrap="truncate-end">Public URL: {artworkPublicUrl}</Text>
+                  ) : (
+                    <Text color="gray" wrap="truncate-end">Public URL: (set podcast.cover_url in config)</Text>
+                  )}
+                </Box>
+              ) : (
+                <Text color="gray">No artwork yet (runs after script; Ctrl+I to regenerate)</Text>
+              )}
             </Box>
             <Box marginTop={1} flexShrink={0} flexDirection="column">
               <Text bold color="cyan">AUDIO</Text>
@@ -360,9 +402,28 @@ export const EpisodesView: React.FC<Props> = ({
                 {pipelineNodes.map((node, idx) => (
                   <Text
                     key={node.key}
-                    color={node.state === 'failed' ? 'red' : node.state === 'running' ? 'yellow' : node.state === 'done' ? 'green' : 'gray'}
+                    color={
+                      node.state === 'failed'
+                        ? 'red'
+                        : node.state === 'running'
+                          ? 'yellow'
+                          : node.state === 'skipped'
+                            ? 'gray'
+                            : node.state === 'done'
+                              ? 'green'
+                              : 'gray'
+                    }
                   >
-                    {node.state === 'failed' ? '✕' : node.state === 'running' ? '◐' : node.state === 'done' ? '●' : '○'} {node.label}
+                    {node.state === 'failed'
+                      ? '✕'
+                      : node.state === 'running'
+                        ? '◐'
+                        : node.state === 'skipped'
+                          ? '−'
+                          : node.state === 'done'
+                            ? '●'
+                            : '○'}{' '}
+                    {node.label}
                     {idx < pipelineNodes.length - 1 ? <Text color="gray">  →  </Text> : ''}
                   </Text>
                 ))}
@@ -458,9 +519,13 @@ function formatTokenCount(totalTokens: number | null, loading: boolean): string 
   return `${totalTokens.toLocaleString()} total`;
 }
 
+type PipelineNodeState = 'done' | 'pending' | 'running' | 'failed' | 'skipped';
+
 function buildPipelineNodes(
-  status: string
-): Array<{ key: string; label: string; state: 'done' | 'pending' | 'running' | 'failed' }> {
+  status: string,
+  imageUrl: string | null | undefined,
+  imageEnabled: boolean
+): Array<{ key: string; label: string; state: PipelineNodeState }> {
   const scriptDone = ['script_ready', 'audio_running', 'audio_generated', 'audio_downloading', 'audio_ready', 'audio_failed', 'published', 'rss_failed'].includes(status);
   const audioDone = ['audio_generated', 'audio_downloading', 'audio_ready', 'published', 'rss_failed'].includes(status);
   const rssDone = status === 'published';
@@ -469,10 +534,28 @@ function buildPipelineNodes(
   const scriptFailed = status === 'script_failed' || status === 'failed';
   const audioFailed = status === 'audio_failed' || (status === 'failed' && scriptDone && !audioDone);
   const rssFailed = status === 'rss_failed';
+
+  const imageDone = !!imageUrl?.trim();
+  const imageRunning =
+    imageEnabled &&
+    scriptDone &&
+    !imageDone &&
+    (status === 'script_ready' || audioRunning || audioDone);
+
+  let imageState: PipelineNodeState = 'pending';
+  if (!imageEnabled) {
+    imageState = 'skipped';
+  } else if (imageDone) {
+    imageState = 'done';
+  } else if (imageRunning) {
+    imageState = 'running';
+  }
+
   return [
     { key: 'ingest', label: 'ingest', state: 'done' },
     { key: 'script', label: 'generate-script', state: scriptFailed ? 'failed' : scriptRunning ? 'running' : scriptDone ? 'done' : 'pending' },
     { key: 'audio', label: 'generate-audio', state: audioFailed ? 'failed' : audioRunning ? 'running' : audioDone ? 'done' : 'pending' },
+    { key: 'image', label: 'generate-image', state: imageState },
     { key: 'rss', label: 'update-rss', state: rssFailed ? 'failed' : rssDone ? 'done' : 'pending' }
   ];
 }
