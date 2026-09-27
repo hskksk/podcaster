@@ -211,9 +211,11 @@ async function main(): Promise<void> {
   if (warnings.length > 0) {
     console.log(`warnings (${warnings.length}):`);
     for (const warning of warnings) console.log(`  - ${warning}`);
-  } else {
-    console.log("warnings: none");
+    console.log("");
+    console.error("d2-check: fix warnings above and re-run (expect `warnings: none`)");
+    process.exit(1);
   }
+  console.log("warnings: none");
   console.log("");
   console.log("ok");
   process.exit(0);
