@@ -1,0 +1,269 @@
+---
+title: "Jevの入力と応答 — 具体例から拾う、できることの一覧"
+publishedAt: 2026-09-27
+podcast: none
+legacyFilename: 20260927_015156_jev_examples_table.md
+---
+
+# Jevでできることの具体例 — 入力と応答の対応をサーベイする
+
+## 概要
+
+JevはTypeSafe AIが2026年9月15日に早期アクセスとして公開した「判断に特化したAIモデル」で、文章を生成せず、**3つの質問型**（選択肢から選ぶ Choice、段階値を返す Score、真偽確率を返す Noul）に決まった答えだけを返す [1]。具体例を横断すると、ほとんどの使用場面は**次の三つに収束する**。
+サポート問い合わせの振り分け（入力＝問い合わせ本文、応答＝Choice で部署・Score で苛立ち・Noul で返金要求）が第一の型である。
+検索やRAG文書の事前絞り込み（入力＝クエリと断片、応答＝Noul の関連度）と、生成AI出力の検証（入力＝断定と根拠文のペア、応答＝Choice で supported／unsupported 判定）が残る二つである [24][32]。
+
+ここでは、公式ドキュメントと日本語の実測報告を横断して、**どんな入力にどんな応答が返るか**の対応を具体例とともに一覧にする。目的は「Jevに何を預け、何をコードに残すか」を機能の説明ではなく、実例の集まりで掴めるようにすることだ。公開から2週間程度の新モデルで、日本語の実測は数十件規模のものが多い。挙げる数字は、その範囲での実測値として読む。
+
+調査範囲は2026年9月15〜26日の公式発表と一次ドキュメント、および日本語・英語の解説記事と実測記事である。料金や応答時間は移り変わりが早い分野のため、料金の切り詰めや実測環境の細部は各出典時点のものとする。SDKの導入手順やエージェントスキルの使い方は本文で扱わず、付録に要点だけ置く。
+
+## 全体像
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart TD
+  Q["<b>問い</b><br/>Jevにどんな入力を渡すと、どんな応答が返るか"]
+  F["<b>軸</b><br/>入力は state（判断材料）と questions（型つき質問）の2部品。<br/>型が答えの形を決める"]
+  C1["<b>分かったこと1</b><br/>3つの質問型で入力と応答の対応が決まる"]
+  C2["<b>分かったこと2</b><br/>複数の質問を1回に並べるパターン群が効果を伸ばす"]
+  C3["<b>分かったこと3</b><br/>数値と日付と生成は扱えず、そこの仕事はコードに置く"]
+  M["<b>答え</b><br/>「選ぶ・測る・真偽を確かめる」に落とせる判断は、<br/>どんな入力でも型つきの答えが並列で返る"]
+  X["<b>扱わない範囲</b><br/>モデル内部の学習手法、経路ごとの料金比較"]
+  S["<b>調査範囲</b><br/>2026年9月の公式資料と実測報告"]
+
+  Q -->|"型をどう選ぶか"| F
+  F --> C1
+  F --> C2
+  F --> C3
+  C1 -.->|"前提になる"| C2
+  C3 -.->|"境界を狭める"| M
+  C1 --> M
+  C2 --> M
+  Q -.->|"外した枝"| X
+  M -.- S
+
+  classDef ask fill:#4F7383,stroke:#33505C,color:#ffffff
+  classDef frame fill:#EEF2F5,stroke:#8FA3B0,color:#14191E
+  classDef claim fill:#FFFFFF,stroke:#416579,color:#14191E
+  classDef map fill:#294960,stroke:#1E3B52,color:#ffffff
+  classDef drop fill:#FFFFFF,stroke:#B3322B,color:#B3322B,stroke-dasharray:5 4
+  classDef scope fill:#FFFFFF,stroke:#8FA3B0,color:#5B6673,stroke-dasharray:2 4
+
+  class Q ask
+  class F frame
+  class C1,C2,C3 claim
+  class M map
+  class X drop
+  class S scope
+```
+{% /diagram %}
+
+連鎖は分かったこと1 → 分かったこと2 の一本だけで、分かったこと3 は答えの成立範囲を横から狭める。以降の節では、入力と応答の対応表、複数質問を束ねるパターン群、Jev の向き不向き、しきい値の設計という流れで追う。
+
+## 背景・歴史 — 文章を生成しないモデルが「System One」として分けられた
+
+LLMの主流の使われ方は「文章を出して、呼び出し側がそれをパースする」であった。TypeSafeの創業者Diogo AlmeidaはOpenAIで対話モデルを調教手法に関わり、出力先がソフトウェアである場合、パースが壊れやすい結合点だと考えた [1]。指示に従う文章生成を突き詰めても、それ自体が人間の好みに最適化されるため、自動化との相性は望めないという診断が出发点である。
+
+TypeSafeは約2年間の非公開開発の末、2026年9月15日にJevを「System Oneモデル」第一弾として公開した [1]。名前はカーネマン『ファスト＆スロー』の System 1（速い直感）と System 2（遅い熟慮）の区別から取り、Jevは経済学者ウィリアム・スタンリー・ジェヴォンスに由来する [1]。ジェヴォンスが指摘した「石炭のパラドックス」は、機械の効率が上がると石炭の消費は減らずに増えるという考え方で、知能のコストが下がると使い道が増えるという予測に置き換えられている [1]。
+
+生成系LLMでは「JSONで返せ」と条件を付けても出力の形が崩れることがあり、そこが自動化の結合点で壊れる。Jevは出力の全体を事前に定義させ（選択肢・段階・真偽）、そこから外れない形で確率つきの答えを返す [1][5]。生成能力を捨てたことで、速度と費用の桁が変わった。公式の自己申告では、同じ判断作業で速度が2桁速くなり、費用は2桁下がる [1]。
+
+## 1. 3つの質問型 — どんな入力も「選ぶ・測る・真偽」のどれかで返る
+
+### リクエストと応答の最小例
+
+入力は二つの部品だけである。**`state`**（判断材料となる文章や JSON オブジェクト）と**`questions`**（型つき質問の辞書）を `POST https://api.typesafe.ai/v1/systemone` に載せる [2][31]。`state` は文字列・オブジェクト・配列のいずれでもよいが、公式は値が名前つきになるオブジェクト推奨する [3]。応答は、質問のIDごとに型つきの答えが並ぶ [2]。
+
+最も短い例が「返金要求かどうか」である。`state` に問い合わせ本文1本を置き、Noul 一問だけを投げる [3]。
+
+```text
+state: "先月分の請求が二重に引き落とされています。"
+questions: { "refund": { "type": "noul", "instructions": "これは返金を求める内容か。" } }
+```
+
+これに対する応答の要点は次のとおりである [3]。
+
+```text
+answers.refund = { "type": "noul", "noul": 0.97 }
+usage: inputTokens 272 / outputTokens 20
+```
+
+返り値が数値のまま帰ってくるため、呼び出し側の `if` 文に直接つながる。パースも検証も、手で書く必要がない [2]。
+
+三つの型を一度に混ぜた例が、公式クイックスタートの「担当部署（Choice）」「顧客の苛立ち度（Score）」「緊急性（Noul）」の3問を1回のリクエストに並べる例である [19]。Stripe連携の失敗を訴えるチケットを投入すると、`department.choice` が technical、`frustration.score` が 1.0、`is_urgent.noul` が 1.0 のように、質問IDごとに型つきの答えが並ぶ [2]。
+
+### 型ごとの細かい違い
+
+| 型 | 問いかけ | 返り値 | 制約 |
+|----|---------|--------|------|
+| Choice | 「候補のどれ？」 | 選択 `choice`・全候補の確率 `probabilities`・分布の尖り `confidence` | 選択肢は**最大255個**。確率合計は1.0 |
+| Score | 「どの段階？」 | 段階番号の確率加重平均 `score`（小数可）・各段階の確率・`confidence` | 順序つき段階は**2〜10段** |
+| Noul | 「はい／いいえ？」 | 真偽確率 `noul`（0〜1）のみ | `confidence` は付かない |
+
+Score の返り値が段階の間の値、たとえば3段階の緊急度で `score: 1.42` と返ることがある。実測した報告では、二重引き落としの文に1.42が返り、段階0は0.01・段階1は0.56・段階2は0.43という配分だった [3]。スコアは「今日中に対応が要る（段階2）」か「急がない（段階0）」かの割合を混ぜた滑らかな値であり、閾値を引く位置を事前に決めておく必要がある [3]。
+
+Choice の選択肢に `other` をつけるかどうかも注意点である。候補が入力を網羅できない可能性があるときに「以上なし」の逃し箱を用意しないと、モデルは最小限ランキングに載っている項目の中から一番弱いものを選んでしまう [6][8]。
+
+**型と返り値で分かること:** 入力は `state` と `questions` の2部品、応答は Choice・Score・Noul のいずれかの型つき数字で、パースは不要である [2][3]。
+
+## 2. 複数の質問を束ねるパターン — 1回の呼び出しで入出力を使える形に整える
+
+### どの型をどんな場面に置くか
+
+複数の質問を1つの `state` に対して並べると、各自の質問が独立・並列で評価される [2]。この性質を活かした**5つのパターン**が、公式ドキュメントと実装報告で形が定まっている [8]。
+
+| パターン | 入力 | 質問の組み方 | 応答の使い方 |
+|---------|------|------------|------------|
+| speculative fan-out（飛び出し） | チケット本文 | カテゴリ Choice・bug severity Score・再現手順の有無 Noul・返金要求 Noul・苛立ち Score の5問を同時 | コードが当件で不要な答えを捨て、要るものだけで分岐 |
+| confidence-gated routing（確信度ゲート） | ユーザーの意図文 | 意図 Choice・複雑さ Score | しきい値で自動処理・確認待ち・人手に分けて、行動ごとに壁を変える |
+| composite scoring（複合採点） | 履歴書など | 独立した寸法ごとに Score（Python の深さ・チーム運営経験・分散設計経験 など） | コードで正規化し、重みを付けて合算して判定 |
+| draft-verify-escalate（カスケード） | 問いと根拠文と下書き | 下書きが根拠に載っているかを Choice で1問 | supported なら公開、unsupported なら上位モデルへやり直し |
+| reranking（検索の絞り込み） | クエリと断片ごとに1回 | 関連度を Score または Noul で断片ごとに投げ | 高得点の断片だけを生成モデルへ渡す |
+
+### speculative fan-out — 質問の追加はほとんど時間をくわない
+
+一つの `state` に質問を詰め込むほど、単価が効く形になる。公式のクックブックでは、13個の質問を1リクエストにまとめた例で**12.2倍安く・10.0倍速く**なったと示されている [22]。Learn Jev の fan-out チュートリアルも同型の手順を示す [14]。独立した実測でも、質問数を1問から500問まで増やしたときサーバー側の処理時間は**98ミリ秒→239ミリ秒**にとどまり、データ部分の課金対象は質問数によらずリクエストごとに1回のみだった [11]。
+
+「あとで要るか分からない質問」を先に全部投げておき、コードで要るものだけ拾う点が特徴である。次のコード例は、日本語の問い合わせ25件を3問（担当部署・緊急度・返金要求）で束ね、振り分け一致率96％・正解した回答の confidence 平均0.95・外れた回答の平均0.47という実測結果を示している [3]。
+
+### confidence-gated routing — 行動の重さで壁を変える
+
+しきい値は1つ書くのではなく、**行動ごとに**設定する。誤りが取り返しやすい行動ほど高い壁を要求する [12]。公式の例では、confidence 0.5 未満は人手へ回し、残高表示は低い壁、送金承認は 0.85 超だけ通す [12]。
+
+日本語25件の実測では、confidence 0.6 以上を自動処理とすると自動処理した23件の誤りはゼロ、人の手に残ったのは2件（8％）であった [3]。しきい値0.9に上げると自動処理は21件・手元に残るは4件（16％）になった [3]。
+
+### composite scoring — 重みはコードに残す
+
+評価を1つの質問に押し込むのではなく、独立した寸法に分けて、コード側で重みを付け直して合算する。公式の例は候補者選考を「Python の深さ」「チーム運営経験」「分散システム設計経験」の3 Score に分け、重み0.40／0.25／0.35で組み合わせる形式である [8]。重みはコードの数字なので、評価の解釈が変わっても1行の変更で済む [8]。生の Score を足すと段階数が多いものが相対的に強く出るため、段階数マイナス1で割って正規化してから合算する [8]。
+
+### draft-verify-escalate — 生成AIを検証結果で分岐させる
+
+安いモデルの下書きを、Jev に確認させてから出す構成である [13]。問いと根拠文と下書き返答を `state` に入れ、Choice で「supported／unsupported／declined」を聞く。**supported＋confidence 0.8以上**なら公開、根拠に載っていなければ上位モデルでやり直すという運用が例として示されている [13]。50問の検証では、このカスケード構成での誤答ゼロ・総費用0.012ドルという結果対、それを常に上位モデルで処理する構成の誤答2件・0.175ドルと比べた [13]。
+
+**パターンで分かること:** どんな応用形も「同じ state に複数の質問を並べ、確率にしきい値を引いてコードで分岐する」という同じ構造の亜型である [8][12][13]。
+
+## 3. 実務での使いどころ — 入力と応答が動く場面の具体例
+
+### 実装報告で確認できる例
+
+| 場面 | 使う型 | 具体例 | 得られた応答 |
+|------|-------|--------|------------|
+| 問い合わせの「答えられるか」判定 | Noul | AIチャットボットが、文章を生成する前に・入力された質問が与え文書で答えられるかを判断 | 日本語50問で **AUC 0.984**。answer無し質問の誤通過0件 [17] |
+| 検索RAGの絞り込み | Noul | 文書検索で得た断片ごとに「このクエリに部分的でも答えに使えるか」 | 本番1日実測で平均10.7件が7.7件に減り、コスト0.7ドル/千検索 [16][27][28] |
+| 法令文書の引用照合（CLERC） | Noul ×1,200 | BM25 top-30 の候補ごとに「この断片は引かれた判例か」 | **top-1 5％→18％**、top-10 38％→62％ [25] |
+| LLM出力の引用照合 | Choice | LLMが引用した8つのうち4つが real か plant かの判別 | 正しい4つは confidence 0.93 以上で検証、植え付け4件はすべて検出 [30] |
+| エージェントの安全ゲート | Noul | 提案されたツール呼び出しが「削除・送金・外部公開」を含むか | 高 confidence の block 状態などに分岐 [26][29][33] |
+| 請求書の異常検知 | Noul | 下書き請求の各項目に「作り込まれた金額」「合計が内訳と合わない」など | 5件中2件の植えられた誤りを検出。コストは全体の49％で済んだ [15] |
+| ゲーム内の操作判断 | Choice | Doom で次に何をするかの判断を毎秒10回投げる | コストは **約7ドル/時**。画面出力ではなく構造化初期値での実演 [1] |
+| Wikipedia のリンク探索 | Choice | 各ページのリンク候補（最大255）から次の移動先を選択 | 高基数の選択肢で2段（スコア→選択）に分かる [1] |
+| 商談中の発話分類 | Score/Noul | 21の発話を逐一分類 | 判断の中央値 **0.25秒**、文字起こし込みで面談利用に耐えた [20] |
+
+### 向いていない判断
+
+公式が自ら公開している「ぎざぎざ（jaggedness）」の失敗モードは9つである [4][10]。実測でも、その一部がそのまま現れた。日本語の自由文を使った検証では、正しい回答が「方針に書かれていないこと」や「対応したこと」との違和感を挙げる例で、曖昧さを汲まない読み方がそのまま出た [18]。具体的な失敗が見つかっているのは、次の4つである [7][10][11][18]。
+
+- 同じ入力を10回繰り返すと担当部署の選択が崩れる（confidence も 0.36 に落ちる）ことがある [10]
+- 一部の英文データを日本語に訳した PAWS-X では、同語の表記揺れ（ネジロベル／ナジロベルのひらがな差）で誤判が増えた [11]
+- 緊急度の段階依頼の定義が曖昧だと、実測では45問中3問の緊急度判定が期待とずれた [7]
+- 「今その場で困っているか」のような状況の読み取りは半分近くしか拾えなかった [18]
+
+逆に数値まわりも対象外である。公式は Jev を電卓の代わりに使うべきではないと明言しており、日付比較もせず、カウント対象が大きくなるほど誤差が伸びる [4]。実測でも3桁の足し算の適否検証は**70％**、リスト50要素の個数判定は**50％**にとどまった [11]。数値・日付・数え上げはコード側に置くことが公式の推奨である [4]。
+
+**使いどころで分かること:** 大量の判断・急場の判断・少数主観が要らない判断には向き、生成と算術と日付の比較には向かない。向かない部分は、コード側で補う。
+
+## 4. 日本語での実測 — 公式の注意記載と実物の両方を見ておく
+
+### 日本語でも動いた例
+
+- 日本語の問い合わせ16文×3回の48回呼び出しで、担当部署・返金要求は48回とも事前のラベルと一致し、緊急度は45回一致した。中央値286ミリ秒 [7]
+- 同じ48回中、返金確率の応答では否定文・引用・完了報告の区別がついた。「返金は不要です。宛名だけ修正してください」（0.02）、「FAQに『返金してください』と書く例ですが私は返金を求めていません」（0.03）、「返金は完了しました。こちらから返金を依頼するものではありません」（0.04） [7]
+- 日本語の黙示文16問・3回答の小テストを3回ずつ、回避文のない例での誤判定はほぼない [7]
+
+### ずれが見えた例
+
+一方、日本語の特徴が効いたずれも見つかっている。
+
+- Zenn の検証レポートのレポートでは、同社の2.8万リクエスト規模の実測で、日本語の「意図分類（MASSIVE）」「含意判定（JSICK）」は英語と有意差がなかった [11]。一方、「言い換え判定 PAWS-X」では日本語が12ポイント低く（**70.2％ vs 82.6％**）、翻訳時の表記揺れが一因だった [11]
+- 同じプロンプト系の入力に対し、攻撃文を入力文に追記した構成で強制された分類は日本語で23.2％、英語で9.0％の誤分類が起きた [11]。入力文が短いほど追加の攻撃文の影響が大きくなる [11]
+- 日本語の指示で3つの質問を投げた例では、怒り度と緊急性は日英で同じ応答を返したが、担当部署の confidence は日本語で0.54ではなく0.36に落ちた [21]
+- 店舗運営者の公開報告では、日本語の指示40件と英語指示39件が正解し、3回のうち1問（急ぐべきか）で評価の段階がずれた例もあった [18]
+
+### しきい値という解決案
+
+日本語で confidence が落ちる例があったにもかかわらず、しきい値設計を変えると、自動処理と人手の割合を運用で調整できるという報告が多い [3][11][23]。日本語50問・しきい値0.6で正解率94％だった例 [17]、MASSIVE 日本語で confidence 0.9 以上だけ採用すると正解率93.9％・自動処理率72.2％だった例 [11] がある。**しきい値を上げるほど自動処理の対象は減り、その分の精度が保たれる**構造が共通している [3][11]。
+
+**日本語で分かること:** 短文の分類では日英差は小さく、表記揺れや複雑な文脈での判別に落ちやすくなる。しきい値と判定対象の踏み込み方で、精度を補える。
+
+## 5. 数値の読み方 — confidence と probability は別の機構
+
+### confidence は分布の硬度
+
+`confidence` は Choice と Score に付く指標で、確率分布がどれだけ単一の候補に集中しているかを要約した値である [5]。**その回答が90％正しい**という意味ではない [5]。`probabilities` は選択肢間の相対的な配分であり、confidence はその尖りである [5]。Noul には confidence が付かない。真偽では確率そのものが不確かさの指標になるため、別に付ける意味がない [5][9]。
+
+Noul の読み方には独特な点がある。0.99は「はい」に寄っている、0.01は「いいえ」に寄っている、0.5付近は「同程度」という読み方である [5]。ひとつの数値に対して、両側に薄いしきい値を持たせ、ちょうど真ん中は人手に回すという設計が推奨される [5]。Choice と Score では**下側のしきい値**1本で人手への流し先を決める [12]。
+
+### 実測から確認されている読み方
+
+- 正解した回答と外れた回答で confidence に差があることが複数の実測で示された（例：正解時0.95、誤り時0.47）[3]
+- confidence 0.9 以上だけを採用して残りを人手に回すと、採用分の正解率 94〜96％，自動化率 72〜77％ という結果が複数のデータセットで再現した [11]
+- 閾値を下回った回答の誤答率は36〜52％に達する。全エラーの67〜78％がこの低い側3割に集中する [11]。判断の難しいケースがこの帯に集まるため、人手側の負担設計を先に考えておくべきである [11]
+
+**confidence で分かること:** しきい値は行動ごとの取り返しのつきやすさで分けて設定する。同じ数字に行為を委ねる設計はしない。
+
+## まとめ — 具体例から拾える8点
+
+1. **入力は `state` と `questions` の2部品**。応答は型つきの数字で帰り、`if` 文に直接つながる [2]。
+2. **3つの型の対応**：選ぶ＝Choice、測る＝Score、真偽＝Noul。複数の質問は1回の呼び出しに並べる [2][9]。
+3. **同じ `state` に質問を詰め込むほど得をする**。13問を1回にまとめた例で12.2倍安く10倍速い [22]。
+4. **5つのパターン**が形として定まっている。speculative fan-out、confidence gate、composite scoring、draft-verify-escalate、reranking [8]。
+5. **数値・日付・生成は対象外**。公式が自ら「電卓ではない」「数え上げも不確か」と明記し、実測でも再現された [4][11]。
+6. **具体的な実用例**は、問い合わせの自動分類・RAGの事前絞り込み・生成結果の検証・エージェントの安全ゲート・操作判断の5つに集約できる [16][17][29][30]。
+7. **日本語では分類部分の実測が実用同等である一方、表記揺れ・入力短文ではずれる**ことが確認されている [7][10][11]。しきい値調整が前提になる [3][11]。
+8. **confidence は「この行動を囲む壁」の高さを決める材料**であって、正しさの保証ではない [5][12]。
+
+## 付録: 出典一覧
+
+- [1] Diogo Almeida / TypeSafe AI, [Introducing System One Models & Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)（2026-09-15）
+- [2] TypeSafe AI, [公式ドキュメント（Quickstart / API / Primitives）](https://docs.typesafe.ai/)（2026-09）
+- [3] fyve.co.jp, [Jevの使い方｜Vercel経由で5分・3つの型と確信度の実測](https://fyve.co.jp/ai-advisor/articles/jev-how-to-use)（2026-09-20）
+- [4] TypeSafe AI 公式ドキュメント（引用・二次集約）, [jev-1.13 jaggedness（モデルのぎざぎざ文書）](https://docs.typesafe.ai/model-jaggedness/jev-1.13.md)（2026-09）
+- [5] Sanity, [What is a Noul in the Jev API? Definition and examples](https://www.sanity.io/glossary/noul)（2026-09）
+- [6] TypeSafe AI 公式, [Confidence 説明ページ](https://docs.typesafe.ai/confidence)（2026-09）
+- [7] Zenn / acrosstudioblog, [文章を生成しないAI「Jev」を日本語で48回試した。速さより面白かったのは「迷い」](https://zenn.dev/acrosstudioblog/articles/a62c066d5d9938)（2026-09-18）
+- [8] Prosper Otemuyiwa / Valyu AI, [How to Use Jev: A practical guide to TypeSafe's System One model](https://dev.to/valyuai/how-to-use-jev-a-practical-guide-to-typesafes-system-one-model-g5e)（2026-09-17）
+- [9] OpenTweet, [Jev Classification: A Worked Guide With Full JSON](https://opentweet.io/jev/classification)（2026-09）
+- [10] Neil Agarwal / Refix, [What is Jev? TypeSafe AI explained](https://www.refix.ai/news/jev-typesafe-ai-explained/)（2026-09-18）
+- [11] Zenn / biscuit, [TypeSafe AI「Jev」の実効性能検証レポート（約2.8万リクエストによる精度・速度・コスト評価）](https://zenn.dev/biscuit/articles/typesafe-ai-jev-benchmark-2026-09)（2026-09-19）
+- [12] Learn Jev, [Jev confidence gating and thresholds](https://learnjev.com/tutorials/confidence-gating)（2026-09）
+- [13] OpenRouter, [Cut LLM Cost with a Jev-Verified Cascade](https://openrouter.ai/docs/cookbook/evaluate-and-optimize/jev-verified-cascade)（2026-09）
+- [14] Learn Jev, [Jev fan-out: ask everything in one request](https://learnjev.com/tutorials/speculative-fan-out)（2026-09）
+- [15] Spring AI TypeSafe, [Demos（TicketTriageDemo / CascadeDemo / GuardrailDemo）](https://spring-ai-community.github.io/spring-ai-typesafe/latest/demos/)（2026-09）
+- [16] Ask This Guy, [RAG reranking with Jev: how we use it in production](https://www.askthisguy.com/en/blog/jev-rag-reranking/)（2026-09-25）
+- [17] edel-hearts, [JevをAIチャットボットに実装して実測｜日本語の精度と速度](https://edel-hearts.com/jev-rag-chatbot-benchmark/)（2026-09-20）
+- [18] 無人店舗ラボ / genica-photo, [Jevを使ってみた感想｜向く仕事・向かない仕事と、無人店舗で使う場所・使わない場所](https://genica-photo.com/lab/notes/typesafe-jev-review)（2026-09-21）
+- [19] ふくふく / 松尾亮, [Jevとは？APIの使い方・料金と業務判断の実装例（Toolbox EP.25）](https://hukuhuku.co.jp/blog/tools-toolbox/toolbox-25-jev-decisions)（2026-09-22）
+- [20] 岡田豊 / note, [「判断が速いAI」を仕事に入れてみた](https://note.com/okada_yutaka/n/nb42a412ba263)（2026-09-26）
+- [21] Zenn / masayan1126, [文章を書かずに判断だけ返すAI「Jev」入門](https://zenn.dev/masayan1126/articles/jev-system-one-decision-model-guide)（2026-09-21）
+- [22] 爆速開発部 / AppTime, [Jevの使い方｜API・SDK・Claude Codeスキルの導入手順](https://apptime.co.jp/media/jev-api-usage/)（2026-09-21）
+- [23] fyve.co.jp, [JevはなぜLLMより速く安いのか｜仕組みと9つの苦手](https://fyve.co.jp/ai-advisor/articles/jev-vs-llm-limitations)（2026-09-20）
+- [24] fyve.co.jp, [Jevの活用例｜公開直後に出た作例とLLMとの使い分け](https://fyve.co.jp/ai-advisor/articles/jev-use-cases)（2026-09-20）
+- [25] frutik / awesome-search, [TypeSafe Cookbook — Re-ranking](https://frutik.github.io/awesome-search/Articles/TypeSafe-Cookbook---Re-ranking)（2026-09-19）
+- [26] Neil Agarwal / Refix, [Jev for AI agents](https://www.refix.ai/news/jev-for-ai-agents/)（2026-09-18）
+- [27] Neil Agarwal / Refix, [Jev for RAG: reranking, passage filters, and citation checks](https://www.refix.ai/news/jev-rag-reranking-citation-checks/)（2026-09-18）
+- [28] Prescott Data, [TypeSafe Jev in JarvisCore 1.12: Agent Routing and RAG](https://developers.prescottdata.io/blog/typesafe-jev-agent-routing-rag-jarviscore)（2026-09-19）
+- [29] Neil Agarwal / Refix, [Jev Choice, Score, and Noul](https://www.refix.ai/news/jev-choice-score-noul/)（2026-09-18）
+- [30] AY Automate, [Jev Use Cases: 7 Patterns and 1300+ Real Builds](https://www.ayautomate.com/blog/jev-use-cases)（2026-09-19）
+- [31] Pydantic, [TypeSafe (Jev) integration notes](https://pydantic.dev/docs/ai/models/typesafe/)（2026-09）
+- [32] ar-aca.tech, [JEV（TypeSafe）とは｜判定専用AIの仕組み・料金・APIの使い方まで](https://ar-aca.tech/posts/jev-typesafe-system-one/)（2026-09-18）
+- [33] 五里霧中 / blog.ast.moe, [Codexの判断をJevに切り出すMCPサーバーを作った](https://blog.ast.moe/blog/2026-09-20-2/)（2026-09-20）
+
+## 付録: 扱わなかった枝・未確認点
+
+- **料金とレート制限の結果**。$0.042／100万トークン・出力無料・64kトークン上限・毎分1200リクエストという数字は複数の資料で一致しているが、早期アクセス中のモデルで、Vercel・OpenRouter・Cloudflare Workers などの経路によって表記や課金の実体が異なる。本稿では、モジュールの動作例の説明に限定した。
+- **モデルの内部構造・学習データ**。RLCD（Reinforcement Learning for Calibrated Decisions）という訓練手法の名前と概要は公式発表 [1] にあるが、モデルの重みの公開や学習データの構成については詳細を確認していない。
+- **大規模な日本語実測の公開値**。日本語の実測は、2.8万件の検証（Zenn biscuit）[11] 以外は数百件程度の小規模なものが多い。業種語や長文での差を確かめるには、自社データでの検証が前提になる。
+- **リアルタイム課金の実務数値**。実測が1週間程度の桁で動いており、数値の安定性や初回登録ユーザー向けの gratuit（無償枠）の扱いは変わる可能性が高い [3][22]。
+
+## 付録: 圧縮表現・隣接語彙との接点
+
+本稿の使用例は、いずれも「出力の形を事前に決め、その中から選ばせる」という同じ構造に収まる。同種の構造を他の表現で実現する例として、構造化出力（JSON schema で LLM を縛る）、few-shot 分類器の構築（DSPy）などは、Jev の出力をサポートする隣接手法であり、使い分けの詳細は本稿の範囲外である [8][9]。生成・算術・日付比較が外れる部分は別ツールに付ける前提か、明示的な fallback を設けて運用する前提である。
