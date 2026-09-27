@@ -18,6 +18,12 @@
     "doom_loop": "deny"
   },
   "agent": {
+    "github-actions": {
+      "mode": "primary",
+      "hidden": true,
+      "description": "GitHub Actions /oc build（非表示）",
+      "prompt": "{file:./.opencode/prompts/github-actions-ci.txt}"
+    },
     "github-reply": {
       "mode": "primary",
       "description": "Reply on GitHub issues without modifying the repository",

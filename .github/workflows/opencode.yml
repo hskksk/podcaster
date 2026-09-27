@@ -340,8 +340,6 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
-          # Ephemeral agent — not in .opencode/agents/ so it does not appear in local TUI.
-          OPENCODE_CONFIG_CONTENT: '{"agent":{"github-actions":{"mode":"primary","description":"GitHub Actions workflow only","prompt":"{file:./.opencode/prompts/github-actions-ci.txt}"}}}'
         with:
           agent: github-actions
           model: ${{ steps.slash.outputs.model }}
