@@ -136,10 +136,13 @@ def main():
     claiming = [h for h in themes if "—" in h or "―" in h]
     tldr_match = re.search(r"(?:^|\n)## TL;DR\s*\n(.*?)(?=\n## |\Z)", body, re.S)
     tldr_items = (
-        re.findall(r"^\s*[-*]\s+\S", tldr_match.group(1), re.M)
+        re.findall(r"^\s*[-*]\s+(.+)$", tldr_match.group(1), re.M)
         if tldr_match
         else []
     )
+    tldr_multi_sentence = [
+        item for item in tldr_items if len(re.findall(r"[。！？!?]", item)) > 1
+    ]
     has_tldr = bool(tldr_match)
     has_overview = any(h == "概要" or h.startswith("概要") for h in h2)
     hist = [h for h in h2 if h.startswith("背景")]
@@ -198,6 +201,8 @@ def main():
                     "タイトル直後、概要より前に置く"))
     ok.append(check("TL;DR の項目数", len(tldr_items), 3 <= len(tldr_items) <= 5,
                     "一文ずつ、3〜5項目"))
+    ok.append(check("TL;DR が一項目一文か", len(tldr_multi_sentence),
+                    not tldr_multi_sentence, "句点・疑問符・感嘆符が複数ある項目を 0 にする"))
     ok.append(check("## 概要", "あり" if has_overview else "なし", has_overview,
                     "見出しなしの要旨はやめる"))
     ok.append(check("## 背景・歴史", hist[0] if hist else "なし",
