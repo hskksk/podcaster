@@ -25,7 +25,13 @@ export default {
   blockquote: defaultNodes.blockquote,
   hr: defaultNodes.hr,
   image: defaultNodes.image,
-  table: defaultNodes.table,
+  table: {
+    ...defaultNodes.table,
+    transform(node: Node, config: Config) {
+      const children = node.transformChildren(config);
+      return new Tag("div", { class: "markdoc-table-wrap" }, [new Tag("table", {}, children)]);
+    },
+  },
   thead: defaultNodes.thead,
   tbody: defaultNodes.tbody,
   tr: defaultNodes.tr,
