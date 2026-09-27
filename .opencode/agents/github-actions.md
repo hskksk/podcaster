@@ -17,11 +17,23 @@ You run inside the **GitHub Actions** job for this repository (`CI=true`, non-in
 
 ## How to work
 
-- Follow skills under `.agents/skills/` when the user invokes them (read `SKILL.md` first).
-- Prefer repo scripts over ad-hoc probes when possible (`pnpm d2:validate` over one-off scripts); `/tmp` is fine for throwaway files.
+- Follow skills under `.agents/skills/` when the user invokes them (read `SKILL.md` first). Skills often say “verify, then open a PR”; **in this job, do the opposite** (see **PR and handoff** below).
+- Prefer repo scripts over ad-hoc probes when possible (`pnpm d2:validate` over one-off scripts); `/tmp` is fine for throwaway files. Do not spend many minutes on parallel ELK stress tests or one-off `scripts/*.ts` benchmarks unless the user explicitly asked for that script in-repo.
 - If `git push` fails with **non-fast-forward**, fetch/rebase onto the remote branch or use a **new branch name**; do not retry the same rejected push indefinitely.
-- The job **times out after 30 minutes** — finish with a PR or a clear issue comment rather than endless measurement loops.
+- The job **times out after 30 minutes**. The worst outcome is timing out with **no branch and no PR** — avoid that.
 - Primary correctness check for TypeScript changes: `pnpm typecheck` (no full test suite in this repo).
+
+## PR and handoff (required when the task changes the repo)
+
+Another agent or a follow-up `/oc` run may continue on the **same branch/PR**. Optimize for **incremental, visible progress**, not a perfect local finish.
+
+1. **Branch early** — After scope is clear (`調査`), create a feature branch off `origin/main` (or continue the PR branch if the trigger is already a PR).
+2. **Draft PR without waiting for full verification** — As soon as there is meaningful WIP (wiki clip, skill output, code, partial doc), **commit, push, and open or update a draft PR**. Do not block the PR on `pnpm typecheck`, `pnpm d2:validate`, `measure.py`, or long manual probes.
+3. **Keep pushing** — After substantial edits, commit and push again so handoff always sees the latest state. Mention WIP gaps in the PR body (what is done / what is left / what failed).
+4. **Verify after, if time remains** — Run relevant checks **after** the draft exists. Fix forward on the same branch when cheap; if a check is slow or flaky, leave the PR draft with a note rather than burning the rest of the 30 minutes.
+5. **When time is low** — Stop starting new long shell work. Push current commits, post `提出` on the trigger thread with the PR link, and say what a follow-up should do.
+
+Use `gh pr create --draft` (or mark existing PRs draft) unless the user asked for a ready-for-review PR.
 
 ## Progress on the triggering thread
 
@@ -37,9 +49,10 @@ Phases (comment **once after each** completes; skip a phase only if it truly did
 | --- | --- |
 | `開始` | Right after you understand the request (before heavy edits) |
 | `調査` | Scope and approach are clear |
-| `実装` | Code/content changes are done |
-| `検証` | Relevant checks ran (e.g. `pnpm typecheck`) |
-| `提出` | Branch pushed and PR opened/updated, or you are stopping without a PR |
+| `下書きPR` | First **draft PR** is opened or updated with WIP (may be before “done”) |
+| `実装` | Main code/content edits for this pass are done (push again if you changed files after `下書きPR`) |
+| `検証` | Relevant checks ran when time allowed (optional if you already pushed draft and time ran out) |
+| `提出` | Final push; PR link; or you are stopping without a PR and explain why |
 
 Keep each comment to **1–3 lines**. Do not paste long logs; link the PR or name the branch in `提出` only.
 
