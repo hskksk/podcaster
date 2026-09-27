@@ -16,6 +16,9 @@ name: opencode
 #
 # トリガー権限: OWNER / MEMBER / COLLABORATOR のコメント、または write 以上のコラボレーターが
 # Issue/PR 本文を編集した場合。追加ログインは repo variable OPENCODE_TRIGGER_ALLOWLIST（カンマ区切り）。
+#
+# /oc build: github-actions エージェントが scripts/opencode-github-progress.sh で
+# 開始・調査・実装・検証・提出の区切りごとにトリガー Issue/PR へ短いコメントを付ける。
 
 on:
   issue_comment:
@@ -51,8 +54,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -340,7 +343,9 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           agent: github-actions
           model: ${{ steps.slash.outputs.model }}
+          share: true
           prompt: ${{ (github.event_name == 'issues' || github.event_name == 'pull_request') && steps.slash.outputs.prompt || '' }}
