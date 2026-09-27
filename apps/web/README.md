@@ -75,7 +75,7 @@ Vercel 上では `NEXT_PUBLIC_VERCEL_ENV` があるので storage は自動的�
 # apps/web/.env.local に CAPTURE_API_TOKEN を入れて pnpm web:dev
 pnpm capture --title "クリップ" --file notes.md
 pnpm capture --title "記事" --file page.md --url https://example.com
-# 既定: content/web-clips/{YYYY-MM-DD}-{slug}/index.mdoc 、podcast: queued（main マージ後に ingest）
+# 既定: web-clips + podcast none。Wiki は --collection docs で podcast queued（main マージ後に ingest）
 ```
 
 Mac / iPhone（Safari・ショートカット・Web Clip）: [docs/guides/capture-clients.md](../../docs/guides/capture-clients.md)

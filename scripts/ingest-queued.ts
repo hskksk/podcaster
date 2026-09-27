@@ -3,7 +3,7 @@
  * Ingest every content docs/web-clips index.mdoc with podcast: queued, then write
  * podcast: published + contentSha in the same process (GitHub Actions commits).
  *
- * Does not bulk-queue existing web-clips. Capture defaults to podcast: queued.
+ * Does not bulk-queue existing web-clips. Capture defaults: docs queued, web-clips none.
  */
 
 import { createHash } from "node:crypto";

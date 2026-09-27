@@ -2,7 +2,7 @@ import { config, collection, fields } from "@keystatic/core";
 import { KeystaticBrandMark } from "./lib/keystatic/brand-mark";
 import { markdocEditorOptions } from "./lib/keystatic/markdoc-options";
 import { parseSlugForSort } from "./lib/keystatic/slug-sort";
-import { markdocComponents, podcastSelect } from "./lib/markdoc-components";
+import { markdocComponents, podcastSelectDocs, podcastSelectWebClips } from "./lib/markdoc-components";
 import { titleSlugField } from "./lib/slug";
 import { githubRepo, isGithubStorage } from "./lib/storage";
 
@@ -52,7 +52,7 @@ export default config({
           label: "Source URL",
           description: "参照元（任意）。",
         }),
-        podcast: podcastSelect,
+        podcast: podcastSelectDocs,
         contentSha: fields.ignored(),
         legacyFilename: fields.ignored(),
         content: markdocField,
@@ -79,7 +79,7 @@ export default config({
           label: "Clipped at",
           description: "ISO-8601（例: 2026-06-09T07:42:19.000Z）。空ならファイル名から推定。",
         }),
-        podcast: podcastSelect,
+        podcast: podcastSelectWebClips,
         contentSha: fields.ignored(),
         legacyFilename: fields.ignored(),
         promotedTo: fields.ignored(),

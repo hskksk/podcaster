@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Capture CLI — POST /api/capture (default podcast: queued; ingest runs on main via Actions).
+ * Capture CLI — POST /api/capture (web-clips: podcast none; docs: podcast queued by default).
  *
  *   pnpm capture --title "Note" --file notes.md
  *   pnpm capture --title "Clip" --file page.md --url https://example.com
@@ -76,14 +76,16 @@ if (argv.includes("--patch")) {
   const file = flag(argv, "--file");
   if (!title || !file) usage();
   const content = readFileSync(file, "utf8");
+  const collection = flag(argv, "--collection") ?? "web-clips";
+  const podcastDefault = collection === "docs" ? "queued" : "none";
   await post(
     {
       title,
       content,
       url: flag(argv, "--url"),
       slug: flag(argv, "--slug"),
-      collection: flag(argv, "--collection") ?? "web-clips",
-      podcast: flag(argv, "--podcast") ?? "queued",
+      collection,
+      podcast: flag(argv, "--podcast") ?? podcastDefault,
     },
     "POST",
   );
