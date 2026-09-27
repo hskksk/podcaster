@@ -13,6 +13,7 @@ export interface Episode {
   mem_note_id: string | null;
   title: string;
   status: string;
+  image_url?: string | null;
   created_at: string;
 }
 

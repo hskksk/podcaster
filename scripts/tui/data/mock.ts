@@ -81,6 +81,7 @@ export const EPISODES = [
     mem_note_id: ARTICLES[0].mem_note_id,
     title: '第48回：江戸を救った男 ─ 勝海舟と無血開城の交渉術',
     status: 'audio_ready',
+    image_url: 'episodes/ep1/cover.jpg',
     created_at: minus(60 * 4 - 18),
   },
   {
@@ -89,6 +90,7 @@ export const EPISODES = [
     mem_note_id: ARTICLES[1].mem_note_id,
     title: '第47回：AIに「記憶」をもたせる ─ 短期・長期・抽象化のアーキテクチャ',
     status: 'published',
+    image_url: 'episodes/ep2/cover.jpg',
     created_at: minus(60 * 26 - 12),
   },
   {
@@ -97,6 +99,7 @@ export const EPISODES = [
     mem_note_id: 'mem_X1',
     title: '第49回：未着手の企画',
     status: 'script_ready',
+    image_url: null,
     created_at: minus(10),
   }
 ];
@@ -128,7 +131,7 @@ export const AUDIO_FILES = [
 export const LOGS = [
   {
     processed_at: minus(2),
-    queue_name: '',
+    queue_name: 'generateEpisodeImage',
     status: 'success',
     episode_id: 'ep1',
     article_id: null,
@@ -158,6 +161,12 @@ export const LOGS = [
 export const CONFIG = [
   { key: 'podcast.title', value: 'Podcaster Daily' },
   { key: 'podcast.description', value: 'AIが生成するテック・教養ポッドキャスト' },
+  {
+    key: 'podcast.cover_url',
+    value: 'https://example.supabase.co/storage/v1/object/public/podcast/cover.png',
+  },
+  { key: 'image.enabled', value: true },
+  { key: 'image.model', value: 'gemini-3.1-flash-image' },
   { key: 'tts.host.name', value: 'Host' },
   { key: 'tts.cohost.name', value: 'CoHost' },
 ];

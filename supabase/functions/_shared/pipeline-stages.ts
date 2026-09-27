@@ -373,7 +373,7 @@ export async function runGenerateEpisodeImageStage(opts: {
     if (updateErr) throw new Error(`Episode image_url update failed: ${updateErr.message}`);
 
     await writeLog(db, {
-      queue_name: "",
+      queue_name: "generateEpisodeImage",
       message_id: null,
       article_id: articleId,
       episode_id: episodeId,
@@ -385,7 +385,7 @@ export async function runGenerateEpisodeImageStage(opts: {
   } catch (err) {
     console.error(`[episode-image] stage failure episode_id=${episodeId}`, err);
     await writeLog(db, {
-      queue_name: "",
+      queue_name: "generateEpisodeImage",
       message_id: null,
       ...(articleId ? { article_id: articleId } : {}),
       episode_id: episodeId,
