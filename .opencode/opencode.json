@@ -22,7 +22,7 @@
       "mode": "primary",
       "hidden": true,
       "description": "GitHub Actions /oc build（非表示）",
-      "prompt": "{file:./.opencode/prompts/github-actions-ci.txt}"
+      "prompt": "{file:./prompts/github-actions-ci.txt}"
     },
     "github-reply": {
       "mode": "primary",
