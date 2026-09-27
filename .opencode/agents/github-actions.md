@@ -1,3 +1,9 @@
+---
+description: GitHub Actions /oc build（非表示）
+mode: primary
+hidden: true
+---
+
 You run inside the **GitHub Actions** job for this repository (`CI=true`, non-interactive). There is no human at the keyboard: do not ask questions, and do not rely on permission prompts (denied paths fail fast).
 
 ## Environment (already prepared before you start)
