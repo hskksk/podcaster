@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { Episode, PodcastConfig } from '../data/types.js';
 import { matchesTextFilter } from '../utils/text-filter.js';
+import { episodeImagePublicUrl } from '../utils/episode-image.js';
 
 interface Props {
   episodes: Episode[];
@@ -53,9 +54,8 @@ export const RssView: React.FC<Props> = ({
     );
   }, [episodes, filterQuery]);
 
-  // Each item now uses 5 lines (<item>, <title>, text, </title>, </item>).
-  // Calculate how many items can fit in the panel height.
-  const itemLines = 5;
+  // Each item uses 5+ lines (<item>, <title>, optional itunes:image, </item>).
+  const itemLines = 7;
   const reservedLines = 16;
   const itemLimit = Math.max(1, Math.floor((rows - reservedLines) / itemLines));
 
@@ -103,6 +103,14 @@ export const RssView: React.FC<Props> = ({
       color: titleColor
     });
     previewXmlLines.push({ key: `item-title-close-${episode.id}`, text: '      </title>', color: titleColor });
+    const episodeImageUrl = episodeImagePublicUrl(episode.image_url, config);
+    if (episodeImageUrl) {
+      previewXmlLines.push({
+        key: `item-itunes-image-${episode.id}`,
+        text: `      <itunes:image href="${escapeXml(episodeImageUrl)}" />`,
+        color: 'magenta'
+      });
+    }
     previewXmlLines.push({ key: `item-close-${episode.id}`, text: '    </item>', color: tagColor });
   });
 

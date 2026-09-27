@@ -226,6 +226,34 @@ export class DataClient {
   }
 
   /** Download podcast audio to ./downloads (audio_files.id or episode_id). */
+  async downloadEpisodeImage(episodeId: string): Promise<ClientActionResult> {
+    if (this.isMock) {
+      console.log(`Mock: download episode image ${episodeId}`);
+      return { success: true, path: join(process.cwd(), 'downloads', 'mock-cover.jpg') };
+    }
+    if (!this.db) return { success: false, error: 'DB not initialized' };
+
+    const { data: episode, error: epErr } = await this.db
+      .from('episodes')
+      .select('image_url')
+      .eq('id', episodeId)
+      .maybeSingle();
+    if (epErr) return { success: false, error: epErr.message };
+    const storagePath = episode?.image_url?.trim();
+    if (!storagePath) return { success: false, error: 'No episode artwork (image_url)' };
+
+    const { data: blob, error: dlErr } = await this.db.storage.from('podcast').download(storagePath);
+    if (dlErr || !blob) {
+      return { success: false, error: dlErr?.message ?? 'Download failed' };
+    }
+    const filename = storagePath.split('/').pop() ?? `${episodeId}-cover.jpg`;
+    const destDir = join(process.cwd(), 'downloads');
+    await mkdir(destDir, { recursive: true });
+    const dest = join(destDir, filename);
+    await writeFile(dest, Buffer.from(await blob.arrayBuffer()));
+    return { success: true, path: dest };
+  }
+
   async downloadAudio(idOrEpisodeId: string): Promise<ClientActionResult> {
     if (this.isMock) {
       console.log(`Mock: download audio ${idOrEpisodeId}`);

@@ -13,6 +13,8 @@ interface Props {
   filterQuery: string;
   /** Ctrl+A on a focused lane: requeue audio for the highlighted episode (confirm in App). */
   onRequeueAudioRequest: (episodeId: string) => void;
+  /** Ctrl+I/i on a focused lane: regenerate episode artwork (confirm in App). */
+  onRegenerateImageRequest: (episodeId: string) => void;
 }
 
 const STAGES = [
@@ -32,7 +34,8 @@ export const PipelineView: React.FC<Props> = ({
   onSelectEpisode,
   keyboardEnabled,
   filterQuery,
-  onRequeueAudioRequest
+  onRequeueAudioRequest,
+  onRegenerateImageRequest
 }) => {
   const { episodes } = data;
   const [offsets, setOffsets] = useState<number[]>(() => STAGES.map(() => 0));
@@ -108,10 +111,17 @@ export const PipelineView: React.FC<Props> = ({
       }
     }
 
-    if (key.ctrl && input === 'a') {
+    if (key.ctrl && (input === 'a' || input === 'A')) {
       const selectedEpisode = laneEpisodes[selectedIndices[laneIndex]];
       if (selectedEpisode) {
         onRequeueAudioRequest(selectedEpisode.id);
+      }
+    }
+
+    if (key.ctrl && (input === 'i' || input === 'I')) {
+      const selectedEpisode = laneEpisodes[selectedIndices[laneIndex]];
+      if (selectedEpisode) {
+        onRegenerateImageRequest(selectedEpisode.id);
       }
     }
   });
@@ -128,7 +138,7 @@ export const PipelineView: React.FC<Props> = ({
       ) : null}
       {keyboardEnabled && (
         <Box paddingX={1} flexShrink={0}>
-          <Text dimColor>Ctrl+A: requeue audio (selected card)</Text>
+          <Text dimColor>Ctrl+A: requeue audio │ Ctrl+I/i: regen artwork (selected card)</Text>
         </Box>
       )}
       <Box flexDirection="row" flexGrow={1} minHeight={0}>
