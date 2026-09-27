@@ -187,7 +187,7 @@ AST による静的解析は Stripe Docs の重要な応用であり、公式ブ
 - AST ベースの自動リファクタリングツールを開発し、find-and-replace より堅牢に文書全体の複雑な編集を可能にしている
 - リンク検証をはじめとする検証は、本文中の全リンクを走査する
 
-Markdoc が意図的に持たせなかったループ・変数代入のおかげで、ドキュメントが完全にステートレスに保たれる点は、こうした解析と最適化を後押ししている。{% if %} のような条件分岐があっても、生成されうる分岐を静的に把握しやすい。
+Markdoc が意図的に持たせなかったループ・変数代入のおかげで、ドキュメントが完全にステートレスに保たれる点は、こうした解析と最適化を後押ししている。`{% if %}` のような条件分岐があっても、生成されうる分岐を静的に把握しやすい。
 
 ## カスタムタグのカタログ：確認できるものと確認できないもの
 
@@ -226,6 +226,19 @@ Create [usage records](/docs/api/usage_records)
 {% /edge %}
 {% /diagram %}
 ```
+
+本サイトは Stripe 独自の `diagram` / `node` / `edge` タグ（React Flow）を実装していない。上記は Markdoc ソースの引用であり、読者向けには同じ node / edge 関係を Mermaid で概略表示する。
+
+{% diagram type="mermaid" %}
+```mermaid
+sequenceDiagram
+  participant Customer
+  participant Typographic
+  participant Stripe
+  Customer->>Typographic: Select plan
+  Typographic->>Typographic: Create usage records
+```
+{% /diagram %}
 
 ポイントは次のとおりである。
 
