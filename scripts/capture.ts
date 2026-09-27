@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Capture CLI — POST /api/capture (never calls ingest / TTS).
+ * Capture CLI — POST /api/capture (default podcast: queued; ingest runs on main via Actions).
  *
  *   pnpm capture --title "Note" --file notes.md
  *   pnpm capture --title "Clip" --file page.md --url https://example.com
@@ -83,7 +83,7 @@ if (argv.includes("--patch")) {
       url: flag(argv, "--url"),
       slug: flag(argv, "--slug"),
       collection: flag(argv, "--collection") ?? "web-clips",
-      podcast: flag(argv, "--podcast") ?? "none",
+      podcast: flag(argv, "--podcast") ?? "queued",
     },
     "POST",
   );

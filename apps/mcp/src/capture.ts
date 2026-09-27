@@ -29,7 +29,7 @@ export async function capturePost(body: {
       content: body.content,
       url: body.url,
       collection: "web-clips",
-      podcast: "none",
+      podcast: "queued",
     }),
   });
   const text = await res.text();

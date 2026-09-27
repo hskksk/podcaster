@@ -107,12 +107,12 @@ export const markdocComponents = {
 export const podcastSelect = fields.select({
   label: "Podcast",
   description:
-    "none = ナレッジのみ。queued は GitHub Actions が ingest し、成功後 published に書き戻します。",
+    "queued（既定）= main マージ後に GitHub Actions が ingest（台本・音声・挿絵）し、成功後 published に書き戻します。none = ナレッジのみ。",
   options: [
-    { label: "None", value: "none" },
     { label: "Queued", value: "queued" },
+    { label: "None", value: "none" },
     { label: "Published", value: "published" },
     { label: "Skipped", value: "skipped" },
   ],
-  defaultValue: "none",
+  defaultValue: "queued",
 });

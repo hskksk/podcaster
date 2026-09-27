@@ -7,7 +7,7 @@ const server = new FastMCP({
   name: "podcaster",
   version: "0.1.0",
   instructions:
-    "Git + Markdoc knowledge for podcaster. Reads use checkout or GITHUB_READ_TOKEN. Writes call Capture API (CAPTURE_API_TOKEN), never GITHUB_TOKEN. Capture does not start TTS.",
+    "Git + Markdoc knowledge for podcaster. Reads use checkout or GITHUB_READ_TOKEN. Writes call Capture API (CAPTURE_API_TOKEN), never GITHUB_TOKEN. Default podcast: queued; ingest runs on main via Actions.",
 });
 
 server.addTool({
@@ -51,7 +51,7 @@ server.addTool({
 server.addTool({
   name: "write_clip",
   description:
-    "Create a web-clip via Capture API (podcast: none). Does not call ingest or TTS. Requires CAPTURE_API_URL + CAPTURE_API_TOKEN.",
+    "Create a web-clip via Capture API (podcast: queued by default). Ingest runs via GitHub Actions on main, not inline. Requires CAPTURE_API_URL + CAPTURE_API_TOKEN.",
   parameters: z.object({
     title: z.string().min(1),
     content: z.string().min(1),

@@ -1,5 +1,5 @@
 # Phase 3: ingest content/** with podcast: queued, then write published.
-# Capture defaults to none. Do not queue the migrated web-clips in bulk.
+# Capture defaults to queued. Do not queue the migrated web-clips in bulk.
 name: Ingest queued podcasts
 
 on:
