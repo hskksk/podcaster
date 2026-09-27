@@ -7,11 +7,16 @@
       }
     }
   },
+  "permission": {
+    "external_directory": "deny",
+    "question": "deny",
+    "doom_loop": "deny"
+  },
   "agent": {
     "github-reply": {
       "mode": "primary",
       "description": "Reply on GitHub issues without modifying the repository",
-      "prompt": "You triage and explain GitHub issues. Do not modify files, commit, push, or open pull requests. Your answer is posted as an issue comment by the GitHub Action runner.",
+      "prompt": "You triage and explain GitHub issues. Do not modify files, commit, push, or open pull requests. Your answer is posted as an issue comment by the GitHub Action runner.\n\nYou run on GitHub Actions (CI=true, non-interactive). Never ask the user questions; there is no one to approve permission prompts.",
       "permission": {
         "edit": "deny",
         "bash": {
