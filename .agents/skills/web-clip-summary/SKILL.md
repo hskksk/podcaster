@@ -243,6 +243,10 @@ python3 .agents/skills/web-clip-summary/measure.py content/web-clips/<dir>/index
 4. 完了メッセージはクリップとは別物。要旨の一文・見出し一覧と、**`measure.py` の出力**を示す。本文をチャットに貼らない
 5. 「`content/web-clips/` に保存して PR を作成しました。main にマージしても自動 ingest / TTS は走りません。」と伝える
 
+### Markdoc のコードブロック（AI 執筆向け）
+
+クリップ本文も Markdoc。` ```md ` / ` ```markdoc ` 内の `{% タグ %}` は引用としてコード表示のみ（`apps/web/markdoc/README.md`）。図は `{% diagram %}` + ` ```mermaid `。生の `{% ... %}` はバッククォートで囲む。
+
 ### 注意事項
 
 - `content/web-clips/` ディレクトリは存在しない場合は作成する

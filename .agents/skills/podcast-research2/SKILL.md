@@ -257,6 +257,10 @@ python3 .agents/skills/podcast-research2/measure.py content/docs/<slug>/index.md
 4. 完了メッセージはレポートとは別物。見出し一覧・答えの一文・位置づけの一文と、**`measure.py` の出力**を示す。本文をチャットに貼らない
 5. 「`content/docs/` に保存して PR を作成しました。main にマージしても自動 ingest / TTS は走りません。」と伝える
 
+### Markdoc のコードブロック（AI 執筆向け）
+
+本文は Markdoc としてビルドされる。` ```md ` / ` ```markdoc ` 等のフェンスは**引用**であり、中の `{% タグ %}` は描画されない（`apps/web/markdoc/README.md`）。図は `{% diagram %}` + ` ```mermaid ` をフェンス外に置く。本文中の生 `{% ... %}` はバッククォートで囲む。
+
 ### 注意事項
 
 - `content/docs/` ディレクトリは存在しない場合は作成する
