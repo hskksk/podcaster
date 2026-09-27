@@ -1,4 +1,21 @@
-import { nodes as defaultNodes } from "@markdoc/markdoc";
+import {
+  nodes as defaultNodes,
+  Tag,
+  type Config,
+  type Node,
+} from "@markdoc/markdoc";
+
+/** Markdoc defaults `process=true` on fences (tags inside are parsed). For doc languages, treat as source quotes. */
+const LITERAL_FENCE_LANGUAGES = new Set(["md", "markdown", "markdoc", "mdoc"]);
+
+function fenceUsesLiteralContent(
+  language: string | undefined,
+  process: boolean | undefined,
+): boolean {
+  if (process === false) return true;
+  if (process === true) return false;
+  return language != null && LITERAL_FENCE_LANGUAGES.has(language);
+}
 
 export default {
   document: defaultNodes.document,
@@ -22,6 +39,17 @@ export default {
   fence: {
     render: "Fence",
     attributes: defaultNodes.fence.attributes,
+    transform(node: Node, config: Config) {
+      const attributes = node.transformAttributes(config);
+      const language = node.attributes.language as string | undefined;
+      const processFlag = attributes.process as boolean | undefined;
+      const literal = fenceUsesLiteralContent(language, processFlag);
+      const children =
+        literal || node.children.length === 0
+          ? [node.attributes.content]
+          : node.transformChildren(config);
+      return new Tag("Fence", attributes, children);
+    },
   },
   heading: {
     render: "Heading",

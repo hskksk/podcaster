@@ -135,6 +135,15 @@ metadata:
 4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
 5. 「`content/docs/` に保存して PR を作成しました。main にマージしても自動 ingest / TTS は走りません。」と伝える
 
+### Markdoc のコードブロック（AI 執筆向け）
+
+本文は Markdoc（`.mdoc`）としてビルドされる。**コードフェンスは原則「引用テキスト」**であり、言語ラベル `md` / `markdown` / `markdoc` / `mdoc` のブロック内の `{% タグ %}` はサイト側で**描画されない**（Markdoc 仕様の `process=false` 相当。詳細は `apps/web/markdoc/README.md`）。
+
+- **構文の例・他サイトの Markdoc ソースを載せる** → ` ```md ` または ` ```markdoc ` でよい（タグはそのままコード表示）
+- **このサイトで図や callout を出す** → フェンスの外で `{% diagram type="mermaid" %}` 等の登録タグを使い、中身は ` ```mermaid ` / ` ```d2 `
+- フェンス内のタグまで実行したい rare case のみ ` ```md {% process=true %} `（通常は使わない）
+- 本文中の生の `{% ... %}` はバッククォートで囲む（インラインタグとして解釈される）
+
 ### 注意事項
 
 - `content/docs/` ディレクトリは存在しない場合は作成する
