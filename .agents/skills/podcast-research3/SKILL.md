@@ -1,0 +1,178 @@
+---
+name: podcast-research3
+description: Research a topic deeply (podcast-research survey structure), apply podcast-research2 Japanese prose rules only, save Markdoc to content/docs/, and create a PR (does not auto-ingest)
+license: MIT
+compatibility: claude-code
+allowed-tools:
+  - WebSearch
+  - WebFetch
+  - Write
+  - Read
+  - Bash(git checkout -b article/*)
+  - Bash(git add content/docs/*)
+  - Bash(git commit -m*)
+  - Bash(git push -u origin article/*)
+  - Bash(gh pr create*)
+metadata:
+  audience: podcast producers
+  companion-of: podcast-research
+  japanese-rules-from: podcast-research2
+---
+
+## What I do
+
+指定されたテーマについて深く調査し、ポッドキャスト台本生成用の詳細な Markdown レポートを作成します。
+
+`podcast-research` の調査手順・章立て・保存先・PR の流れはそのまま使い、**日本語本文の作法だけ** `podcast-research2` の `references/japanese.md` を適用する版です（三層構造・`measure.py`・`structure.md` 等は使いません）。
+
+1. **多角的なリサーチ**: 概要・背景・詳細・最新動向・具体例・関連トピックを複数回のWeb検索で収集
+2. **レポート保存**: `content/docs/` に Markdoc (`index.mdoc`) として保存する（公開 Wiki / 旧 `articles/` 相当）
+3. **PR 作成**: origin/main ベースのブランチを作成して PR を出す（マージしても TTS は走らない。`podcast: none`）
+
+**保存先の区別**: `content/web-clips/` は短い Web クリップ・クイックメモ用。本スキルのような **深い調査レポートは `content/docs/` に置く**（Keystatic の Wiki Documents）。
+
+## When to use me
+
+- `/podcast-research3 <テーマ>` の形式で呼び出す
+- 例: `/podcast-research3 モジュラー曲線と楕円曲線の関係`
+- `/podcast-research` と同じサーベイ型の目次。日本語の読みやすさだけ `podcast-research2` 由来の規則を足す
+
+## Instructions
+
+あなたはポッドキャスト制作用のリサーチエージェントです。
+以下の手順で指定テーマを徹底調査し、詳細な Markdown レポートを作成してください。
+
+### 参照ファイル
+
+| 参照 | 役割 | いつ読むか |
+|------|------|-----------|
+| `references/japanese.md` | 直訳調の直し方と日本語の文の整え方（`podcast-research2` と同一内容） | **出力が日本語のとき、本文を書き始める前に必須** |
+
+### ステップ 1: リサーチ計画
+
+まずテーマを分析し、調査すべきサブトピックを列挙する（最低8〜12項目）。
+- 概要・定義・歴史的背景
+- 核となる概念・理論・仕組み
+- 具体例・応用事例
+- 重要人物・論文・文献
+- 最新の動向・未解決問題
+- 関連する隣接分野との接続
+
+### ステップ 2: 徹底的なWeb調査
+
+各サブトピックについてWebSearchとWebFetchを繰り返し実行する。
+- **検索は最低15回以上** 行い、日本語・英語の両方で検索する
+- 重要なページは WebFetch で全文取得して詳細を把握する
+- Wikipedia、arXiv、技術ブログ、公式ドキュメントなど複数ソースを参照する
+- 数式・アルゴリズム・定理は正確に記録する
+
+進捗は都度報告する（「〇〇について調査中...」）。信頼性が低い情報はその旨を明記する。
+
+### ステップ 3: Markdown レポート作成
+
+**日本語で書くとき**は `references/japanese.md` を読んだうえで本文を書く。直訳調はこのスキルの既知の失敗モードである。とくに次を守る。
+
+- **英語の比喩をそのまま訳さない**（1.3 の置き換え表）
+- **複合語を勝手に作らない**（1.5）
+- **「持つ」を乱用しない**（1.6）
+- **漢語を三つ以上続けない**（2.5）
+- **常体で統一**（2.6）。既定は「〜である」「〜した」
+- **太字**は初出の術語・数値と条件・節末ラベルの3種に限る（2.10）
+
+出力言語はユーザーの指定がなければ日本語・常体。固有名、論文題、API、ファイルパスは原文のまま。
+
+収集した情報を以下の構成で Markdown にまとめる。
+
+**目標文字数: 約2万字**（長すぎると生成音声が長くなりコスト増・品質劣化の原因となるため）
+
+```markdown
+# <テーマタイトル>
+
+## 概要
+（テーマの全体像・重要性・なぜ面白いか）
+
+## 背景・歴史
+（どのような経緯で生まれ、発展してきたか）
+
+## 核となる概念
+### <概念1>
+### <概念2>
+...
+
+## 詳細な仕組み・理論
+（技術的・数学的な詳細。数式は LaTeX 記法で記述）
+
+## 具体例・応用事例
+（実際の例、ケーススタディ）
+
+## 重要人物・文献
+（関連する人物、論文、書籍）
+
+## 最新動向・未解決問題
+（現在進行形のトピック）
+
+## 関連トピック
+（隣接する概念・分野へのつながり）
+
+## 参考リンク
+（調査に使用したURL一覧）
+```
+
+### ステップ 4: content/docs/ に保存して PR を作成する
+
+ユーザーの確認は不要。以下を順に実行する。
+
+1. `content/docs/YYYYMMDD_HHMMSS_<テーマ>/index.mdoc` にレポートを保存する。先頭に YAML frontmatter を付ける（本文のプロスは Markdown のまま。数式は `$...$` / `$$` でよい）:
+
+   ```markdown
+   ---
+   title: "<テーマタイトル>"
+   publishedAt: YYYY-MM-DD
+   podcast: none
+   legacyFilename: YYYYMMDD_HHMMSS_<topic-slug>.md
+   ---
+   ```
+
+2. origin/main ベースの新しいブランチを作成してコミット:
+   ```bash
+   SLUG="YYYYMMDD_HHMMSS_<topic-slug>"
+   BRANCH="article/$SLUG"
+   git checkout -b "$BRANCH" origin/main
+   git add "content/docs/$SLUG/index.mdoc"
+   git commit -m "Add podcast research article: <テーマ>"
+   git push -u origin "$BRANCH"
+   ```
+3. PR を作成する:
+   - `gh` CLI が使える場合:
+     ```bash
+     gh pr create \
+       --base main \
+       --title "Podcast Research: <テーマ>" \
+       --body "## 概要
+
+知識として content/docs（Wiki 記事）に入れます。マージしても TTS は実行しません（podcast: none）。
+
+- ファイル: content/docs/$SLUG/index.mdoc
+- テーマ: <テーマ>
+- スキル: podcast-research3"
+     ```
+   - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
+4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
+5. 「`content/docs/` に保存して PR を作成しました。main にマージしても自動 ingest / TTS は走りません。」と伝える
+
+### Markdoc のコードブロック（AI 執筆向け）
+
+本文は Markdoc（`.mdoc`）としてビルドされる。**コードフェンスは原則「引用テキスト」**であり、言語ラベル `md` / `markdown` / `markdoc` / `mdoc` のブロック内の `{% タグ %}` はサイト側で**描画されない**（Markdoc 仕様の `process=false` 相当。詳細は `apps/web/markdoc/README.md`）。
+
+- **構文の例・他サイトの Markdoc ソースを載せる** → ` ```md ` または ` ```markdoc ` でよい（タグはそのままコード表示）
+- **このサイトで図や callout を出す** → フェンスの外で `{% diagram type="mermaid" %}` 等の登録タグを使い、中身は ` ```mermaid ` / ` ```d2 `
+- フェンス内のタグまで実行したい rare case のみ ` ```md {% process=true %} `（通常は使わない）
+- 本文中の生の `{% ... %}` はバッククォートで囲む（インラインタグとして解釈される）
+
+### 注意事項
+
+- `content/docs/` ディレクトリは存在しない場合は作成する
+- ファイル名のテーマ部分はファイルシステムで安全な文字のみ使用する（スペースはアンダースコアに）
+- 情報の信頼性が低い場合はその旨を明記する
+- `podcast: queued` にはしない。TTS が必要ならユーザーが明示したときだけ `queued` に変える（既定は `none`。マージだけでは ingest しない）
+- このスキルは `podcast-research` と `podcast-research2` を置き換えない
