@@ -156,6 +156,7 @@ def main():
     calque = re.findall(CALQUE, body)
     say = [sentence for sentence in sentences if re.search(SAY_FINAL, sentence)]
     h2 = [line[3:].strip() for line in body.splitlines() if line.startswith("## ")]
+    h3 = [line[4:].strip() for line in body.splitlines() if line.startswith("### ")]
     tldr_match = re.search(
         r"(?:^|\n)## TL;DR\s*\n(.*?)(?=\n## |\Z)",
         body,
@@ -202,10 +203,17 @@ def main():
     result("本文字数", body_chars, True, "参考値。下限なし", required=False)
     result("散文の文数", len(sentences), True, "", required=False)
     result(
+        "H2 / H3 の数",
+        f"{len(h2)} / {len(h3)}",
+        True,
+        "階層の適否は目次テストで確認",
+        required=False,
+    )
+    result(
         "一文の平均字数",
         f"{statistics.mean(lengths):.1f}",
         True,
-        "目安 55〜95",
+        "目安 95以下。下限なし",
         required=False,
     )
     result(
