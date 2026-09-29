@@ -93,11 +93,9 @@ Be consistent: one name per thing, used every time. Elegant variation ("the tabl
 - **Semicolon**: joins two independent clauses whose connection you want to assert without a conjunction. Not a stronger comma.
 - **Serial comma**: use it, always. `A, B, and C` cannot be misread as `A` and `(B and C)`.
 
-## 10. What the Japanese revision changed, and what carries over
+## 10. Research-report conventions
 
-Three conventions were reversed for Japanese output after measuring two real reports. Two of them carry over to English; one does not.
-
-**Carries over — numbered `[n]` citations.** Put the citation at the end of the sentence and keep the source name out of the subject position. Without a citation mechanism, every source becomes a grammatical subject and the report turns into a bibliography.
+**Use numbered `[n]` citations.** Put the citation at the end of the sentence and keep the source name out of the subject position. Without a citation mechanism, every source becomes a grammatical subject and the report turns into a bibliography.
 
 ```
 Weak:   Validatar's "10 Data Quality Tests" notes that missing referential integrity in
@@ -107,6 +105,6 @@ Better: Missing referential integrity in PIT/Bridge surfaces as a reporting gap,
 
 Name a source in running text only when its position is itself the subject — "Brooks separated essential from accidental complexity" is right, because Brooks is what the sentence is about.
 
-**Carries over — headings that state the finding.** `## 3. Hash contracts — they break silently and joins disappear`. The original rule sent conclusions to each section's first sentence and left headings as bare noun phrases. That produces a table of contents a reader cannot navigate, in either language. Run the **contents test**: read only the headings, top to bottom, and see whether you can state the survey's conclusion.
+**Use heading levels consistently with `gravity.md`.** Top-level sections tell readers whether they are entering background, mechanism, constraints, evidence, or implications. Lower-level headings name the concrete finding, question, or comparison target. Avoid both generic labels such as `Details` and headings that try to carry the entire argument.
 
-**Does not carry over — bold density.** Japanese has no capitals and no spaces between words, so bold is one of the few scanning landmarks, and `japanese.md` 2.10 removes the cap on it. English already has capitals, italics and word spacing. Keep bold sparse here: a couple of spans per section, and only to prevent a misreading.
+**Keep bold sparse.** English already has capitals, italics, and word spacing. Use bold only to prevent a misreading or expose a condition.

@@ -6,6 +6,14 @@
 
 Podcaster is an AI podcast generator built on Supabase. Article text flows through a pgflow pipeline: `ingest -> craftEpisode(generateScript -> generateAudio -> updateRss)`. Execution is handled by `craft-episode-worker`, and flow definitions are served by `functions/pgflow` ControlPlane. See `CLAUDE.md` and `README.md` for full architecture and command reference. Knowledge files live under `content/`. PKM stack: Capture, Git ingest, Next.js public site, MCP, mem cleanup (`docs/architecture/pkm-next.md`).
 
+### Documentation maintenance
+
+- Operational documentation and agent skills describe the **current** behavior and rules. When changing them, replace obsolete guidance instead of appending a chronological account of the change.
+- Do not add revision histories, session narratives, “before/after” timelines, experiment diaries, or notes about what an agent just changed unless the user explicitly asks for that record.
+- Git history and pull requests are the default record of change. If a design rationale must remain discoverable, put the current decision and its reason in a dedicated design document; do not repeat the history in every operational file.
+- Keep one authoritative location for each rule and link to it from other files. Retain only the smallest example needed to apply the rule.
+- Generated reports under `content/` must stand on their own and must not mention the skill, prompt, agent session, or revision process that produced them.
+
 ### Prerequisites (already installed in the VM environment)
 
 - **Node.js 24** via fnm (`eval "$(fnm env --shell bash)"` to activate)

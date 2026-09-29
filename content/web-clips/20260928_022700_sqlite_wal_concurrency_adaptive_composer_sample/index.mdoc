@@ -1,0 +1,147 @@
+---
+title: "SQLite WALの同時実行 — 読み書きは分離し、書き込みとチェックポイントは直列のまま"
+url: "https://github.com/hskksk/podcaster/pull/180"
+clippedAt: "2026-09-28T02:27:00.000Z"
+podcast: none
+legacyFilename: 20260928_022700_sqlite_wal_concurrency_adaptive_composer_sample.md
+---
+
+# SQLite WALの同時実行 — 読み書きは分離し、書き込みとチェックポイントは直列のまま
+
+## TL;DR
+
+- **WAL**（Write-Ahead Logging）を有効にすると、読み取りと書き込みは互いをブロックせず同時に進められるが、WALファイルは1本のため同時にコミットできる書き込みは常に1つに限られる [1][2]。
+- 読み取りはトランザクション開始時点の **end mark** より古いWALフレームと本体 `.db` を組み合わせた **スナップショット** を見るため、書き込み中でも一貫した古いページを読める [1][2]。
+- トランザクション分離は引き続き **serializable** で、実装は書き込みの直列化で満たされ、WALはマルチライターではない [2]。
+- チェックポイントは既定でPASSIVEが走り、読者や書き込みがいるとWALが伸び続け、読者が絶えない環境では **reader gap** か強いモードが要る [1][4]。
+- ロック競合の既定は即時 **SQLITE_BUSY** で、busy_timeoutやBEGIN IMMEDIATEは有効だがDEFERREDからの書き込み昇格では **SQLITE_BUSY_SNAPSHOT** が待機不能な経路として残る [2][5][6]。
+
+## 答え・条件・この文書の範囲
+
+組み込みアプリやエッジサービスでSQLiteを読み書き混在で使うとき、最初に押さえるべき整理は次の一文に集約できる。WALは「読み取りが書き込みを待たない」「書き込みが読み取りを待たない」状態を作る。一方で「複数の書き込みを並べる」機能は付かない。書き込みの上限は依然として **1接続・1トランザクション** の直列コミットである [1][2]。
+
+この整理は、接続プールやワーカー数を増やして書き込みスループットが伸びると期待する設計を防ぐ。WALを入れたあとにSQLITE_BUSYが増える場合、原因は多くのとき複数writerの競合か、WALの肥大化とチェックポイント不足である [1][4][8]。
+
+本稿は公式のWAL・分離・ロック形式の説明を軸に、ロールバックジャーナルとの差、チェックポイント四モード、busy処理、運用上の上限を一枚の判断材料にまとめる。実験ブランチのBEGIN CONCURRENT、WAL2、サーバー型DBとの性能比較の詳細は付録の「採用しなかった枝」に回す。
+
+## 基本の仕組み
+
+### WALは読みと書きの待ち合いだけを切り離す
+
+`journal_mode=WAL` にすると、変更はまず `-wal` へ追記され、本体ファイルは可能な限り古い内容を保つ [1]。書き込み側は末尾にフレームを足すだけなので、読み取り側が参照しているページを上書きしない [1][3]。
+
+読み取り側はページを必要になったとき、自分のend markより前にそのページの有効フレームがWALにあればそこから読み、なければ本体から読む [1]。そのため、長い読み取りトランザクションは、途中でコミットされた書き込みを見ない [2]。
+
+並行読み取りの性能は **wal-index**（通常は `-shm` 共有メモリ）が支える。全読者が同一マシン上にいる前提であり、NFSなどのネットワークファイルシステムではWAL自体が使えない [1]。共有メモリを持たないVFSでは `locking_mode=EXCLUSIVE` を先に設定すれば単一プロセス利用に限ってWALが可能になるが、通常のマルチプロセス共有とは別物である [1]。
+
+## ロールバックジャーナルとの比較
+
+### ロールバックジャーナルとの差は「本体を書く瞬間」にある
+
+比較の軸は「読み取りと書き込みがぶつかる層」である。次の表は公式の分離説明とロック資料から抜いた運用向けの対比である [2][7]。
+
+| 観点 | ロールバック（DELETE等） | WAL |
+| --- | --- | --- |
+| 変更の置き場 | 本体ファイルへ直接書き、`-journal` で巻き戻し | まず `-wal` に追記、後で本体へマージ |
+| 読み取りと書き込み | ディスクへフラッシュ前に読者を一時排除しやすい | 同時進行が可能 |
+| 同時writer | 実質1本（RESERVED→EXCLUSIVE） | 明示的に1本（WALは1ファイル） [1] |
+| 読み取りの見え方 | ロックで部分コミットを遮断 | スナップショット分離（開始時点を固定） [2] |
+| 典型の誤解 | 「読みだけなら常に軽い」 | 「WALで書き込みも並列」 |
+
+ロールバックでは、書き込みが本体へページを書き出す段階で **EXCLUSIVE** が要り、読み取りは待たされる [2][7]。WALはその衝突点をWAL追記に移した。書き込みスループットの上限モデルは変わらない [2][9]。
+
+## 制約
+
+### 書き込みが1本に並ぶのは単一WALと排他ロックの結果である
+
+serializable分離は、接続が別でも「書き込みを実際に直列化する」ことで満たされる [2]。任意の瞬間にwriterは1つまでである [2]。
+
+実装面では、**WAL_WRITE_LOCK** は常に排他であり、WAL末尾へ追記する接続だけが保持する [3]。追記ログが1本である以上、2つの書き込みが同時に末尾へコミット境界を書くことはできない [1][3]。
+
+2つ目の書き込みは、先のwriterがロックを放すまで待つか、待たない設定ならSQLITE_BUSYになる [1][5]。これは分離レベルの名前が並列書き込みを禁止しているのではなく、データ構造が1本のログであることが原因である [2][3]。
+
+### 読み取り途中の書き込み昇格とBEGIN IMMEDIATE
+
+読み取りトランザクションの途中で同じ接続が書き込みへ昇格しようとすると、スナップショットが最新でなくなりSQLITE_BUSY_SNAPSHOTになる。履歴の分岐は許されない [2]。書き込みが確実な処理は **BEGIN IMMEDIATE** で最初からwriterトランザクションを開き、他writerをブロックするか失敗する [2]。
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart LR
+  R1["読み取り A<br/>end mark 固定"]
+  R2["読み取り B<br/>end mark 固定"]
+  W["書き込み 1本<br/>WAL 末尾追記"]
+  DB["本体 .db"]
+  WAL["-wal ログ"]
+  W --> WAL
+  R1 --> WAL
+  R1 --> DB
+  R2 --> WAL
+  R2 --> DB
+```
+{% /diagram %}
+
+## 運用
+
+### チェックポイントはWALサイズと読者ギャップのトレードオフを決める
+
+コミット後もフレームはしばらくWALに残り、チェックポイントで本体へ写し戻される [1]。自動チェックポイントは既定で **PASSIVE** で、他接続を邪魔しない範囲で進む。読者やwriterがいると完了しないことがある [1][4]。
+
+読者が常に存在するサービスでは、**checkpoint starvation** と呼ばれる状態でWALが肥大し、読み取りの索引コストが上がる [1]。公式はreader gap（誰も読んでいない時間）でチェックポイントを試す回避策を挙げる [1]。
+
+手動・API経由ではFULL・RESTART・TRUNCATEがより完了を狙う。代償として読者がブロックされうる [1][4]。
+
+| モード | ブロックの強さ（要約） | 典型用途 |
+| --- | --- | --- |
+| PASSIVE | 読者・writerを待たない。未完了がありうる | 既定の自動チェックポイント [1][4] |
+| FULL | writerがいなくなり、読者が最新スナップショットを読むまで待つ | WALをできるだけ本体へ寄せる [4] |
+| RESTART | FULLの後、全読者が本体のみを読むまで待つ | ログ先頭の再利用を狙う [4] |
+| TRUNCATE | RESTART相当の後WALファイルを0バイトに切る | メンテナンス窓 [4] |
+
+PASSIVEでも、チェックポイント側が先にデータベースロックを取れば、他接続は待つことがある。完全に無干渉ではない [10]。
+
+WAL_CKPT_LOCKはチェックポイント実行中に排他で保持され、nBackfillは増える方向にだけ更新される [3]。チェックポイントと追記writerは別ロックだが、どちらもWALのライフサイクルを直列に制御する部品である [3][4]。
+
+### busy_timeoutとトランザクション開始の型で待ちを設計する
+
+ロック競合時、busy-handlerが未設定ならSQLITE_BUSYは即返る [6]。**busy_timeout**（`PRAGMA busy_timeout=N`）はミリ秒単位の待機を組み込む実装である [5][6]。
+
+WALは読み書きの多くの衝突を消すが、writer同士や強いチェックポイントでは待ちが残る [1][4][8]。接続ごとにbusy_timeoutを設定し、短い書き込みトランザクションにまとめるのが実務的な定番である [8]。
+
+busy-handlerは再入不可であり、ハンドラ内で同じ接続を変更してはならない [6]。デッドロックを避けるため、状況によってはハンドラを呼ばずSQLITE_BUSYを返す [6]。
+
+**DEFERRED** で読み取りから始めた接続が後からUPDATEへ昇格する場合、非ブロッキングでwriterロックを取りに行く経路があり、busy_timeoutが効かないSQLITE_BUSY_SNAPSHOTが起きうる [2]。書き込み前提の処理は最初からBEGIN IMMEDIATEとセットで設計する [2]。
+
+### 運用上の上限と監視の目安
+
+次の条件はWALの利点を打ち消すか、別問題を生む。
+
+- 複数プロセスwriterを増やしてもスループットはほぼ伸びず、ロック待ちのオーバーヘッドだけが増える [1][8]。
+- 長寿命の読み取りトランザクションはWALの回収を遅らせ、ディスク使用量と読み取りコストを押し上げる [1]。
+- `synchronous=NORMAL`ではfsyncの多くがチェックポイントに寄る。耐久性とレイテンシのバランスはsynchronous設定とチェックポイント頻度の組み合わせで決まる [1][9]。
+- ネットワーク越しのDBファイル共有はWAL非対応である。共有ディスク上のSQLiteはロールバックモードか、単一プロセスEXCLUSIVE WALに限定される [1]。
+
+本稿の解釈として、WALを「読み取り可用性の改善」と「書き込みキューの単一化」をセットで受け入れるのが現実的である。書き込みを水平分割したいなら、シャーディングや上位のキューイング層が必要で、モード変更だけでは足りない [8][9]。
+
+## 含意
+
+アプリ側では、読み取りは短く保ち、書き込みは1本のパイプに集約し、busy_timeoutとBEGIN IMMEDIATEで失敗パターンを減らす。WALサイズと自動チェックポイントの失敗回数を監視し、読者が絶えないならreader gapか保守用のRESTART/TRUNCATEを計画する [1][4]。
+
+## 付録: 出典一覧
+
+1. Write-Ahead Logging — https://www.sqlite.org/wal.html
+2. Isolation In SQLite — https://www.sqlite.org/isolation.html
+3. WAL-mode File Format — https://www.sqlite.org/walformat.html
+4. sqlite3_wal_checkpoint_v2 — https://www.sqlite.org/c3ref/wal_checkpoint_v2.html
+5. PRAGMA busy_timeout — https://www.sqlite.org/pragma.html#pragma_busy_timeout
+6. sqlite3_busy_handler — https://www.sqlite.org/c3ref/busy_handler.html
+7. File Locking And Concurrency In SQLite Version 3 — https://www.sqlite.org/lockingv3.html
+8. WAL mode and concurrency (Coddy) — https://coddy.tech/docs/sqlite/wal-mode-and-concurrency
+9. The Write Stuff: Concurrent Write Transactions in SQLite (Oldmoe) — https://oldmoe.blog/2024/07/08/the-write-stuff-concurrent-write-transactions-in-sqlite/
+10. WAL Checkpoint Blocking Behavior (sqlite-users archive) — https://sqlite-users.sqlite.narkive.com/t9GhV7DG/sqlite-wal-checkpoint-blocking-behavior
+
+### 採用しなかった調査枝
+
+- BEGIN CONCURRENTやWAL2など実験的なマルチライター拡張は、本線のSQLiteリリース外であり、組み込みの既定運用には載せなかった。
+- better-sql.ioや各言語バインディングのパフォーマンス記事は、公式仕様の補助には使ったが、ロック順序の根拠には使わなかった（実装差が混ざる）。
+- ベンチマーク数字の横比較は、ワークロード依存が大きく、本稿の判断軸（直列writerとチェックポイント）から外した。
+- 2025年以降のWAL-resetバグ修正リリースノートは、設計原則（単一writer）を変えないため、本文の主張には組み込まず、運用者向けの「稀な競合バグ」として除外した。
