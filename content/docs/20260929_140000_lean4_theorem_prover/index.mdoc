@@ -1,0 +1,403 @@
+---
+title: "Lean 4 入門 — 証明とプログラムを同じ言語で書く"
+publishedAt: 2026-09-29
+podcast: none
+legacyFilename: 20260929_140000_lean4_theorem_prover.md
+---
+
+# Lean 4 入門 — 証明とプログラムを同じ言語で書く
+
+## 概要
+
+Lean は、数学の証明とプログラムを同じ言語で書くための **証明支援系** であり、同時に汎用の関数型プログラミング言語でもある。基盤にあるのは **依存型理論** の一種である Calculus of Inductive Constructions で、型を命題、その型を持つ項を証明とみなす。そのため `def` で関数を定義するのと同じ構文で `theorem` を宣言し、`simp` や `rw` といった **タクティク** で対話的に証明を組み立てられる。
+
+ここでは Lean 4 を対象に、基本の文法を実際のコードで示しながら、帰納型・構造体・タクティク・mathlib・自動化・メタプログラミング・応用の順にたどる。目的は、証明支援系という言葉から連想するより広い姿を、手元で書けるコードとともに置くことだ。Lean は数学の定理を機械検証する道具であるだけでなく、ソフトウェアを検証する言語であり、AI が生成した証明を検査する土台でもある。
+
+対象は 2026年9月時点の Lean 4.33 系と、その公式資料・論文・mathlib である。圏論やホモトピー型理論のような高度な数学の中身、他の証明支援系との網羅的な比較、カーネル内部の実装詳細までは扱わない。
+
+## 全体像
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart TB
+  Q["<b>問い</b><br/>Lean とは何で、証明とプログラムをどう書くのか"]
+  F["<b>軸</b><br/>証明もプログラムも、同じ型理論の項として書かれる"]
+  M["<b>答え</b><br/>Lean は依存型の証明支援系であり、関数型言語でもある"]
+  X["<b>扱わない範囲</b><br/>高度な数学の中身と他系との網羅比較"]
+  S["<b>調査範囲</b><br/>Lean 4.33 系の公式資料・論文・mathlib（2026年9月）"]
+
+  subgraph G1["<b>分かったこと1</b><br/>証明と計算は同じ言語に乗る"]
+    direction TB
+    D1["<b>論点 1–2</b><br/>型が命題、帰納型がデータの定義"]
+  end
+
+  subgraph G2["<b>分かったこと2</b><br/>対話的証明はライブラリと自動化が支える"]
+    direction TB
+    D2["<b>論点 3</b><br/>ゴールを書き換えるタクティク"]
+    D3["<b>論点 4</b><br/>mathlib が数学の土台になる"]
+    D4["<b>論点 5</b><br/>自動化が定型証明を片づける"]
+  end
+
+  subgraph G3["<b>分かったこと3</b><br/>拡張性と実応用が選択理由になる"]
+    direction TB
+    D5["<b>論点 6</b><br/>Lean 自身で Lean を拡張する"]
+    D6["<b>論点 7–8</b><br/>数学・検証・AI が同じカーネルに乗る"]
+  end
+
+  Q -->|どの軸で切るか| F
+  F --> G1
+  F --> G2
+  F --> G3
+  G1 -->|書き方の土台を与える| M
+  G2 -->|証明を現実的にする| M
+  G3 -->|利用範囲を広げる| M
+  Q -.->|検証対象外| X
+  M -.- S
+
+  classDef ask fill:#4F7383,stroke:#33505C,color:#ffffff
+  classDef frame fill:#EEF2F5,stroke:#8FA3B0,color:#14191E
+  classDef claim fill:#FFFFFF,stroke:#416579,color:#14191E
+  classDef detail fill:#F7FAFC,stroke:#8FA3B0,color:#14191E
+  classDef map fill:#294960,stroke:#1E3B52,color:#ffffff
+  classDef drop fill:#FFFFFF,stroke:#B3322B,color:#B3322B,stroke-dasharray:5 4
+  classDef scope fill:#FFFFFF,stroke:#8FA3B0,color:#5B6673,stroke-dasharray:2 4
+
+  class Q ask
+  class F frame
+  class G1,G2,G3 claim
+  class D1,D2,D3,D4,D5,D6 detail
+  class M map
+  class X drop
+  class S scope
+```
+{% /diagram %}
+
+第一の主張は文法の土台、第二の主張は対話的証明の実務、第三の主張は Lean が選ばれる理由である。論点1–2はテーマ1–2、論点3–5はテーマ3–5、論点6はテーマ6、論点7–8はテーマ7–8に対応する。
+
+## 背景・歴史 — 2013年の実験システムから、AI時代の検証基盤へ
+
+Lean は 2013年、Microsoft Research にいた Leonardo de Moura によって始められた。狙いは、独立に実装できるほど小さな論理カーネルが与える信頼性と、SMT ソルバーのような自動化の使いやすさを、大きな問題にも耐える形で両立させることだった。Lean 0.1 が公開されたのは 2014年6月16日である [1][3]。
+
+初期の Lean は、クライアントコードが独立に検査できる証明を書くための C++ ライブラリとして設計されていた。その後、対話的な証明器へと性格を変え、タクティクはまず Lua で書かれ、のちに専用の構文が用意された。2017年1月20日に Lean 3.0 系が最初に公開される [1]。
+
+Lean 3 は数学者に広く使われ、**タクティク・記法・トップレベルのコマンドを Lean 自身で定義できる**自己拡張性を初めて実現した。この時期にコミュニティが数学ライブラリ mathlib を育て、Lean 3 の末尾には100万行を超える形式化された数学が集まった。ただし本体は C++ で書かれており、拡張のたびに本体側の変更が要るという制約があった [1][18]。
+
+Lean 4 の開発は 2018年に始まり、**2023年9月8日** に 4.0 が公開された。4 では処理系のおよそ9割が Lean 自身で書かれており、Lean は自分自身を記述する。mathlib も 2023年に Lean 4 へ移植され、いまは150万行を超える。移植で規模が5割増えたのに、検査は Lean 3 より速い [1][4]。
+
+開発を支える非営利団体 **Lean FRO**（Focused Research Organization）は 2023年8月に設立され、2028年8月の自立を目標に、拡張性・使いやすさ・文書・証明自動化に投資している [22]。同じ流れで、2024年にはケンブリッジの Kevin Buzzard を中心にフェルマーの最終定理の形式化プロジェクトが始まり、Google DeepMind は Lean を使った自動証明 AlphaProof を 2024年の国際数学オリンピックで動かした [23][27]。2026年には、AI が見つけたカーネルの健全性バグが相次いで修正されている [31][32]。
+
+ここに挙げた節目は、いずれもシステムの設計判断が数学とソフトウェア検証の両方の使い方を左右した出来事である。自己拡張性、自己記述、標準ライブラリの整備という順に課題が移り、いまは自動化とAIとの接続が次の争点になっている。
+
+## 1. 型が命題、項が証明 — 同じ構文で関数と定理を書く
+
+Lean は証明支援系であると同時に汎用の関数型プログラミング言語でもあり、検証を目的としないコードでも純粋関数型の利点をそのまま使える [2]。その文法の核は、**型と命題を区別しない**ことである。この見方を型としての命題、あるいはカリー=ハワード対応と呼ぶ。命題 `p` の証明とは、型 `p` を持つ項のことである。証明の正しさは、その項が正しい型を持つかどうかの検査に還元される [5][6]。
+
+この対応の帰結として、`theorem` と `def` の間にカーネル上の違いはない。どちらも型を持つ名前を導入する。次の二つは同じことを、項として書いたものとタクティクで書いたものである [6][7]。証明を書く作業は特別な言語を覚えることを要求せず、関数を定義するのと同じ構文と型検査の仕組みをそのまま使って、証明したい命題を型として書き下せばよいので、プログラミングの経験がある人ほど証明の入口に立ちやすい。
+
+```lean
+theorem and_comm (p q : Prop) : p ∧ q → q ∧ p := by
+  intro h
+  exact ⟨h.2, h.1⟩
+```
+
+`by` のあとがタクティクの列で、`intro` は含意の仮定を文脈に取り込み、`exact` はその型の項を与えてゴールを閉じる。`⟨h.2, h.1⟩` は連言の無名コンストラクタ記法で、`And.intro h.2 h.1` と同じである [7][8]。
+
+この関数の定義も同じ形をとる。次の `double` は単なるプログラムだが、その振る舞いについての定理をすぐ隣に書ける。`rfl` は両辺が定義上等しいときに証明を閉じるタクティクである [5][6]。
+
+```lean
+def double (n : Nat) : Nat := n + n
+
+theorem double_eq (n : Nat) : double n = n + n := rfl
+```
+
+両辺が計算によって同じ形に落ちるとき、その等式は **定義的等価** であるといい、`rfl` だけで証明が閉じる。証明を書かなくても、型のなかの式を評価した結果がそのまま型を決めるので、計算と推論が同じ言語のなかでつながり、証明の細部をコンピュータに埋めさせやすくなる。
+
+### 依存型が型を計算にする
+
+型は値に依存できる。`List α` が要素の型 `α` に依存するのと同じように、長さ `n` を持つベクトル `Vector α n` は長さに依存する。この依存関数型は `(a : α) → β a` と書き、戻り値の型が引数ごとに変わる関数を表せる [6][13]。
+
+```lean
+#check Vector     -- Vector (α : Type) (n : Nat) : Type
+#check Sigma.mk   -- (a : α) × β a のペアを作る依存直積型
+```
+
+この仕組みは、後述する添字付き族や、型安全な `zip` の定義に直結する。型の中に値を置けることが、Lean を単なる型付き言語より表現力の高いものにしている。型が値に依存できるおかげで、長さを持つ配列や、前提を満たす入力だけを受け取る関数を、実行時の検査ではなく型の側で表現でき、検証したい性質を仕様としてそのまま型に書けるので、プログラムと証明のあいだの境界はかなり薄い。
+
+**ここで分かること:** Lean では証明を書くことが型を持つ項を書くことであり、`def` と `theorem` はカーネルから見れば同じ宣言である [5][6][7]。
+
+## 2. 帰納型と構造体 — データ型の定義がそのまま数学の対象になる
+
+新しいデータ型（**帰納型**）は `inductive` で定義する。コンストラクタの列挙がそのまま型の定義であり、数学で帰納的に定める自然数や木構造と対応する [9][12][35]。
+
+```lean
+inductive BinTree where
+  | leaf : BinTree
+  | node : BinTree → Nat → BinTree → BinTree
+
+def BinTree.size : BinTree → Nat
+  | leaf => 0
+  | node l _ r => size l + size r + 1
+```
+
+`BinTree` の定義から、場合分けと再帰のための関数が自動的に導かれる。`match` や上の `size` のような方程式形式は、裏で帰納原理（recursor）に展開される。Lean は再帰が止まることを既定で要求するので、意図しない無限ループは型検査の段階で弾かれる。止まると示せない関数は `partial` を付けて区別する [9][12][37]。
+
+ひとつしかコンストラクタを持たない非再帰的な帰納型は **構造体** として書ける。`structure` はフィールドの射影関数や `mk` を生成する [10][38]。
+
+```lean
+structure Point where
+  x : Float
+  y : Float
+  deriving Repr
+
+def origin : Point := { x := 0, y := 0 }
+```
+
+`deriving Repr` のような導出は、表示や等値比較のためのインスタンスを自動生成する。構造体は更新記法 `{ p with x := 1 }` を使え、これは元を変更せず新しい値を作る [10][38]。
+
+### 添字付き族が長さを型に刻む
+
+パラメータと **添字** は違う。`Vect α n` では `α` がパラメータ、`n` が添字で、コンストラクタごとに添字が変わる。このような型を添字付き族と呼ぶ [11][13]。
+
+```lean
+inductive Vect (α : Type) : Nat → Type where
+  | nil : Vect α 0
+  | cons : α → Vect α n → Vect α (n + 1)
+```
+
+添字があると、長さの合わない `zip` は型エラーになる。`List` では実行時に長さを確認する必要がある場面でも、`Vect` ではコンパイル時に同じ長さであることが保証される [11][13]。依存パターンマッチによって、`nil` の場合には相手も `nil` しかありえない、といった絞り込みが型検査器に伝わる。
+
+添字は単なる注釈ではなく、その型に対してどのコンストラクタを使えるかを決めている。長さ `0` の値には `nil` しか許されず、長さ `n + 1` の値には `cons` しか使えないので、型が合う限り長さの食い違いは起こりえず、実行時の長さ検査を書かなくてよい。
+
+**ここで分かること:** `inductive` と `structure` は数学の定義と対応し、添字まで型に含めると、長さや条件の取り違えをコンパイル時に排除できる [9][10][11]。
+
+## 3. タクティク — ゴールを書き換えて証明を組み立てる
+
+対話的証明の中心が **タクティク** である。`:= by` のあとにタクティクを並べ、エディタの InfoView で **ゴール**（`⊢` の右側）と文脈（仮説の一覧）を見ながら進める。代表的なものを挙げる [8][14]。
+
+| ゴールの形 | 使うタクティク | すること |
+|---|---|---|
+| `P → Q` | `intro` | `P` を仮定として導入する |
+| `∀ x, P x` | `intro` | `x` を任意に固定する |
+| `P ∧ Q` | `constructor` | 二つのゴールに分ける |
+| `P ∨ Q` | `left` / `right` | どちらを示すか選ぶ |
+| `∃ x, P x` | `use` | witness を与える |
+| `a = b` | `rfl` / `rw` / `simp` | 等式を閉じる・書き換える |
+
+この表は [8][14] をまとめたものである。
+
+帰納法は `induction` で行う。自然数の加法の交換律を、帰納法と書き換えで示す例を示す [8][9]。
+
+```lean
+theorem add_comm' (n m : Nat) : n + m = m + n := by
+  induction n with
+  | zero => simp
+  | succ n ih => rw [Nat.succ_add, ih, Nat.add_succ]
+```
+
+`ih` は帰納法の仮説である。`rw` は等式を左から右へ書き換え、`simp` は `@[simp]` の付いた補題で式を簡約する。等式の連鎖は `calc` で読める形にできる [8][11]。タクティクは後戻りできるので失敗する手を試してから別の道を選べるし、エディタが各時点の仮説とゴールを表示するおかげで、証明を書き進める作業は、いま何が示せているかを確かめながら次の一手を探す探索に近い。
+
+```lean
+example (a b c : Nat) (h1 : a = b) (h2 : b = c) : a = c := by
+  calc
+    a = b := h1
+    _ = c := h2
+```
+
+場合分けは `cases` で行う。選言を分解し、それぞれの枝でゴールを閉じる [8]。
+
+```lean
+example (p q : Prop) : p ∨ q → q ∨ p := by
+  intro h
+  cases h with
+  | inl hp => exact Or.inr hp
+  | inr hq => exact Or.inl hq
+```
+
+タクティクで組み立てた結果は **証明項** と呼ばれる通常の項として残るので、証明を出力して別の検査器で読み直せる。どのタクティクがどの補題を使ったかは証明項に反映されるため、後から読む人は、証明を書いた人の説明がなくても根拠をたどれる。
+
+**ここで分かること:** タクティクは「今のゴールをどう変形するか」を指示する命令であり、`intro` で仮定を増やし、`rw` と `simp` で式を整え、`exact` や `rfl` で最後に閉じる、という流れが基本になる [8][14]。
+
+## 4. mathlib — 百万行の数学が証明の土台になる
+
+**mathlib** は Lean の数学ライブラリで、コミュニティが維持している。代数・解析・位相・確率・数論から計算機科学の基礎までをカバーし、2026年時点で200万行規模に達している [15][16][17][36]。Lean 3 の終わりに100万行を超え、Lean 4 への移植を経てさらに伸びた [1][18]。
+
+設計の柱は、できるだけ一般な形で定義すること、関連する構造をまとめて階層にすること、定型部分をタクティクで自動化すること、命名規則を守ることである [16][18]。抽象代数の構造は **型クラス階層** として積み上げられ、環・体・順序といった条件を段階的に足していく。そのため、環についての定理は整数にも有理数にも複素数にもそのまま効く [16][39]。
+
+```lean
+import Mathlib
+
+example (a b : ℝ) : (a + b)^2 = a^2 + 2*a*b + b^2 := by
+  ring
+```
+
+`ring` は環の公理だけで導ける等式を自動で証明する。抽象的な構造に対する定理も、型クラスのインスタンスを経由して使える [39]。
+
+```lean
+example {G : Type} [CommGroup G] (a b : G) : a * b = b * a :=
+  mul_comm a b
+```
+
+`[CommGroup G]` は可換群のインスタンスを要求する。mathlib にはこの種の階層が広く整備されており、証明のたびに初等的な事実を証明し直す必要がない [15][18]。mathlib の価値は定義と定理の数だけにあるのではない。型クラスの階層が整っているので、抽象的な構造について証明された定理は、その構造を備えた具体的な対象へそのまま流れ込み、利用者は初等的な事実を証明し直さずに済むため、証明の労力は本当に難しい部分へ集中できる。mathlib は証明の再利用を第一に設計されている。同じ概念を別の文脈で使うたびに定義をやり直すのではなく、既存の抽象へ寄せてから特殊化する書き方が推奨されるので、多数の分野にまたがる定理が一つの整合した数学としてつながり、部分ごとに別々の流儀を覚えなくてよい。ライブラリが一つの整合した数学として育つと、ある分野で証明された定理を別の分野の道具として持ち込めるようになり、形式化の出発点は毎回ゼロではなく、すでに検証済みの膨大な知識の上に置かれるので、難しい定理ほど既存の土台から組み立てやすくなる。
+
+**ここで分かること:** mathlib は mathlib 単体ではなく、Lean の型クラス機構と結びついて、抽象的な定理を具体的な対象へ使い回せるようにする。証明の大半を既存の数学に委ねられる点が、Lean を現実的な道具にしている [15][16][17]。
+
+## 5. 自動化 — simp と ring、omega、grind が定型を片づける
+
+Lean の自動化は、単純化と領域別の手続きに分かれる。**単純化** `simp` は `@[simp]` を付けた補題を向きを固定して適用し、式を正規形へ寄せる。便利な反面、`simp` は読み込むライブラリの集合に依存するため、残すコードでは `simp only [...]` と使う補題を明示するのが勧められる [14][19]。
+
+線形算術は `omega`（自然数・整数）や `linarith` が引き受ける。数値計算の評価は `norm_num`、多項式環の等式は `ring`、体の割り算を含む式は `field_simp` が担当する [14][39]。
+
+```lean
+example (n : Nat) : n + 0 = n ∧ 0 + n = n := by
+  omega
+
+example (x : ℚ) (hx : x ≠ 0) : x * (1 / x) = 1 := by
+  field_simp
+```
+
+Lean 4.22 で加わった **grind** は、SMT ソルバーの発想を Lean のメタプログラミングで実装した汎用の自動化である。合同閉包・E-matching・制約伝播・誘導付き場合分けと、整数算術や可換環の理論ソルバーを協調させ、依存型と型クラスをそのまま扱う。出力は通常の Lean の証明項になる [22]。
+
+```lean
+example (p q : Prop) (h : p ∧ q) : q ∧ p := by
+  grind
+```
+
+ただし grind は組み合わせ爆発に弱い。鳩の巣原理の大きな例や、数百万の分岐を要する SAT 的な問題には向かず、そうした用途では専用の `bv_decide` などを使う [22]。自動化が届かない部分を対話的に埋められることが、Lean の設計の要である。自動化は探索を速くするが、何を証明しているかは変えない。届かなければゴールが残るので、人間が続きを書き足せる [14][22]。自動化の使い方は、まず単純化や算術の手続きに任せ、失敗したら人間がゴールを分解する、という順序になる。自動化が何をしたかは証明項として残るので、後から読む人は、どこでどの補題が使われたかを確認でき、意図しない簡約に気づくこともできる。
+
+自動化が届く範囲は年々広がっている。単純化・線形算術・環の等式・体の割り算・汎用の探索と目的ごとに道具が分かれているので、まず広い道具を試し、効かなければ狭い道具へ切り替え、それでも届かなければ人間がゴールを分解する、という順序で進めるのが実際的である。
+
+**ここで分かること:** 定型は `simp` や `omega` などの自動化に任せ、届かない部分だけ人間がタクティクで埋める。`grind` はその自動化を依存型理論の内部にまで広げたものである [14][22]。
+
+## 6. メタプログラミング — Lean 自身で Lean を拡張する
+
+Lean 4 の大きな特徴は、言語処理系のほぼ全体が Lean 自身で書かれていることである。パーサ、**elaborator**、タクティク、コード生成、プリティプリンタを、利用者が Lean で拡張できる。型検査を担うカーネルだけが信頼の対象として小さく保たれる [4][22]。
+
+もっとも簡単な拡張はマクロである。マクロは構文から構文への変換で、衛生的（hygienic）なので、導入した識別子が利用者の識別子と衝突しない [20]。
+
+```lean
+macro "finish!" : tactic =>
+  `(tactic| first | rfl | simp | assumption)
+```
+
+より複雑な拡張は **elaborator** で行う。タクティクの場合、`TacticM` の中でゴールを操作する。次の例は `intro` の簡略版で、ゴールに仮説を一つ導入する [19]。
+
+```lean
+elab "my_intro" : tactic => do
+  let g ← getMainGoal
+  let (_, g') ← g.intro `h
+  replaceMainGoal [g']
+```
+
+コマンドを追加することもできる。`#twice` は与えられた項を二回足した式を表示する [19]。
+
+```lean
+elab "#twice " n:term : command => do
+  logInfo m!"{n} + {n}"
+```
+
+これは「自分専用のコマンドや記法をその場で定義し、同じファイル内で使えるようにする」。証明の自動化を Lean で書き、C へコンパイルして読み込める点も、Lean 4 が Lean 3 から変えたところである [4]。この拡張性を前提に、`grind` のような大規模な自動化や、構文を丸ごと差し替える **DSL** がコミュニティから生まれている [19][20]。処理系の道具も同じ方針で、ビルドツールの Lake は設定を Lean で書き、依存パッケージを Reservoir から取得する [21]。
+
+この仕組みが効くのは証明を書く場合だけではない。言語処理系もビルドツールも利用側から拡張できるので、研究用の記法と産業用の検証基盤が同じ処理系の上に共存でき、目的ごとに別の言語を覚える必要が減り、習得した知識をそのまま次の仕事へ持ち越せる。記法を一つ足すだけならマクロ、ゴールを操作するならタクティク、構文ごと受け入れるなら elaborator と、目的に応じて最小の仕組みを選べるので、覚える概念を必要最小限に抑えながら処理系を育てられる。
+
+**ここで分かること:** Lean では、証明を書く言語と処理系を拡張する言語が同じである。新しい記法や自動化をユーザーが追加でき、カーネルを触らずに済む [4][19][20]。
+
+## 7. 数学の最前線 — フェルマーの最終定理が機械検証される
+
+Lean の数学での到達点は、研究水準の定理を実際に形式化していることにある。ケンブリッジの Kevin Buzzard が率いる **フェルマーの最終定理** プロジェクトは、2024年から2029年まで EPSRC の助成を受けている [23][24]。Wiles の証明をそのまま写すのではなく、Taylor が設計した現代的な経路を形式化する。その経路には Khare–Wintenberger らの改良が取り込まれている。
+
+このプロジェクトは、最終目標を「1980年代末までに知られていた結果に還元する」ことに置く。そのため Mazur の定理やラングランズの巡回基底変換など、それらの結果の証明は仮定として残す。作業はブループリント（LaTeX の証明スケッチ）と Lean の対応を可視化し、世界中の協力者が未解決の小補題を分担できるようにする [24][25]。
+
+この形式化の過程で、文献側の誤りが見つかった例がある。クリスタリン・コホモロジーを支える divided powers の構成で、Roby の補題の証明が別の補題を誤って引用していることが判明した。しかし Berthelot–Ogus の付録にある別証明で補われ、最終的には修復された [25]。
+
+数学の形式化としては、Clausen–Scholze の **液体テンソル実験** が 2022年7月14日に完了している。Scholze が 2020年12月に公に出した挑戦で、凝縮数学の主要定理を Lean 3 で検証した。この取り組みは mathlib にホモロジー代数や凝縮アーベル群の理論を押し出し、証明の blueprint を共有する協働の型を作った [26]。形式化が進むほど数学の側にも利益が返ってくる。定義と定理が機械可読な形で蓄積されるので次の定理を証明するときに土台を再利用でき、理解の全体を共有しない協力者でも、担当した小補題が正しいことをカーネルが保証するので、分業が成り立つ。
+
+形式化の途中で人が書いた証明の穴が見つかることは珍しくなく、それを埋める作業は、文献をそのまま信じるのではなく、機械が検査できる形へ落とし直すことで、どの事実が証明の前提として暗黙に使われていたのかを明らかにするので、数学の理解そのものを深めることにつながる。
+
+**ここで分かること:** 研究水準の数学を形式化すると、人では見落とす文献の欠陥まで表面化する。ブループリントと Lean を組み合わせると、理解の全体を共有しない大人数の協働が成立する [23][24][25][26]。
+
+## 8. 検証とAI — 同じカーネルが産業と自動証明を支える
+
+Lean の応用は数学にとどまらない。AWS は認可ポリシー言語 Cedar を Lean で形式化し、本番の Rust 実装と差分テストで突き合わせている。Lean のモデルは本番コードのおよそ10分の1の大きさで、仕様と検証対象を兼ねる。Lean の実行はテストケースあたり約5マイクロ秒、Rust が約7マイクロ秒で、大量のランダム入力による **差分テスト** が現実的になる。モデル・証明・差分テストが最新でなければ新しい版を出さない、という運用まで組まれている [29][30]。
+
+同じ流れから、差分プライバシーの検証済みライブラリ SampCert、Armv8 機械語のシンボリック・シミュレータ LNSym、Rust から Lean へ変換する Aeneas、SNARK の安全性を検証する ArkLib などが育っている [22][29]。
+
+AI との相性も強い。Google DeepMind の **AlphaProof** は Lean を環境とした強化学習のエージェントで、自然言語の問題文を自動形式化する Gemini 系モデルと組み合わせ、約100万問を約8000万問の Lean 問題へ膨らませて訓練した。2024年の国際数学オリンピックでは、幾何を除く5問のうち3問を解き、AlphaGeometry 2 と合わせて銀メダル相当に達した [27][28]。
+
+2026年には、汎用モデルをエージェントとして Lean に接続する方式が伸びた。LEAP はブループリントを有向非巡回グラフとして組み、コンパイラのエラーを反復修正しながら、2025年の Putnam 競技の12問すべてを解いたと報告する。Goedel-Architect や MerLean-Prover も系列の異なる設計で同等の水準に達している。Anthropic は 2026年、フェルマーの最終定理の完全な機械検証済み証明を Lean 4 で公開し、独立実装のカーネル nanoda でも再検査した [40]。
+
+その一方で、**カーネル** の健全性そのものが 2026年に揺らいだ。AI の支援で見つかった複数のバグが、メタプログラムから `False` の証明を受け入れさせられる欠陥につながり、7月には Collatz 予想を反証したと主張するリポジトリがこの欠陥を突いた。Lean FRO は 4.33.1 で修正し、独立カーネルや `lake check` による再検査、複数カーネルでの比較検証を進めている [31][32][33][34]。証明の候補を突き合わせる道具も整ってきた。**Comparator** は提出された証明を別の環境へ輸出し直して再検査し、標準の公理だけに依存しているか、余分な仮定がすり抜けていないかを確かめる。
+
+信頼の基点が小さなカーネルにあるからこそ、その実装を独立に検査する仕組みが重視される。証明を機械可読にしておくと、人間が細部まで理解していない部分も含めて全体を検査でき、AI が生成した候補を人間が信頼する前に機械的に弾けるので、証明の共有と再利用が人の記憶ではなくカーネルに支えられるようになる。
+
+**ここで分かること:** 数学・ソフトウェア検証・自動証明は、同じ小さなカーネルと mathlib の上で動いている。証明を機械可読にしておくことが、人間にも AI にも検証可能な成果を生む [22][29][31][40]。
+
+## まとめ — Lean 4 を読み書きするための7点
+
+1. **型が命題、項が証明である。** `theorem` と `def` はカーネルから見れば同じで、証明は型検査で確かめられる [5][6][7]。
+2. **新しいデータ型は `inductive` と `structure` で定義する。** 定義は帰納原理に展開され、構造的再帰が既定で終了を要求する [9][10][12]。
+3. **証明は `by` とタクティクで組み立てる。** `intro`・`rw`・`simp`・`exact`・`induction` が基本で、`calc` は等式の連鎖を読める形にする [8][11][14]。
+4. **mathlib を土台にする。** 抽象代数の階層が整い、200万行規模の数学をそのまま使える [15][16][17]。
+5. **定型は自動化に任せる。** `omega`・`ring`・`field_simp`・`grind` が届く範囲を広げる。残すコードでは `simp only` で補題を明示する [14][22]。
+6. **Lean 自身で Lean を拡張する。** マクロと elaborator で記法・コマンド・タクティクを追加できる [4][19][20]。
+7. **応用は数学・検証・AI に広がる。** フェルマーの最終定理の形式化、AWS Cedar、AlphaProof が同じ基盤に乗る [23][27][30]。
+
+## 付録: 出典一覧
+
+- [1] Lean Language Reference, ["Introduction"](https://lean-lang.org/doc/reference/latest/Introduction/)（2026）.
+- [2] Lean Lang, ["Frequently Asked Questions"](https://lean-lang.org/faq/)（2026）.
+- [3] Wikipedia, ["Lean (proof assistant)"](https://en.wikipedia.org/wiki/Lean_(proof_assistant))（2026）.
+- [4] Leonardo de Moura, Sebastian Ullrich, ["The Lean 4 Theorem Prover and Programming Language"](https://lean-lang.org/papers/lean4.pdf), CADE 28（2021）.
+- [5] Jeremy Avigad, Leonardo de Moura, Soonho Kong, ["Theorem Proving in Lean 4: Introduction"](https://lean-lang.org/theorem_proving_in_lean4/Introduction/)（2026）.
+- [6] ["Theorem Proving in Lean 4: Dependent Type Theory"](https://leanprover.github.io/theorem_proving_in_lean4/Dependent-Type-Theory/)（2026）.
+- [7] ["Theorem Proving in Lean 4: Propositions and Proofs"](https://leanprover.github.io/theorem_proving_in_lean4/Propositions-and-Proofs/)（2026）.
+- [8] ["Theorem Proving in Lean 4: Tactics"](https://leanprover.github.io/theorem_proving_in_lean4/Tactics/)（2026）.
+- [9] ["Theorem Proving in Lean 4: Inductive Types"](https://leanprover.github.io/theorem_proving_in_lean4/Inductive-Types/)（2026）.
+- [10] ["Theorem Proving in Lean 4: Structures and Records"](https://lean-lang.org/theorem_proving_in_lean4/Structures-and-Records/)（2026）.
+- [11] ["Theorem Proving in Lean 4: Quantifiers and Equality"](https://lean-lang.org/theorem_proving_in_lean4/Quantifiers-and-Equality/)（2026）.
+- [12] ["Functional Programming in Lean: Datatypes, Patterns and Recursion"](https://leanprover.github.io/functional_programming_in_lean/getting-to-know/datatypes-and-patterns.html)（2026）.
+- [13] ["Functional Programming in Lean: Indexed Families"](https://leanprover.github.io/functional_programming_in_lean/dependent-types/indexed-families.html)（2026）.
+- [14] ["Lean 4 tactic cheatsheet"](https://leanprover-community.github.io/papers/lean-tactics.pdf)（2024）.
+- [15] Lean Community, ["leanprover-community/mathlib4"](https://github.com/leanprover-community/mathlib4)（2026）.
+- [16] Lean Community, ["A mathlib overview"](https://leanprover-community.github.io/mathlib-overview.html)（2026）.
+- [17] Lean Lang, ["Mathlib: A Foundation for Formal Mathematics"](https://lean-lang.org/use-cases/mathlib/)（2026）.
+- [18] The mathlib Community, ["The Lean Mathematical Library"](https://arxiv.org/pdf/1910.09336), CPP 2020（2020）.
+- [19] Lean Community, ["Metaprogramming in Lean 4: Elaboration"](https://leanprover-community.github.io/lean4-metaprogramming-book/main/07_elaboration.html)（2026）.
+- [20] Lean Community, ["Metaprogramming in Lean 4: Macros"](https://leanprover-community.github.io/lean4-metaprogramming-book/main/06_macros.html)（2026）.
+- [21] Lean Language Reference, ["Lake"](https://lean-lang.org/doc/reference/latest/Build-Tools-and-Distribution/Lake/)（2026）.
+- [22] Leonardo de Moura, ["A Decade of Lean"](https://leodemoura.github.io/static/files/CADE25.pdf), CADE 25（2025）.
+- [23] Imperial College London, ["FLT: Ongoing Lean formalisation of Fermat's Last Theorem"](https://github.com/ImperialCollegeLondon/FLT)（2026）.
+- [24] Kevin Buzzard, ["The Fermat's Last Theorem Project"](https://leanprover-community.github.io/blog/posts/FLT-announcement/)（2024）.
+- [25] Kevin Buzzard, ["Fermat's Last Theorem — how it's going"](https://xenaproject.wordpress.com/2024/12/11/fermats-last-theorem-how-its-going/)（2024）.
+- [26] Mathlib community, ["Completion of the Liquid Tensor Experiment"](https://leanprover-community.github.io/blog/posts/lte-final/)（2022）.
+- [27] AlphaProof and AlphaGeometry teams, ["Olympiad-level formal mathematical reasoning with reinforcement learning"](https://www.nature.com/articles/s41586-025-09833-y), Nature（2025）.
+- [28] Google DeepMind, ["AI achieves silver-medal standard solving International Mathematical Olympiad problems"](https://deepmind.google/blog/ai-solves-imo-problems-at-silver-medal-level/)（2024）.
+- [29] Amazon Science, ["How the Lean language brings math to coding and coding to math"](https://www.amazon.science/blog/how-the-lean-language-brings-math-to-coding-and-coding-to-math)（2024）.
+- [30] Lean Lang, ["Lean Powers Secure Software at AWS: Cedar's Journey"](https://lean-lang.org/use-cases/cedar/)（2026）.
+- [31] Leonardo de Moura, ["Postmortem for Kernel Soundness Bug #14576"](https://leodemoura.github.io/blog/2026-8-1-postmortem-for-kernel-soundness-bug-14576/)（2026）.
+- [32] Leonardo de Moura, ["Postmortem for the Kernel Soundness Bug Hunt"](https://leodemoura.github.io/blog/2026-8-24-postmortem-for-the-kernel-soundness-bug-hunt/)（2026）.
+- [33] Lean Lang, ["Lean 4.32.1"](https://lean-lang.org/doc/reference/latest/releases/v4.32.1/)（2026）.
+- [34] oss-security, ["Lean 4 kernel soundness bug: forging proofs via nested inductive projections"](https://www.openwall.com/lists/oss-security/2026/08/02/1)（2026）.
+- [35] lean4.dev editorial team, ["Inductive Types"](https://lean4.dev/language/data-modeling/inductive-types)（2026）.
+- [36] lean4.dev editorial team, ["Introduction to Mathlib"](https://lean4.dev/tactics/mathlib/intro)（2026）.
+- [37] lean4.dev editorial team, ["Structures"](https://lean4.dev/language/data-modeling/structures)（2026）.
+- [38] Aconite, ["Theorem Proving in Lean 4 日本語訳"](https://aconite-ac.github.io/theorem_proving_in_lean4_ja/introduction.html)（2026）.
+- [39] yuma-mizuno, ["lean-math-workshop"](https://github.com/yuma-mizuno/lean-math-workshop)（2026）.
+- [40] Anthropic, ["Fermat's Last Theorem in Lean 4"](https://github.com/anthropics/fermats-last-theorem)（2026）.
+
+## 付録: 扱わなかった枝・未確認点
+
+**高度な数学の中身。** 圏論、ホモトピー型理論、クリスタリン・コホモロジー、凝縮数学の各理論そのものは本文で説明していない。テーマ7では、それらを形式化する取り組みが Lean の到達点として何を意味するかに絞った [23][25][26]。
+
+**他系との網羅比較。** Lean と Rocq（旧 Coq）・Isabelle/HOL・Agda の設計差は、必要な箇所で触れるにとどめた。両者は依存型理論に基づく点で近いが、Lean は定義的証明無関係性、非累積的な宇宙階層、カーネル外の再帰処理といった違いを持つ [2]。依拠したのは公式 FAQ と Lean 4 の論文であり、各システムの一次資料を横断して確かめてはいない [2][4]。
+
+**カーネルの実装詳細。** 健全性バグの修正内容（入れ子帰納型のパラメータ検査、`is_prop` の厳格化、参照カウンタの飽和、GMP の版）は要約にとどめた。PR 単位の技術的詳細は原典を参照されたい [31][32][34]。
+
+**数値の確度。** mathlib の行数は出典によって100万行・150万行・200万行と幅がある。本文では Lean 3 終盤の100万行、Lean 4 移行後の150万行・200万行という記述を併記した [1][17][18]。AlphaProof の自動形式化規模（約100万問から約8000万問）は Nature 論文の記載に依る [27]。
+
+## 付録: 用語と学習リソース
+
+**主要な用語。** **依存型理論**（dependent type theory）は型が値に依存できる型理論。**Calculus of Inductive Constructions** は Lean の基盤となるその一種。**カーネル**（kernel）は証明項を検査する最小の信頼部分。**タクティク** はゴールを変形する命令。**elaborator** は構文をカーネルが扱う項へ変換する処理。**メタプログラミング** は Lean 自身で Lean を拡張すること [1][4][19]。
+
+**学習の入口。** 数学者は Mathematics in Lean と *Theorem Proving in Lean 4* から入るのが定番である。後者には日本語訳がある [38]。証明でよく使うタクティクはコミュニティのチートシート [14] と、日本語のワークショップ教材 [39] が早い。ライブラリの探し方は mathlib の概観 [16] と `lean4.dev` の入門 [36] が役立つ。
+
+**道具立て。** プロジェクトは `elan` でツールチェーンを固定し、`lake new` で雛形を作り、`lake build` でビルドする。`lakefile.toml` に依存を書き、VS Code 拡張でゴールを表示しながら編集する [21]。
