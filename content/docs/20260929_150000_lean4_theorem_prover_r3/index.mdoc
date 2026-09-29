@@ -1,0 +1,332 @@
+---
+title: "Lean 4 定理証明器 — 依存型・カーネル・mathlib の横断サーベイ"
+publishedAt: 2026-09-29
+podcast: none
+legacyFilename: 20260929_150000_lean4_theorem_prover_r3.md
+---
+
+# Lean 4 定理証明器 — 依存型・カーネル・mathlib の横断サーベイ
+
+## 概要
+
+**Lean 4** は、数学の定理を機械で検証する **証明支援系** と、実行可能なコードを書く **関数型プログラミング言語** を同一の型理論の上に載せたシステムである。ユーザーが書くのは高水準の定義・定理・タクティク呼び出しだが、最終的な正しさは小さな **カーネル** が型付け規則だけで判定する。この分離は de Bruijn の基準として知られ、自動化やライブラリにバグがあっても、カーネルが受理した証明項だけが「論理的に閉じた」結果になる。
+
+本稿は Lean 4 を、入門チュートリアルの反復ではなく **設計の筋道** として整理する。2013年に Leonardo de Moura が Microsoft Research で始めた Lean は、SMT ソルバー系の自動化と、独立実装可能な論理カーネルという二つの要求のあいだに置かれた。Lean 3 世代で mathlib が急成長し、Perfectoid 空間や Liquid Tensor Experiment といった研究数学の形式化が実証された。2023年以降は Lean 4 が標準となり、mathlib4 の移植完了、**grind** などの SMT 風自動化、Lean FRO による基盤投資、AlphaProof や FLT 形式化プロジェクトが同じエコシステムを押し上げている。
+
+読者がここで掴むべきことは三つである。第一に、**Curry–Howard 同型** により型が命題・項が証明として読めること。第二に、エラボレータ・メタプログラミング・Lake が「書きやすさ」を担い、信頼境界はカーネルに寄せること。第三に、mathlib4 が単なるライブラリではなく、コミュニティの **共有数学インフラ** であり、PR レビューと AI 支援の両方がボトルネックになっていること。
+
+対象は 2026年9月時点の Lean 4.33 前後の公式資料、mathlib4、Lean FRO の公開ロードマップ、および主要な形式化プロジェクトの報告である。ホモトピー型理論の専門理論、カーネル C++ 実装の行単位の解説、他系（Rocq・Isabelle）との網羅比較は範囲外とする。
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart LR
+  subgraph front["フロントエンド（信頼外）"]
+    S[ソースと記法]
+    E[エラボレータ]
+    T[タクティク / simp / aesop / grind]
+  end
+  subgraph mid["中間表現"]
+    X[Expr 証明項]
+  end
+  subgraph trust["信頼境界"]
+    K[カーネル型チェック]
+  end
+  S --> E --> T --> X --> K
+  M[mathlib4 百万行] -.-> T
+```
+{% /diagram %}
+
+上図は議論の足場である。矢印の左側が「便利だがバグりうる」領域で、右端のカーネルだけが論理の最終判定者になる。
+
+## 背景・歴史
+
+### 起源と世代交代
+
+Lean の開発は **2013年** に始まった。de Moura は、小さな信頼できるコアと、大規模な数学・ソフトウェア検証に耐える自動化を両立させることを目標にした。Lean 0.1 の公開は **2014年6月** である。初期のユーザー層は、形式化数学に関心のある数学者と、依存型を実験するプログラミング言語研究者が中心だった。
+
+**Lean 3** は 2017年頃からコミュニティの主力となった。Kevin Buzzard らが Imperial College London で教育と形式化を広げ、**mathlib** が統合数学ライブラリとして急拡大した。2019年の Perfectoid 空間形式化（Buzzard・Commelin・Massot）は、トレンドの研究数学を証明支援系で扱えることを示した。2020年の Scholze による **Liquid Tensor Experiment** ブログ投稿は、condensed 数学の定理を Lean 3 で検証する大規模協業を起動し、**2022年7月** に主要定理の形式化が完了した。
+
+**Lean 4** は言語・コンパイラ・ランタイムの全面刷新である。型理論の骨格は Lean 3 と同系だが、バイトコード VM・LLVM 経路・並列エラボレーションなど実装面が別物であり、後方互換はない。mathlib の Lean 4 移植は 2022年末から本格化し、約10か月で百万行規模の理論ファイルが移された。2024年にはポート作業が実用段階に入り、新規プロジェクトは Lean 4 + mathlib4 を前提とするのが通例になった。
+
+世代の違いを表にまとめる。
+
+| 観点 | Lean 3 | Lean 4 |
+| --- | --- | --- |
+| 実装言語 | C++（サーバ）+ Lean メタ | C++ カーネル + Lean による自己記述部分 |
+| パッケージ | leanpkg | Lake + elan |
+| 標準ライブラリ | mathlib（3） | Std / Mathlib4 |
+| 典型用途 | 形式化数学 | 数学 + 高性能プログラム + AI 環境 |
+
+Lean 3 リポジトリはメンテナンスモードに入り、新規の研究形式化はほぼ例外なく Lean 4 に流れる。移植ノート（porting notes）は 2025年時点でも千件規模が残るという報告があり、API の改善で古い workaround が不要になる一方、ドキュメントと教材の更新が追いつかない場面もある。
+
+### 組織と資金
+
+**2023年7月** に **Lean FRO**（Focused Research Organization）が発表された。Simons Foundation International、Alfred P. Sloan Foundation などの助成を受け、スケーラビリティ・ユーザビリティ・ドキュメント・証明自動化を五年計画で押し上げる。2024–2025年度のロードマップでは、コンパイラ性能、**grind**、標準ライブラリの安定化、Rust/Linux Foundation に近いガバナンス移行が言及されている。
+
+数学側では Kevin Buzzard 率いる **Imperial College London FLT プロジェクト**（EPSRC 助成、2023年開始）が、フェルマーの最終定理の 21 世紀版証明路線を blueprint で組み立てている。2026年には Anthropic による自律マルチエージェント形式化（約1300万行の Lean、カーネルが検査）という別系統のマイルストーンも報告され、人間主導の FLT と AI 主導の検証が同じ mathlib 土台で交差する局面に入った。
+
+Imperial 側の第一段階（2029年まで）は、1980年代までに知られていた定理を仮定しつつ、Wiles–Taylor–Wiles 系の現代改訂版に沿って FLT が従うことを示す、という現実的なスコープである。ゼロから 17 世紀の記述を再発明するのではなく、mathlib に既にある代数幾何・保型形式の層に新しい証明木を接続する。Anthropic 側のリポジトリは Frey–Serre–Ribet–Wiles の筋道を `PROOF-PATH.md` で列挙し、`FinalCheck.lean` が公理依存を機械的に監査する。
+
+どちらの路線も「証明の正しさ」と「証明が意図した数学的主張を表すこと」は分離される。前者はカーネルの仕事で、後者は人間のレビューと blueprint の仕事である。
+
+## 核となる概念
+
+### 依存型と Calculus of Inductive Constructions
+
+Lean の論理は **依存型理論** の一種、すなわち帰納構造の計算（CIC）に基づく。型宇宙 `Type 0`, `Type 1`, … は **非累積** の階層をなす。`Prop` は証明 irrelevance を伴う命題宇宙であり、古典数学の大部分は選択公理 `Classical.choice` など標準公理の上に載る。
+
+依存性の核心は、型が値に依存できる点である。例えば `(a : α) → β a` は、引数 `a` ごとに返り値の型が変わる関数の型である。非依存の関数型 `α → β` は、`β` が `a` に依存しないときの記法にすぎない。同様に依存積（シグマ型）`Σ a : α, β a` は、証明における「存在」やデータのペアリングを表す。
+
+**帰納型** はコンストラクタの列から生成される。`Nat` はゼロと後続、`List α` は空と cons といった具合である。各帰納型には **recursor** が自動生成され、構造再帰やパターンマッチはこの primitive に落ちる。mutual inductive や nested inductive も Lean 4 でネイティブに扱える。
+
+入門例として、加法の結合律を項で書くと次の形になる（NNG4 卒業後の記法）。
+
+```lean
+theorem add_assoc (a b c : Nat) : (a + b) + c = a + (b + c) := by
+  induction c with
+  | zero => rfl
+  | succ c ih =>
+      rw [Nat.add_succ, Nat.add_succ, ih]
+```
+
+`induction` は `Nat.rec` を自動生成するタクティクである。等式の証明は `Eq` 型の項であり、`rfl` は定義等価で閉じる場合の基本コンストラクタである。
+
+### Curry–Howard と命題即型
+
+**Curry–Howard 同型** の読み方では、型は命題、型を満たす項はその命題の証明である。`def` で関数を書く構文と `theorem` で主張を書く構文は表層では近く、証明は項として格納される。例えば `a + b = b + a` の証明は、等式の型を返す項である。
+
+`Prop` と `Type` の分離は計算内容を制御する。証明項は実行時に消える設計が基本だが、`Decidable` インスタンスや `native_decide` など、計算可能な証明の抽出経路もある。公理を足すと計算の意味が壊れる場合があるため、mathlib では「何に依存するか」を `print axioms` で監査する習慣が根付いている。
+
+### カーネルと de Bruijn 基準
+
+**カーネル** は、完全に明示された項に対して型チェックと定義等価（definitional equality）の判定だけを行う小さなプログラムである。エラボレータ、タクティク、`simp` の lemma データベース、mathlib の百万行はすべて「証明項を生成するフロントエンド」に分類される。
+
+信頼の境界は次のように引かれる。タクティクが誤った項を生成しても、カーネルが拒否すれば定理にはならない。逆に、エラボレータやビルドチェーンのバグは、意図しない項がカーネルに渡るリスクを残す。輸出形式（export）と **lean4lean** のような別実装チェッカーは、カーネル外のスタックを信頼しない運用のための手段である。
+
+### エラボレーションとメタレベル
+
+ユーザーが書く Lean は、まず **Syntax** として解析され、**TermElabM** / **MetaM** のモナド上で **Expr** に変換される。暗黙引数、型クラス合成、universe 推論、記法（notation）はこの段階で処理される。`MetaM` は型推論・弱頭正規形・定義等価・メタ変数の割当てを提供し、タクティクもここでゴールを変形する。
+
+**メタプログラミング** により、ユーザーは `elab` コマンドや `@[tactic]` で新しい構文と戦術を Lean 自身で登録できる。これが `simp`、`aesop`、`grind` などの拡張性の源泉である。Lean 4 は「証明支援系を自分で書き換えられる言語」として設計されている。
+
+### Lake とツールチェーン
+
+**Lake** は Lean 4 の標準ビルドシステム兼パッケージマネージャである。`lakefile.toml`（または `lakefile.lean`）で依存関係とライブラリ根を宣言し、`lean-toolchain` でコンパイラ版を固定する。`elan` がツールチェーンを切り替え、mathlib 利用時は `lake exe cache get` でプリコンパイル成果物を取得するのが定番手順である。
+
+**Reservoir** は Lean パッケージの索引サーバで、Natural Number Game 4 や sphere-eversion などのプロジェクトが登録されている。mathlib は Lake 依存として rev をピンし、`lake-manifest.json` で再現性を保つ。
+
+## 詳細な仕組み・理論
+
+### 証明のライフサイクル
+
+ゴールは通常 **メタ変数** `mvar` として表示される。タクティクはメタ変数を分割し、子ゴールをスタックに積む。`·` ブロック（bullet）で部分ゴールを並列に閉じる記法は、読みやすい証明スクリプトのための糖衣である。
+
+典型的な証明は次の段階を通る。
+
+1. ユーザーが `theorem` と `by` ブロック（または項形式の証明）を書く。
+2. タクティクが **ゴール**（メタ変数）を分割・書き換える。`rw`、`simp`、`apply`、`cases` などがここに入る。
+3. すべてのゴールが閉じると、証明項が構築される。
+4. カーネルが宣言全体をチェックし、環境に追加される。
+
+項形式の証明（`exact`、`show` + `calc`）は、タクティクを使わず直接項を組み立てる方式である。自動化が生成した証明を `aesop?` や `grind` のインタラクティブモードで **`Try this` 提案**として固定し、再現可能なスクリプトに落とす流れが 2025 年リリースで強化された。
+
+### タクティクと自動化の層
+
+| 層 | 代表 | 役割 |
+| --- | --- | --- |
+| 書き換え | `rw`, `simp`, `conv` | 等式・定義を局所に展開 |
+| 構造 | `cases`, `induction`, `fun_induction` | 帰納・場合分け |
+| 探索 | `aesop` | ルール集合に基づく最良優先探索 |
+| 決定手続き | `decide`, `native_decide`, `omega`（旧） | 計算可能な判定 |
+| SMT 風 | `grind`（2025–） | 線形整数、AC 演算、Groebner など |
+| ビットベクトル | `bv_decide` | 有限域・ビット演算の決定 |
+
+**Aesop**（Automated Extensible Search for Obvious Proofs）は、`@[aesop]` で登録したルールを最良優先で適用する。`simp` と連携し、Isabelle の `auto` に近い立ち位置である。白箱性を重視し、どのルールがどの順で走るかをユーザーが予測できるよう設計されている（CPP 2023）。
+
+**grind** は Lean 4.22（2025年8月）で本番投入された。`cutsat` が整数線形を扱い、従来の `omega` を置き換える方向にある。AC 演算子、単射、前順序、Groebner 基底など理論ソルバがモジュールとして追加され、4.25 ではインタラクティブモードで証明探索を人間が制御し、再現可能な証明を提案できる。
+
+`simp` は simp セット（`@[simp]` 属性）に登録された等式を左から右へ書き換える。mathlib では数千の simp 補題が相互に干渉するため、**simp 正規形**の設計がレビューの中心になる。`simp only [list]` のように集合を限定すると、デバッグと再現性が上がる。
+
+`conv` モードはゴールの一部だけを `conv => lhs => rw [...]` のように隔離して書き換える。長い等式チェーンで、全体を一度に `simp` すると意図しない項が消えるときの逃げ道になる。
+
+### 型クラスと構造体
+
+mathlib は **型クラス**（`SMul`, `TopologicalSpace`, `MeasurableSpace` など）で数学的構造を積み上げる。インスタンス探索はエラボレーション時に走り、証明の見た目を短く保つ。`structure` は帰納型の特例で、フィールド投影と `copy` 的な更新記法が使える。
+
+設計上の注意点は、型クラスの循環や重いインスタンス合成がコンパイル時間を押し上げることである。mathlib ではインスタンスの locality や `lower_priority` などの慣習で抑制する。
+
+### 計算と抽出
+
+Lean 4 のランタイムは **閉包変換・ラムダリフト・インライン** などを経て C または LLVM に落ちる。`extern` や `implemented_by` は信頼境界を広げるため、検証プロジェクトでは使用を限定する。
+
+`#eval` はコンパイル済みコードを走らせるが、証明項の実行とは別経路である。`#guard_msgs` はタクティクのメッセージをテストに使い、CI で「この `simp` は期待どおり失敗する」ことを固定できる。ライブラリの regress テストは、この仕組みと `example` ブロックの大量配置で支えられている。
+
+**証明の計算内容**と**プログラムの実行**は別問題である。カーネルが型チェックした定理について、コンパイラが生成した実行ファイルまで正しいとみなすには、コンパイラも信頼基盤に入る。zk/STARK 系の **AMO-Lean** や Peregrine のような抽出パイプラインは、仕様から C/Rust への変換を別途証明する方向で補う。
+
+### 古典公理と `sorry`
+
+標準の三公理は `propext`, `Classical.choice`, `Quot.sound` である。フェルマーの最終定理の機械検査済み証明（2026年報告）も、この三つだけに依存することをビルドターゲットで強制している例がある。
+
+`sorry` は未証明の穴として型チェックを通すが、本番ライブラリでは CI が禁止する。`admit` や `axiom` の追加は、プロジェクトの信頼方針とセットで管理する。
+
+## 具体例・応用事例
+
+### 教育：Natural Number Game 4
+
+**Natural Number Game 4**（NNG4）は、Kevin Buzzard と Mohammad Pedramfar による古典チュートリアルの Lean 4 版である。Web 上（adam.math.hhu.de）で、自然数の加法・乗法・順序をタクティク操作で学ぶ。ゲーム内コマンドは本番 Lean 記法の糖衣であり、卒業後は VS Code + Lean 4 拡張で mathlib プロジェクトに移るのが定番である。
+
+ワールド構成は `Tutorial` → `Addition` → `Multiplication` → `Power` → `Implication` → 応用ワールドへと進む。Peano 公理から `2 + 2 = 4`、交換律、順序までを再構築する設計は、「定理の名前を信じる」のではなく、規則を積み上げる体験を与える。Strong Induction や素数ワールドは開発中であり、GitHub の issue で進捗が公開されている。
+
+ローカル開発では `lake build` でゲーム本体をコンパイルし、lean4game サーバでブラウザから接続する。教育パイプラインは **Imperial College** の形式化数学コース、Cambridge の教材、各種ワークショップと接続し、mathlib への最初の PR を目標にする学生も増えている。
+
+### 研究数学のマイルストーン
+
+| プロジェクト | 内容 | 備考 |
+| --- | --- | --- |
+| Perfectoid spaces | 定義まで形式化 | Lean 3 時代、CPP 2020 |
+| Liquid Tensor Experiment | Scholze の定理 1.1 | Lean 3、2022年完了 |
+| Sphere eversion | h-principle ⇒ 球面の裏返し | Lean 4 移植済み、2022年証明完了 |
+| FLT（Imperial） | Wiles 系の現代路線 | blueprint、2029年までの段階目標 |
+| FLT（Anthropic 2026） | 機械検査済み完全証明 | mathlib 上、自律エージェント |
+
+Sphere eversion プロジェクトは、Patrick Massot・Floris van Doorn・Oliver Nash らが **凸積分** に基づく h-principle を形式化し、Smale の球面裏返しをコロラリーとして得た。幾何的トポロジーの「代数より重い」直感を、証明支援系で扱えることを示した。
+
+Liquid Tensor Experiment は Lean 3 上で完走したが、condensed 数学のインフラは mathlib4 に吸収されつつある。Scholze のブログ投稿が示したのは、専門家が「この補題は本当に必要か」と議論しながら、GitHub と blueprint で分担する協業モデルである。定理 9.4（Analytic 9.4）が中間の難所となり、ホモロジー代数と condensed モジュールの両方に人員を割いた。
+
+### 実務ワークフロー（ローカル開発）
+
+新規プロジェクトの最短経路は次のとおりである。
+
+```bash
+curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh
+lake init myproj math
+cd myproj
+lake exe cache get
+lake build
+```
+
+`math` テンプレートは mathlib 依存と推奨 `lakefile` を生成する。VS Code の **lean4** 拡張が Language Server を起動し、ゴールウィンドウとジャンプ定義が使える。ファイルを保存すると、未解決の `sorry` や型エラーが赤線で示される。
+
+コミュニティの会話は **Zulip**（leanprover-community）が中心である。mathlib の PR では `bors` によるマージキューが使われ、CI が `lake build` と lint を通したものだけが main に入る。ローカルで `MATHLIB_CACHE_DIR` を設定し、キャッシュを共有すると、ラップトップでもビルド時間を短縮できる。
+
+### ソフトウェア・暗号検証
+
+Lambda Class などの事例では、NTT や Merkle 検証を Lean で仕様化し、カーネル検査済みの保証を得る。Ethereum 系の zk 検証でも、Lean 4 + mathlib を土台にした形式化資金が動いている。SampCert（差分プライバシー）のように industry 研究が mathlib を参照する例も、Growing Mathlib 論文で挙げられている。
+
+### AI 定理証明
+
+**AlphaProof**（Google DeepMind）は、Lean を環境とした RL エージェントで、2024年 IMO の非幾何 5 問のうち 3 問を形式証明した。難問では **test-time RL** で数百万の問題変種を生成し、数日かけて適応する。証明が正しいかは Lean カーネルが判定するため、自然言語のみの推論とは信頼モデルが異なる。
+
+**LeanDojo** / **LeanDojo-v2** は、リポジトリから証明状態・タクティク・前提を抽出し、Hugging Face 上で fine-tune するオープン基盤である。Pantograph が Lean 4 と RPC で接続し、best-first 探索と組み合わせる。ITPEval（2025–）は Lean・Rocq・Isabelle・HOL Light 間の翻訳ベンチマークを提供する。
+
+データセットの **novel premises** 分割は、訓練で一度も使われないライブラリ補題に依存する定理をテストに回す設計である。人間の証明者が「既知の引理の組み合わせ」ではなく新しい道具を選ぶ場面に近づける。ReProver は前提選択に retrieval を入れ、GPT-4 ゼロショットより高い成功率を報告した。
+
+産業利用では、証明を生成するより **検査器**として Lean を置く動きが増えている。LLM が出力した Lean スニペットをカーネルが拒否すれば、その証明は採用されない。AlphaProof が示したのは、探索そのものを RL で回せば IMO 級の問題に届く余地がある一方、組合せ論問題は依然難しいという境界である。
+
+## 重要人物・文献
+
+### 人物と役割
+
+| 人物 | 役割 |
+| --- | --- |
+| Leonardo de Moura | Lean 創始者、Lean FRO 技術リード |
+| Mario Carneiro | mathlib 初期の中心、Lean 3→4 翻訳ツール |
+| Kevin Buzzard | 形式化数学の普及、FLT プロジェクト |
+| Johan Commelin | Liquid Tensor Experiment 共同リード |
+| Patrick Massot | 幾何・sphere eversion、教材執筆 |
+| Kim Morrison | mathlib メンテナンス、圏論 |
+| Sebastian Ullrich | Lean 4 コンパイラ、エラボレータ |
+| Jannis Limperg | Aesop 著者 |
+
+### 論文・書籍・公式資料
+
+- Theorem Proving in Lean 4（公式チュートリアル、依存型理論の章）
+- Lean 4 Reference Manual（Lake、帰納型、リリースノート）
+- de Moura et al., *The Lean 4 Theorem Prover and Programming Language*（システム記述）
+- Buzzard, Commelin, Massot, *Formalising perfectoid spaces*（arXiv:1910.12320）
+- Massot, van Doorn, Nash, *Formalising the h-principle and sphere eversion*（arXiv:2210.07746）
+- Limperg & From, *Aesop: White-Box Best-First Proof Search for Lean*（CPP 2023）
+- Yang et al., *LeanDojo: Theorem Proving with Retrieval-Augmented Language Models*（NeurIPS 2023）
+- Google DeepMind, *Olympiad-level formal mathematical reasoning with reinforcement learning*（Nature 2025, AlphaProof）
+
+### mathlib4 の位置づけ
+
+**mathlib4** は 2017年創設の mathlib の Lean 4 版である。Growing Mathlib（arXiv:2508.21593）によれば、2025年時点で約 **190万行**、2025年10月には **200万行** 規模に達したという報告がある。単一の巨大ライブラリとして、代数・解析・位相・確率・圏論などを同一の命名規約と PR 文化で統合する。
+
+メンテナは領域別に分担され、リンタ（`nolints`, style）と `simp` 正規形の調整が日常作業である。MathlibPR ベンチマーク（2025–）は、カーネルが通ってもマージに値するかを LLM に判定させる試みであり、**正しさと保守性の差**が明示された。
+
+mathlib の設計原則には、**最大一般性**（例えばモノイドで言えるところを群に限定しない）、**命名の一貫性**（`Isometry` と `Isometric` の使い分け）、**ファイル粒度**（一ファイル一概念に近づける）がある。新規ファイルは `Mathlib/Topology/...` のような階層に置かれ、`import` グラフの循環を CI が検出する。確率論では強大数の法則や中心極限定理まで到達しており、StatsMLlib や StatLean など派生ライブラリが高次元統計・機械学習理論を追加している。
+
+## 最新動向・未解決問題
+
+### コンパイラと自動化（2024–2026）
+
+Lean 4.18 以降のリリースは、`fun_induction` / `fun_cases`、`bv_decide` の拡張、inlay hints、並列エラボレーションなどが密集している。4.24–4.25 では `DecidableEq` 構築の最適化、`grind` の AC・単射・順序ソルバ、型クラスメソッドの仕様定理自動生成、Lake のリモートキャッシュなどが入った。
+
+未解決・進行中のテーマには次がある。
+
+- **カーネル理論**：Lean 4 の型理論のメタ定理（健全性・完全性の標準的枠組みでの位置）が、Lean 3 ほど文献化されていないという指摘がある。
+- **信頼チェーン**：エラボレータ・Lake・`native_decide` を含むエンドツーエンドの「誤証なし」保証は、研究課題として残る。
+- **mathlib のボトルネック**：PR 待ち行列とレビュー負荷。AI が証明を生成しても、マージ適格性は別判定である。
+- **大定理の人間可読性**：FLT のような巨大形式化で、各補題が数学的に意図した主張を表すかは、カーネルでは検査できない。
+
+### 他系との関係（要点のみ）
+
+Rocq/Coq は同じ CIC 系だが、universe 累積性・抽出文化・メタ理論の成熟度が異なる。Isabelle/HOL は自動化（Sledgehammer）と Isar 記法に強く、依存型の表現は間接的になる。Lean 4 の強みは、**単一の活発な mathlib**、VS Code LSP、およびプログラミング言語としての実用速度である。弱点として、バージョン更新の速さと RAM 使用量がよく挙げられる。
+
+実務的な選定の目安を短く書く。構成的数学やプログラム抽出を最優先するなら Rocq 文化の蓄積が効く。古典数学の自動化と読みやすい証明文を最優先するなら Isabelle が有利な場面が残る。現役の研究数学を一つのライブラリで形式化し、学生と AI を同じ環境に載せたいなら Lean 4 がデフォルト候補になる。いずれも「正しい」というより、チームの既存資産と教育パイプラインで決まる。
+
+### 初学者が詰まりやすい点
+
+型クラス合成が失敗すると、エラーメッセージは長い metavariable の列になりがちである。`set_option trace.Meta.synthInstance true` で合成の試行を追うか、明示的な `haveI` でインスタンスを与えると切り分けやすい。
+
+universe のエラーは、初心者より移植作業で遭遇する。`Type*` と `Type u` の違い、`max u v` の推論を理解すると、mathlib のジェネリック補題を読みやすくなる。
+
+`open` と `namespace` のスコープを広げすぎると、名前衝突で別定理を証明していることに気づかない例がある。ファイル先頭で `open scoped` を最小に留めるのが mathlib 流の安全策である。
+
+## 関連トピック
+
+Lean 4 を学んだあとに伸ばすなら、次の方向が近い。
+
+- **メタプログラミング**：`lean4-metaprogramming-book` で `Syntax` → `Macro` → `elab` を追う。独自タクティクはここから始まる。
+- **Blueprint**：TeX で書いた証明計画と Lean ファイルをリンクし、未形式化の穴を赤で示す。大規模プロジェクトの進捗管理に使われる。
+- **Simproc**：`simp` より制御された書き換え手続きを登録する API。mathlib の新しい自動化はこちらに移行しつつある。
+
+他系との接続:
+
+- **Rocq / Coq**：CIC、Program extraction、CompCert 文化
+- **Isabelle/HOL**：古典論理、Archive of Formal Proofs
+- **Agda**：依存型、証明と計算の一体化（タクティク文化は薄め）
+- **Metamath / HOL Light**：極小カーネル、別の信頼モデル
+- **形式検証産業**：seL4、CertiCoq、F*、CakeML
+- **自動定理証明（非対話）**：SMT（Z3）、ハンマー（Hammer）
+- **ブループリント**：Lean blueprint による TeX と Lean の同期（FLT、sphere eversion）
+
+## 参考リンク
+
+1. https://lean-lang.org/
+2. https://lean-lang.org/theorem_proving_in_lean4/
+3. https://lean-lang.org/doc/reference/latest/
+4. https://github.com/leanprover/lean4
+5. https://github.com/leanprover-community/mathlib4
+6. https://leanprover-community.github.io/mathlib-overview.html
+7. https://lean-lang.org/doc/reference/latest/releases/v4.22.0/
+8. https://lean-lang.org/doc/reference/latest/releases/v4.25.0/
+9. https://github.com/leanprover-community/aesop
+10. https://leandojo.org/leandojo
+11. https://github.com/lean-dojo/LeanDojo-v2
+12. https://deepmind.google/blog/ai-solves-imo-problems-at-silver-medal-level/
+13. https://www.nature.com/articles/s41586-025-09833-y
+14. https://leanprover-community.github.io/blog/posts/lte-final/
+15. https://leanprover-community.github.io/sphere-eversion/
+16. https://imperialcollegelondon.github.io/FLT/
+17. https://github.com/anthropics/fermats-last-theorem
+18. https://github.com/leanprover-community/NNG4
+19. https://lean-lang.org/fro/roadmap/y2/
+20. https://arxiv.org/abs/2508.21593
+21. https://ammkrn.github.io/type_checking_in_lean4/whats_a_kernel.html
+22. https://github.com/digama0/lean4lean
+23. https://statsmllib.github.io/
+24. https://leandojo.org/itpeval.html
+
+**節末メモ：** Lean 4 を学ぶときは、カーネル・エラボレータ・mathlib の三層を分けて覚えると、タクティクの魔法に溺れずに済む。
