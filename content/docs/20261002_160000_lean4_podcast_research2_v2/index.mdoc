@@ -1,0 +1,266 @@
+---
+title: "Lean 4 — 証明とプログラムを依存型理論で束ねる"
+publishedAt: 2026-10-02
+podcast: none
+legacyFilename: 20261002_160000_lean4_podcast_research2_v2.md
+---
+
+# Lean 4 — 証明とプログラムを依存型理論で束ねる
+
+## TL;DR
+
+- Lean 4 は依存型理論上、定理とプログラムを同じ項として書き、カーネルが型だけを最終検査する [3][6]。
+- Prop の証明無関性と Type の計算規則が、論理層と実行可能データを切り分ける [4][5]。
+- エラボレーションとタクティクは信頼されない前段で、`.olean` に載るのは検査済み環境だけである [6][19]。
+- mathlib4 と grind・Aesop が大規模証明を支え、LeanDojo と AlphaProof が同じパイプラインに接続する [26][10][30]。
+
+## 概要
+
+Lean 4 は、Leonardo de Moura が Microsoft Research で始めた定理証明支援系であり、同時に依存型理論に基づく関数型プログラミング言語でもある。命題を型、証明をその型を持つ項とみなすカリー=ハワード対応の下では、`theorem` も `def` も同じ型理論の項として検査される [1][3]。
+
+ただし Prop と Type の分離、証明無関性、非累積の宇宙階層が、論理用の層と計算用の層を切り分ける [4][5]。実務の証明はタクティクとエラボレーションが担い、最終的な正しさだけが小さなカーネルに委ねられる [6][7]。
+
+ここでは Lean 4 を、入門記法の解説ではなく信頼境界と処理系の層の観点から整理する。目的は、数学の形式化・ソフトウェア検証・AI による自動証明が、なぜ同じ Lean ファイルに収束するかを説明することだ。
+
+2024年から2026年にかけて、mathlib4 の拡大、grind などの組込み自動化、AlphaProof による IMO 銀相当の結果が相次いだ [8][9][10]。形式言語が「検査可能な共通言語」として再評価されている背景も含めて扱う。
+
+対象は Lean 4 の公式資料・Lean FRO の年表・mathlib4・主要論文とブログである。Rocq や Agda との網羅比較、カーネル C++ 実装の行単位の解説、各数学分野の中身までは扱わない。
+
+## 全体像
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart TB
+  Q["<b>問い</b><br/>Lean 4 で証明とプログラムはどこまで同一か"]
+  F["<b>軸</b><br/>すべてが依存型の項だが Prop と実行の規則が異なる"]
+  M["<b>答え</b><br/>同一言語で書き、カーネルが最後に型だけを保証する"]
+  X["<b>扱わない範囲</b><br/>他系との網羅比較と分野別数学"]
+  S["<b>調査範囲</b><br/>Lean 4 公式資料・FRO・mathlib4・2023–2026 の論文"]
+
+  subgraph G1["<b>分かったこと1</b><br/>命題とプログラムは同じ項として書ける"]
+    direction TB
+    D11["<b>論点 1</b><br/>カリー=ハワードで theorem=def"]
+    D12["<b>論点 2</b><br/>Prop は証明無関性で論理専用"]
+  end
+
+  subgraph G2["<b>分かったこと2</b><br/>正しさはカーネル、快適さは前段"]
+    direction TB
+    D21["<b>論点 3–4</b><br/>エラボレーションとタクティク"]
+    D22["<b>論点 5</b><br/>lean4checker と Lean4Lean"]
+  end
+
+  subgraph G3["<b>分かったこと3</b><br/>大規模化と AI は同じ .olean に接続"]
+    direction TB
+    D31["<b>論点 6–7</b><br/>mathlib4 と Lake ビルド"]
+    D32["<b>論点 8</b><br/>LeanDojo と AlphaProof"]
+  end
+
+  Q -->|"どの軸で切るか"| F
+  F --> G1
+  F --> G2
+  F --> G3
+  G1 -->|"論理とデータの分離"| M
+  G2 -->|"信頼境界を固定"| M
+  G3 -->|"検査可能な共通言語"| M
+  Q -.->|"外した枝"| X
+  M -.- S
+
+  classDef ask fill:#4F7383,stroke:#33505C,color:#ffffff
+  classDef frame fill:#EEF2F5,stroke:#8FA3B0,color:#14191E
+  classDef claim fill:#FFFFFF,stroke:#416579,color:#14191E
+  classDef detail fill:#F7FAFC,stroke:#8FA3B0,color:#14191E
+  classDef map fill:#294960,stroke:#1E3B52,color:#ffffff
+  classDef drop fill:#FFFFFF,stroke:#B3322B,color:#B3322B,stroke-dasharray:5 4
+  classDef scope fill:#FFFFFF,stroke:#8FA3B0,color:#5B6673,stroke-dasharray:2 4
+
+  class Q ask
+  class F frame
+  class G1,G2,G3 claim
+  class D11,D12,D21,D22,D31,D32 detail
+  class M map
+  class X drop
+  class S scope
+```
+{% /diagram %}
+
+三つの主張は並列だが、第二が第一の検査手続きを固定し、第三が第一・第二の出力を共有インフラに載せる関係である。論点1–2はテーマ1–2、論点3–4はテーマ3–4、論点5はテーマ5、論点6–7はテーマ6–7、論点8はテーマ8に対応する。
+
+## 背景・歴史 — C++ 実装から自己記述へ、検証基盤へ
+
+Lean は 2013年に de Moura によって始められ、2014年に最初の公開版が出た [2]。初期は小さな論理 カーネル と SMT 的な自動化を両立させる実験だった。
+
+Lean 3 では対話的証明が広まり、mathlib が百万行規模まで育った。本体は C++ のままだったため、拡張のたびにコア変更が必要だった [2][8]。
+
+Lean 4 の開発は 2018年から進み、2023年9月 に 4.0 が公開された [8]。処理系の大部分が Lean 自身で書かれ、パーサ・エラボレータ・タクティクをユーザーが Lean で拡張できる [2][11]。
+
+同年、コミュニティは mathlib を Lean 4 へ移植し終えた [8]。Lean FRO が非営利で本体開発を継承し、2024年には AlphaProof が IMO で銀相当の得点を報告した [8][10]。
+
+この流れで、課題は「証明を書く言語」から「検査可能なエコシステム全体」へ移った。自己記述、共有ライブラリ、自動化、機械学習の各層が同じ型検査に接続する。
+
+## 1. カリー=ハワード — 定理も関数も型を持つ項として検査される
+
+Lean 4 では、命題 `p : Prop` の 証明 は型 `p` を持つ項である [3]。含意 `p → q` の証明は、仮定 `hp : p` を受け取り `q` を返す関数と同型になる [3]。
+
+`theorem t1 : p → q → p := fun hp hq => hp` のように、ラムダ抽象と適用だけで証明できる [3]。カーネルから見れば `theorem` は `def` と同じく、型付きの定義である [3]。
+
+実務では `by` ブロックで タクティク を並べ、裏で項を組み立てる [12]。読者が触るのは対話的な手順だが、保存されるのは常に項である [13]。
+
+**ここでの要点:** 証明支援系特有の別言語は表層にだけある。正しさの判定は「項が宣言した型を持つか」に還元される [3][6]。
+
+## 2. Prop と Type — 証明無関性が論理とデータを分ける
+
+`Prop` は `Sort 0`、`Type u` は `Sort (u+1)` である [4][5]。Lean の宇宙は 非累積 で、各型はちょうど一つの宇宙に属する [4]。
+
+証明無関性 により、同じ命題の二つの証明 `t1 t2 : p` は定義上 equal になる [3][5]。論理では「真か偽か」だけが残り、証明の内部構造は区別されない [14]。
+
+一方、`Type` 側のデータは証明無関性の対象外である。`Nat` や `String` の値は区別され、 `#eval` で実行結果を得られる [1][15]。
+
+述語 `β : α → Prop` に対する `(a : α) → β a` は 依存関数型 で、返り値の型が引数に依存する [1][16]。長さ付きベクトルなど、仕様を型に埋め込める。
+
+**ここでの要点:** 「同じ言語」でも Prop は消去と不可逆性の規則が異なる。プログラム検証では、仕様を Prop に置き、実装を Type に置く、という使い分けが定石になる [4][17]。
+
+## 3. カーネル — 環境への追加は必ず型検査を通る
+
+Lean の 信頼されるカーネル は、コア型理論の小さな型検査器である [6]。再帰の終止判定や統一はカーネル外の エラボレーション が担う [6][18]。
+
+新しい定義や帰納型は、環境に載る前にカーネルで検査される [6]。`.olean` にシリアル化されるのも、この検査済み環境である [6][19]。
+
+lean4checker や Lean4Lean は、メタプログラムが環境を不正に書き換えていないかを別経路で監査する [7][36]。
+
+タクティク や simp などのメタプログラムは信頼されない [7]。どれだけ複雑でも、最終的にカーネル項を生成できれば足りる [7]。
+
+**ここでの要点:** 拡張性と信頼性の折衷は「厚い前段＋薄いカーネル」で実現している。バグの影響範囲を前段に閉じ込める設計である [6][7]。
+
+## 4. エラボレーション — Syntax から Expr へ暗黙情報を埋める
+
+ユーザーが書くのは Syntax である。エラボレータがこれを Expr に変換し、カーネルが理解できる内部表現にする [11][20]。
+
+TermElab は `Syntax → Option Expr → TermElabM Expr` で、MetaM 上で項を構築する [11]。暗黙引数・型クラス・notation はここで解決される [16][20]。
+
+マクロ展開とエラボレーションは交互に進む [6]。`id` や `List.nil` のように、文脈不足では型が定まらない 多相 な表現もここで決まる [16]。
+
+**ここでの要点:** 「Lean が推論してくれる」部分の大半はカーネルではなくエラボレーションである。エラボレータのバグはカーネル検査で捕捉されるが、ユーザー体験は壊れる [6][11]。
+
+## 5. 対話的証明 — ゴール状態を逐次書き換える
+
+`by` の後ろは タクティクモード である。各タクティクは 証明状態（仮定と残ゴール）を更新する [12][13]。
+
+VS Code 拡張の InfoView は、カーソル位置のゴールと仮定を表示する [21]。`intro`・`apply`・`rw`・`simp` は、この状態を機械的に変換する命令である [12]。
+
+タクティクはメタプログラムとして実装され、裏で 証明項 の断片を組み立てる [13]。ゴールがゼロになった時点で、完全な項が得られる [13]。
+
+**ここでの要点:** 対話的証明は UX 層の発明である。保存形式は依然として項であり、再現性はファイルと `.olean` に依存する [12][19]。
+
+## 6. Lake とコンパイル — モジュールから実行可能ファイルへ
+
+プロジェクト管理は Lake が担う。`lake build` は `.setup.json` を生成し、`lean` に `.olean` と `.c` の生成を指示する [19][22]。
+
+`import` が読むのは主に `.olean` である [19]。`.ilean` は LSP 向け、`.c` はネイティブコード生成用である [19]。
+
+実行可能ファイルは Lean → LCNF → IR → C → オブジェクト → リンク、という段階を経る [23][24]。`IO` モナドのプログラムもこの経路で動く [15][25]。
+
+**ここでの要点:** 証明支援系としての Lean と、バイナリを出す言語としての Lean は、同じモジュールグラフ上で共存する [15][23]。
+
+## 7. mathlib4 と自動化 — ライブラリと grind がスケールを支える
+
+mathlib4 はコミュニティ維持の数学・プログラミング基盤ライブラリである [26]。定理・定義・タクティクが `.lean` ソースからドキュメント生成される [26]。
+
+Aesop はルール登録型の証明探索で、Isabelle の `auto` に近い [27]。`@[aesop]` で安全／非安全ルールを足し、短いゴールを自動で閉じる [27]。
+
+grind は SMT 風のネイティブタクティクで、同値類・算術・環を協調させる [9]。各ステップは通常の Lean 証明項を生成する [9]。
+
+両者は役割が異なる。`grind` は simp セットに依存せず、存在量化子のインスタンスも積極的には埋めない [28]。短い論理連鎖は Aesop、等式・算術の塊は grind、という使い分けが現場で語られる [28][29]。
+
+**ここでの要点:** 大規模形式化は「手書き＋ライブラリ＋自動化」の三層で回る。自動化も最終的にはカーネル項を出す [9][27]。
+
+## 8. AI と形式化 — コンパイラが誤りを返す共通言語
+
+LeanDojo は Lean から証明状態・タクティク・前提を抽出し、Python から Lean と対話する OSS 基盤である [30][31]。NeurIPS 2023 で、98,734 定理規模のベンチと ReProver が公開された [30]。
+
+AlphaProof は Lean 上で候補を探索し、検証済み証明でモデルを強化する RL 系である [10][32]。2024年 IMO では非幾何 3問 に形式証明を付け、合計 28/42 点と報告された [10][33]。
+
+自動形式化研究では、mathlib4 の定理を自然言語化し、再形式化の教師データにする流れがある [34]。Lean 4 コンパイラのエラーは プロセス監督 の信号として使われる [34]。
+
+Duper のような依存型向け ATP も、タクティクとしてカーネル項を生成する方向で統合されている [35]。
+
+**ここでの要点:** LLM の出力をそのまま信じず、Lean が受理した項だけを成果物にする、というパターンが定着しつつある [10][34]。
+
+## まとめ — Lean 4 を読み解く8点
+
+1. **証明は型を持つ項である** — `theorem` と `def` はカーネル上同型で、タクティクは項を組み立てる UI である [3][12]。
+
+2. **Prop と Type で論理と計算を分ける** — 証明無関性と宇宙規則が、実行可能データと命題を切り分ける [4][5]。
+
+3. **信頼されるのはカーネルだけ** — タクティクとエラボレータは厚く、正しさの最終判定は薄い型検査に集約される [6][7]。
+
+4. **暗黙引数と notation はエラボレーション** — 推論の大半はカーネル前の Meta 層で完結する [11][16]。
+
+5. **`.olean` がモジュールの真実** — Lake ビルドは検査済み環境をシリアル化し、import チェーンを形成する [19][22]。
+
+6. **mathlib4 が数学の地力** — 自動化タクティクもライブラリの上で意味を持つ [26][9]。
+
+7. **grind と Aesop は補完関係** — 等式・算術の塊と短い探索は別ツールに任せる [28][29]。
+
+8. **AI は Lean が受理した証明だけを残す** — AlphaProof と LeanDojo は同じ検査パイプラインに接続する [10][30]。
+
+## 付録: 出典一覧
+
+- [1] Jeremy Avigad 他, [Theorem Proving in Lean 4 — Introduction (日本語訳)](https://aconite-ac.github.io/theorem_proving_in_lean4_ja/introduction.html)（2024年頃）
+- [2] ウィキペディア, [Lean (証明アシスタント)](https://ja.wikipedia.org/wiki/Lean_(%E8%A8%BC%E6%98%8E%E3%82%A2%E3%82%B7%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%88))（2025年頃）
+- [3] Jeremy Avigad 他, [Propositions and Proofs](https://lean-lang.org/theorem_proving_in_lean4/Propositions-and-Proofs/)（2024年）
+- [4] Lean 公式, [Universes](https://lean-lang.org/doc/reference/latest/The-Type-System/Universes/)（2025年）
+- [5] proofs-and-programs, [PropsProofs.lean](https://raw.githubusercontent.com/proofs-and-programs/proofs-and-programs-25/refs/heads/main/PfsProgs25/Unit02/PropsProofs.lean)（2025年）
+- [6] Lean 公式, [Elaboration and Compilation](https://lean-lang.org/doc/reference/latest/Elaboration-and-Compilation/)（2025年）
+- [7] A. Knutsen, [Trust — Type Checking in Lean 4](https://ammkrn.github.io/type_checking_in_lean4/trust/trust.html)（2023年）
+- [8] Lean FRO, [About](https://lean-lang.org/fro/about/)（2025年）
+- [9] Lean 公式, [The grind tactic](https://lean-lang.org/doc/reference/latest/The--grind--tactic)（2025年）
+- [10] Google DeepMind, [AI achieves silver-medal standard solving IMO problems](https://deepmind.google/blog/ai-solves-imo-problems-at-silver-medal-level/)（2024年7月）
+- [11] Lean コミュニティ, [Elaboration — Metaprogramming in Lean 4](https://leanprover-community.github.io/lean4-metaprogramming-book/main/07_elaboration.html)（2024年）
+- [12] Jeremy Avigad 他, [Tactics](https://lean-lang.org/theorem_proving_in_lean4/Tactics/)（2024年）
+- [13] lean4.dev, [The Proof State](https://lean4.dev/tactics/intro/proof-state)（2024年）
+- [14] lean4.dev, [Propositions as Types](https://lean4.dev/tactics/intro/propositions-types)（2024年）
+- [15] Jeremy Avigad 他, [Functional Programming in Lean — IO monad](https://leanprover.github.io/functional_programming_in_lean/monads/io.html)（2024年）
+- [16] Jeremy Avigad 他, [Dependent Type Theory](https://lean-lang.org/theorem_proving_in_lean4/Dependent-Type-Theory/)（2024年）
+- [17] Lean 公式, [FAQ — Is Lean just like Rocq?](https://lean-lang.org/faq/)（2025年）
+- [18] Proof Assistants Stack Exchange, [What are the main differences between Coq and Lean?](https://proofassistants.stackexchange.com/questions/153/what-are-the-main-differences-between-coq-and-lean)（2020年）
+- [19] Lean Zulip アーカイブ, [Understanding the Lean build pipeline](https://leanprover-community.github.io/archive/stream/270676-lean4/topic/Understanding.20the.20Lean.20build.20pipeline.html)（2024年）
+- [20] leanprover-community, [07_elaboration.lean](https://github.com/leanprover-community/lean4-metaprogramming-book/blob/master/lean/main/07_elaboration.lean)（2024年）
+- [21] leanprover, [vscode-lean4 manual](https://raw.githubusercontent.com/leanprover/vscode-lean4/master/vscode-lean4/manual/manual.md)（2025年）
+- [22] lean4.dev, [Compiling to Binary — Executables in Lean 4](https://lean4.dev/language/projects/compiling)（2024年）
+- [23] DeepWiki, [Code Generation — leanprover/lean4](https://deepwiki.com/leanprover/lean4/6.3-code-generation)（2025年）
+- [24] leanprover, [EmitC.lean](https://github.com/leanprover/lean4/blob/f2e06ead5436e01e585a15dcc795ccb96bf3d182/src/Lean/Compiler/IR/EmitC.lean)（2024年）
+- [25] Lean 公式, [IO Logical Model](https://lean-lang.org/doc/reference/latest/IO/Logical-Model/)（2025年）
+- [26] leanprover-community, [mathlib4 README](https://github.com/leanprover-community/mathlib4)（2025年）
+- [27] leanprover-community, [aesop README](https://github.com/leanprover-community/aesop)（2025年）
+- [28] Lean Zulip アーカイブ, [grind vs aesop](https://leanprover-community.github.io/archive/stream/287929-mathlib4/topic/grind.20vs.20aesop.html)（2025年）
+- [29] lean4.dev, [aesop Tactic](https://lean4.dev/tactics/automation/aesop)（2024年）
+- [30] NeurIPS, [LeanDojo abstract](https://proceedings.neurips.cc/paper_files/paper/2023/hash/4441469427094f8873d0fecb0c4e1cee-Abstract.html)（2023年）
+- [31] lean-dojo, [LeanDojo GitHub](https://github.com/lean-dojo/leandojo)（2024年）
+- [32] Google Research, [Olympiad-Level Formal Mathematical Reasoning with RL](https://research.google/pubs/olympiad-level-formal-mathematical-reasoning-with-reinforcement-learning/)（2024年）
+- [33] DeepMind, [IMO 2024 Solutions](https://storage.googleapis.com/deepmind-media/DeepMind.com/Blog/imo-2024-solutions/index.html)（2024年）
+- [34] arXiv, [Process-Driven Autoformalization in Lean 4](https://arxiv.org/html/2406.01940v1)（2024年）
+- [35] J. Clune 他, [Duper (ITP 2024 PDF)](https://joshclune.github.io/pdfs/Duper.pdf)（2024年）
+- [36] Mario Carneiro 他, [Lean4Lean arXiv](https://arxiv.org/html/2403.14064v2)（2024年）
+
+## 付録: 扱わなかった枝・未確認点
+
+**Rocq / Agda / Idris との詳細比較** — FAQ レベルの差（累積宇宙、証明無関性、商型）は本文で触れたが、実務の選定指針までは書いていない [17][18]。
+
+**カーネル C++ 実装の行レベル監査** — Lean4Lean は Lean で型検査器を再実装する方向だが、本稿では成果の位置づけのみ [36]。
+
+**各 IMO 問題の数学的内容** — AlphaProof の証明は公開されているが、問題自体の解説は対象外 [33]。
+
+**内部版 Lean / mathlib に依存する再現** — 公開 mirror ではパッチが必要なケースがある [33]。
+
+## 付録: 年表（Lean 4 まわり）
+
+| 年 | 出来事 |
+| --- | --- |
+| 2013 | Lean プロジェクト開始 [2] |
+| 2018 | Lean 4 開発開始 [8] |
+| 2021 | Mathlib4 リポジトリ作成 [8] |
+| 2023-07 | Lean FRO 設立、mathlib Lean 4 移植完了 [8] |
+| 2023-09 | Lean 4.0 リリース [8] |
+| 2023 | LeanDojo（NeurIPS） [30] |
+| 2024-07 | AlphaProof IMO 結果公開 [10] |
+| 2025 | grind 等の自動化強化（FRO 年表） [8][9] |
