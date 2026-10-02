@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "japanese-writing": {
+      "source": "hskksk/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/japanese-writing/SKILL.md",
+      "computedHash": "52362eaf0265a24605524bc76a364ee6e148814fa8e26cab038a2c495eed3aea"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
