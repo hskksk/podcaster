@@ -55,11 +55,10 @@ URL を受け取り、元記事を取得して、`content/web-clips/` に日本�
 | `references/compression.md` | 骨子の取り方と、何を落とし何を残すか。要約特有の失敗 | **原文を読み終えた直後に必須** |
 | `references/structure.md` | クリップの骨格、骨子表、見出し、引用の作法、分量 | **書き始める前に必須** |
 | `japanese-writing` スキル | 日本語の語・文・表記 | **必須**（`references/japanese-writing-hook.md`） |
-| `references/prose-style.md` | 段落、論の運び、出典の書き方 | 書く・直すとき |
 | `references/checklists.md` | 提出前の9テスト | 提出前 |
 | `measure.py` | 数えられる指標の計測スクリプト | 提出前に必ず実行 |
 
-`references/japanese.md` は `japanese-writing` スキルへのシンボリックリンク。`prose-style.md` は `podcast-research2` と共有。日本語の正本は `japanese-writing` のみを更新する。
+`references/japanese.md` は `japanese-writing` へのシンボリックリンク。`prose-style.md` は使わない。
 
 ### 要約の原則
 

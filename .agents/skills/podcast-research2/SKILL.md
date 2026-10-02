@@ -53,7 +53,6 @@ metadata:
 |------|------|-----------|
 | `references/structure.md` | 三層、概要の位置づけ、背景・歴史、見出し、テーマの割り方、全体像の図、長さの上限、Before/After | **本文を書き始める前に必須** |
 | `japanese-writing` スキル | 日本語の語・文・表記（正本はその `references/japanese.md`） | **出力が日本語のとき、執筆前と推敲前に必須**（`references/japanese-writing-hook.md`） |
-| `references/prose-style.md` | 段落、論の運び、出典の書き方、埋め草 | 本文を書く・直すとき |
 | `references/english.md` | 英語の文の作法 | 出力が英語のとき |
 | `references/checklists.md` | 提出前の14テストと、長すぎる原稿の直し順 | 提出前 |
 | `measure.py` | 数えられる指標の計測スクリプト | 提出前に必ず実行 |
@@ -180,7 +179,7 @@ metadata:
 
 出力言語はユーザーの指定がなければ日本語・常体。固有名、論文題、API、ファイルパスは原文のまま。
 
-**`japanese-writing` スキルを読み込み、手順に従って初稿と推敲を行う**（`references/japanese-writing-hook.md`）。直訳調はこのスキルの既知の失敗モードである。本スキル固有の作法は次のみ。
+**`japanese-writing` スキルを読み込み、手順に従って初稿と推敲を行う**（`references/japanese-writing-hook.md`）。`references/prose-style.md` は**使わない**（廃止）。直訳調はこのスキルの既知の失敗モードである。本スキル固有の作法は次のみ。
 
 - **スキル内部の語を本文に出さない。** 「見取り図」「枠組み」「射程」「骨格」「スロット」「L1」は作業用の語である。図の見出しは `## 全体像`、ノードのラベルは「問い」「軸」「分かったこと」「論点」「答え」「扱わない範囲」「調査範囲」を使う
 - **太字**は本スキルの情報設計に合わせ、初出の術語・数値と条件・持ち帰りラベルの3種（`japanese-writing` と矛盾する場合は、レポート構造の太字規則を優先）
