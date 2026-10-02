@@ -1,0 +1,293 @@
+---
+title: "Lean 4 定理証明器・証明とプログラム"
+publishedAt: 2026-10-02
+podcast: none
+legacyFilename: 20261002_140000_lean4_podcast_research.md
+---
+
+# Lean 4 定理証明器・証明とプログラム
+
+## 概要
+
+Lean 4 は、依存型理論に基づく**対話型定理証明器**と**汎用関数型プログラミング言語**を同一の型システム上に載せたシステムである。2013年にレオナルド・デ・モウラ（Leonardo de Moura）が Microsoft Research で始めた Lean プロジェクトの現行版であり、2023年9月に Lean 4.0 が公式リリースされた。開発の主導は Lean Focused Research Organization（Lean FRO、2023年設立の非営利団体）と世界中のコミュニティが担う。
+
+Lean の設計思想の中心は、**証明とプログラムを区別せず同じ言語で書く**ことにある。カリー＝ハワード同型（Curry–Howard correspondence）の下では、数学の命題は型、証明はその型の項（プログラム）として表現される。定理を証明するときは項を構築し、プログラムの正しさを示すときは仕様を型として書き、その型の項を構築する。いずれも Lean カーネルが型チェックする。
+
+この統合は、数学の形式化（Mathlib など百万行超のライブラリ）、ソフトウェア検証（AWS の Cedar 認可エンジンなど）、教育（Natural Number Game、大学講義）、AI 支援証明（Lean Copilot、国際数学オリンピック問題の形式化）まで広がっている。Lean 4 は Lean 自身で再実装され、パーサ・エラボレータ・タクティク・コード生成の多くをユーザーが Lean で拡張できる。実行性能は参照カウントと functional but in-place（FBIP）最適化により、証明自動化を大量に走らせる用途でも実用域に入っている。
+
+本稿は、Lean 4 を「証明器」としても「言語」としても理解するための調査レポートである。歴史、型理論の骨格、ツールチェーン、代表事例、他システムとの比較、未解決の課題までを一通り扱う。
+
+ポッドキャスト台本向けに要点だけ先に置く。第一に、Lean は「証明を書く＝プログラムを書く」という単一の作業感を与える。第二に、Mathlib と産業検証の両方が同じ言語で進んでいるため、数学とソフトウェアの境界が薄い。第三に、AI は提案役に留まり、最終判定は小さなカーネルが担う。この三つが、他の証明支援系との会話でも繰り返し出てくる軸になる。
+
+## 背景・歴史
+
+### Lean 1〜3：定理証明器としての成熟
+
+Lean は 2013年の初版（後に Lean 1 と呼ばれる）から、依存型の対話型証明支援系として育てられた。Lean 2（2015年頃の公式版）で数学者向けの利用が広がり、Lean 3（2017年1月リリース）では**ユーザーが Lean 自身でタクティクを書けるメタプログラミング**が整備された。ICFP 2017 の論文「A Metaprogramming Framework for Formal Verification」に代表されるこの設計が、`linarith`・`ring`・`omega` などコミュニティ製の自動化を可能にした。
+
+並行して Mathlib プロジェクトが立ち上がり、単一の Git リポジトリに数学・メタプログラミング・タクティクが集積される運用が定着した。Lean 3 は主に C++ 実装だったが、コミュニティフォークにより 3.51 系まで保守が続いた。
+
+### Lean 4 への転換（2018年〜）
+
+2018年初頭、デ・モウラとセバスティアン・ウルリッヒ（Sebastian Ullrich）が Lean 4 をゼロから設計した。目標は明確だった。**Lean を汎用プログラミング言語にし、コンパイラの大部分を Lean で書き直す**ことで、拡張性と性能を同時に取る。2020年10月には Lean 4 が Lean 4 でコンパイルできる段階（セルフホスト）に達した。2021年にプレリリースが公開され、2023年9月に Lean 4.0.0 が公式版となった。
+
+この期間は Mathlib の移植（Mathport）も並走し、2023年時点で Mathlib4 は百万行規模に達した。Lean 3 と Lean 4 は**後方互換がない**別製品であり、バージョン番号の連続性はあってもコードはそのまま動かない。
+
+### 組織とエコシステム
+
+2023年7月、Lean FRO が Convergent Research 配下の非営利として設立された。ミッションはスケーラビリティ、使いやすさ、ドキュメント、証明自動化の改善と、2028年までの自立的運営（Lean Foundation への移行を想定）である。デ・モウラは AWS Automated Reasoning Group のシニアプリンシパルとして Lean の Chief Architect を務める。
+
+メディアや数学コミュニティの注目は、ショルツェの Liquid Tensor Experiment（2022年完了、Lean 3）、IMO 問題の Mathlib 格納、Times や Quanta による報道などで高まった。ソフトウェア検証では Cedar が「本番で Lean を使う」象徴例になっている。
+
+デ・モウラ自身の講演資料（ItaLean 2025、FLoC 2026 など）では、Lean 3 時代の HoTT サポート撤回、Lean 4 開発初期の「ステルスモード」、2020年のセルフホスト達成、コミュニティとの関係修復と Mathlib4 ポートの経緯が語られている。技術史として読むと、**メタプログラミングの成功が Lean 4 の再実装を正当化した**一方で、ライブラリとユーザーの慣性が最大の移行コストだったことが分かる。
+
+## 核となる概念
+
+### 依存型理論と計算の解釈
+
+Lean の論理は**帰納型付き構築の計算（CIC）**の系譜に属する。項には型があり、型はより大きな「宇宙」（universe）`Sort u` の要素である。`Prop` は `Sort 0` の糖衣構文で、数学的な命題を表す。`Type u`（実際には `Sort (u+1)`）はデータ型の宇宙である。
+
+**依存関数型** `(x : α) → β x` は、引数 `x` に応じて返り値の型が変わる関数を表す。通常の関数型 `α → β` は、`β` が `x` に依らないときの記法である。全称量化子 `∀ x : α, p x` は依存関数型と同一視される。存在量化子 `∃` は依存対（シグマ型 `Σ`）の命題版に対応する。
+
+帰納型（自然数、リスト、等式など）は、構成子と再帰原理（recursor）によって定義される。パターンマッチングと構造的再帰が証明とプログラムの両方の骨格になる。
+
+### カリー＝ハワード同型：命題即ち型
+
+論理と型の対応は次のように覚えるとよい。
+
+| 論理 | 型・プログラム |
+| --- | --- |
+| 命題 | 型（しばしば `Prop`） |
+| 証明 | その型の項 |
+| 真 | 空でない型（項が存在） |
+| 偽 | 空の型 |
+| 含意 $A \to B$ | 関数型 |
+| 連言 | 直积型 |
+| 選言 | 直和型 |
+| 全称 | 依存関数（Π型） |
+| 存在 | 依存対（Σ型） |
+
+例として、`p → q → p` の証明は `fun hp : p => fun hq : q => hp` という項であり、データ型の `α → β → α` と同じ形をする。Lean カーネルは `theorem` と `def` を同種の宣言として扱う。
+
+含意の項スタイル証明と、タクティクによる同じ定理の証明は、エラボレータが同じ裏側の項を生成する。初学者はタクティクから入り、リファクタリングで項を見る、という学習経路がよく取られる。
+
+```lean
+theorem t1 : p → q → p := fun hp hq => hp
+
+theorem t1' : p → q → p := by
+  intro hp hq
+  exact hp
+```
+
+データ型側の「恒等関数」`fun (x : α) (y : β) => x` と並べて読むと、論理とプログラムの対応が目に見える。
+
+`Prop` は**証明无关性**（proof irrelevance）の対象である。同じ命題の二つの証明は定義上同一とみなされる。これにより証明項の細部は実行時や以降の証明に影響しにくく、ライブラリの再利用が楽になる。Coq では命題的等式として公理化されるのに対し、Lean はカーネルの定義等価に組み込む点が理論上の大きな差である。
+
+### 信頼できるカーネルとその外側
+
+型の正しさを最終判定する**カーネル**は、概ね数千行の C++ 実装である。エラボレータ、タクティク、notation、マクロ、型クラス合成、simp などは Lean で書かれた**フロントエンド**に属し、カーネルに送る前の項を生成する。
+
+ユーザーが信頼する境界（trusted computing base, TCB）は、カーネルと公理（選択公理 `Classical.choice`、商型、コンパイル結果を信じる `Lean.ofReduceBool` など）に集約される。Cedar のようなプロジェクトでは、Lean モデルと Rust 実装の差分テストが TCB を補完する。
+
+### 項モードとタクティクモード
+
+証明の記述には二つのスタイルがある。
+
+- **項モード（term-style）**：ラムダ抽象と関数適用で直接証明項を書く。小さな命題や、証明の構造を明示したいときに向く。
+- **タクティクモード（tactic-style）**：`by` ブロック内で `intro`・`apply`・`exact`・`cases`・`rw`・`simp` などの命令を順に実行し、ゴールを分解する。長い証明や自動化との接続に向く。
+
+VS Code 拡張ではゴール表示とエラー位置のフィードバックがリアルタイムで得られる。`have` で中間補題を挟み、`calc` で計算証明を書くなど、構造化の道具も豊富である。
+
+### 型クラスと多重解釈
+
+Lean は型クラス（type class）で演算や関係を抽象化する。例えば `Ring R` があれば、`ring` タクティクや `rw` で環の等式を扱える。インスタンス合成はテーブル解決ベースの手続きで、Mathlib の巨大な階層（群・環・体・モジュール…）を支える。
+
+### プログラミング言語としての側面
+
+Lean 4 は**純粋関数型・厳格評価**の言語である。副作用は `IO` などの型で明示される。`do` 記法でモナド的に書ける。配列 `Array` は参照カウントが 1 のとき in-place 更新され、リストやツリーの FBIP 最適化により、証明自動化やコンパイラ的な処理でも割り当てを抑えられる。
+
+ビルドと依存管理は **Lake**（Lean Make）が担い、ツールチェーンのバージョンは **elan** でプロジェクトごとに固定する。コンパイラは C コードを生成しネイティブ実行するため、メタプログラムや検証モデルを「普通の高速コード」として走らせられる。
+
+開発体験は VS Code の `lean4` 拡張が中心である。ファイルを保存するとゴールが更新され、`.olean` キャッシュと Mathlib の事前ビルド成果物（`lake exe cache get`）で初回ビルド時間を抑える。Zulip の Lean コミュニティは質問対応の実質的なサポート窓口になっている。
+
+## 詳細な仕組み・理論
+
+### 宇宙と impredicativity
+
+Lean は可算個の非累積的宇宙 `Sort u` を持つ。`Prop` は impredicative で、命題が任意の宇宙の型を量化できる。これは数学の慣習（「すべての実数について…」を一つの命題として扱う）に近いが、型論としては強い公理力を伴う。Agda のような予述的系とは設計が異なる。
+
+### 定義等価と正規化
+
+カーネルは**定義等価**（definitional equality）を判定する。β簡約、δ簡約（定義の展開）、ι簡約（再帰子の計算）、proof irrelevance、一部の η規則などが含まれる。エラボレータは metavariable を埋めながら、定義等価を利用して型をそろえる。
+
+理論上、Lean の型論は主題縮約（subject reduction）を満たさない例が知られており、カーネルが拒否する項が存在する（Mario Carneiro の型論解析で整理されている）。これは**健全性（soundness）を破るものではなく**、完全性の話として理解される。実務では Mathlib 規模でも運用されている。
+
+`simp`・`rw`・`ring`・`linarith`・`omega`・`decide` などの戦術は、いずれもエラボレータとメタ理論上の帰納的に正しい変換を積み重ね、最後にカーネルが項を受け入れる。自動化が強いほど、**どの補題が使われたか**を追う読み方（白箱的な Aesop 設計など）が保守性を決める。
+
+### エラボレーションとマクロ
+
+Lean 4 の構文拡張は**衛生的マクロ**（hygienic macro）と `syntax`・`macro`・`elab` の層で行う。ユーザーは C++ を触らずに記法・コマンド・タクティクを追加できる。パース → マクロ展開 → エラボレーション（`Syntax` から `Expr`）→ 型チェック → コード生成、という流れがメタプログラミングの本でも説明される。
+
+### 帰納型とパターンマッチング
+
+データと証明の両方で帰納型が中心である。自然数は `Nat.zero` と `Nat.succ`、リストは `nil` と `cons` で生成される。パターンマッチは構造的再帰を保証し、well-founded 再帰や `partial` で一般再帰も扱える。停止性のチェックはカーネルとエラボレータの協調に依存する。
+
+自然数の加法は、再帰的な `def` で定義され、帰納法による証明は `Nat.rec` や `induction` タクティクに落ちる。プログラムと証明が同じ再帰の骨格を共有する典型例である。
+
+```lean
+def add : Nat → Nat → Nat
+  | n, zero => n
+  | n, succ m => succ (add n m)
+
+theorem add_zero (n : Nat) : add n zero = n := by rfl
+```
+
+### 商型と古典論理
+
+Mathlib は古典数学を主に扱う。排中律や選択公理は `Classical` 名前空間で公理として利用可能である。商型（quotient）は同値関係で型を丸める仕組みで、他の証明支援系との比較でよく論点になる。実装の詳細はライブラリとカーネルの契約に載る。
+
+### コード生成と `native_decide`
+
+決定可能な命題を実行時に判定する `native_decide` は、コンパイルしたコードの結果を信頼する `ofReduceBool` 公理に依存する。ソフトウェア検証や reachability 解析（l3m など）では、この境界が TCB に明示される。
+
+### Lake とワークスペースの構造
+
+Lake はパッケージ（リポジトリ単位）、ワークスペース（ルートパッケージと `.lake` 成果物）、ターゲット（ライブラリ・実行ファイル）を区別する。`lake update` が依存を取得し、`lake build` が増分ビルドする。宣言的 `lakefile.toml` とプログラム的 `lakefile.lean` の両方が使える。Reservoir はパッケージ索引であり、Lean Copilot や Aesop はここから依存解決される。
+
+オフラインや再現ビルドでは `.lake/package-overrides.json` で manifest の git 依存をローカルパスに差し替えられる。Nix など外部ビルドシステムも、この overrides 形式を生成して Lake に渡す例がある。
+
+## 具体例・応用事例
+
+### Mathlib と数学の形式化
+
+Mathlib4 は代数・解析・位相・組合せ・確率・数論・計算機科学の基礎などを横断するライブラリである。設計原則は抽象化・一般性・合成可能性を重視し、定理を小さな補題に分解して再利用する。`Archive` ディレクトリには IMO 2024 の複数問題（例：Q3 の周期性、Q5 のゲーム理論的解法）の完全形式化が含まれる。`Wanted` には未証明の `proof_wanted` が置かれ、コントリビューションの入口になっている。
+
+Kevin Buzzard らの Xena プロジェクトは、学部教育と Mathlib の橋渡しとして知られる。「Formalising Mathematics」講義資料は Lean 4 と Mathlib を前提に書かれている。
+
+形式化の日常作業は、既存の `rw`・`simp`・型クラスインスタンス探索・`apply?`・Loogle（宣言検索）の組み合わせである。新しい定理は、できるだけ既存の抽象化（例：`Monoid` 上の議論）に寄せて書く。そうすると、他の圏や具体例に再利用しやすい。
+
+Blueprint（Patrick Massot らが普及したワークフロー）は、LaTeX 原稿と Lean ファイルを相互リンクし、依存グラフで証明の骨格を見せる。Liquid Tensor や現代の形式化プロジェクトでは、**人間向けの説明と機械向けの証明を並行維持する**運用の標準例になった。
+
+### Liquid Tensor Experiment（歴史的なマイルストーン）
+
+2022年7月、Peter Scholze が提示した liquid vector spaces 周りの主定理が Lean 3 + Mathlib で機械検証された。プロジェクトは blueprint（Patrick Massot ら）と GitHub 上の形式化が結び付き、解析的幾何の難題がコミュニティ証明になった象徴である。実装は当時インフラが揃っていた Lean 3 上だが、現在の Mathlib4 はその後の数学的基盤を大幅に拡張している。
+
+### AWS Cedar と検証駆動開発
+
+Cedar は AWS のオープンソース認可ポリシー言語である。コアコンポーネント（evaluator、authorizer、validator）の**実行可能モデルを Lean で書き**、禁止ポリシーが許可を上書きするなどの性質を定理として証明する。本番は Rust だが、**差分ランダムテスト**（数百万入力でモデルと実装の出力一致）で結び付ける。モデルは本番コードより大幅に短く、仕様書としても読める。Lean の実行速度がテストを実用化している。
+
+検証駆動開発（VGD）の流れは、仕様を Lean で書く → 性質を証明する → 実装を別言語で書き、ランダムテストで一致を見る → 証明とテストの両方を CI で回す、という形になる。Cedar Analysis は Lean 実装のシンボリックコンパイラとして、ポリシー解析の健全性・完全性を数学的に主張する側面も持つ。
+
+### 教育：Natural Number Game
+
+Natural Number Game は、Peano 公理と帰納法から始め、`a + b = b + a` などをプレイヤーが証明する Web ゲームである。Lean 3 版は凍結され、Lean 4 版でレベルと UI が拡張されている。`rw`・`induction`・`cases` といった基本タクティクをゲーム化し、非専門家に「証明＝プログラム」を体験させる。
+
+### 分散プロトコルと Veil
+
+Lean 公式サイトが挙げる Veil は、分散プロトコル検証のフレームワークで、Lean 上にシンボリック・コンクリートモデルチェック、SMT、対話型証明を統合する。証明支援系を「スタンドアロン検証器」ではなく**プラットフォーム**として使う例である。
+
+### IMO・コンペティション形式化
+
+`compfiles` や Mathlib の `Archive/Imo` は、コンペ問題を `problem` 宣言として形式化する流れを示す。2024年問題は、床関数と実数（P1）、GCD 条件（P2）、Turbo the snail（Q5）など、初等的だが証明が長い題が格納されている。Google DeepMind の AlphaProof 出力を公開リリース向けに整えたミラーなど、AI 証明と Mathlib の接点も動いている。
+
+### 証明自動化：Aesop と Lean Copilot
+
+**Aesop**（Automated Extensible Search for Obvious Proofs）は、ユーザー登録ルールに基づく最良優先探索タクティクである。`@[aesop]` で safe / unsafe ルールを登録し、`measurability` や `continuity` など Mathlib の特化自動化の背後にもある。Isabelle の `auto` に近い位置づけだが、ルールの挙動を白箱的に設計できるとされる。
+
+**Lean Copilot** は LLM を Lean 内でネイティブに呼び、 tactic 提案・前提選択・`search_proof`（LLM + Aesop）を提供する。論文報告では、人間補助時の手動ステップ数や自動化率で Aesop 単体を上回るケースが示されている。モデルはローカル GPU やサーバーで動かせる。
+
+ソフトウェア検証の別例として、翻訳検証（Reopt）、車両制御の形式モデル、l3m のような「エージェントの到達可能性をカーネルで検証する」試みが挙げられる。いずれも、**仕様を型で書き、実行コードは別経路で信頼する**というパターンのバリエーションである。
+
+## 重要人物・文献
+
+| 人物・団体 | 役割 |
+| --- | --- |
+| Leonardo de Moura | Lean 創始者、Lean FRO Chief Architect |
+| Sebastian Ullrich | Lean 4 共同設計、エラボレーション・コンパイラ |
+| Mario Carneiro (digama0) | 型論、Mathlib、ポート・タクティク |
+| Kevin Buzzard | 教育・形式化数学の普及、Xena |
+| Johan Commelin ら | Liquid Tensor Experiment 主導 |
+| leanprover-community | Mathlib、ツール、Zulip コミュニティ |
+
+主要文献・資料には次がある。
+
+- *Theorem Proving in Lean 4*（公式チュートリアル、依存型・命題・タクティク）
+- *Functional Programming in Lean*（プログラム側の公式テキスト）
+- de Moura & Ullrich, «The Lean 4 Theorem Prover and Programming Language»（CADE 2021）
+- de Moura, «Lean: Past, Present, and Future»（FSCD 2024 招待講演）
+- Carneiro, *The Type Theory of Lean*（博士論文、理論の参照）
+- Limperg & From, «Aesop»（CPP 2023）
+- Song et al., «Lean Copilot»（arXiv:2404.12534）
+- Torlak & Hietala, «How We Built Cedar»（検証駆動開発）
+
+日本語資料には、aconite-ac による *Theorem Proving in Lean 4* 日本語訳（命題と証明など）や、日本語 Wikipedia の Lean 条目が入門の補助になる。
+
+## 最新動向・未解決問題
+
+### Lean FRO のロードマップ
+
+Year 3 ロードマップ（2025年8月〜2026年7月）は、証明自動化の強化とコンパイラ性能への集中的投資を掲げる。SymM、Tau Ceti、Palomar など AI と数学・コード合成のプロジェクト名が公開資料に現れる。Reservoir は Lean パッケージの索引サーバーとしてエコシステムを支える。
+
+### AI と形式証明
+
+LLM は証明案を提案できるが、**正しさは Lean カーネルが判定する**という非対称性が続く。前提選択・タクティク合成・全体探索は活発だが、研究レベルの定理を人手なしで完結させる段階には達していない。LeanDojo データセットや ReProver 系モデルは、このギャップを埋める訓練基盤である。
+
+### 理論・実装の継続課題
+
+- 外部 SMT・一階証明器との統合（Lean 4 論文でも将来課題として挙げられる）
+- カーネルと定義等価の完全性・移植性（Lean4Less など intensional 訳の研究）
+- Mathlib のビルド時間・キャッシュ運用（`lake exe cache`）
+- 教育と研究のオンボーディングコスト（学習曲線は依然急）
+
+### エコシステムの安定性
+
+Lean 2→3→4 で互換が切れた歴史から、長期プロジェクトはツールチェーン固定と Mathlib の追従が必須である。一方、Lean 4 以降は FRO と月次リリース文化で「製品」としての運用が進んでいる。
+
+### 学習とプロジェクトの始め方（2026年時点の典型経路）
+
+新規参加者は、次の順序がよく推奨される。まず elan を入れ、`lake new` で空プロジェクトを作る。Theorem Proving in Lean 4 の前半（依存型・命題）と Natural Number Game または Lean4 Academy でタクティクに触れる。数学志向なら Mathematics in Lean と Mathlib の `Archive` を読み、ソフト志向なら Functional Programming in Lean と Cedar の公開モデルを読む。
+
+Mathlib 依存プロジェクトでは `lakefile` に git 依存を書き、`require mathlib from git` と `lean-toolchain` のバージョン整合を取る。CI では `lake build` と `lake exe cache get` の組み合わせが定番である。形式化の PR は通常、ビルドが通り、スタイルリンタ（`nolints` など）に従い、docstring と命名規約が Mathlib に合うことが求められる。
+
+未解決の「人間の問題」として、**形式化と元の数学的主張の対応**は依然専門家のレビューが要る。カーネルは「Lean 内の型の項」しか保証しない。定理のステートメントが教科書の意図と一致しているかは、ブループリント、コメント、査読文化で補う。ここは AI が自動では埋めにくいギャップとして残る。
+
+## 関連トピック
+
+- **Coq / Rocq**：同じく CIC 系。宇宙累積性、抽出（extraction）、ソフトウェア検証の伝統が強い。証明无关性は公理扱い。
+- **Agda**：Martin-Löf 型論、予述的宇宙。依存型プログラミングとパターンマッチの教科書的例。
+- **Isabelle/HOL**：高階論理と自動化（Sledgehammer）の文化。依存型ではないがハンマー連携の参照になる。
+- **Idris**：依存型プログラミング言語。実行時と証明の分離の設計が異なる。
+- **Metamath / Mizar**：別系統の形式数学。Lean ユーザーには証明スタイルの対照として有用。
+
+### Coq / Agda / Lean の設計差（実務者向けの整理）
+
+| 観点 | Lean 4 | Coq（CIC） | Agda |
+| --- | --- | --- | --- |
+| 主な利用者層 | 数学形式化・産業検証 | ソフト検証・構成的数学 | 依存型プログラミング研究 |
+| 証明无关性 | 定義等価に組み込み | 公理（命題的等式） | 設計により異なる |
+| 宇宙 | 非累積的 `Sort` | 累積性あり | 予述的が基本 |
+| 大規模ライブラリ | Mathlib4 | Mathematical Components 等 | 相対的に小さい |
+| プログラム実行 | ネイティブコード生成 | 抽出（OCaml 等） | インタプリタ中心 |
+
+翻訳は非自明である。Lean-auto のようなハンマーは、内部で依存型を中間表現に落としてから外部証明器に渡す。ITP 間のデータセット共有は、論理の拡張の差がボトルネックになる。
+
+将来像として、FRO は「計算可能な数学論文」— 散文・通常の記法・Lean コードを同一ワークスペースで往復し、査読可能な機械証明を科学の共通言語に近づける— を掲げる。現状はまだ専門家の道具だが、IMO 形式化や Cedar の本番採用は、**形式検証がニッチを出た**兆候として資料に残る。
+
+## 参考リンク
+
+- Lean 公式：https://lean-lang.org/
+- Theorem Proving in Lean 4：https://lean-lang.org/theorem_proving_in_lean4/
+- Functional Programming in Lean：https://lean-lang.org/functional_programming_in_lean/
+- Mathlib4：https://github.com/leanprover-community/mathlib4
+- Lean 4 リポジトリ：https://github.com/leanprover/lean4
+- Lake リファレンス：https://lean-lang.org/doc/reference/latest/Build-Tools-and-Distribution/Lake
+- Lean FRO：https://lean-lang.org/fro/about/
+- Cedar use case：https://lean-lang.org/use-cases/cedar/
+- Aesop：https://github.com/leanprover-community/aesop
+- Lean Copilot：https://github.com/lean-dojo/LeanCopilot
+- Liquid Tensor blueprint：https://leanprover-community.github.io/liquid/
+- Natural Number Game（Lean 4）：リポジトリ README が Lean 4 版を案内
+- IMO 2024 Archive（Mathlib）：`Archive/Imo/Imo2024Q*.lean`
+- 日本語訳（命題と証明）：https://aconite-ac.github.io/theorem_proving_in_lean4_ja/propositions_and_proofs.html
+- Wikipedia（英）：https://en.wikipedia.org/wiki/Lean_(proof_assistant)
+- Wikipedia（日）：https://ja.wikipedia.org/wiki/Lean_(証明アシスタント)
