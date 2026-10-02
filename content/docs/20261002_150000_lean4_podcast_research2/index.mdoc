@@ -1,0 +1,201 @@
+---
+title: "Lean 4 定理証明器・証明とプログラム"
+publishedAt: 2026-10-02
+podcast: none
+legacyFilename: 20261002_150000_lean4_podcast_research2.md
+---
+
+# Lean 4 定理証明器・証明とプログラム
+
+## TL;DR
+
+- Lean 4 では数学の命題も実行可能な関数も同じ依存型の項として書き、小さなカーネルが型チェックだけを担う。
+- エラボレータ・タクティク・パーサは信頼境界の外側にあり、証明の正しさは最終的に項の存在で固定される。
+- `Prop` の証明は定義上同一視されコンパイル時に消えるため、「証明付きプログラム」と「実行コード」は別レイヤで分離される。
+- Mathlib・Cedar・教育ゲームは同じ言語だが、要求される信頼の強さ（カーネル限定かネイティブ評価を含むか）が異なる。
+- LLM 支援は提案に留まり、採用した証明は従来どおりカーネルが検査する。
+
+## 概要
+
+ソフトウェアの仕様を型に書き、実装がその型の項になるまでを一つの言語で追えると、レビューとテストの役割分担がはっきりする。Lean 4 はその両方を依存型理論の上に載せた対話型定理証明器兼関数型言語である。2013年に Leonardo de Moura が Microsoft Research で始めた Lean の現行版は、2023年9月8日に v4.0.0 として安定版リリースに入り、実装の大半を Lean 自身で書くセルフホスト構成に移行した [15][16]。
+
+本稿の問いは次の一文に集約できる。「証明とプログラムを同じ型システムに載せたとき、どこまでが数学的に保証され、どこからがツールチェーンや実行環境への信頼に依存するのか。」読者は Lean の名前と用途（形式数学・検証）を知っているが、カーネルとエラボレータの境界、項証明とタクティク証明の関係、他の証明支援系との差を整理したいポッドキャスト制作者を想定する。範囲は Lean 4 の型理論の基礎、ビルドと信頼、代表事例、他システムとの比較に限り、各定理の証明技法のチュートリアルや Mathlib の目次紹介は扱わない。
+
+## 全体像
+
+証明支援の作業は、人間が書く表面の記法から、カーネルが検査する項へ落ち、必要ならネイティブコードへコンパイルされる。AI や自動タクティクは途中のゴールを埋める補助に置かれ、最後の門はカーネルが閉じる。
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart LR
+  subgraph untrusted["信頼境界の外"]
+    SRC["ソース<br/>theorem / def / by"]
+    ELAB["エラボレータ<br/>型推論・マクロ"]
+    TAC["タクティク・メタプログラム"]
+    LLM["LLM 提案<br/>Lean Copilot 等"]
+  end
+  subgraph trusted["信頼境界の内"]
+    KERN["カーネル型チェック"]
+    TERM["証明項・プログラム項"]
+  end
+  subgraph runtime["実行時（別の信頼）"]
+    COMP["コンパイラ・FBIP"]
+    NATIVE["ネイティブ評価<br/>decide +native 等"]
+  end
+  SRC --> ELAB
+  ELAB --> TAC
+  TAC --> TERM
+  LLM -.-> TAC
+  TERM --> KERN
+  KERN -->|Prop は消去| COMP
+  KERN -->|検証用途| NATIVE
+  COMP --> BIN["実行ファイル"]
+```
+{% /diagram %}
+
+図の矢印はデータの流れであり、上から下へ「人間が触る記法」から「機械が保持する項」へ圧縮される。`decide +native` や `@[implemented_by]` を使うと、正しさの一部がコンパイラ実装へ移る点は後述のテーマ6で扱う。
+
+## 背景・歴史
+
+### Lean 3 までに固まった「証明もコードも Lean で拡張する」方向
+
+Lean は 2013年の初版から依存型の対話型証明器として育てられた。Lean 3（2017年）では、ユーザーが Lean 自身でタクティクを書くメタプログラミングが実用化し、`linarith` や `ring` などコミュニティ製の自動化が Mathlib と一体で増えた [14]。並行して Liquid Tensor Experiment（2022年7月完了）は、Scholze が提起した凝縮数学の主定理を Lean 3 と blueprint で形式化し、大規模協業のモデルケースになった [18][19]。この時期の教訓は、ライブラリとタクティクを同じリポジトリ文化で回すことで証明工学の速度が上がる一方、実装言語が C++ のままでは拡張と性能の両立に天井があったことである。
+
+### Lean 4 は言語として再設計し、2023年に安定版へ
+
+2018年から de Moura と Sebastian Ullrich が Lean 4 をゼロから設計し、汎用言語としての性能と、パーサ・エラボレータ・コード生成を Lean で書き換える拡張性を狙った [14]。2020年にセルフホストが達成され、Mathlib は Mathport 経由で Lean 4 へ移植され、2023年時点で百万行超に達した [16]。2023年7月には Lean Focused Research Organization（Lean FRO）が非営利として立ち上がり、スケーラビリティ・使いやすさ・証明自動化・ドキュメントを五年計画で担う体制が整った [20][21]。安定版 v4.0.0（2023-09-08）以降は月次のマイナーリリースが想定され、エコシステム全体が nightly 依存から段階的に離れる方向が示された [18]。
+
+### 数学と産業検証が同じ言語に集まった背景
+
+形式数学側では Mathlib4 の規模と IMO 問題の Archive 化などが続き、産業側では AWS の Cedar 認可言語が Lean で仕様と定理を書き、Rust 実装と差分ランダムテストで一致を監視する verification-guided development が公開された [11][12]。教育では Natural Number Game の Lean 4 版（NNG4）が Lean4 Game Engine 上で提供され、自然数の公理からタクティク入門までをゲーム化している [23][24]。いずれも「同じ型で書く」利点を別ドメインで再利用している例である。
+
+## カリー＝ハワード同型が「証明＝項」に固定する
+
+論理の含意と関数型、全称量化と依存関数型は同じ構文で表せる。Lean では `theorem` と `def` はカーネルから見て同種の宣言であり、`p → q → p` の証明は `fun hp hq => hp` という項としてそのまま書ける [1][3]。日本語訳の Theorem Proving in Lean 4 でも、命題 `p : Prop` を証明する操作は項 `t : p` を構築することと説明されている [3]。
+
+| 論理 | Lean の型・項 |
+| --- | --- |
+| 命題 | `Prop`（`Sort 0` の糖衣） |
+| 証明 | その型の項 |
+| 含意 | 関数型 `→` |
+| 連言 | 直积 `∧` |
+| 全称 | 依存関数 `∀` / `(x : α) → β x` |
+| 存在 | 依存対 `∃` / `Σ` |
+
+タクティクモードの `by intro ... exact ...` は、裏で同じ形の項を組み立てる別 UI である。初学者はタクティクから入り、項モードで証明の中身を見る学習経路が一般的で、Lean4 Academy も「すべてのタクティク証明は項を構築している」と明示している [6]。ポッドキャストで「証明を書いた」と言うとき、実際にカーネルが保存するのは項であり、タクティクはその生成手順に相当する。
+
+## 信頼境界：カーネル内側とエラボレータ外側
+
+### テーマ1 — カーネルは項と環境の追加だけを検査する
+
+Lean の信頼コードベースの中心は、依存型の小さなカーネル実装である。エラボレータはユーザー向け記法をコア理論の項へ変換し、再帰は原始再帰子へ落とし、終止性チェックはカーネル外で扱われる [7]。新しい帰納型や定義が環境へ入る前に、必ずカーネルが型を検査する。`.olean` にシリアライズされた環境も、経路によっては `lean4checker` で再検証できる [7]。
+
+2026年のカーネル健全性バグのポストモーテムでは、メタプログラム経由で不正な項を差し込む攻撃は想定され、エラボレータを制限しても根本解決にならないと整理されている。不正な `.olean` やメモリ改ざんも同様に、カーネル単体が拒否できるかが問われる [8]。独立カーネル実装との照合は、単一実装への依存を下げる実務的な防御線として位置づけられている。
+
+### テーマ2 — `Prop` は定義上同一視され、実行コードからは消える
+
+`Prop` の証明は定義上の証明無関係性（proof irrelevance）により、同じ命題の二つの証明は区別されない [9][10]。コンパイラは型が `Prop` の項を消去し、IR では `erased` 引数として扱う [26][27]。したがって「仕様を `Prop` で書き、データを `Type` で書く」パターンは、実行時コストと数学的表現力を分離する。
+
+実行性能を取るときは、`Prop` 引数をそのまま関数に渡すとダミー引数が残ることがあり、`Subtype` など `Type` 側に証拠を埋め込むリファクタが有効だとコミュニティで共有されている [28]。証明とプログラムが同じ言語であることと、同じ実行パスであることは一致しない。
+
+### テーマ3 — タクティクとメタプログラムは拡張点として Lean 自身で書く
+
+Lean 4 はパーサ・エラボレータ・タクティク・決定手続き・コード生成の多くをユーザーが Lean で拡張できる [14]。Lean 3 でタクティク拡張が Mathlib の速度を支えた経験が、Lean 4 のセルフホスト再実装の正当化になった。型クラス解決はテーブル化された手続きに置き換えられ、大規模ライブラリでの性能問題への応答が組み込まれている [14]。
+
+タクティクは信頼境界の外側にある。バグったタクティクは誤った項を生成しうるが、カーネルが通せばその項は型として有効である。逆に正しいゴールを示すタクティクが失敗しても、項を直接書けば証明は完成する。
+
+### テーマ4 — Lake と olean が「何を信頼する環境か」を固定する
+
+プロジェクト管理は Lake（Lean Make）が担い、依存取得・ビルド・テスト実行を `lakefile` と `lean-toolchain` で固定する [29][30]。`lake build` はモジュールを `.olean` へコンパイルし、インポートはメモリマップ可能なバイナリとして環境を復元する [7][29]。Mathlib のように Lean バージョンとライブラリ revision が噛み合わないと、ライブラリ側で大量のエラーが出るため、ツールチェーンのピン留めは運用上の必須手順である [30]。
+
+ポッドキャスト向けに押さえる点は、証明の「中身」は Git 上の `.lean` だが、CI やローカルで実際に検査されるのはツールチェーン固定後の `.olean` 付き環境であることだ。
+
+### テーマ5 — FBIP と参照カウントが自動化の実用速度を支える
+
+Lean 4 の実行モデルは Perceus 系の参照カウントと functional but in-place（FBIP）最適化に基づく。共有されていないデータ構造は破壊的更新相当のコードを生成でき、リストの `map` などで不要な割り当てを避けられる [14]。FBIP は言語意味ではなくコンパイラ最適化なので、コード変更で再利用が消えることもあり、コミュニティでは IR の `trace.compiler.ir.rc` で調べる習慣がある [31][32]。
+
+証明自動化は大量の項生成と再帰を伴う。Lean 3 が C++ 実装だった時代より、Lean 4 でカスタム自動化を Lean 自体で書けることと、生成コードが実用域に入ったことが、Mathlib4 が増えてもチェック時間が抑えられる要因の一端である [15][16]。
+
+### テーマ6 — ネイティブ評価と外部 ATP は信頼の取り込み方が違う
+
+`decide +kernel` はカーネル上で Decidable 实例を評価し、`decide +native` はコンパイラと `@[implemented_by]` を信頼コードベースへ広げる [9]。Lean-auto は Lean 4 の依存型を単相化して ATP（自動定理証明器）へ送る翻訳を実装し、Mathlib4 上で既存ツールより多くの問題を自動化できると報告されている [33]。
+
+Lean Copilot（2024）は LLM を Lean 内でネイティブに呼び出し、タクティク提案・証明探索・前提選択を提供する。Mathematics in Lean のベンチでは、人間補助時の手動ステップ数や自動化率でルールベースの aesop を上回ると報告されているが、採用された証明は依然として Lean の型チェックを通る必要がある [34][35]。LLM は「正しい証明を保証する層」ではなく、「候補を出す層」として設計される。
+
+## 他証明器との差は論理の置き方と自動化の厚み
+
+| 観点 | Lean 4 | Rocq（旧 Coq） | Isabelle/HOL |
+| --- | --- | --- | --- |
+| 論理の基盤 | 依存型（CIC 系） | 依存型（累積宇宙など差あり） | 高階論理（HOL） |
+| 証明の形 | 明示的項をカーネルが検査 |  tactic スクリプト＋項 | LCF スタイルのサブゴール |
+| 設計の強み | 古典数学・メタプログラミング・単一言語 | 構成性・抽出・検証の伝統 | 自動化と可読スクリプト |
+| 大型ライブラリ | Mathlib4 | math-comp 等 | Archive of Formal Proofs |
+| 産業例のイメージ | Cedar（Lean 仕様） | CompCert 等 | seL4 等 |
+
+公式 FAQ は、Rocq との違いを宇宙の扱い・証明無関係性・再帰の信頼位置など技術差として列挙し、上に載せる設計目標（スケーラビリティ、自動化、古典論理、メタプログラミング）が異なると整理している [36]。Isabelle とは基盤が別で、Lean は依存型の項をカーネルへ渡す一方、Isabelle は HOL と巨大な自動化（Sledgehammer）を組み合わせる [36]。
+
+ITPEval（2024〜）は Lean 4・Rocq・Isabelle/HOL・HOL Light を横断し、定理の翻訳がターゲット証明器で受理されるかを実行ベースで評価する。エコシステムが分断している現状では、「同じ数学を別言語で書く」コストが AI 評価の題材になっている [37]。
+
+## 代表事例が信頼の強さを変える
+
+**Cedar（AWS）** は評価・認可・検証の definitional モデルを Lean に書き、型検査や slicing、シンボリックコンパイルの健全性・完全性を定理として示す [11][38]。本番は Rust だが、リリース前に数百万ケースの差分ランダムテストで Lean モデルと一致させる。Lean 実行が高速であることは、このテスト経済を成立させる条件の一部である [12]。
+
+**Mathlib4** は単一リポジトリに数学・タクティク・メタツールを集め、コミュニティの PR 文化で拡張する。2024年の代数幾何ワークショップや IMO 2024 Q5 の形式化など、研究と教育の両方で「ライブラリが先に育つ」モデルを示している [39][40]。
+
+**Natural Number Game** は Peano 公理から始め、タクティクを段階的に解禁する教材である。Lean 4 版は追加ワールドを含み、Lean4 Game Engine 上でレベルとヒントをデータとして持つ [23][24]。
+
+## まとめ
+
+Lean 4 を「証明器」と「言語」の二つに割らずに理解する鍵は、カリー＝ハワード同型によって**証明が項である**ことと、**カーネルだけがその項を受理する**ことの組み合わせにある。エラボレータ・タクティク・LLM は作業速度を上げるが、信頼の芯は変わらない。`Prop` の消去と FBIP 最適化が、数学的表現と実行性能を同じソースから切り離す。Cedar と Mathlib は同じ構文を使うが、求める保証（差分テストかライブラリ定理か）と信頼境界（カーネル限定かネイティブ評価を含むか）が異なる。
+
+未解決の摩擦は、ツールチェーンの破壊的更新、自動化の保守コスト、AI 提案の採否判断の属人化などに残る。ポッドキャストで聞き手に渡す実務的な一言は、「Lean で正しいと言えるのは、カーネルが検査した項についてだ」と限定することである。
+
+## 付録: 出典一覧
+
+1. Jeremy Avigad et al., *Theorem Proving in Lean 4* — Propositions and Proofs, https://leanprover.github.io/theorem_proving_in_lean4/Propositions-and-Proofs/
+2. Lean Lang, Propositions (reference), https://lean-lang.org/doc/reference/latest/The-Type-System/Propositions/
+3. aconite-ac, 命題と証明（日本語訳）, https://aconite-ac.github.io/theorem_proving_in_lean4_ja/propositions_and_proofs.html
+4. aconite-ac, 依存型理論（日本語訳）, https://aconite-ac.github.io/theorem_proving_in_lean4_ja/dependent_type_theory.html
+5. aconite-ac, イントロダクション（日本語訳）, https://aconite-ac.github.io/theorem_proving_in_lean4_ja/introduction.html
+6. Lean4 Academy, Proof terms and Curry–Howard, https://lean4.dev/academy/proof-terms
+7. Lean Lang, Elaboration and Compilation, https://lean-lang.org/doc/reference/latest/Elaboration-and-Compilation/
+8. Leonardo de Moura, Postmortem for Kernel Soundness Bug #14576, https://leodemoura.github.io/blog/2026-8-1-postmortem-for-kernel-soundness-bug-14576/
+9. Lean Lang, Validating a Lean Proof, https://lean-lang.org/doc/reference/latest/ValidatingProofs/
+10. Ammkrn, Trust — Type Checking in Lean 4, https://ammkrn.github.io/type_checking_in_lean4/trust/trust.html
+11. AWS Open Source Blog, Lean Into Verified Software Development, https://aws.amazon.com/blogs/opensource/lean-into-verified-software-development/
+12. Emina Torlak et al., How We Built Cedar (arXiv:2407.16888), https://arxiv.org/html/2407.1688
+13. cedar-policy/cedar-spec, cedar-lean README, https://github.com/cedar-policy/cedar-spec/blob/main/cedar-lean/README.md
+14. Leonardo de Moura & Sebastian Ullrich, The Lean 4 Theorem Prover and Programming Language (CADE 2021 PDF), https://lean-lang.org/papers/lean4.pdf
+15. Lean Lang, Introduction (reference), https://lean-lang.org/doc/reference/latest/Introduction/
+16. Lean Lang, Release v4.0.0, https://lean-lang.org/doc/reference/latest/releases/v4.0.0/
+17. GitHub, leanprover/lean4 release v4.0.0, https://github.com/leanprover/lean4/releases/tag/v4.0.0
+18. Lean community blog, The first official release of Lean 4, https://leanprover-community.github.io/blog/posts/first-lean-release/
+19. Lean community blog, Completion of the Liquid Tensor Experiment, https://leanprover-community.github.io/blog/posts/lte-final/
+20. Lean FRO (archived), Mission, https://web.archive.org/web/20241222074338/https:/lean-fro.org/about/
+21. Lean FRO, Year 1 Roadmap, https://lean-fro.org/about/roadmap/
+22. Zilin Yang, Exploring Lean 4 (slides), https://zilin.one/slides/exploring_lean_4/2024-11-15.html
+23. leanprover-community/NNG4, https://github.com/leanprover-community/NNG4
+24. Lean Lang, Learn, https://lean-lang.org/learn/
+25. LMU Munich, Interactive Theorem Proving (Lean 4 course), https://www.tcs.ifi.lmu.de/teaching/courses-ss-2024/interactive-theorem-proving
+26. leanprover/lean4, ToLCNF.lean (compiler), https://github.com/leanprover/lean4/blob/25b1b46572db22b300471ff0668d15ca3091e10a/src/Lean/Compiler/LCNF/ToLCNF.lean
+27. leanprover/lean4, IR/Basic.lean, https://github.com/leanprover/lean4/blob/797c613eb9b6d4ec95db23e3e00af9ac6657f24b/src/Lean/Compiler/IR/Basic.lean
+28. Zulip archive, Codegen of functions taking Prop arguments, https://leanprover-community.github.io/archive/stream/270676-lean4/topic/Codegen.20of.20functions.20taking.20Prop.20arguments.html
+29. leanprover/lean4, Lake README, https://github.com/leanprover/lean4/blob/master/src/lake/README.md
+30. lean4.dev, Lake build system guide, https://lean4.dev/language/projects/lake
+31. Zulip archive, Efficient generated code, https://leanprover-community.github.io/archive/stream/270676-lean4/topic/Efficient.20generated.20code.html
+32. Zulip archive, Mutable Value Semantics vs FBIP, https://leanprover-community.github.io/archive/stream/113488-general/topic/Mutable.20Value.20Semantics.20vs.2E.20FBIP.html
+33. Springer, Lean-Auto chapter (2024), https://link.springer.com/chapter/10.1007/978-3-031-98682-6_10
+34. Peiyang Song et al., Lean Copilot (arXiv:2404.12534), https://arxiv.org/abs/2404.12534
+35. lean-dojo/LeanCopilot README, https://github.com/lean-dojo/LeanCopilot/blob/main/README.md
+36. Lean Lang, FAQ (Rocq / Isabelle comparison), https://lean-lang.org/faq/
+37. LeanDojo, ITPEval, https://leandojo.org/itpeval.html
+38. Lean Lang, Cedar use case, https://lean-lang.org/use-cases/cedar/
+39. Lean community blog, Durham Computational Algebraic Geometry Workshop, https://leanprover-community.github.io/blog/posts/durham-algebraic-geometry-workshop/
+40. leanprover-community/mathlib4 README, https://github.com/leanprover-community/mathlib4?tab=readme-ov-file
+
+## 付録: 調査したが本文に入れなかった枝
+
+- **Agda / Metamath / F* との詳細比較** — 依存型族は共通だが、本稿の問い（Lean 内の信頼境界）から外れるため表には載せなかった。
+- **HoTT 路線の Lean 3 撤回** — 歴史の分岐として重要だが、Lean 4 の現行設計説明を長くする割に証明とプログラムの統合には直結しない。
+- **Reservoir パッケージレジストリ** — Lean FRO ロードマップ上の配布改善だが、カーネルと項の話の本筋ではない [21]。
+- **コンパイラ LLVM バックエンド** — 性能議論の枝だが、信頼境界の説明がカーネル中心の本稿では二次的と判断した。
