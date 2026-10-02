@@ -54,8 +54,7 @@ metadata:
 | 参照 | 役割 | いつ読むか |
 |------|------|-----------|
 | `references/gravity.md` | 前・中・後の重心選択、混合型、モデル別の構成 | **調査計画の前と、本文を書き始める前に必須** |
-| `references/japanese.md` | 日本語の作法。第1部が直訳調の直し方、第2部が文の整え方 | **出力が日本語のとき必須** |
-| `references/prose-style.md` | 段落、論の運び、出典の書き方、埋め草 | 本文を書く・直すとき |
+| `references/japanese.md` | 日本語の作法（`japanese-writing` 導入後はそのスキルを優先） | **出力が日本語のとき必須** |
 | `references/english.md` | 英語の文の作法 | 出力が英語のとき |
 | `references/checklists.md` | 共通テストと重心別テスト | 提出前 |
 | `measure.py` | 数えられる指標の計測スクリプト | 提出前に必ず実行 |
@@ -130,7 +129,7 @@ BLUF、ピラミッド、ダイヤモンド、IMRaD、後部重点は発想の�
 
 出力言語はユーザーの指定がなければ日本語・常体。固有名、論文題、API、ファイルパスは原文のまま。
 
-**`references/japanese.md` を読んでから本文を書く。** 直訳調を避け、一文一義、具体的な動詞、簡潔化の順序を適用する。作業語（「前重心」「価値の中心」など）や制作過程は本文へ出さない。
+**日本語は `japanese-writing` スキルがあればそれに従い、なければ `references/japanese.md` を読んでから本文を書く。** `references/prose-style.md` は**使わない**（廃止。段落・文体は `japanese-writing` / `japanese.md` に任せ、出典は下記の `[n]` 規則と `measure.py` で足りる）。作業語（「前重心」「価値の中心」など）や制作過程は本文へ出さない。
 
 #### Markdoc
 
