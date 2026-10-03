@@ -16,7 +16,7 @@ export function Heading(props: { level: number; id?: string; children?: ReactNod
   const Tag = `h${level}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   const id = props.id ?? slugifyHeading(headingText(props.children));
   return (
-    <Tag id={id} className="scroll-mt-24">
+    <Tag id={id} className="markdoc-heading scroll-mt-24">
       {props.children}
     </Tag>
   );

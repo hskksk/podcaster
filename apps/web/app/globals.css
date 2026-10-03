@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@import "@hskksk/markdoc-react/styles.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

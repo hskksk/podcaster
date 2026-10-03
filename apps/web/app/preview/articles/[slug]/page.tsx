@@ -17,7 +17,7 @@ import { feedUrl, loadSiteConfig } from "../../../../lib/site/config";
 import { getDraftPreviewContext } from "../../../../lib/site/draft-context";
 import { fetchArticleImageMap, imageForPublicDoc } from "../../../../lib/site/episode-images";
 import { articleOpenGraph } from "../../../../lib/site/open-graph";
-import { renderMarkdoc } from "../../../../lib/site/render-markdoc";
+import { MarkdocBody } from "../../../../components/MarkdocBody";
 import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
 import { extractToc } from "../../../../lib/site/toc";
 import { textify } from "../../../../../../scripts/lib/mdoc";
@@ -77,7 +77,6 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
   const audioUrl = audioForPublicDoc(audioMap, doc);
   const coverImageUrl = imageForPublicDoc(imageMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
-  const body = renderMarkdoc(renderSource);
   const toc = extractToc(renderSource);
   const { prev, next } = await adjacentPublicDocsForRequest(slug);
   const rss = feedUrl();
@@ -112,7 +111,9 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
 
         <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
           <article className="mx-auto w-full min-w-0 max-w-3xl lg:mx-0">
-            <div className="markdoc">{body}</div>
+            <div className="markdoc">
+              <MarkdocBody source={renderSource} />
+            </div>
           </article>
           <aside className="mx-auto w-full max-w-3xl lg:mx-0">
             <ArticleToc entries={toc} />

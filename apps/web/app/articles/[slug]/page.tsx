@@ -13,7 +13,7 @@ import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { EpisodePlayer } from "../../../components/EpisodePlayer";
 import { ReadingProgress } from "../../../components/ReadingProgress";
 import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
-import { renderMarkdoc } from "../../../lib/site/render-markdoc";
+import { MarkdocBody } from "../../../components/MarkdocBody";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
 import { extractToc } from "../../../lib/site/toc";
 import { textify } from "../../../../../scripts/lib/mdoc";
@@ -74,7 +74,6 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   const audioUrl = audioForPublicDoc(audioMap, doc);
   const coverImageUrl = imageForPublicDoc(imageMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
-  const body = renderMarkdoc(renderSource);
   const toc = extractToc(renderSource);
   const { prev, next } = adjacentPublicDocs(slug);
   const rss = feedUrl();
@@ -112,7 +111,9 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
             className="mx-auto w-full min-w-0 max-w-3xl lg:mx-0"
             data-pagefind-body
           >
-            <div className="markdoc">{body}</div>
+            <div className="markdoc">
+              <MarkdocBody source={renderSource} />
+            </div>
           </article>
           <aside className="mx-auto w-full max-w-3xl lg:mx-0">
             <ArticleToc entries={toc} />
