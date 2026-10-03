@@ -1,13 +1,5 @@
-import nodes from "./nodes";
-import * as tags from "./tags";
+import { createMarkdocConfig } from "@hskksk/markdoc-react";
+import { markdocExtensions } from "../lib/markdoc/extensions";
 
 /** Loaded by `@markdoc/next.js` (`schemaPath: ./markdoc`). */
-export default {
-  nodes,
-  tags: {
-    math: tags.math,
-    diagram: tags.diagram,
-    callout: tags.callout,
-    podcastPlayer: tags.podcastPlayer,
-  },
-};
+export default createMarkdocConfig(markdocExtensions);

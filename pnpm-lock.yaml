@@ -106,6 +106,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@hskksk/markdoc-react':
+        specifier: ^0.1.0
+        version: 0.1.0(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@keystatic/core':
         specifier: ^0.6.9
         version: 0.6.9(@keystar/ui@0.10.0(next@15.1.11(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react-aria@3.50.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react-stately@3.48.0(react@19.2.5))(react@19.2.5))(react-aria@3.50.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react-stately@3.48.0(react@19.2.5))(react@19.2.5)
@@ -476,6 +479,13 @@ packages:
     peerDependencies:
       hono: ^4
 
+  '@hskksk/markdoc-react@0.1.0':
+    resolution: {integrity: sha512-FKWyy3qa/IVh7gRzT2G2SnB71E6nmHMh02TmAisndqeuJs0ZvlIxY1fkEXdpQYOXT3nK0HpJGAe9Ag5H/DzNpA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+
   '@hskksk/mem-ai-cli@0.2.0':
     resolution: {integrity: sha512-IFK3YrEvy3T3qmK2Er/CNw7XgbW3nARN17GsaJSjf1aCedGvPXLI0bv9h9grtkUxfyy3tAss2G0rYPN4JcRLwQ==}
     engines: {node: '>=20.0.0'}
@@ -651,6 +661,18 @@ packages:
 
   '@markdoc/markdoc@0.4.0':
     resolution: {integrity: sha512-fSh4P3Y4E7oaKYc2oNzSIJVPDto7SMzAuQN1Iyx53UxzleA6QzRdNWRxmiPqtVDaDi5dELd2yICoG91csrGrAw==}
+    engines: {node: '>=14.7.0'}
+    peerDependencies:
+      '@types/react': '*'
+      react: '*'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+
+  '@markdoc/markdoc@0.5.10':
+    resolution: {integrity: sha512-5HwkG2cLG/ivffeJlxGmraJ9erYfsaYz9rjG1KCf46PLy+yhrBQWw26h69GewNUHbyKNW6FrXuDYgbl2kvIYdA==}
     engines: {node: '>=14.7.0'}
     peerDependencies:
       '@types/react': '*'
@@ -3794,6 +3816,14 @@ snapshots:
     dependencies:
       hono: 4.13.7
 
+  '@hskksk/markdoc-react@0.1.0(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
+    dependencies:
+      '@markdoc/markdoc': 0.5.10(@types/react@19.2.14)(react@19.2.5)
+      react: 19.2.5
+      react-dom: 19.2.5(react@19.2.5)
+    transitivePeerDependencies:
+      - '@types/react'
+
   '@hskksk/mem-ai-cli@0.2.0':
     dependencies:
       commander: 12.1.0
@@ -4018,6 +4048,13 @@ snapshots:
 
   '@markdoc/markdoc@0.4.0(@types/react@19.2.14)(react@19.2.5)':
     optionalDependencies:
+      '@types/markdown-it': 12.2.3
+      '@types/react': 19.2.14
+      react: 19.2.5
+
+  '@markdoc/markdoc@0.5.10(@types/react@19.2.14)(react@19.2.5)':
+    optionalDependencies:
+      '@types/linkify-it': 3.0.5
       '@types/markdown-it': 12.2.3
       '@types/react': 19.2.14
       react: 19.2.5

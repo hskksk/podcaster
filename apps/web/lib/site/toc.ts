@@ -1,5 +1,5 @@
+import { slugify } from "@hskksk/markdoc-react";
 import { parseFrontmatter } from "../../../../scripts/lib/mdoc";
-import { slugifyHeading } from "./slugify";
 
 export type TocEntry = {
   id: string;
@@ -18,7 +18,7 @@ export function extractToc(source: string): TocEntry[] {
     if (!m) continue;
     const level = m[1].length as 2 | 3;
     const text = m[2].replace(/\{#.+?\}$/, "").trim();
-    const base = slugifyHeading(text);
+    const base = slugify(text) || "section";
     const n = used.get(base) ?? 0;
     const id = n > 0 ? `${base}-${n + 1}` : base;
     used.set(base, n + 1);
