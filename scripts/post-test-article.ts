@@ -30,7 +30,7 @@ if (target === "remote") {
   function getSupabaseStatus(): Record<string, string> {
     try {
       return JSON.parse(
-        execSync("supabase status --json", {
+        execSync("supabase status -o json", {
           encoding: "utf8",
           stdio: ["pipe", "pipe", "pipe"],
         }),

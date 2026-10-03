@@ -44,7 +44,7 @@ pnpm deploy
 ### Manually trigger Edge Functions locally
 
 ```bash
-KEY=$(supabase status --json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
+KEY=$(supabase status -o json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
 curl -s http://localhost:54331/functions/v1/craft-episode-worker -H "Authorization: Bearer $KEY"
 ```
 

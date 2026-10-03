@@ -166,7 +166,7 @@ pnpm test:post
 
 ```bash
 # service_role key を取得
-KEY=$(supabase status --json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
+KEY=$(supabase status -o json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
 
 # craft episode submit worker（script + batch submit）
 curl -s http://localhost:54331/functions/v1/craft-episode-worker \

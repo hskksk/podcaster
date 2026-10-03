@@ -8,26 +8,31 @@ Podcaster is an AI podcast generator built on Supabase. Article text flows throu
 
 ### Prerequisites (already installed in the VM environment)
 
-- **Node.js 24** via fnm (`eval "$(fnm env --shell bash)"` to activate)
-- **pnpm 9.14.0** (pinned in `packageManager`)
-- **Docker** with fuse-overlayfs storage driver (for Supabase local stack)
-- **Supabase CLI** (`supabase` binary at `/usr/local/bin/supabase`)
+- **Node.js 22** on `PATH` (`apps/web` engines are `22.x`). GitHub Actions workflows use Node 24; do not switch this image to 24 for local typecheck.
+- **pnpm 9.14.0** (pinned in `packageManager`, available as `pnpm` in login shells)
+- **Docker** (`docker.io`) with the `fuse-overlayfs` storage driver and iptables-legacy
+- **Supabase CLI 2.119.0** at `/usr/bin/supabase`
 
 ### Starting the development environment
 
+Cloud Agent `start` already brings the stack up. Check `/tmp/cursor/start-user/start-user.log` before starting anything by hand. It:
+
+1. Starts `dockerd` when Docker is not reachable (tmux session `dockerd`, log `/tmp/dockerd.log`)
+2. Runs `supabase start` (migrations, Storage, and Edge Functions on port 54331)
+3. Runs `TARGET=local pnpm seed:config`
+4. Starts `pnpm web:dev` on port 3000 when that port is closed (tmux session `web`, log `/tmp/web-dev.log`)
+5. Creates gitignored `.env` and `apps/web/.env.local` with a local `CAPTURE_API_TOKEN` when they are missing
+
+`supabase start` on this CLI serves Edge Functions with `per_worker` reload. Do not also run `pnpm functions:serve` against the same project while that stack is up.
+
+If `start` did not run, from `/workspace`:
+
 ```bash
-# 1. Activate Node.js (required in every new shell)
-eval "$(fnm env --shell bash)"
-
-# 2. Start Docker daemon (if not running)
-dockerd &>/tmp/dockerd.log &
-sleep 3
-
-# 3. Start the Supabase local stack (pulls Docker images on first run, ~2 min)
+sudo dockerd >/tmp/dockerd.log 2>&1 &
+# wait until `docker info` succeeds, then:
 supabase start
-
-# 4. Serve Edge Functions (in a separate terminal/tmux pane)
-pnpm functions:serve
+TARGET=local pnpm seed:config
+pnpm web:dev
 ```
 
 ### Key gotchas
@@ -35,7 +40,8 @@ pnpm functions:serve
 - **`supabase status` flag**: Use `-o json` (not `--json`) with this CLI version to get machine-readable output.
 - **Edge Functions return immediately**: All worker functions use `EdgeRuntime.waitUntil()` and return `{"ok":true}` right away. Check `processing_logs` via `TARGET=local pnpm cli logs` to see actual results.
 - **No test suite**: `pnpm typecheck` is the primary correctness check. There are no unit/integration tests.
-- **API keys required for full pipeline**: `GEMINI_API_KEY` must be in `.env` for pgflow stages to succeed. Without it, `generateScript` fails.
+- **API keys required for script and audio**: Ingest, the public site, Capture, and `TARGET=local pnpm cli` work without `GEMINI_API_KEY`. `generateScript` and TTS need a real key in `.env`, or the Gemini mock in `README.md` (`pnpm gemini:mock:serve` plus `gemini.api_root` in `podcast_config`).
+- **Missing `supabase/seed.sql`**: `supabase/config.toml` lists `./seed.sql`, but that file is not in the repo. `supabase start` prints `no files matched pattern: supabase/seed.sql` and continues. Do not add a seed file unless you mean to change reset behavior.
 - **TUI requires TTY**: `pnpm tui` (Ink-based) needs a real terminal with raw mode support. Use `pnpm tui -- --mock` for mock data. It will fail with "Raw mode is not supported" in non-interactive shells.
 - **`TARGET=local`**: Set this env var for CLI/TUI commands to connect to the local Supabase stack instead of remote.
 - **Never edit existing migrations**: Schema changes require a new `supabase/migrations/` file named `YYYYMMDD{seq}_snake_case_description.sql` (never modify committed migrations). See CLAUDE.md → Database Migrations.
