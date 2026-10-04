@@ -1,1 +1,0 @@
-../../japanese-writing/references/japanese.md

@@ -54,11 +54,8 @@ URL を受け取り、元記事を取得して、`content/web-clips/` に日本�
 |------|------|-----------|
 | `references/compression.md` | 骨子の取り方と、何を落とし何を残すか。要約特有の失敗 | **原文を読み終えた直後に必須** |
 | `references/structure.md` | クリップの骨格、骨子表、見出し、引用の作法、分量 | **書き始める前に必須** |
-| `japanese-writing` スキル | 日本語の語・文・表記 | **必須**（`references/japanese-writing-hook.md`） |
 | `references/checklists.md` | 提出前の9テスト | 提出前 |
 | `measure.py` | 数えられる指標の計測スクリプト | 提出前に必ず実行 |
-
-`references/japanese.md` は `japanese-writing` へのシンボリックリンク。`prose-style.md` は使わない。
 
 ### 要約の原則
 
@@ -156,7 +153,7 @@ WebFetch で全文を取る。取得に失敗したら、その旨を伝えて�
 
 出力言語はユーザーの指定がなければ日本語・常体。固有名、論文題、API、ファイルパス、コマンドは原文のまま。
 
-**`japanese-writing` スキルを読み込み、手順に従って初稿と推敲を行う**（`references/japanese-writing-hook.md`）。英語記事の要約は直訳調になりやすい。
+日本語で書くとき、**`japanese-writing` スキル**があれば執筆前と推敲前に読み込み、手順に従う。英語記事の要約は直訳調になりやすい。
 
 - **術語は初出だけ原語併記。** 「差分プライバシー（differential privacy）」。二度目からは日本語だけ
 
