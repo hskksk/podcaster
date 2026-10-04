@@ -1,6 +1,8 @@
 import "server-only";
 
-import Markdoc, { Tag, type RenderableTreeNodes } from "@markdoc/markdoc";
+import Markdoc, { type RenderableTreeNodes } from "@markdoc/markdoc";
+
+const { Tag } = Markdoc;
 import { parseFrontmatter } from "../../../../scripts/lib/mdoc";
 import type { TocEntry } from "../site/toc";
 import markdocSchema from "../../markdoc/config";
@@ -70,7 +72,11 @@ function extractTocFromContent(content: RenderableTreeNodes): TocEntry[] {
   return entries;
 }
 
-/** Parse + transform on the server; client receives only the renderable tree. */
+/**
+ * Parse + transform on the server; client receives only the renderable tree.
+ * SSG embeds the tree in static HTML props — very long articles can produce a
+ * larger payload than raw `source`; monitor if individual pages grow huge.
+ */
 export function prepareMarkdoc(source: string): PreparedMarkdoc {
   const { body } = parseFrontmatter(source);
   const ast = Markdoc.parse(body);

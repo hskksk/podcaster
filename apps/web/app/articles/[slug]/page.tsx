@@ -15,7 +15,7 @@ import { ReadingProgress } from "../../../components/ReadingProgress";
 import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
 import { MarkdocArticleBody } from "../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
-import { prepareMarkdoc } from "../../../lib/markdoc/prepare";
+import { prepareMarkdoc } from "../../../lib/markdoc";
 import { textify } from "../../../../../scripts/lib/mdoc";
 
 export const dynamic = "force-static";

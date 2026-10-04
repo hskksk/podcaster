@@ -24,7 +24,7 @@
         "setup:gh-secrets": "npx tsx scripts/setup-gh-secrets.ts",
         "cli": "tsx scripts/podcast-cli.ts",
         "tui": "tsx scripts/tui/index.tsx",
-        "typecheck": "tsc --noEmit && pnpm typecheck:web && pnpm typecheck:mcp",
+        "typecheck": "tsc --noEmit && pnpm typecheck:web && pnpm typecheck:mcp && pnpm markdoc:check-config",
         "typecheck:web": "pnpm --filter @podcaster/web typecheck",
         "typecheck:mcp": "pnpm --filter @podcaster/mcp typecheck",
         "web:build": "tsx scripts/build-pages-redirects.ts",
@@ -38,7 +38,8 @@
         "mcp": "pnpm --filter @podcaster/mcp start",
         "d2:validate": "tsx scripts/d2-validate.ts",
         "d2:render": "tsx scripts/d2-render.ts",
-        "d2:check": "tsx scripts/d2-check.ts"
+        "d2:check": "tsx scripts/d2-check.ts",
+        "markdoc:check-config": "pnpm --filter @podcaster/web markdoc:check-config"
     },
     "devDependencies": {
         "@terrastruct/d2": "0.1.33",

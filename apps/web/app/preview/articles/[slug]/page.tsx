@@ -19,7 +19,7 @@ import { fetchArticleImageMap, imageForPublicDoc } from "../../../../lib/site/ep
 import { articleOpenGraph } from "../../../../lib/site/open-graph";
 import { MarkdocArticleBody } from "../../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
-import { prepareMarkdoc } from "../../../../lib/markdoc/prepare";
+import { prepareMarkdoc } from "../../../../lib/markdoc";
 import { textify } from "../../../../../../scripts/lib/mdoc";
 
 export const dynamic = "force-dynamic";

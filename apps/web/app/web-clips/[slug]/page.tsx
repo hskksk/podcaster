@@ -11,7 +11,7 @@ import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { MarkdocArticleBody } from "../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
-import { prepareMarkdoc } from "../../../lib/markdoc/prepare";
+import { prepareMarkdoc } from "../../../lib/markdoc";
 import { loadPublicWebClip, loadPublicWebClips } from "../../../lib/site/web-clips";
 import { textify } from "../../../../../scripts/lib/mdoc";
 

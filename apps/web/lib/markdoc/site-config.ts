@@ -2,18 +2,19 @@
  * Server-safe Markdoc config aligned with @hskksk/markdoc-react built-ins.
  * The npm package is client-only (`createMarkdocConfig` cannot run in RSC).
  *
- * Sync check: when bumping `@hskksk/markdoc-react`, diff against package
- * `createMarkdocConfig` / built-in nodes+tags (or switch to a `/server` entry).
+ * Sync: keep `MARKDOC_REACT_SYNC_VERSION` in sync with `apps/web/package.json`
+ * and run `pnpm markdoc:check-config` after bumps (or switch to a `/server` entry).
  */
-import {
-  nodes as markdocNodes,
-  Tag,
-  type Config,
-  type Node,
-  type Schema,
-} from "@markdoc/markdoc";
+import Markdoc from "@markdoc/markdoc";
+import type { Config, Node, Schema } from "@markdoc/markdoc";
+
+const { Tag, nodes: markdocNodes } = Markdoc;
+import { firstContentFence, resolveBlockSource } from "./block-source";
 import type { MarkdocExtensions } from "./extensions";
 import { markdocSlugify } from "./slugify";
+
+/** Must match `apps/web/package.json` → `@hskksk/markdoc-react`. */
+export const MARKDOC_REACT_SYNC_VERSION = "0.4.0";
 
 const LITERAL_FENCE_LANGUAGES = new Set(["md", "markdown", "markdoc", "mdoc"]);
 
@@ -126,21 +127,23 @@ const builtinNodes = {
   table,
 };
 
-function plainText(node: Node): string {
-  if (node.type === "text" || node.type === "code") {
-    return typeof node.attributes.content === "string" ? node.attributes.content : "";
-  }
-  if (node.type === "softbreak" || node.type === "hardbreak") return "\n";
-  return node.children.map(plainText).join("");
-}
-
-function diagramFence(node: Node): Node | undefined {
-  return node.children.find((child) => {
-    if (child.type !== "fence") return false;
-    return (
-      typeof child.attributes.content === "string" && child.attributes.content.trim().length > 0
-    );
-  });
+function jsonBlockTag(name: string): Schema {
+  return {
+    render: name,
+    attributes: {
+      engine: { type: String, required: true },
+      source: { type: String },
+      height: { type: String },
+    },
+    transform(node: Node, config: Config) {
+      const attributes = node.transformAttributes(config);
+      const source = resolveBlockSource(node);
+      const next: Record<string, unknown> = { ...attributes };
+      if (source) next.source = source;
+      else delete next.source;
+      return new Tag(name, next, []);
+    },
+  };
 }
 
 const builtinTags: Record<string, Schema> = {
@@ -189,7 +192,7 @@ const builtinTags: Record<string, Schema> = {
     },
     transform(node: Node, config: Config) {
       const attributes = node.transformAttributes(config);
-      const fence = diagramFence(node);
+      const fence = firstContentFence(node);
       const lang =
         typeof fence?.attributes.language === "string" ? fence.attributes.language : undefined;
       const explicit = node.attributes.type;
@@ -199,25 +202,27 @@ const builtinTags: Record<string, Schema> = {
           : lang?.toLowerCase() === "d2"
             ? "d2"
             : "mermaid";
-      let source: string | undefined;
-      const fenceSource = fence?.attributes.content;
-      const attributeSource = node.attributes.source;
-      if (typeof fenceSource === "string" && fenceSource.trim()) {
-        source = fenceSource;
-      } else if (typeof attributeSource === "string" && attributeSource.trim()) {
-        source = attributeSource;
-      } else {
-        const body = node.children
-          .filter((child) => child.type !== "fence")
-          .map(plainText)
-          .join("\n")
-          .trim();
-        if (body) source = body;
-      }
+      const source = resolveBlockSource(node);
       const next: Record<string, unknown> = { ...attributes, type };
       if (source) next.source = source;
       else delete next.source;
       return new Tag("Diagram", next, []);
+    },
+  },
+  chart: {
+    ...jsonBlockTag("Chart"),
+    attributes: {
+      engine: { type: String, required: true, matches: ["echarts", "vega-lite"] },
+      source: { type: String },
+      height: { type: String },
+    },
+  },
+  graph: {
+    ...jsonBlockTag("Graph"),
+    attributes: {
+      engine: { type: String, required: true, matches: ["cytoscape"] },
+      source: { type: String },
+      height: { type: String },
     },
   },
 };
