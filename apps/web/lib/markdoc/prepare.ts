@@ -2,11 +2,8 @@ import "server-only";
 
 import Markdoc, { Tag, type RenderableTreeNodes } from "@markdoc/markdoc";
 import { parseFrontmatter } from "../../../../scripts/lib/mdoc";
-import { createSiteMarkdocConfig } from "./site-config";
-import { markdocExtensions } from "./extensions";
 import type { TocEntry } from "../site/toc";
-
-const markdocSchema = createSiteMarkdocConfig(markdocExtensions);
+import markdocSchema from "../../markdoc/config";
 
 export type PreparedMarkdoc = {
   content: RenderableTreeNodes;

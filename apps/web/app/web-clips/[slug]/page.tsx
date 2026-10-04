@@ -9,7 +9,7 @@ import { SiteShell } from "../../../components/SiteShell";
 import { adjacentWebClips } from "../../../lib/site/adjacent-web-clips";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { articleOpenGraph } from "../../../lib/site/open-graph";
-import { MarkdocContent } from "../../../components/MarkdocContent";
+import { MarkdocArticleBody } from "../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
 import { prepareMarkdoc } from "../../../lib/markdoc/prepare";
 import { loadPublicWebClip, loadPublicWebClips } from "../../../lib/site/web-clips";
@@ -100,7 +100,7 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
         <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
           <article className="mx-auto w-full min-w-0 max-w-3xl lg:mx-0">
             <div className="markdoc">
-              <MarkdocContent content={content} />
+              <MarkdocArticleBody content={content} />
             </div>
           </article>
           <aside className="mx-auto w-full max-w-3xl lg:mx-0">

@@ -2,30 +2,48 @@
 
 import Markdoc, { type RenderableTreeNodes } from "@markdoc/markdoc";
 import {
+  Badge,
+  CodeFence,
+  Details,
+  Diagram,
+  Kbd,
   MarkdocProvider,
-  builtinComponents,
+  Math,
+  Tab,
+  Tabs,
   createD2Renderer,
   createMermaidRenderer,
   type D2Like,
   type DiagramRenderer,
 } from "@hskksk/markdoc-react";
-import type { ComponentType, ReactNode } from "react";
-
-type MarkdocComponent = ComponentType<any>;
-type MarkdocComponents =
-  | Record<string, MarkdocComponent>
-  | ((name: string) => MarkdocComponent);
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { createSiteShikiHighlighter } from "../lib/markdoc/shiki-highlighter";
 import { Callout } from "./markdoc/Callout";
 import { Heading } from "./markdoc/Heading";
 import { PodcastPlayer } from "./markdoc/PodcastPlayer";
 import { useTheme } from "./ThemeProvider";
 
+type MarkdocComponent = ComponentType<any>;
+type MarkdocComponents =
+  | Record<string, MarkdocComponent>
+  | ((name: string) => MarkdocComponent);
+
 const siteComponents = {
   Callout,
   Heading,
   PodcastPlayer,
+};
+
+const markdocComponents = {
+  Badge,
+  CodeFence,
+  Details,
+  Diagram,
+  Kbd,
+  Math,
+  Tab,
+  Tabs,
+  ...siteComponents,
 };
 
 function MarkdocDocument({ children }: { children?: ReactNode }) {
@@ -73,18 +91,13 @@ export function MarkdocContent({ content }: { content: RenderableTreeNodes }) {
     };
   }, []);
 
-  const mergedComponents = useMemo(
-    () => ({ ...builtinComponents, ...siteComponents }),
-    [],
-  );
-
   const body = useMemo(
     () =>
       Markdoc.renderers.react(content, React, {
-        components: mergedComponents,
+        components: markdocComponents,
         resolveTagName,
       }),
-    [content, mergedComponents],
+    [content],
   );
 
   return (

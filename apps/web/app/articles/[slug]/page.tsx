@@ -13,7 +13,7 @@ import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { EpisodePlayer } from "../../../components/EpisodePlayer";
 import { ReadingProgress } from "../../../components/ReadingProgress";
 import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
-import { MarkdocContent } from "../../../components/MarkdocContent";
+import { MarkdocArticleBody } from "../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
 import { prepareMarkdoc } from "../../../lib/markdoc/prepare";
 import { textify } from "../../../../../scripts/lib/mdoc";
@@ -112,7 +112,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
             data-pagefind-body
           >
             <div className="markdoc">
-              <MarkdocContent content={content} />
+              <MarkdocArticleBody content={content} />
             </div>
           </article>
           <aside className="mx-auto w-full max-w-3xl lg:mx-0">

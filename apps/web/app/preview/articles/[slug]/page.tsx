@@ -17,7 +17,7 @@ import { feedUrl, loadSiteConfig } from "../../../../lib/site/config";
 import { getDraftPreviewContext } from "../../../../lib/site/draft-context";
 import { fetchArticleImageMap, imageForPublicDoc } from "../../../../lib/site/episode-images";
 import { articleOpenGraph } from "../../../../lib/site/open-graph";
-import { MarkdocContent } from "../../../../components/MarkdocContent";
+import { MarkdocArticleBody } from "../../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
 import { prepareMarkdoc } from "../../../../lib/markdoc/prepare";
 import { textify } from "../../../../../../scripts/lib/mdoc";
@@ -112,7 +112,7 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
         <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
           <article className="mx-auto w-full min-w-0 max-w-3xl lg:mx-0">
             <div className="markdoc">
-              <MarkdocContent content={content} />
+              <MarkdocArticleBody content={content} />
             </div>
           </article>
           <aside className="mx-auto w-full max-w-3xl lg:mx-0">

@@ -1,7 +1,7 @@
 "use client";
 
-import { createHighlighter, type Highlighter } from "shiki";
 import { createShikiRenderer, type Highlighter as MarkdocHighlighter } from "@hskksk/markdoc-react";
+import type { Highlighter } from "shiki";
 
 const LANGS = [
   "bash",
@@ -28,10 +28,12 @@ let highlighterPromise: Promise<Highlighter> | null = null;
 
 function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
-    highlighterPromise = createHighlighter({
-      themes: ["github-light", "github-dark"],
-      langs: [...LANGS],
-    });
+    highlighterPromise = import("shiki").then(({ createHighlighter }) =>
+      createHighlighter({
+        themes: ["github-light", "github-dark"],
+        langs: [...LANGS],
+      }),
+    );
   }
   return highlighterPromise;
 }

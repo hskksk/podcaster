@@ -1,6 +1,9 @@
 /**
  * Server-safe Markdoc config aligned with @hskksk/markdoc-react built-ins.
  * The npm package is client-only (`createMarkdocConfig` cannot run in RSC).
+ *
+ * Sync check: when bumping `@hskksk/markdoc-react`, diff against package
+ * `createMarkdocConfig` / built-in nodes+tags (or switch to a `/server` entry).
  */
 import {
   nodes as markdocNodes,
@@ -10,6 +13,7 @@ import {
   type Schema,
 } from "@markdoc/markdoc";
 import type { MarkdocExtensions } from "./extensions";
+import { markdocSlugify } from "./slugify";
 
 const LITERAL_FENCE_LANGUAGES = new Set(["md", "markdown", "markdoc", "mdoc"]);
 
@@ -33,15 +37,6 @@ function uniqueHeadingId(base: string, config: Config): string {
   }
   used.add(id);
   return id;
-}
-
-function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
 }
 
 function renderableText(value: unknown): string {
@@ -106,7 +101,7 @@ const heading: Schema = {
     const children = node.transformChildren(config);
     const explicit =
       typeof node.attributes.id === "string" ? node.attributes.id.trim() : "";
-    const base = explicit || slugify(renderableText(children));
+    const base = explicit || markdocSlugify(renderableText(children));
     const id = base ? uniqueHeadingId(base, config) : undefined;
     const next: Record<string, unknown> = { ...attributes, level: node.attributes.level };
     if (id) next.id = id;
