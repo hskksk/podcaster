@@ -5,7 +5,6 @@ import {
   createD2Renderer,
   createMermaidRenderer,
   type D2Like,
-  type DiagramInput,
   type DiagramRenderer,
 } from "@hskksk/markdoc-react";
 import { useEffect, useMemo, useState } from "react";
@@ -41,9 +40,12 @@ export function MarkdocBody({ source }: { source: string }) {
       if (cancelled) return;
       const mermaidRender = createMermaidRenderer(mermaid);
       const d2Render = createD2Renderer(new D2() as unknown as D2Like);
-      setDiagramRenderer(async (input: DiagramInput) =>
-        input.type === "d2" ? d2Render(input) : mermaidRender(input),
-      );
+      const renderDiagram: DiagramRenderer = async (input) => {
+        if (!input) return { error: "Invalid diagram input" };
+        return input.type === "d2" ? d2Render(input) : mermaidRender(input);
+      };
+      // State type is a function — pass an updater so React stores the renderer, not runs it.
+      setDiagramRenderer(() => renderDiagram);
     })();
     return () => {
       cancelled = true;
