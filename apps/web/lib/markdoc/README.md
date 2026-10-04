@@ -1,16 +1,12 @@
 # Markdoc (public site)
 
-Server transform + client render for article / web-clip bodies.
-
 | Entry | Role |
 |-------|------|
 | `prepareMarkdoc()` | RSC: parse, transform, TOC, serialize tree for client |
 | `MarkdocArticleBody` | `next/dynamic` wrapper around `MarkdocContent` |
-| `markdoc/config.ts` | Keystatic + `@markdoc/next.js` schema (same as `createSiteMarkdocConfig`) |
-| `site-config.ts` | Server-safe copy of `@hskksk/markdoc-react` built-ins until a `/server` export exists |
+| `markdoc/config.ts` | Keystatic + `@markdoc/next.js` — uses `@hskksk/markdoc-react/server` |
+| `extensions.ts` | App tag `podcastPlayer` |
 
-After bumping `@hskksk/markdoc-react`:
+Schema is **`createMarkdocConfig` from `@hskksk/markdoc-react/server`** (not a local copy).
 
-1. Set `MARKDOC_REACT_SYNC_VERSION` in `site-config.ts`
-2. Diff package `createMarkdocConfig` / built-in tags
-3. Run `pnpm markdoc:check-config` and update `scripts/fixtures/markdoc-site-config.sha256` if intentional
+After bumping `@hskksk/markdoc-react`, run `pnpm markdoc:check-config` and update the golden hash if the upstream schema changed intentionally.

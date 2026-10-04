@@ -1,36 +1,26 @@
 /**
- * Ensures server-side Markdoc schema stays aligned with @hskksk/markdoc-react version.
+ * Ensures Markdoc transform output stays stable for a fixture document.
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Markdoc from "@markdoc/markdoc";
+import { createMarkdocConfig } from "@hskksk/markdoc-react/server";
+import { markdocExtensions } from "../lib/markdoc/extensions";
 
 const { Tag } = Markdoc;
-import { markdocExtensions } from "../lib/markdoc/extensions";
-import {
-  MARKDOC_REACT_SYNC_VERSION,
-  createSiteMarkdocConfig,
-} from "../lib/markdoc/site-config";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webPkg = JSON.parse(readFileSync(path.join(here, "../package.json"), "utf8")) as {
   dependencies: Record<string, string>;
 };
 
-const installed = webPkg.dependencies["@hskksk/markdoc-react"]?.replace(/^\^/, "");
-if (!installed) {
-  console.error("markdoc-site-config-check: @hskksk/markdoc-react not in package.json");
-  process.exit(1);
-}
-if (installed !== MARKDOC_REACT_SYNC_VERSION) {
-  console.error(
-    `markdoc-site-config-check: package.json has @hskksk/markdoc-react@${installed} ` +
-      `but MARKDOC_REACT_SYNC_VERSION=${MARKDOC_REACT_SYNC_VERSION}. ` +
-      "Update lib/markdoc/site-config.ts (and golden hash if needed).",
+const declared = webPkg.dependencies["@hskksk/markdoc-react"];
+if (declared && !declared.includes("0.5") && !declared.startsWith("workspace:")) {
+  console.warn(
+    `markdoc-site-config-check: expected @hskksk/markdoc-react 0.5.x with /server entry (got ${declared})`,
   );
-  process.exit(1);
 }
 
 function serialize(node: unknown): unknown {
@@ -63,7 +53,7 @@ graph TD
 {% /diagram %}
 `.trim();
 
-const config = createSiteMarkdocConfig(markdocExtensions);
+const config = createMarkdocConfig(markdocExtensions);
 const ast = Markdoc.parse(fixture);
 const tree = Markdoc.transform(ast, config);
 const hash = createHash("sha256").update(JSON.stringify(serialize(tree))).digest("hex");
@@ -75,9 +65,9 @@ if (hash !== golden) {
     "markdoc-site-config-check: transform golden hash mismatch.\n" +
       `  expected: ${golden}\n` +
       `  actual:   ${hash}\n` +
-      "If you intentionally changed site-config, update apps/web/scripts/fixtures/markdoc-site-config.sha256",
+      "If you intentionally changed the schema, update apps/web/scripts/fixtures/markdoc-site-config.sha256",
   );
   process.exit(1);
 }
 
-console.log(`markdoc-site-config-check: ok (@hskksk/markdoc-react@${MARKDOC_REACT_SYNC_VERSION})`);
+console.log("markdoc-site-config-check: ok");

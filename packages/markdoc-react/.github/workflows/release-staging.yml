@@ -1,0 +1,54 @@
+name: Release (npm staging)
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release:
+    name: semantic-release → npm stage publish (@staging)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # npm Trusted Publishing (OIDC) needs npm ≥ 11.5.1 (bundled with Node 24+).
+          node-version: 24
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec semantic-release

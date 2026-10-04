@@ -1,5 +1,5 @@
-import { createSiteMarkdocConfig } from "../lib/markdoc/site-config";
+import { createMarkdocConfig } from "@hskksk/markdoc-react/server";
 import { markdocExtensions } from "../lib/markdoc/extensions";
 
 /** Loaded by `@markdoc/next.js` (`schemaPath: ./markdoc`). */
-export default createSiteMarkdocConfig(markdocExtensions);
+export default createMarkdocConfig(markdocExtensions);
