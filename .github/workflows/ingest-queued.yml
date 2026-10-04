@@ -29,14 +29,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: hskksk/gh-actions/setup-pnpm@v1
-        with:
-          pnpm-version: "9.14.0"
-          node-version: "24"
-          install: "true"
-          frozen-lockfile: "false"
+      - uses: hskksk/gh-actions/setup-mise@v1
+
+      - run: pnpm install
 
       - uses: hskksk/gh-actions/setup-supabase-cli@v1
+        with:
+          install: "false"
 
       - name: Ingest queued files and write published
         env:
