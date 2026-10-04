@@ -9,9 +9,9 @@ import { SiteShell } from "../../../components/SiteShell";
 import { adjacentWebClips } from "../../../lib/site/adjacent-web-clips";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
 import { articleOpenGraph } from "../../../lib/site/open-graph";
-import { MarkdocBody } from "../../../components/MarkdocBody";
+import { MarkdocContent } from "../../../components/MarkdocContent";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
-import { extractToc } from "../../../lib/site/toc";
+import { prepareMarkdoc } from "../../../lib/markdoc/prepare";
 import { loadPublicWebClip, loadPublicWebClips } from "../../../lib/site/web-clips";
 import { textify } from "../../../../../scripts/lib/mdoc";
 
@@ -65,7 +65,7 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
   const cfg = loadSiteConfig();
   const clips = loadPublicWebClips();
   const renderSource = mdocBodyForRender(clip.source, clip.title);
-  const toc = extractToc(renderSource);
+  const { content, toc } = prepareMarkdoc(renderSource);
   const { prev, next } = adjacentWebClips(slug);
   const rss = feedUrl();
 
@@ -100,7 +100,7 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
         <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
           <article className="mx-auto w-full min-w-0 max-w-3xl lg:mx-0">
             <div className="markdoc">
-              <MarkdocBody source={renderSource} />
+              <MarkdocContent content={content} />
             </div>
           </article>
           <aside className="mx-auto w-full max-w-3xl lg:mx-0">
