@@ -31,7 +31,7 @@ jobs:
 
       - run: pnpm typecheck
 
-      - uses: hskksk/gh-actions/setup-supabase-cli@main
+      - uses: hskksk/gh-actions/setup-supabase-cli@v1
         with:
           install: "false"
 

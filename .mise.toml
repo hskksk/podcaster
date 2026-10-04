@@ -1,4 +1,4 @@
 [tools]
 node = "24"
-pnpm = "9.14.0"
+pnpm = "9.14.4"
 supabase = "2.119.0"
