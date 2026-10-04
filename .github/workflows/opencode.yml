@@ -1,5 +1,8 @@
 name: opencode
 
+permissions:
+  contents: read
+
 # 通常（変更があれば PR）: /oc, /opencode
 # 調査用 github-reply: /oci, /oca, /oc-issue, /oc-ask, /opencode-issue, /opencode-ask
 #
