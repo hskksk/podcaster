@@ -6,6 +6,8 @@ Public article bodies use **`createMarkdocConfig` from `@hskksk/markdoc-react/se
 
 `packages/markdoc-react` is a **0.5.0** snapshot that adds `src/server.ts` and the `/server` export. It tracks [hskksk/markdoc-react](https://github.com/hskksk/markdoc-react) branch `feat/server-entry` until that lands on npm.
 
+**`dist/` is committed** so Vercel’s production `pnpm install` (no devDependencies) does not need `tsup` during `prepare`. `scripts/ensure-dist.mjs` skips the build when `dist/` is present.
+
 After **0.5.0** is published to npm:
 
 1. Set `apps/web` to `"@hskksk/markdoc-react": "^0.5.0"`.

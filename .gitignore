@@ -1,6 +1,7 @@
 # Node.js / pnpm
 node_modules/
 dist/
+!packages/markdoc-react/dist/
 .next/
 
 # Python
@@ -39,4 +40,4 @@ scripts/*.txt
 
 # temporary
 podcast-delivery-system-tui/
-markdoc-react/
+/markdoc-react/
