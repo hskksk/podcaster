@@ -1,6 +1,6 @@
 # English Sentence Mechanics
 
-Load this when the output language is English. It covers what makes an English sentence readable — where the verb sits, how information is ordered within a sentence, and which constructions bury the action. Paragraph- and argument-level norms live in `prose-style.md`.
+Load this when the output language is English. It covers what makes an English sentence readable — where the verb sits, how information is ordered within a sentence, and which constructions bury the action. Paragraph flow and `[n]` citations follow `SKILL.md` and `references/checklists.md` only (`prose-style.md` is not used).
 
 Source: prism-data-labs-agent `write-clear-prose/references/english.md` (Gopen and Swan, Williams, plain-language practice). Analysis-specific examples are rewritten for research.
 
