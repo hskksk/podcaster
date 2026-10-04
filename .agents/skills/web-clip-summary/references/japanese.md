@@ -1,1 +1,1 @@
-../../podcast-research2/references/japanese.md
+../../japanese-writing/references/japanese.md

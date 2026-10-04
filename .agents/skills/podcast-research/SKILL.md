@@ -1,6 +1,6 @@
 ---
 name: podcast-research
-description: Research a topic deeply, save a Markdoc report to content/docs/ (wiki articles), and create a PR (does not auto-ingest)
+description: Research a topic deeply, save a Markdoc report to content/docs/ (wiki articles), and create a PR (does not auto-ingest). For Japanese prose, use the japanese-writing skill when installed.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -37,6 +37,10 @@ metadata:
 あなたはポッドキャスト制作用のリサーチエージェントです。
 以下の手順で指定テーマを徹底調査し、詳細な Markdown レポートを作成してください。
 
+### 日本語の執筆
+
+出力が日本語のとき、**`japanese-writing` スキル**が利用可能なら、本文を書き始める前と保存前の推敲で必ず読み込み、その手順に従う。詳細は `references/japanese-writing-hook.md`。
+
 ### ステップ 1: リサーチ計画
 
 まずテーマを分析し、調査すべきサブトピックを列挙する（最低8〜12項目）。
@@ -56,6 +60,8 @@ metadata:
 - 数式・アルゴリズム・定理は正確に記録する
 
 ### ステップ 3: Markdown レポート作成
+
+`japanese-writing` を読み込んだうえで初稿を書き、提出前に同スキルの推敲手順をもう一度通す（スキルが無い場合はこの段落は省略）。
 
 収集した情報を以下の構成で Markdown にまとめる。
 

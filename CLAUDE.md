@@ -110,6 +110,8 @@ ln -s ../../.agents/skills/<name> .claude/skills/<name>
 
 Never keep a second copy of a skill under `.claude/skills/`. Other agents (Cursor and anything else reading `.agents/`) load the `.agents/` copy, so a duplicated directory silently diverges and the two harnesses run different versions of the same skill.
 
+**External skills** (for example `japanese-writing` from [hskksk/agent-skills](https://skills.sh/hskksk/agent-skills/japanese-writing)) install into `.agents/skills/` via `npx skills add hskksk/agent-skills --skill japanese-writing`. Podcast research skills reference them by name; they do not vendor a copy of `japanese.md`.
+
 ## Database Migrations
 
 ### Migration file rules
