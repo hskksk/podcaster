@@ -25,20 +25,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: hskksk/gh-actions/setup-pnpm@v1
         with:
-          version: 9.14.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install
+          pnpm-version: "9.14.0"
+          node-version: "24"
+          install: "true"
+          frozen-lockfile: "false"
 
       - run: pnpm typecheck
 
-      - uses: supabase/setup-cli@v2
+      - uses: hskksk/gh-actions/setup-supabase-cli@v1
 
       - name: Create .env
         run: |
