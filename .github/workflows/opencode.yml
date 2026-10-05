@@ -1,8 +1,5 @@
 name: opencode
 
-permissions:
-  contents: read
-
 # 通常（変更があれば PR）: /oc, /opencode
 # 調査用 github-reply: /oci, /oca, /oc-issue, /oc-ask, /opencode-issue, /opencode-ask
 #
@@ -36,6 +33,8 @@ on:
 
 jobs:
   opencode:
+    permissions:
+      id-token: write
     uses: hskksk/gh-actions/.github/workflows/opencode.yml@v1
     secrets: inherit
     with:
