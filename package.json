@@ -42,8 +42,8 @@
         "markdoc:check-config": "pnpm --filter @podcaster/web markdoc:check-config"
     },
     "devDependencies": {
-        "@terrastruct/d2": "0.1.33",
         "@hskksk/mem-ai-cli": "latest",
+        "@terrastruct/d2": "0.1.33",
         "@types/node": "^22.0.0",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
@@ -70,5 +70,10 @@
         "unist-util-visit": "^5.1.0",
         "unitex-kokic": "github:hskksk/UniTeX"
     },
-    "packageManager": "pnpm@9.14.0"
+    "packageManager": "pnpm@9.14.0",
+    "pnpm": {
+        "patchedDependencies": {
+            "@hskksk/markdoc-react@0.5.0": "patches/@hskksk__markdoc-react@0.5.0.patch"
+        }
+    }
 }
