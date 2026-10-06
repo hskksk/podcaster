@@ -2,20 +2,22 @@
 
 Public article bodies use **`createMarkdocConfig` from `@hskksk/markdoc-react/server`** so RSC can run `Markdoc.transform` without importing the client bundle (`"use client"`).
 
-## Workspace copy (temporary)
+Requires **`@hskksk/markdoc-react` ≥ 0.5.0** on npm (with `./server` in `exports`).
 
-`packages/markdoc-react` is a **0.5.0** snapshot that adds `src/server.ts` and the `/server` export. It tracks [hskksk/markdoc-react](https://github.com/hskksk/markdoc-react) branch `feat/server-entry` until that lands on npm.
+## Workspace copy (until npm ≥ 0.5.0)
 
-**`dist/` is committed** so Vercel’s production `pnpm install` (no devDependencies) does not need `tsup` during `prepare`. `scripts/ensure-dist.mjs` skips the build when `dist/` is present.
-
-After **0.5.0** is published to npm:
+`packages/markdoc-react` is a temporary **0.5.0** snapshot with `src/server.ts`. Remove it once the registry serves ≥ 0.5.0:
 
 1. Set `apps/web` to `"@hskksk/markdoc-react": "^0.5.0"`.
-2. Remove `packages/markdoc-react` from this monorepo.
-3. Run `pnpm install` and `pnpm markdoc:check-config`.
+2. Delete `packages/markdoc-react`.
+3. `pnpm install` and `pnpm markdoc:check-config`.
+
+Committed `dist/` avoids Vercel production installs needing `tsup` during `prepare`.
 
 ## Podcaster wiring
 
 - `apps/web/markdoc/config.ts` → `createMarkdocConfig(markdocExtensions)`
 - `apps/web/lib/markdoc/prepare.ts` → imports that config for SSG
 - `pnpm markdoc:check-config` → golden transform hash
+
+After bumping `@hskksk/markdoc-react`, run `pnpm markdoc:check-config` and update the golden hash if the upstream schema changed intentionally.

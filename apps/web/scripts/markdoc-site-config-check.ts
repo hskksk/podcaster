@@ -17,9 +17,14 @@ const webPkg = JSON.parse(readFileSync(path.join(here, "../package.json"), "utf8
 };
 
 const declared = webPkg.dependencies["@hskksk/markdoc-react"];
-if (declared && !declared.includes("0.5") && !declared.startsWith("workspace:")) {
+if (
+  declared &&
+  !declared.startsWith("workspace:") &&
+  !/[\^~]?0\.(5|[6-9]|[1-9]\d)/.test(declared) &&
+  !declared.includes("0.5")
+) {
   console.warn(
-    `markdoc-site-config-check: expected @hskksk/markdoc-react 0.5.x with /server entry (got ${declared})`,
+    `markdoc-site-config-check: expected @hskksk/markdoc-react ≥0.5.0 with /server entry (got ${declared})`,
   );
 }
 

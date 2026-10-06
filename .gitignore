@@ -1,7 +1,6 @@
 # Node.js / pnpm
 node_modules/
 dist/
-!packages/markdoc-react/dist/
 .next/
 
 # Python
