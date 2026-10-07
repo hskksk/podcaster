@@ -70,10 +70,5 @@
         "unist-util-visit": "^5.1.0",
         "unitex-kokic": "github:hskksk/UniTeX"
     },
-    "packageManager": "pnpm@9.14.0",
-    "pnpm": {
-        "patchedDependencies": {
-            "@hskksk/markdoc-react@0.5.0": "patches/@hskksk__markdoc-react@0.5.0.patch"
-        }
-    }
+    "packageManager": "pnpm@9.14.0"
 }

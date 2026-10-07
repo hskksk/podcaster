@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  '@hskksk/markdoc-react@0.5.0':
-    hash: 7yvzi3khlxnehpcbmpm5ao2kpq
-    path: patches/@hskksk__markdoc-react@0.5.0.patch
-
 importers:
 
   .:
@@ -112,8 +107,8 @@ importers:
   apps/web:
     dependencies:
       '@hskksk/markdoc-react':
-        specifier: ^0.5.0
-        version: 0.5.0(patch_hash=7yvzi3khlxnehpcbmpm5ao2kpq)(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+        specifier: ^0.5.1
+        version: 0.5.1(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@keystatic/core':
         specifier: ^0.6.9
         version: 0.6.9(@keystar/ui@0.10.0(next@15.1.11(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react-aria@3.50.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react-stately@3.48.0(react@19.2.5))(react@19.2.5))(react-aria@3.50.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react-stately@3.48.0(react@19.2.5))(react@19.2.5)
@@ -484,8 +479,8 @@ packages:
     peerDependencies:
       hono: ^4
 
-  '@hskksk/markdoc-react@0.5.0':
-    resolution: {integrity: sha512-NUyKDibFckSVloytDeo8iNe/IiP3DVuEbVCDO4wuZbisOUUAkhh9eIlm9Y4wljk0CLfrnL6ksFGSOL2xrqtvQQ==}
+  '@hskksk/markdoc-react@0.5.1':
+    resolution: {integrity: sha512-9JNt2LzhzsqTebXvCzxf00kTTsBtyyf9wx06VF4WQ9H41ZjzjgJcChahMErnB8qfst2zuug1BfXKoRkMfTI/lA==}
     engines: {node: '>=20'}
     peerDependencies:
       react: '>=18'
@@ -3821,7 +3816,7 @@ snapshots:
     dependencies:
       hono: 4.13.7
 
-  '@hskksk/markdoc-react@0.5.0(patch_hash=7yvzi3khlxnehpcbmpm5ao2kpq)(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
+  '@hskksk/markdoc-react@0.5.1(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
       '@markdoc/markdoc': 0.5.10(@types/react@19.2.14)(react@19.2.5)
       react: 19.2.5
