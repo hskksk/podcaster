@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hskksk/gh-actions/setup-mise@v1
+      - uses: hskksk/gh-actions/actions/setup-mise@v1
 
       - run: pnpm install
 
@@ -49,7 +49,7 @@ jobs:
             echo "skip=0" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: hskksk/gh-actions/publish-github-pages-artifact@v1
+      - uses: hskksk/gh-actions/actions/publish-github-pages-artifact@v1
         with:
           path: dist/web
           skip: ${{ steps.check.outputs.skip == '1' }}
