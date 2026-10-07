@@ -8,10 +8,11 @@
     "build": "next build",
     "postbuild": "pagefind --site .next/server/app --output-path public/pagefind --force-language ja",
     "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "markdoc:check-config": "tsx scripts/markdoc-site-config-check.ts"
   },
   "dependencies": {
-    "@hskksk/markdoc-react": "^0.1.0",
+    "@hskksk/markdoc-react": "^0.5.1",
     "@keystatic/core": "^0.6.9",
     "@keystatic/next": "^5.0.5",
     "@markdoc/markdoc": "^0.5.9",

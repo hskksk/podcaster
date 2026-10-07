@@ -65,52 +65,23 @@ body {
   padding: 0;
 }
 
-/* Shiki-injected code blocks */
-.markdoc pre.shiki,
-.markdoc .shiki {
-  overflow-x: auto;
-  margin: 0;
-  padding: 1rem 1.25rem;
-  font-size: 0.875rem;
-  line-height: 1.6;
-  background: var(--color-muted) !important;
+/* @hskksk/markdoc-react (markdoc-root) — site theme hooks */
+.markdoc .markdoc-root {
+  --markdoc-border: var(--color-border);
+  --markdoc-muted: var(--color-muted-fg);
+  --markdoc-surface: var(--color-muted);
 }
 
-.dark .markdoc pre.shiki,
-.dark .markdoc .shiki {
-  background: #0c0a09 !important;
-}
-
-.markdoc pre.mermaid {
-  @apply border border-border bg-surface text-center;
-  line-height: normal;
-}
-
-.markdoc pre.mermaid svg {
-  max-width: 100%;
-  height: auto;
-}
-
-.markdoc .math-display {
-  overflow-x: auto;
-  margin: 1.25em 0;
-}
-
-.markdoc-table-wrap {
+.markdoc .markdoc-table-wrap {
   @apply -mx-1 my-6 min-w-0 max-w-full overflow-x-auto;
   -webkit-overflow-scrolling: touch;
 }
 
-.markdoc-table-wrap table {
+.markdoc .markdoc-table-wrap table {
   @apply w-full min-w-max text-sm;
 }
 
-.markdoc th,
-.markdoc td {
-  @apply border border-border px-3 py-2 align-top;
-}
-
-.markdoc th {
+.markdoc .markdoc-table-wrap th {
   @apply bg-muted font-semibold;
 }
 

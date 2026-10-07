@@ -186,5 +186,5 @@ pnpm d2:check path/to/diagram.d2 --svg /tmp/preview.svg
 ## 詳細
 
 - 自己点検スクリプト: `scripts/d2-check.ts`（共有処理は `scripts/lib/d2.ts`、予算は `--max-*`）
-- Markdoc タグ: `@hskksk/markdoc-react` の built-in（`diagram`）。アプリ固有は `apps/web/lib/markdoc/extensions.ts`
-- 描画: `apps/web/components/MarkdocBody.tsx`（`MarkdocView` + D2/Mermaid アダプタ）
+- Markdoc タグ: `apps/web/markdoc/config.ts`（`@hskksk/markdoc-react/server` の built-in）+ `extensions.ts`（`podcastPlayer`）
+- 描画: サーバ `prepareMarkdoc` → `MarkdocArticleBody`（`MarkdocContent` を dynamic import、D2/Mermaid/Shiki）

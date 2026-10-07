@@ -1,4 +1,4 @@
-import type { MarkdocExtensions } from "@hskksk/markdoc-react";
+import type { MarkdocExtensions } from "@hskksk/markdoc-react/server";
 
 /** App-specific Markdoc tags (Keystatic + public render). */
 export const markdocExtensions: MarkdocExtensions = {

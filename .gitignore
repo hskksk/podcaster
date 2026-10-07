@@ -39,3 +39,4 @@ scripts/*.txt
 
 # temporary
 podcast-delivery-system-tui/
+/markdoc-react/
