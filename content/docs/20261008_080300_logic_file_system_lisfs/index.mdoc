@@ -1,0 +1,191 @@
+---
+title: "Logic File System (LISFS) — パスを論理式に置き換えたファイルシステム"
+publishedAt: 2026-10-08
+podcast: none
+legacyFilename: 20261008_080300_logic_file_system_lisfs.md
+---
+
+# Logic File System (LISFS) — パスを論理式に置き換えたファイルシステム
+
+## TL;DR
+
+- LISFS はディレクトリのパスを論理式として解釈し、クエリ結果のなかを仮想のディレクトリとして移動できる研究プロトタイプで、Padioleau と Ridoux が USENIX ATC 2003 で発表した [1]。
+- 仕組みの要点は「式の外延」で、`ls` は現在地の式を広げる性質だけをサブディレクトリとして計算する [1]。
+- 検索は `find` より速い一方、ファイル作成は索引の更新が要るため桁違いに遅く、作成中心の負荷が実用化の課題になった [1]。
+- 名前が似た Log-structured File System (LFS) は更新をログに追記するストレージ方式で、LISFS とは別の研究である [1][15]。
+
+## 背景: 1つの場所に置けないファイル
+
+ファイルを探す場面では、階層型のファイルシステムとキーワード検索がそれぞれ別の欠点を出す。階層型では1つのファイルに到達する経路が1本しかなく、経路を正確に覚えているか、たまたま見つけるしかない。しかも1つのファイルを複数の独立した概念（価格と重さなど）で表すこともできない [1]。
+
+キーワード検索は複数の語の組み合わせから同じファイルへ到達できるため柔軟だが、ヒット一覧を返すだけで「次に何で絞ればよいか」を提示しない。候補が長くなるほど、次の語を当てる作業はユーザーに委ねられる [1]。
+
+データベースは `size > 45` のような値の条件を扱えるが、スキーマと問い合わせ言語を先に学ぶ必要がある。当時の論文は、UNIX シェルの習得に1時間、SQL に40時間という対比を掲げて、この学習コストを階層型との差として示した [1]。
+
+| パラダイム | 例 | 強み | 弱み |
+|---|---|---|---|
+| 階層 | UNIX のディレクトリ、Yahoo! | 階段式に絞り込むヒントが出る | 経路が1本、配置先も1つ |
+| ブール | Google などの検索 | 連言・選言・否定を書ける | 結果は一覧で、絞り込みの手がかりがない |
+| リレーショナル | リレーショナルデータベース | 値の条件や複雑な問い合わせ | スキーマと問い合わせ言語の学習コスト |
+
+LISFS はこの3つを1つのインターフェースに載せる試みである [4]。パスの語法を保ったまま、階層のナビゲーションとブール式の表現力を両方使う [1]。
+
+## パスは論理式である
+
+### `/` は連言、`|` は選言、`!` は否定
+
+LISFS では属性名を `mkdir` で登録し、`cd` で式を書き、`touch` で現在地の属性をファイルに付ける。区切りの `/` は論理和ではなく論理積を意味するので、`lib/usr` と `usr/lib` は同じ場所になる [1]。
+
+式は合取標準形で書ける。たとえば `cd /music/!bad/disco|rock` は「bad のタグがなく、disco か rock である曲」を選ぶ [2]。階層型のシェルでは `cd */(keyword1|keyword2)/` は意味を持たず、否定はさらに書きにくい。ここでは素の式として扱える [1]。
+
+### 外延と increments
+
+ある式 φ の**外延 (extension)** は、ファイルの説明が φ を満たすファイルの集合である。根 `/` は恒真式を表すので、根の `ls` は全ファイルの集合になる [1]。
+
+`ls` の答えは**2つに分かれる**。1つは現在地の式を真に広げる性質を並べた**仮想のサブディレクトリ**（increments）で、もう1つはそれ以上に関連する性質で区別できないファイルの一覧である。論文の例では、`lib/usr` の下で `usr` や `opt` が候補として出ないのは、それらでは結果を絞り込めないからで、`local` は `usr/lib` の中にある一部のファイルだけを指すため残る [1]。
+
+同名のファイルは、説明が異なれば1つの仮想ディレクトリで区別できる。Alice と Bob がそれぞれ持つ `foo` は属性 `alice` と `bob` を带び、共有できるファイルは両方の属性を持てばよい [1]。
+
+### タクソノミは mkdir が作る公理
+
+性質が増えると根の `ls` は候補だらけになる。そこで `mkdir` を入れ子にすることで分類を足す。`cd /OperatingSystem; mkdir Unix` は公理「Unix ⇒ OperatingSystem」を宣言するもので、分類の関係は有向非巡回グラフになる [1]。
+
+`ls` はこのグラフを上から辿り、最も一般な increments だけを出す。分類の道筋を先に、細かい属性は後から見せる仕組みで、階層型のように1つの軸に固定されるわけではない [1]。
+
+### 仮想ディレクトリへの書き込み
+
+仮想ディレクトリは読み取り専用ではない。`mv p1/f1 p2/f2` は `f1` の名前を変え、説明から `p1` の属性を外して `p2` の属性を付ける。このとき集合の定義と整合しない書き込みが起きないよう、削除や属性変更はファイルの所有者に限られる [1]。
+
+パスの権限も書き換えられている。順序が意味を持たない以上、最終ディレクトリの権限で決められず、パスを構成する各属性の権限の連言になる。全員が書き込める `/tmp` で他者のファイルを消されないようにする sticky bit と同じ発想である [1]。
+
+## 実装と計測値
+
+### プロトタイプの構成
+
+2003年時点のプロトタイプはユーザー空間のファイルシステムで、PerlFS の上に Berkeley DB（B ツリー）でメタデータを置き、ファイル本体は下の **EXT2** に預ける構成だった。メタデータの更新は Berkeley DB のトランザクションで事故に備える [1]。
+
+中心の表は **`keyword->objects`**（各性質が含むファイル）と `object->keywords`（各ファイルが持つ性質）で、いわばファイルと属性の行列である。外延は `keyword->objects` の演算結果として事前に計算され、分類グラフの祖先ノードにも格納される [1]。
+
+この設計は作成のコストを索引更新に寄せている。ファイルを1つ足すと、その属性とすべての祖先ノードの集合を更新する必要がある。論文は「最適化すべきは参照であって作成ではない」と述べ、作成は待たせず後ろのタスクに回せる案を示している [1]。
+
+`ls` の実装は、現在地の式の集合と分類グラフを突き合わせて increments を選び出す。**1ファイルあたりの属性数**はファイル数に依存せず（man ページの実験では約45属性）、疎な行列の積として短絡切りを効かせられるため、実行時間は大きくならなかった [1]。
+
+さらに `ls` の答えはディレクトリの inode にキャッシュされ、ファイルの追加削除で増える全体タイムスタンプと比較して再計算の要否を判定する [1]。
+
+### 計測された性能
+
+Andrew ベンチマークの計測（合計時間、秒）は次のとおりである [1]。
+
+| 処理 | EXT2 | PerlFS | LISFS（transducer なし） | LISFS（transducer あり） |
+|---|---|---|---|---|
+| Copy | 1.359 | 5.943 | 13.212 | 46.296 |
+| Scan | 2.506 | 5.141 | 5.348 | 6.638 |
+| Read | 3.548 | 11.510 | 11.119 | 12.333 |
+| 合計 | 24.526 | 51.964 | 67.684 | 115.230 |
+
+**読む系の差**は小さく、`Scan` や `Read` は PerlFS と同程度である。差が出るのは `Copy` で、ファイルを作るたびに索引を更新するため、transducer（後述）を有効にすると46秒まで伸びる [1]。
+
+一方、**検索用途では逆転する**。関数名を `find` で探すのに2.899秒かかった処理が、LISFS の `lookup` では0.081秒で、MP3 をジャンルで探す検索も即座に返る [1]。
+
+| 操作 | 所要時間 | 結果 |
+|---|---|---|
+| `find` で関数を検索 | 2.899秒 | ヒット一覧 |
+| `lookup` で同じ関数を検索 | 0.081秒 | ヒット一覧 |
+| `ls change`（man ページ） | 1.370秒 | increments 110件 |
+| `apropos change` | 0.145秒 | 288件 |
+
+`ls` の答えには分類の道筋が含まれ、結果件数は `apropos` より少ない。索引の容量はファイル種別で異なり、MP3 633ファイルで0.17%、man ページ11,502ファイルで17.6%、Andrew ベンチマークのファイル群で20%だった [1]。
+
+ファイル数を増やした実験では、作成時間は1万ファイル付近までほぼ横ばいのあと悪化し始める。ICSE 2006 の報告では、クエリとナビゲーションの対話的な使い方は約10万オブジェクトまで成立した [2]。
+
+## 従来方式との違い
+
+### Semantic File System との差
+
+**Semantic File System (SFS)** は1991年の研究で提案された先行研究で、ファイルの種別ごとのプログラム（transducer）が属性を自動抽出し、その属性を名前にした**仮想ディレクトリ**を問い合わせとして解釈する [6]。LISFS の transducer はこの考え方を引き継いでいる [1]。
+
+LISFS が異なる点は、属性をユーザーが自由に付けられることと、仮想ディレクトリの中をさらに移動できることである。2003年論文の整理では、SFS の仮想ディレクトリは並びにあり、そこの中を回る操作モードは別扱いだった [1]。
+
+### 他の非階層ファイルシステム
+
+同時期には類似の試みが複数あり、それぞれ1つだけの特徴を持っていた [1][2]。
+
+| システム | 方針 | この研究が見た限界 |
+|---|---|---|
+| SFS (1991) | 属性の仮想ディレクトリ、transducer | 属性は自動抽出のみ、結果内ナビゲーションなし |
+| HAC (1999) | 階層と内容ベース検索を併用 | クエリの答えを実ディレクトリ化し、矛盾を書き込める |
+| BeFS | ユーザーが属性を付与 | 標準 UNIX のインターフェースと非互換 |
+| Nebula | クエリに名前を付けて階層化 | クエリ結果の中は移動できない |
+| LiFS (2005) | 属性と関係リンク [12] | フラッシュメモリ想定で、ファイル内容は扱わない |
+| LISFS | 式が場所、外延の演算で移動 | ファイル内部 (intra-file) まで扱う点が独自 [2] |
+
+HAC はクエリの答えを実体のあるディレクトリにしてしまうため、そのディレクトリに書いた内容がクエリと食い違う可能性を論文は指摘している [1][7]。Nebula の「名前付きクエリ」は再利用には向くが、答えの中をさらに絞る操作にはならない [1]。
+
+### デスクトップ検索との位置づけ
+
+ICSE 2006 の論文は、同時期の Google Desktop が文書をデータベースに索引し、Apple の Spotlight が索引をファイルシステムの属性として持つ構成を対比として挙げる。どちらも検索は別アプリケーションが受け持つ。LISFS は索引だけでなく検索手段そのものをファイルシステムに置く [2]。
+
+## 支える理論: Logic Information Systems
+
+### FCA から論理概念分析へ
+
+LISFS の背後には **Logic Information System (LIS)** という枠組みがある。データベースのスキーマの代わりに論理式の体系が入り、オブジェクトの説明もクエリも同じ論理式で書ける [8]。
+
+土台は形式概念分析 (FCA) である。FCA はオブジェクトと属性の対応から概念格を組み、格の移動をナビゲーションにする。LIS は属性の集合を論理式に置き換えた「論理概念分析」で、クエリへの答えが同じ論理式のリンク（increments）として返るため、クエリとナビゲーションを任意の順序で混ぜられる [8][11]。
+
+概念格そのものは作らない。AWT の文脈では概念が約13万個になるが、LISFS が計算するのはその中の1経路だけである [9]。写真5,000枚を分類・再検索する CameliS は、この林組みをファイルシステムの外で使った応用例で、Flickr のタグでは「Sydney」から「Australia」へ絞れない問題を分類論理で解いている [11]。
+
+### ファイルの中身まで
+
+LISFS にはファイル単位の**inter-file** と、ファイルの部分を扱う**intra-file** の2層がある。後者は Parts-of-file File System (PofFS) として USENIX 2005 で報告され、10万行のファイルを効率よく扱えるとした [3]。
+
+ファイルをマウント点とみなし、性質で部分を選び出したものを1つのファイルとして読む。複数の見方が同時に編集でき、変更は元のファイルへ戻る。クラスのメソッドを役割ごとに並べ替えて編集するような用途が想定されている [3][13]。
+
+### 応用の広がり
+
+メール16万件の実験では、送信者・件名・スレッド・日付を transducer が索引し、全文検索には Glimpse と組み合わせた。「contains:foo」と書けばヒット一覧ではなく、そこへ至るincrements を計算する方式だった [2]。
+
+ソフトウェア工数の文脈では、型同型・継承関係・命名規約・コメントの語といった複数の基準を1つの索引にまとめ、ソースやコンポーネントを横断して辿る応用が示されている [9]。n-ary な関係（呼び出し、継承など）は当時の LISFS では1オブジェクトずつの述語で表すしかなく、関係を直接扱える拡張が ICCS 2005 で提案された [10]。
+
+## 何が新しく、何が残ったか
+
+### 新しさだった点
+
+成果は、問い合わせとナビゲーションをファイルシステムのインターフェースの内側で制限なく組み合わせたことにある。仮想ディレクトリへ書き込んでも整合が保たれ、自動抽出する intrinsic な属性と、ユーザーが付ける extrinsic な属性を同じ式で扱える [1]。検索と移動の操作が区別されなくなった点は、先行研究との差として繰り返し強調されている [1][2]。
+
+### 未解決だった点
+
+最大の課題は**索引更新**である。作成が実質的なオンライン索引構築であり、分類グラフの祖先まで書き換えるコストが大きい。台数が増えたときにどう分散するかは、当時の計測では1万ファイル付近で頭打ちになった [1]。
+
+制約も残る。述語は1オブジェクトに1つの性質を与える形式で、オブジェクト間の関係は不便だった [9][10]。関係を含む拡張は理論側で整えられたが、広い採用には至らなかった [10]。
+
+2026年時点で、LISFS そのものが主要な OS に入った形はなく、公式サイトの配布も途絶えている。コードは後年のミラーで読める状態が残る [14]。一方、仮想ディレクトリ、タグによる複数分類、検索結果のフォルダ化といった断片は、デスクトップ検索やタグ付けツールへ別経路で浸透した（このレポートの整理）。
+
+### 名前が似た別研究
+
+**Log-structured File System (LFS)** は Rosenblum と Ousterhout が1991年に提案したストレージ方式で、すべての更新をログへ順に追記して書き込み速度とクラッシュ回復を改善する [15]。LISFS が論じるのはファイルの置き場所と検索のモデルであり、LFS が論じるのはディスクへの書き込み方である。LISFS という略が使われるのは、この混同を避けるためだった [1]。
+
+## 調査しなかった枝
+
+- Padioleau のフランス語の博士論文（2005年）が全体をまとめるが、本文では英語の会議論文に絞った。
+- LIS の理論側の詳細（ラベル付け作用素、亜種の論理、確信度を含む索引）は [8][10] にあり、実装の挙動への影響を追っていない。
+- LtU の会議レポートは、当時のプロトタイプが Prolog 解釈系を内蔵していたと伝えている [5]。これは一次資料ではないため、本文では報告として扱った。
+- SFS 以降の Semantic Web 派生や、2000年代半ばのタグ型ツールへの移行は対象外とした。
+
+## 付録: 出典一覧
+
+- [1] Yoann Padioleau, Olivier Ridoux. "A Logic File System." USENIX Annual Technical Conference, 2003. https://www.usenix.org/legacy/events/usenix03/tech/full_papers/padioleau/padioleau.pdf
+- [2] Yoann Padioleau, Benjamin Sigonneau, Olivier Ridoux, Sébastien Ferré, Mireille Ducassé, Peggy Cellier, Olivier Bedel. "LISFS: a Logical Information System as a File System." ICSE, 2006. https://www.irisa.fr/lande/lande/icse-proceedings/icse/p803.pdf
+- [3] Yoann Padioleau, Olivier Ridoux. "A Parts-of-File File System." USENIX Annual Technical Conference, 2005. https://www.usenix.org/conference/2005-usenix-annual-technical-conference/parts-file-file-system
+- [4] Wikipedia. "Logic File System." https://en.wikipedia.org/wiki/Logic_File_System
+- [5] Lambda the Ultimate. "A Logic File System (conference report)." 2003. http://lambda-the-ultimate.org/classic/message7919.html
+- [6] David K. Gifford, Pierre Jouvelot, Mark A. Sheldon, James W. O'Toole Jr. "Semantic File Systems." SOSP, 1991. https://web.mit.edu/6.826/archive/S97/13-Gifford-Semantic-file-systems-paper.pdf
+- [7] Burra Gopal, Udi Manber. "Integrating Content-based Access Mechanisms with Hierarchical File Systems." OSDI, 1999. https://www.usenix.org/legacy/events/osdi99/full_papers/gopal/gopal.pdf
+- [8] Sébastien Ferré, Olivier Ridoux. "Introduction to Logical Information Systems." INRIA RR-4540 / Information Processing & Management, 2004. https://www.irisa.fr/LIS/ferre/camelis/doc/PreprintLIS.pdf
+- [9] Benjamin Sigonneau, Olivier Ridoux. "Software Engineering Applications of Logic File System." MSR, 2006. https://www.irisa.fr/lande/lande/icse-proceedings/msr/p87.pdf
+- [10] Sébastien Ferré, Olivier Ridoux, Benjamin Sigonneau. "Arbitrary Relations in Formal Concept Analysis and Logical Information Systems." ICCS, 2005. https://www.irisa.fr/LIS/ferre/papers/iccs2005.pdf
+- [11] Sébastien Ferré. "Camelis: Organizing and Browsing a Personal Photo Collection with a Logical Information System." CEUR Workshop, 2007. https://ceur-ws.org/Vol-331/Ferre.pdf
+- [12] "Richer File System Metadata Using Links and Attributes" (LiFS). MSST, 2005. https://users.soe.ucsc.edu/~sbrandt/papers/MSST05c.pdf
+- [13] IRISA Team-LIS. "LISFS activity report 2006." http://www.irisa.fr/LIS/common/ra2006/RA2006/lis/uid36.html
+- [14] Yoann Padioleau. "aryx/lfs — logic file system (source mirror)." GitHub. https://github.com/aryx/lfs
+- [15] Mendel Rosenblum, John K. Ousterhout. "The Design and Implementation of a Log-Structured File System." SOSP, 1991. https://dl.acm.org/doi/10.1145/121132.121137
