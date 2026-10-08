@@ -1,10 +1,9 @@
 ---
-title: "Lean 4 入門 — 証明とプログラムを同じ言語で書く"
+title: Lean 4 入門 — 証明とプログラムを同じ言語で書く
 publishedAt: 2026-09-29
-podcast: none
+podcast: queued
 legacyFilename: 20260929_140000_lean4_theorem_prover.md
 ---
-
 # Lean 4 入門 — 証明とプログラムを同じ言語で書く
 
 ## 概要
@@ -174,14 +173,35 @@ inductive Vect (α : Type) : Nat → Type where
 
 対話的証明の中心が **タクティク** である。`:= by` のあとにタクティクを並べ、エディタの InfoView で **ゴール**（`⊢` の右側）と文脈（仮説の一覧）を見ながら進める。代表的なものを挙げる [8][14]。
 
-| ゴールの形 | 使うタクティク | すること |
-|---|---|---|
-| `P → Q` | `intro` | `P` を仮定として導入する |
-| `∀ x, P x` | `intro` | `x` を任意に固定する |
-| `P ∧ Q` | `constructor` | 二つのゴールに分ける |
-| `P ∨ Q` | `left` / `right` | どちらを示すか選ぶ |
-| `∃ x, P x` | `use` | witness を与える |
-| `a = b` | `rfl` / `rw` / `simp` | 等式を閉じる・書き換える |
+{% table %}
+- ゴールの形
+- 使うタクティク
+- すること
+---
+- `P → Q`
+- `intro`
+- `P` を仮定として導入する
+---
+- `∀ x, P x`
+- `intro`
+- `x` を任意に固定する
+---
+- `P ∧ Q`
+- `constructor`
+- 二つのゴールに分ける
+---
+- `P ∨ Q`
+- `left` / `right`
+- どちらを示すか選ぶ
+---
+- `∃ x, P x`
+- `use`
+- witness を与える
+---
+- `a = b`
+- `rfl` / `rw` / `simp`
+- 等式を閉じる・書き換える
+{% /table %}
 
 この表は [8][14] をまとめたものである。
 
@@ -334,18 +354,18 @@ AI との相性も強い。Google DeepMind の **AlphaProof** は Lean を環境
 ## まとめ — Lean 4 を読み書きするための7点
 
 1. **型が命題、項が証明である。** `theorem` と `def` はカーネルから見れば同じで、証明は型検査で確かめられる [5][6][7]。
-2. **新しいデータ型は `inductive` と `structure` で定義する。** 定義は帰納原理に展開され、構造的再帰が既定で終了を要求する [9][10][12]。
-3. **証明は `by` とタクティクで組み立てる。** `intro`・`rw`・`simp`・`exact`・`induction` が基本で、`calc` は等式の連鎖を読める形にする [8][11][14]。
-4. **mathlib を土台にする。** 抽象代数の階層が整い、200万行規模の数学をそのまま使える [15][16][17]。
-5. **定型は自動化に任せる。** `omega`・`ring`・`field_simp`・`grind` が届く範囲を広げる。残すコードでは `simp only` で補題を明示する [14][22]。
-6. **Lean 自身で Lean を拡張する。** マクロと elaborator で記法・コマンド・タクティクを追加できる [4][19][20]。
-7. **応用は数学・検証・AI に広がる。** フェルマーの最終定理の形式化、AWS Cedar、AlphaProof が同じ基盤に乗る [23][27][30]。
+1. **新しいデータ型は `inductive` と `structure` で定義する。** 定義は帰納原理に展開され、構造的再帰が既定で終了を要求する [9][10][12]。
+1. **証明は `by` とタクティクで組み立てる。** `intro`・`rw`・`simp`・`exact`・`induction` が基本で、`calc` は等式の連鎖を読める形にする [8][11][14]。
+1. **mathlib を土台にする。** 抽象代数の階層が整い、200万行規模の数学をそのまま使える [15][16][17]。
+1. **定型は自動化に任せる。** `omega`・`ring`・`field_simp`・`grind` が届く範囲を広げる。残すコードでは `simp only` で補題を明示する [14][22]。
+1. **Lean 自身で Lean を拡張する。** マクロと elaborator で記法・コマンド・タクティクを追加できる [4][19][20]。
+1. **応用は数学・検証・AI に広がる。** フェルマーの最終定理の形式化、AWS Cedar、AlphaProof が同じ基盤に乗る [23][27][30]。
 
 ## 付録: 出典一覧
 
 - [1] Lean Language Reference, ["Introduction"](https://lean-lang.org/doc/reference/latest/Introduction/)（2026）.
 - [2] Lean Lang, ["Frequently Asked Questions"](https://lean-lang.org/faq/)（2026）.
-- [3] Wikipedia, ["Lean (proof assistant)"](https://en.wikipedia.org/wiki/Lean_(proof_assistant))（2026）.
+- [3] Wikipedia, ["Lean (proof assistant)"](https://en.wikipedia.org/wiki/Lean_\(proof_assistant\))（2026）.
 - [4] Leonardo de Moura, Sebastian Ullrich, ["The Lean 4 Theorem Prover and Programming Language"](https://lean-lang.org/papers/lean4.pdf), CADE 28（2021）.
 - [5] Jeremy Avigad, Leonardo de Moura, Soonho Kong, ["Theorem Proving in Lean 4: Introduction"](https://lean-lang.org/theorem_proving_in_lean4/Introduction/)（2026）.
 - [6] ["Theorem Proving in Lean 4: Dependent Type Theory"](https://leanprover.github.io/theorem_proving_in_lean4/Dependent-Type-Theory/)（2026）.
