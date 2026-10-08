@@ -1,10 +1,9 @@
 ---
 title: ソフトウェアの複雑さを定義した議論
 publishedAt: 2026-09-19
-podcast: none
+podcast: queued
 legacyFilename: 20260919_013932_software_complexity_definitions_r2.md
 ---
-
 Brooks の『銀の弾なし』は、ソフトウェアの本質的な困難と事故的な困難を分けた。Moseley と Marks はこの区別を受け継ぎながら、Brooks が主張する「本質は残る」に対して「残るものの大半はまだ事故だ」と返した。Hickey はこれらの議論を踏まえて、単純さと簡単さを区別し、編み込まれた状態こそが複雑さの源だと言った。三人が「複雑さ」と呼ぶものは別である。
 
 調査範囲は 1986 年から 2011 年の一次資料と、それを扱った二次文献である。本稿が扱うのは、三つの定義が同じ言葉を共有するようになった経緯と、それぞれが複雑さをどう測定したか、の二点である。
@@ -115,24 +114,20 @@ Hickey が 2011 年に単純さと簡単さを区別したのは、動的言語�
 ## まとめ — 複雑さの三つの定義を使い分けるための5点
 
 1. **「複雑さ」が何を指しているかを確認する。** 要件の複雑さ（Brooks）、状態の多さ（Moseley & Marks）、概念の絡み合い（Hickey）、三つは別問題である [1][3][4][6]。
-
-2. **本質的複雑さを減らすことはできないが、その中身を明確にすることはできる。** Brooks の警告は「本質は変わらない」だが、本質の範囲を正確に引くことで、それ以外は設計の工夫で対処できる [3][4]。
-
-3. **状態を最小化することは、要件よりも設計の問題である。** Moseley と Marks が示すように、同じ要件でも、必要な状態の量は設計で大きく変わる [4][5]。
-
-4. **簡単さと単純さは別の軸である。** 初期の実装の楽さを取れば、システムが複雑になる。単純さを取れば、初期の学習コストがある [6][7]。
-
-5. **参照透過性は、複雑さを測る一つの物差しになる。** Hickey が提示した参照透過性は、状態と時間の絡み合いを避ける原則である。これを指標に設計すれば、複雑さは低く保たれる [6][7]。
+1. **本質的複雑さを減らすことはできないが、その中身を明確にすることはできる。** Brooks の警告は「本質は変わらない」だが、本質の範囲を正確に引くことで、それ以外は設計の工夫で対処できる [3][4]。
+1. **状態を最小化することは、要件よりも設計の問題である。** Moseley と Marks が示すように、同じ要件でも、必要な状態の量は設計で大きく変わる [4][5]。
+1. **簡単さと単純さは別の軸である。** 初期の実装の楽さを取れば、システムが複雑になる。単純さを取れば、初期の学習コストがある [6][7]。
+1. **参照透過性は、複雑さを測る一つの物差しになる。** Hickey が提示した参照透過性は、状態と時間の絡み合いを避ける原則である。これを指標に設計すれば、複雑さは低く保たれる [6][7]。
 
 ## 付録: 出典一覧
 
 1. Fred Brooks（1986）「No Silver Bullet—Essence and Accident in Software Engineering」『*IEEE Computer*』19(4): 10-19
-2. Fred Brooks（1986）同上、日本語概説『銀の弾なし——ソフトウェア工学の本質と偶然』infoq.com 概説版
-3. Fred Brooks（1986）同上、要旨『The Mythical Man-Month』Anniversary Edition（1995 改訂版）及び『No Silver Bullet』全文
-4. Ben Moseley, Peter Marks（2006）「Out of the Tar Pit」*SPA2006* proceedings, 紙版・PDF版共
-5. Ben Moseley, Peter Marks（2006）同上、要旨及び関連論述『Out of the Tar Pit – the morning paper』blog.acolyer.org
-6. Rich Hickey（2011）「Simple Made Easy」*QCon London* Keynote、公式動画及び講演スライド
-7. Rich Hickey（2011）同上、関連記述『Simple versus easy』johndcook.com ブログ版
+1. Fred Brooks（1986）同上、日本語概説『銀の弾なし——ソフトウェア工学の本質と偶然』infoq.com 概説版
+1. Fred Brooks（1986）同上、要旨『The Mythical Man-Month』Anniversary Edition（1995 改訂版）及び『No Silver Bullet』全文
+1. Ben Moseley, Peter Marks（2006）「Out of the Tar Pit」*SPA2006* proceedings, 紙版・PDF版共
+1. Ben Moseley, Peter Marks（2006）同上、要旨及び関連論述『Out of the Tar Pit – the morning paper』blog.acolyer.org
+1. Rich Hickey（2011）「Simple Made Easy」*QCon London* Keynote、公式動画及び講演スライド
+1. Rich Hickey（2011）同上、関連記述『Simple versus easy』johndcook.com ブログ版
 
 ## 付録: 検討した代替説明と採用しなかった枝
 
