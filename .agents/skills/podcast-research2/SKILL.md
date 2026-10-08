@@ -50,7 +50,6 @@ metadata:
 | `how-to-survey` | 問い、検索計画、Web 調査、調査の十分性 | **検索の前から調査の確認まで。** `SKILL.md` と、そこで指示された `references/` を読む |
 | `survey-report` | Phase、重心、読者レベル、構成、チェック、`references/measure.py` | **本文を書き始める前と提出前。** `SKILL.md` と、そこで指示された `references/` を読む |
 | `japanese-writing` | 日本語の語彙・文・推敲 | 出力が日本語のとき、執筆前と推敲前 |
-| `references/english.md` | 英語の文の作法 | 出力が英語のとき |
 | `write-d2-diagram` | D2 の図 | D2 を使うとき |
 
 `how-to-survey` と `survey-report` に同じ規則があるときは、レポートの形は `survey-report`、調査の実行は `how-to-survey` に従う。作業メモは完成原稿へ載せない。
