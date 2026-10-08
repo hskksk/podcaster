@@ -110,7 +110,7 @@ ln -s ../../.agents/skills/<name> .claude/skills/<name>
 
 Never keep a second copy of a skill under `.claude/skills/`. Other agents (Cursor and anything else reading `.agents/`) load the `.agents/` copy, so a duplicated directory silently diverges and the two harnesses run different versions of the same skill.
 
-**External skills** (for example `japanese-writing` from [hskksk/agent-skills](https://skills.sh/hskksk/agent-skills/japanese-writing)) install into `.agents/skills/` via `npx skills add hskksk/agent-skills --skill japanese-writing`. Podcast research skills tell the agent to load them by skill name when writing Japanese; they do not ship hook files or symlink their references.
+**External skills** from [hskksk/agent-skills](https://skills.sh/hskksk/agent-skills) (`japanese-writing`, `how-to-survey`, `survey-report`) install into `.agents/skills/` via `npx skills add hskksk/agent-skills --skill <name>`. `podcast-research2` loads `how-to-survey`, `survey-report`, and (for Japanese prose) `japanese-writing` by skill name. It does not ship copies of their references.
 
 ## Database Migrations
 

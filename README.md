@@ -471,7 +471,7 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 ```
 
 - `podcast-research`（`.claude/skills/podcast-research/SKILL.md`）: 概要→背景→核概念…のサーベイ型
-- `podcast-research2`（`.claude/skills/podcast-research2/SKILL.md`）: 読者の前提レベルを決めたうえで、前重心（答え）・中重心（比較や分類）・後重心（検証と考察）から主構造を選ぶ実験版。指定がなければ内部機構を知らない入門読者から始め、概要・歴史・図・主張数は固定しない
+- `podcast-research2`（`.claude/skills/podcast-research2/SKILL.md`）: 調査は `how-to-survey`、構成は `survey-report`（Phase 1 探索 / Phase 2 検証、前・中・後重心、入門・実務・専門）に従う。指定がなければ入門。概要・歴史・図・主張数は固定しない。保存と PR だけこのリポジトリ向け
 
 例:
 

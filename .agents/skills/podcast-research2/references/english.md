@@ -1,6 +1,6 @@
 # English Sentence Mechanics
 
-Load this when the output language is English. It covers what makes an English sentence readable — where the verb sits, how information is ordered within a sentence, and which constructions bury the action. Paragraph flow and `[n]` citations follow `SKILL.md` and `references/checklists.md` only (`prose-style.md` is not used).
+Load this when the output language is English. It covers what makes an English sentence readable — where the verb sits, how information is ordered within a sentence, and which constructions bury the action. Paragraph flow, heading roles, and `[n]` citations follow `survey-report` (`references/report-conventions.md` and `references/checklists.md`). `prose-style.md` is not used.
 
 Source: prism-data-labs-agent `write-clear-prose/references/english.md` (Gopen and Swan, Williams, plain-language practice). Analysis-specific examples are rewritten for research.
 
@@ -95,7 +95,7 @@ Be consistent: one name per thing, used every time. Elegant variation ("the tabl
 
 ## 10. Research-report conventions
 
-**Use numbered `[n]` citations.** Put the citation at the end of the sentence and keep the source name out of the subject position. Without a citation mechanism, every source becomes a grammatical subject and the report turns into a bibliography.
+**Use numbered `[n]` citations.** The rule is `survey-report`'s `references/report-conventions.md`. In English, put the citation at the end of the sentence and keep the source name out of the subject position. Without a citation mechanism, every source becomes a grammatical subject and the report turns into a bibliography.
 
 ```
 Weak:   Validatar's "10 Data Quality Tests" notes that missing referential integrity in
@@ -105,6 +105,6 @@ Better: Missing referential integrity in PIT/Bridge surfaces as a reporting gap,
 
 Name a source in running text only when its position is itself the subject — "Brooks separated essential from accidental complexity" is right, because Brooks is what the sentence is about.
 
-**Use heading levels consistently with `gravity.md`.** Top-level sections tell readers whether they are entering background, mechanism, constraints, evidence, or implications. Lower-level headings name the concrete finding, question, or comparison target. Avoid both generic labels such as `Details` and headings that try to carry the entire argument.
+**Use heading levels from `survey-report`.** `references/gravity.md` and `references/report-conventions.md` decide what `##` and `###` name.
 
 **Keep bold sparse.** English already has capitals, italics, and word spacing. Use bold only to prevent a misreading or expose a condition.

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""podcast-research2 のモデル非依存な指標を計測する。
+"""survey-report のレポートで、数えられる共通指標を計測する補助スクリプト。
 
-    python3 .agents/skills/podcast-research2/measure.py \
-      --model front|middle|rear \
-      content/docs/<slug>/index.mdoc
+    python3 references/measure.py \\
+      --model front|middle|rear \\
+      <レポートファイル>
 
 構成の適否は references/checklists.md で判断する。このスクリプトは、重心を
-固定目次へ逆戻りさせずに数えられる共通指標だけを検査する。
+固定目次へ逆戻りさせずに数えられる共通指標を検査する。文脈で適否が変わる語は
+参考表示にとどめる。出力はそのまま報告し、数字を手で書き換えたり、必須指標の
+未達を無視したりしない。
 """
 
 import argparse
@@ -17,8 +19,8 @@ from pathlib import Path
 
 
 APPENDIX = "## 付録: 出典一覧"
-INTERNAL = (
-    r"前重心|中重心|後重心|価値の中心|"
+INTERNAL = r"前重心|中重心|後重心|価値の中心"
+INTERNAL_CANDIDATES = (
     r"見取り図|射程|骨格|スロット|\bL1\b|\bL2\b|\bL3\b|主張[0-9]"
 )
 CALQUE = (
@@ -153,6 +155,7 @@ def main():
         sentence for sentence in sentences if re.search(subject_re, sentence)
     ]
     internal = re.findall(INTERNAL, body)
+    internal_candidates = re.findall(INTERNAL_CANDIDATES, body)
     calque = re.findall(CALQUE, body)
     say = [sentence for sentence in sentences if re.search(SAY_FINAL, sentence)]
     h2 = [line[3:].strip() for line in body.splitlines() if line.startswith("## ")]
@@ -246,13 +249,19 @@ def main():
             f"目標 0 {sorted(set(internal)) if internal else ''}",
         )
     )
-    checks.append(
-        result(
-            "直訳テストの語",
-            len(calque),
-            not calque,
-            f"目標 0 {sorted(set(calque)) if calque else ''}",
-        )
+    result(
+        "内部語候補（文脈確認）",
+        len(internal_candidates),
+        True,
+        f"参考。該当語を文脈で確認 {sorted(set(internal_candidates)) if internal_candidates else ''}",
+        required=False,
+    )
+    result(
+        "直訳候補語（文脈確認）",
+        len(calque),
+        True,
+        f"参考。該当語を文脈で確認 {sorted(set(calque)) if calque else ''}",
+        required=False,
     )
     checks.append(
         result("「〜は述べる」で終わる文", len(say), not say, "目標 0")
@@ -275,13 +284,12 @@ def main():
             "番号引用の対応先",
         )
     )
-    checks.append(
-        result(
-            "互いに異なる URL",
-            len(urls),
-            len(urls) >= 8,
-            "8以上。同じ文献の別版で本数を稼がない",
-        )
+    result(
+        "互いに異なる URL",
+        len(urls),
+        len(urls) >= 8,
+        "目安 8以上。目的に対して薄ければ調査を足す。同じ文献の別版で本数を稼がない",
+        required=False,
     )
     undefined = cites_used - cites_listed
     checks.append(
