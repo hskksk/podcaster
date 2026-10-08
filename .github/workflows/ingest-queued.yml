@@ -13,8 +13,9 @@ on:
 permissions:
   contents: write
 
+# Keystatic may push several queued articles within seconds; serialize ingest + publish commits.
 concurrency:
-  group: ingest-queued
+  group: ingest-queued-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -28,6 +29,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - uses: hskksk/gh-actions/actions/setup-mise@v1
 
