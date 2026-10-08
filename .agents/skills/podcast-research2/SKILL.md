@@ -8,7 +8,7 @@ allowed-tools:
   - WebFetch
   - Write
   - Read
-  - Bash(python3 .agents/skills/survey-report/references/measure.py*)
+  - Bash(python3 *)
   - Bash(git checkout -b article/*)
   - Bash(git add content/docs/*)
   - Bash(git commit -m*)
@@ -47,8 +47,8 @@ metadata:
 
 | 参照 | 役割 | いつ読むか |
 |------|------|-----------|
-| `how-to-survey` | 問い、検索計画、Web 調査、調査の十分性 | **検索の前から調査の確認まで。** `SKILL.md` と、そこで指示された `references/` を読む |
-| `survey-report` | Phase、重心、読者レベル、構成、チェック、`references/measure.py` | **本文を書き始める前と提出前。** `SKILL.md` と、そこで指示された `references/` を読む |
+| `how-to-survey` | 問い、検索計画、Web 調査、調査の十分性 | **検索の前から調査の確認まで。** そのスキルの `SKILL.md` を読み、手順に従う |
+| `survey-report` | Phase、重心、読者レベル、構成、提出前の計測とチェック | **本文を書き始める前と提出前。** そのスキルの `SKILL.md` を読み、手順に従う |
 | `japanese-writing` | 日本語の語彙・文・推敲 | 出力が日本語のとき、執筆前と推敲前 |
 | `write-d2-diagram` | D2 の図 | D2 を使うとき |
 
@@ -66,7 +66,7 @@ metadata:
 
 - 出力言語はユーザーの指定がなければ日本語・常体。固有名、論文題、API、ファイルパスは原文のまま
 - **分量の上限は概要＋本文で2万字程度**（長いと生成音声が長くなり、コストと品質が落ちる）。付録に上限はない。下限はない。2万字に届かせるために主張を増やさない。余った材料は付録へ移す
-- 調査が十分かは `how-to-survey` の `references/evidence-bar.md` と `survey-report` のチェックで判断する。字数では測らない
+- 調査が十分かは `how-to-survey` の手順で判断する。字数では測らない
 - 作業語（「前重心」「中重心」「後重心」「価値の中心」「Phase 1」「Phase 2」など）や制作過程は本文へ出さない
 - `references/prose-style.md` は使わない
 
@@ -87,15 +87,9 @@ flowchart TD
 
 ### ステップ3: content/docs/ に保存して PR を作成する
 
-ユーザーの確認は不要。提出前に `survey-report` の計測を実行する。
+ユーザーの確認は不要。提出前に `survey-report` の `SKILL.md` を読み、そこに書かれた計測とチェックに従う。計測コマンドは、そのスキルに書かれたものをそのまま使う。
 
-```bash
-python3 .agents/skills/survey-report/references/measure.py \
-  --model <front|middle|rear> \
-  content/docs/<slug>/index.mdoc
-```
-
-**共通必須指標の未達をゼロにしてから進む。出力の数字を書き換えない。** 続けて `survey-report` の `references/checklists.md` にある共通テストと、選んだ Phase・重心のテストを見る。構成は機械判定だけで決めない。
+**共通必須指標の未達をゼロにしてから進む。出力の数字を書き換えない。** 構成は機械判定だけで決めない。
 
 1. `content/docs/YYYYMMDD_HHMMSS_<テーマ>/index.mdoc` にレポートを保存する。先頭に YAML frontmatter:
 
@@ -137,7 +131,7 @@ python3 .agents/skills/survey-report/references/measure.py \
 
    - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
 
-4. 完了メッセージはレポートとは別物。**選んだ Phase、読者の前提レベル、主重心とその理由**、価値の中心、見出し一覧、答えの一文、**`measure.py` の出力**を示す。本文をチャットに貼らない
+4. 完了メッセージはレポートとは別物。**選んだ Phase、読者の前提レベル、主重心とその理由**、価値の中心、見出し一覧、答えの一文、**計測の出力**を示す。本文をチャットに貼らない
 5. 「`content/docs/` に保存して PR を作成しました。main にマージしても自動 ingest / TTS は走りません。」と伝える
 
 ### 注意事項
