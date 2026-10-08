@@ -60,6 +60,28 @@ function markPublished(rel: string, raw: string, contentSha: string): void {
   writeFileSync(path.resolve(rel), next, "utf8");
 }
 
+/** CI: checkout is the push commit; after concurrency wait, main may be ahead. */
+function syncWithOriginMain(): void {
+  execSync("git fetch origin main", { stdio: "inherit" });
+  execSync("git checkout main", { stdio: "inherit" });
+  execSync("git pull --rebase origin main", { stdio: "inherit" });
+}
+
+function pushOriginMainWithRetry(maxAttempts = 5): void {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      execSync("git push origin main", { stdio: "inherit" });
+      return;
+    } catch {
+      if (attempt >= maxAttempts) {
+        throw new Error("git push origin main failed after retries");
+      }
+      console.log(`git push rejected (attempt ${attempt}/${maxAttempts}); rebasing on origin/main…`);
+      execSync("git pull --rebase origin main", { stdio: "inherit" });
+    }
+  }
+}
+
 async function ingestOne(
   file: QueuedFile,
   url: string,
@@ -101,6 +123,10 @@ async function ingestOne(
   return "ok";
 }
 
+if (process.env.INGEST_QUEUED_COMMIT === "1") {
+  syncWithOriginMain();
+}
+
 const queued = collectQueued();
 if (queued.length === 0) {
   console.log("No podcast: queued files.");
@@ -130,7 +156,7 @@ if (written > 0 && process.env.INGEST_QUEUED_COMMIT === "1") {
     execSync('git config user.name "github-actions[bot]"');
     execSync('git config user.email "41898282+github-actions[bot]@users.noreply.github.com"');
     execSync('git commit -m "chore: mark ingested queued files as published"', { stdio: "inherit" });
-    execSync("git push", { stdio: "inherit" });
+    pushOriginMainWithRetry();
   }
 }
 
