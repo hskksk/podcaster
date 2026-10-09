@@ -480,7 +480,7 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 /podcast-research2 モジュラー曲線と楕円曲線の関係
 ```
 
-スキル同士の呼び方は `skill-orchestration`（`.agents/skills/skill-orchestration/SKILL.md`）に従う。呼び出し側は相手のファイルを指さない。
+スキル同士の呼び方は `skill-orchestration`（`hskksk/agent-skills` から import。`.agents/skills/skill-orchestration/SKILL.md`）に従う。呼び出し側は相手のファイルを指さない。
 
 ---
 

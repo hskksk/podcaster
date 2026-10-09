@@ -13,6 +13,12 @@
       "skillPath": "skills/japanese-writing/SKILL.md",
       "computedHash": "52362eaf0265a24605524bc76a364ee6e148814fa8e26cab038a2c495eed3aea"
     },
+    "skill-orchestration": {
+      "source": "hskksk/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-orchestration/SKILL.md",
+      "computedHash": "cdbb30d96906553d0078504cdbb4916f0849b40c88b2f8c0687e5a8c0e57b8d3"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
