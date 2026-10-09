@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "how-to-survey": {
+      "source": "hskksk/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/how-to-survey/SKILL.md",
+      "computedHash": "c7c87b8eb140d96be1d28525ad7911fdfe1209118587feae5f037034e08c9c56"
+    },
     "japanese-writing": {
       "source": "hskksk/agent-skills",
       "sourceType": "github",
@@ -16,6 +22,12 @@
       "source": "supabase/agent-skills",
       "sourceType": "github",
       "computedHash": "d606a1146be6d54fb9e73f718b5320b9acac5ff2ba2d7230a555df4b5a923b4a"
+    },
+    "survey-report": {
+      "source": "hskksk/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/survey-report/SKILL.md",
+      "computedHash": "15c60f2ec023d54adcb52be72673659ddc46880a7fead7045f604ccf696c6617"
     }
   }
 }
