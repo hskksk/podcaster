@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArticleHeader } from "../../../components/ArticleHeader";
 import { ArticlePager } from "../../../components/ArticlePager";
-import { ArticleToc } from "../../../components/ArticleToc";
+import { ArticleMinimapLayout } from "../../../components/ArticleMinimapLayout";
 import { ReadingProgress } from "../../../components/ReadingProgress";
 import { SiteShell } from "../../../components/SiteShell";
 import { adjacentWebClips } from "../../../lib/site/adjacent-web-clips";
@@ -65,7 +65,7 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
   const cfg = loadSiteConfig();
   const clips = loadPublicWebClips();
   const renderSource = mdocBodyForRender(clip.source, clip.title);
-  const { content, toc } = prepareMarkdoc(renderSource);
+  const { content } = prepareMarkdoc(renderSource);
   const { prev, next } = adjacentWebClips(slug);
   const rss = feedUrl();
 
@@ -97,16 +97,11 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
           />
         </div>
 
-        <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-          <article className="mx-auto w-full min-w-0 max-w-3xl lg:mx-0">
-            <div className="markdoc">
-              <MarkdocArticleBody content={content} />
-            </div>
-          </article>
-          <aside className="mx-auto w-full max-w-3xl lg:mx-0">
-            <ArticleToc entries={toc} />
-          </aside>
-        </div>
+        <ArticleMinimapLayout source={renderSource}>
+          <div className="markdoc">
+            <MarkdocArticleBody content={content} />
+          </div>
+        </ArticleMinimapLayout>
 
         <div className="mx-auto max-w-3xl">
           <ArticlePager prev={prev} next={next} basePath="/web-clips" />

@@ -72,6 +72,29 @@ body {
   --markdoc-surface: var(--color-muted);
 }
 
+/* Minimap: document scroll (not the package default scrollport) */
+.article-minimap-layout .markdoc-reader__main {
+  max-height: none;
+  overflow: visible;
+}
+
+@media (min-width: 721px) {
+  .article-minimap-layout .markdoc-minimap.article-minimap {
+    top: 6rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .article-minimap-layout .markdoc-minimap.article-minimap {
+    position: sticky;
+    top: 3.5rem;
+    z-index: 10;
+    padding-bottom: 0.5rem;
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+  }
+}
+
 .markdoc .markdoc-table-wrap {
   @apply -mx-1 my-6 min-w-0 max-w-full overflow-x-auto;
   -webkit-overflow-scrolling: touch;
