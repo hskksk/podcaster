@@ -1,6 +1,6 @@
 ---
 name: podcast-research2
-description: Research a topic with how-to-survey, structure it with survey-report (Phase, gravity, reader level), write a Japanese Markdoc report to content/docs/ (wiki), and create a PR (does not auto-ingest). For Japanese prose, use the japanese-writing skill when installed.
+description: Research a topic with how-to-survey, structure it with survey-report (Phase, gravity, reader level), write a Japanese Markdoc report to content/docs/ (wiki), and create a PR (podcast queued by default; ingest/TTS after merge). For Japanese prose, use the japanese-writing skill when installed.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -28,7 +28,7 @@ metadata:
 
 1. **調べる**: `how-to-survey` の手順で問い、範囲、検索、出典を固める
 2. **構成して書く**: `survey-report` の手順で Phase、重心、読者レベルを選び、レポートにする
-3. **このリポジトリ向けに整える**: Markdoc、本文の字数上限、`content/docs/` への保存、PR（`podcast: none`。マージだけでは TTS は走らない）
+3. **このリポジトリ向けに整える**: Markdoc、本文の字数上限、`content/docs/` への保存、PR（`podcast: queued` 既定。main マージ後に ingest / TTS）
 4. **日本語**: `japanese-writing` があれば執筆前と推敲前に読む
 
 **保存先の区別**: `content/web-clips/` は短い Web クリップ・クイックメモ用。本スキルのような**深い調査レポートは `content/docs/` に置く**（Keystatic の Wiki Documents）。
@@ -97,7 +97,7 @@ flowchart TD
    ---
    title: "<テーマタイトル>"
    publishedAt: YYYY-MM-DD
-   podcast: none
+   podcast: queued
    legacyFilename: YYYYMMDD_HHMMSS_<topic-slug>.md
    ---
    ```
@@ -122,7 +122,7 @@ flowchart TD
        --title "Podcast Research: <テーマ>" \
        --body "## 概要
 
-知識として content/docs（Wiki 記事）に入れます。マージしても TTS は実行しません（podcast: none）。
+知識として content/docs（Wiki 記事）に入れます。main マージ後、Actions が `podcast: queued` を ingest し台本・音声を生成します。
 
 - ファイル: content/docs/\$SLUG/index.mdoc
 - テーマ: <テーマ>
@@ -132,12 +132,12 @@ flowchart TD
    - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
 
 4. 完了メッセージはレポートとは別物。**選んだ Phase、読者の前提レベル、主重心とその理由**、価値の中心、見出し一覧、答えの一文、**計測の出力**を示す。本文をチャットに貼らない
-5. 「`content/docs/` に保存して PR を作成しました。main にマージしても自動 ingest / TTS は走りません。」と伝える
+5. 「`content/docs/` に保存して PR を作成しました。main にマージすると `podcast: queued` により ingest / TTS が走ります。」と伝える
 
 ### 注意事項
 
 - `content/docs/` ディレクトリは存在しない場合は作成する
 - ファイル名のテーマ部分はファイルシステムで安全な文字のみ（スペースはアンダースコア）
 - `md` / `markdoc` フェンス内の Markdoc タグは描画されない。図はフェンス外の `{% diagram %}` を使い、生のタグはバッククォートで囲む
-- `podcast: queued` にはしない。TTS が必要ならユーザーが明示したときだけ `queued` に変える（既定は `none`）
+- 既定は `podcast: queued`。TTS を出したくないときだけユーザーが明示して `none` に変える
 - このスキルは `podcast-research` を置き換えない。両方残す

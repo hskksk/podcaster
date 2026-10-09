@@ -388,7 +388,7 @@ PDF 6 章をそのまま使う。
 
 - ingest に `content_path` / `content_sha`、UNIQUE、正規化前処理
 - Actions: `queued` 検知 → ingest → **同じ job が `published` を書き戻す**
-- `podcast-research` は mdoc を書いて PR（queued は明示）
+- `podcast-research` / `podcast-research2` は mdoc を書いて PR（既定 `podcast: queued`）
 - `mem_note_id` のみ経路は残してよい。本線ではない
 
 ### Phase 4 — 公開サイト

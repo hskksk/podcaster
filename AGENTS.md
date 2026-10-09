@@ -38,6 +38,15 @@ supabase start
 pnpm functions:serve
 ```
 
+### Pull requests and commits
+
+CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）が、**PR タイトルとブランチ上の全コミット**を [Conventional Commits](https://www.conventionalcommits.org/) 形式で検証する。どちらかが外れると PR の CI が落ちる。
+
+- **形式**: `type(optional-scope): subject`（例: `feat(web): add capture patch`、`docs(agents): note conventional commits`、`chore: bump dependency`）
+- **type**（よく使うもの）: `feat`, `fix`, `docs`, `refactor`, `chore`, `ci`, `build`, `test`, `perf`, `style`, `revert`
+- **PR タイトル**もコミットと同じ規約にする（スカッシュマージ後の履歴になる）
+- コミット本文は任意。subject は命令形・小文字始まりが無難
+
 ### Key gotchas
 
 - **`supabase status` flag**: Use `-o json` (not `--json`) with this CLI version to get machine-readable output.

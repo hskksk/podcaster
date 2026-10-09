@@ -1,6 +1,6 @@
 ---
 name: podcast-research
-description: Research a topic deeply, save a Markdoc report to content/docs/ (wiki articles), and create a PR (does not auto-ingest). For Japanese prose, use the japanese-writing skill when installed.
+description: Research a topic deeply, save a Markdoc report to content/docs/ (wiki articles), and create a PR (podcast queued by default; ingest/TTS after merge). For Japanese prose, use the japanese-writing skill when installed.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -23,7 +23,7 @@ metadata:
 
 1. **多角的なリサーチ**: 概要・背景・詳細・最新動向・具体例・関連トピックを複数回のWeb検索で収集
 2. **レポート保存**: `content/docs/` に Markdoc (`index.mdoc`) として保存する（公開 Wiki / 旧 `articles/` 相当）
-3. **PR 作成**: origin/main ベースのブランチを作成して PR を出す（マージしても TTS は走らない。`podcast: none`）
+3. **PR 作成**: origin/main ベースのブランチを作成して PR を出す（`podcast: queued` 既定。main マージ後に ingest / TTS）
 
 **保存先の区別**: `content/web-clips/` は短い Web クリップ・クイックメモ用。本スキルのような **深い調査レポートは `content/docs/` に置く**（Keystatic の Wiki Documents）。
 
@@ -108,7 +108,7 @@ metadata:
    ---
    title: "<テーマタイトル>"
    publishedAt: YYYY-MM-DD
-   podcast: none
+   podcast: queued
    legacyFilename: YYYYMMDD_HHMMSS_<topic-slug>.md
    ---
    ```
@@ -130,14 +130,14 @@ metadata:
        --title "Podcast Research: <テーマ>" \
        --body "## 概要
 
-知識として content/docs（Wiki 記事）に入れます。マージしても TTS は実行しません（podcast: none）。
+知識として content/docs（Wiki 記事）に入れます。main マージ後、Actions が `podcast: queued` を ingest し台本・音声を生成します。
 
 - ファイル: content/docs/$SLUG/index.mdoc
 - テーマ: <テーマ>"
      ```
    - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
 4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
-5. 「`content/docs/` に保存して PR を作成しました。main にマージしても自動 ingest / TTS は走りません。」と伝える
+5. 「`content/docs/` に保存して PR を作成しました。main にマージすると `podcast: queued` により ingest / TTS が走ります。」と伝える
 
 ### Markdoc のコードブロック（AI 執筆向け）
 
@@ -154,4 +154,4 @@ metadata:
 - ファイル名のテーマ部分はファイルシステムで安全な文字のみ使用する（スペースはアンダースコアに）
 - リサーチ中は進捗を都度報告する（「〇〇について調査中...」など）
 - 情報の信頼性が低い場合はその旨を明記する
-- `podcast: queued` にはしない。TTS が必要ならユーザーが明示したときだけ `queued` に変える（既定は `none`。マージだけでは ingest しない）
+- 既定は `podcast: queued`。TTS を出したくないときだけユーザーが明示して `none` に変える
