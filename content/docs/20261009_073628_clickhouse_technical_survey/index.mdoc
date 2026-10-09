@@ -1,0 +1,191 @@
+---
+title: "ClickHouse の技術調査 — 何が速さを生み、どこで破綻するか"
+publishedAt: 2026-10-09
+podcast: queued
+legacyFilename: 20261009_073628_clickhouse_technical_survey.md
+---
+# ClickHouse の技術調査 — 何が速さを生み、どこで破綻するか
+
+## TL;DR
+
+- ClickHouse はカラム指向・不変パーツ・ベクトル化実行を組み合わせ、数百億行の集計クエリを1秒未満で返すことを狙った OLAP データベースである。
+- 速さの中心は、INSERT が不変パーツを作り背景マージが整理する MergeTree と、8192行単位のグラニュールを飛ばすスパース主キー索引にある。
+- 大量取り込み・高並行ダッシュボード・ログやオブザーバビリティ・時系列に強く、単行の点問い合わせ・高頻度の更新削除・厳密なトランザクションには向かない。
+- 単一バイナリで小さく始められる一方、分散構成やクラウドでは Keeper や共有メタデータ層など運用部品が増える。
+- 公開ベンチマークは再現可能だが、代表的な ClickBench をベンダー自身が運営しており、数値の解釈には注意が要る。
+
+## 概要
+
+ClickHouse はオープンソースの**カラム指向** SQL データベース管理システムであり、オンライン分析処理（**OLAP**）向けに設計されている [1]。もともとは Yandex の Web 解析基盤 Yandex.Metrica の内部技術として2009年に開発が始まり、2012年に本番投入、2016年6月に Apache License 2.0 で公開された [14][15]。現在は ClickHouse, Inc. が商用クラウド ClickHouse Cloud を提供し、オープンソース版とクラウド版の両方が並行して開発されている [16][25]。
+
+この調査が答える問いは「ClickHouse の速さはどの仕組みから来て、どんなワークロードで力を発揮し、どこで破綻するか」である。範囲はアーキテクチャ（ストレージ層・クエリ処理層・分散構成）、主要機能、用途、競合との比較、2025〜2026年の動向とする。個々の SQL 関数の網羅、サーバー設定の細かなチューニング、ClickHouse Cloud の料金計算は対象外とした。
+
+一言でいえば、ClickHouse は「読みと取り込みを最適化し、更新と点問い合わせを犠牲にした分析専用エンジン」である。この**非対称な設計**を理解すると、向く用途と向かない用途が同じ一つの理由から説明できる。
+
+> このレポートは技術調査の全体像を示す。読者は意思決定の材料として、設計の地図・比較表・次に確かめるべき3つの問いを得る。前提は入門レベルとし、SQL と分析データベースの一般概念は既知として、MergeTree・グラニュール・スパース索引などの内部用語は本文で導入する。
+
+## 全体像 — 層で分けて捉える
+
+ClickHouse のエンジンは3つの主要層で説明される。クエリ処理層、ストレージ層、統合層である。アクセス層が4つ目の層として、セッション管理と各種プロトコルでの通信を担う [3][4]。
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart TB
+  CLIENT["クライアント<br/>HTTP / Native / MySQL / PostgreSQL"]
+  subgraph QP["クエリ処理層"]
+    PARSE["パースとクエリプラン"] --> OPT["最適化"] --> VEC["ベクトル化実行<br/>SIMD・並列レーン・JIT"]
+  end
+  subgraph ST["ストレージ層"]
+    MT["MergeTree 系エンジン"] --- PART["不変パーツ"]
+    MT --- SPIDX["スパース主キー索引<br/>8192行のグラニュール"]
+    MT --- SKIP["スキップ索引・射影"]
+    SPECIAL["特殊エンジン<br/>Distributed / Dictionary"]
+    VIRTUAL["仮想エンジン<br/>Kafka / S3 / Iceberg"]
+  end
+  CLIENT --> PARSE
+  VEC --> MT
+  VEC --> SPECIAL
+  VEC --> VIRTUAL
+  MT --> MERGE["背景マージ"]
+```
+{% /diagram %}
+
+ストレージ層はテーブルデータの形式と保管場所を定めるテーブルエンジンで構成される。中心は MergeTree 系で、これが ClickHouse の標準的な永続化形式である。このほかに、分散や高速化のための特殊エンジン（Distributed、Dictionary）と、外部システムと双方向にやり取りする仮想エンジン（Kafka、S3、Iceberg など）がある [3][4]。
+
+## 速さの源
+
+### ストレージ: 不変パーツとバックグラウンドマージ
+
+分析エンジンの土台は**カラム指向ストレージ**である。各列を連続した圧縮ブロックとして書き、クエリは必要な列と、フィルタに一致しうるブロックだけを読む [30]。
+
+**MergeTree** では、テーブルはソート済みの**不変パーツ**の集まりとして保存される。INSERT のたびに新しいパーツが作られ、各行は主キー（厳密にはソートキー）に従ってソートされる。パーツは自己完結で、内容を解釈するためのメタデータをすべて含み、中央カタログへの参照を必要としない。背景プロセスが小さなパーツを継続的に大きなパーツへマージし、パーツ数が膨らむのを防ぐ。マージ後のパーツは一定時間（既定では8分）後に削除される [3][6][7]。
+
+この設計は LSM ツリーに着想を得ているが、同じではない。LSM ツリーがパーツを階層（レベル）に分けるのに対し、ClickHouse はすべてのパーツを対等に扱う。またメモリテーブルや Write-Ahead Log を持たず、挿入データを直接ディスクへ書く [3][5]。
+
+このため INSERT は軽量で、同時挿入どうしの同期も不要になる。ただしその代償として、毎秒多数回の小さい INSERT には向かない。行をまとめてから（目安は2万行単位）、あるいは非同期 INSERT モードで挿入することが推奨される [3][7]。
+
+データをその場で書き換える仕組みはストレージ層の上で実現される。`ALTER TABLE ... UPDATE/DELETE`（**ミューテーション**）は対象パーツ全体を非同期に書き換える。単一行の更新でもパーツ全体の再書き込みになり、書き込み増幅と I/O スパイクを招く [8]。
+
+`DELETE FROM` による軽量削除は削除マスクを書き、実際の消去は背景マージに委ねるため、ディスク容量の回収は遅延する [8][20]。頻繁な更新には **ReplacingMergeTree** や **CollapsingMergeTree** を使い、`FINAL` でクエリ時に重複を解消する運用が推奨される [8]。
+
+### スパース主キー索引とデータプルーニング
+
+分析クエリのコストは、読むデータ量でほぼ決まる。ClickHouse はデータを主キーで物理的にソートし、その上に**スパース主キー索引**を置く。スパース索引は、B-Tree のように1行ごとのエントリを持つのではなく、8192行（既定の `index_granularity`）ごとに1つのマークを持つ。行を並べ替えるのではなく、大きなデータブロックを飛ばすために索引を使う [5][10][38]。
+
+行の集まりのうち、クエリが実際に読む最小単位を**グラニュール**と呼ぶ。主キー索引はメモリに常駐できるほど小さく、データ量が増えても索引が肥大化しない。フィルタ条件が主キーの前置部分と一致すれば、索引から候補グラニュールを絞り込み、該当する列の圧縮ブロックだけを読んで展開する [5][10]。この絞り込みの手段は主キー索引だけではない。ソート順を変えた内部コピーである射影（projection）、列に統計を埋め込むスキップ索引、パーティション式によるパーティション枝刈りが組み合わされる [2][5]。
+
+この設計の裏返しが二つある。第一に、主キーは一意ではない。同じ主キーの行を複数挿入でき、挿入時の存在チェックも行わない [5][38]。第二に、キーによる単行の点問い合わせは苦手である。1件のキーを引くにも、そのキーを含むグラニュール（最悪で `index_granularity` 行）と、圧縮ブロック全体を読む必要がある [5][20]。したがって主キーは、一意性のためではなく、頻出するフィルタと高い相関を持つ列を中心に、フィルタで除外できる効果の大きい順に選ぶ [10]。
+
+### ベクトル化実行と並列化
+
+クエリ処理層は MonetDB/X100 に類似した**ベクトル化実行**モデルを採用する。演算子は行を1つずつではなく、データのチャンク単位で受け渡す。これにより仮想関数呼び出しのオーバーヘッドを抑え、CPU キャッシュを効率的に使い、SIMD 命令で複数値をまとめて処理できる。SIMD カーネルは実行環境の CPU 機能（AVX-512、AVX2 など）に応じて実行時に選ばれる [3][4]。
+
+単一ノードでは、クエリプランがコア数に応じた実行レーンに展開される。各レーンは重複しないデータ範囲を処理し、交換演算子（Repartition、Distribute）がレーン間の負荷をならす。GROUP BY のキーがテーブルのソート順の前置部分と一致する場合は、ソート済み入力をそのまま集約する**ソート集約**を使い、ハッシュ集約より省メモリに処理できる [3][31]。加えて、同じ式を繰り返し実行するクエリでは、LLVM によるクエリコンパイル（JIT）で隣接する演算子を融合する [3][4]。
+
+### マージ時変換とマテリアライズドビュー
+
+MergeTree 系エンジンの一部は、マージ時にデータを変換する。AggregatingMergeTree は同じソートキーの行を集約関数の状態にまとめ、SummingMergeTree は数値列を合計する。TTL 式を使えば、古い行やパーツをマージ時に移動・圧縮・削除できる [3][7]。クエリ時に計算する代わりに、取り込み時とマージ時に計算を寄せる仕組みである。
+
+この考え方をユーザーが使う手段が**増分マテリアライズドビュー**だ。ClickHouse の増分マテリアライズドビューは、トランザクション DB のように保存済みスナップショットを返すのではなく、ソーステーブルへの INSERT をトリガーとして新しいブロックだけにクエリを実行し、結果をターゲットテーブルへ書き込む。集約は部分状態（`-State` サフィックス）として保存され、背景マージで統合される。既存データは自動でバックフィルされない点には注意が要る [11]。リアルタイム性の高い集約を、読み取り時に毎回計算せず提供できるのが利点である。
+
+## 分散構成とクラウド
+
+単一ノードの容量を超えるデータは、シャーディングとレプリケーションで扱う。テーブルはシャーディング式に従って独立したシャードに分割され、通常は別ノードに置かれる。`Distributed` エンジンが全シャードを横断するグローバルなビューを提供し、シャードを意識せずクエリできる [3][4]。障害耐性のため、各シャードは `ReplicatedMergeTree` 系エンジンで複数ノードに複製できる。
+
+レプリケーションと分散 DDL の調整を担うのが **ClickHouse Keeper** である。Keeper は Apache ZooKeeper のドロップイン代替で、同じデータモデルと互換クライアントプロトコルを持ち、C++ 実装で NuRaft による **Raft** を使う。書き込みの線形化可能性を保証し、設定により読み取りの線形化も選べる [12][13]。ただし線形化可能な書き込みは単一のグローバルキューで直列化されるため、読み取りはCPUコアでスケールするが書き込みは縦にも横にもスケールしにくい。この制約に対して、Keeper ではマルチグループ Raft による分担が進められている [13]。
+
+クラウド版の ClickHouse Cloud は、アーキテクチャがオンプレミスと異なる。データを共有オブジェクトストレージに置く **SharedMergeTree** により、コンピュートとストレージを分離する。さらに **Shared Catalog** と Shared データベースエンジンがデータベースメタデータを中央の Keeper に持ち、コンピュートノードをステートレスにする。同一ストレージを共有する複数のサービス（Warehouse）を作れば、読み取りと書き込みのワークロードを分離できる [21][22]。
+
+## 向くワークロード・向かないワークロード
+
+設計の非対称性は、用途の適否としてほぼそのまま現れる。
+
+| ワークロード | 適合 | 理由 |
+|---|---|---|
+| 大量データの集計・レポート | 高い | 列スキャンと集約に最適化され、ベクトル化実行と枝刈りが効く [1][2] |
+| リアルタイムダッシュボード（高並行） | 高い | ロックなしの読みと並列レーン、複数レプリカでの読みスケール [31][32] |
+| ログ・オブザーバビリティ | 高い | 高い圧縮率と TTL、Grafana 連携、SQL ベースの検索 [33][34] |
+| 時系列メトリクス | 高い | 型別コーデックとソートキー設計が効く [1][2] |
+| 単行の点問い合わせ・Key-Value | 低い | スパース索引のためグラニュールと圧縮ブロックを読む [5][20] |
+| 高頻度の更新・削除 | 低い | パーツの書き換え、非同期で容量回収も遅延 [8][20] |
+| 厳密なトランザクション（OLTP） | 低い | 行ロックや完全な ACID トランザクションを持たない [20] |
+| 複雑な相関サブクエリ | 制限 | VLDB 2024 論文の時点で未対応 [3] |
+| 既存列の型変更などのスキーマ変更 | 低い | 大規模テーブルでは全書き換えになる [20] |
+
+JOIN についても補足する。ClickHouse は複数の JOIN アルゴリズムを持ち、クエリプランナが自動で選ぶが、JOIN は非正規化テーブルからの読みより本質的に高コストである。レイテンシが重要な用途では**非正規化**が推奨され、JOIN を使う場合も1クエリあたり3〜4個までに抑えるのが目安とされる [9]。辞書を使った直接 JOIN はハッシュテーブルの構築を省けるため高速だが、辞書は重複キーを許さず、多対多の関係では行が失われる点に注意が要る [9]。
+
+## 競合との位置づけ
+
+分析エンジンは「誰がクエリを実行するか」と「データがどう届くか」で役割が分かれる。同じ列指向・ベクトル化でも、配置と並行性の設計が異なる。
+
+| エンジン | 形態 | 並行性 | 取り込み | 更新・削除 | 主用途 |
+|---|---|---|---|---|---|
+| ClickHouse | クライアント・サーバー / クラウド | 高い | ストリーミング取り込み | SQL 標準の UPDATE/DELETE（制約付き） | リアルタイム OLAP・ログ・倉庫 |
+| DuckDB | プロセス内（組み込み） | 単一プロセス | バッチ中心 | — | ローカル・組み込み分析 |
+| Apache Pinot / Druid | 分散マルチサービス | 非常に高い | ストリーミング | append-only | ユーザー向けサービング |
+| Snowflake / BigQuery | クラウド DWH | 中程度 | マイクロバッチ / ストリーミング | ACID（更新可） | 社内 BI・バッチ |
+
+ClickHouse はオープンソースの選択肢の中でも**一つのエンジンでこなせる仕事の幅**が広いとされる。単一バイナリで始められ、組み込みの chDB や `clickhouse-local` まで同じエンジンで動く [32]。DuckDB は組み込み・単一ライターで、ファイルをその場でクエリする用途に強く、共有・高並行のサービングには構造的に向かない。両者は競合よりも補完の関係にあり、DuckDB で探索し ClickHouse で配信する併用が一般的である [28][29]。Pinot と Druid は超低遅延のサービングに特化するが、マルチサービスの運用負荷が高く、append-only のため更新や削除をエンジン外で扱う必要がある [32]。Snowflake や BigQuery は内部 BI とバッチに向き、高並行の対象にはキューイングとコストが効いてくる [32]。
+
+## ベンチマークの読み方
+
+代表的な公開ベンチマークが **ClickBench** である。英語のクリックストリームを模した1テーブルへの43クエリで、フルスキャン、フィルタ付きスキャン、索引探索、関係演算を含む [17]。ClickHouse 自身の集計では、100 GB の `hits` データセット（9990万行、105列）に対して、単一の `c6a.4xlarge` で43クエリ中32を制し、ホット時の中央値が148ミリ秒、圧縮後サイズが14.21 GiB、失敗は0だった。クラウド版は2ノードで43中38を制し中央値109ミリ秒と報告されている [18]。
+
+数値を読むときの留保が三つある。第一に、ClickBench は ClickHouse 社が運営しており、集計ページも同社が公表している。ベンチマークはオープンソースで再現可能とされるが、指標の提示主体が競合である点は差し引いて見る必要がある [17][18]。第二に、各エンジンは異なるハードウェアと設定で測られており、同一条件の比較ではない [18]。第三に、単一テーブルの非正規化データに偏る。正規化スキーマを使う RTABench では、ClickBench で ClickHouse に劣る TimescaleDB が ClickHouse より1.9倍速いという逆転が報告されている [19]。VLDB 2024 論文の TPC-H 結果も単一ノードの計測で、相関サブクエリを含む11クエリは除外されている [3]。結局のところ、公開ベンチマークは出発点であり、自組織のデータとクエリで測ることが要る。
+
+## 採用事例と2025〜2026年の動向
+
+大規模採用の例として、Cloudflare は10年近くオープンソース版 ClickHouse を使い、1クエリで96兆イベントを2秒未満で処理し、1日の集計で1.61京イベントを扱うと報告する [26]。eBay は監視基盤の OLAP を Druid から ClickHouse へ移し、インフラのフットプリントを9割以上削減、反転索引型ストア比で約5倍のストレージ削減を得た [27][37]。いずれもベンダー側が発信する事例であるため、独立した評価と合わせて読むのが望ましい。ログ基盤では、Datadog など従量課金の可観測性サービスに対するコスト削減の手段として ClickHouse を選ぶ動きが目立つ [34]。
+
+プロジェクトは Apache License 2.0 の下で月次リリースを続け、2025年にはベクトル類似検索の一般提供、転置索引の再設計、Warehouse によるコンピュート分離、並列レプリカの一般提供（25.12）などが入った [23][24][36]。会社側は2025年5月に3億5000万ドルを調達して評価額63億5000万ドルに達し、2026年には4億ドルのシリーズDと LLM 可観測性企業 Langfuse の買収を発表した [25][16]。DB-Engines の総合順位は20位台前半で、オープンソースの列指向データベースとしては突出して人気が高い [35]。
+
+## 次に解くべき3つの問い
+
+1. **速さのうち、どれだけがカラム指向一般の性質で、どれだけが ClickHouse 実装固有か。** ClickBench のような単一テーブル・非正規化のベンチマークで得た優位が、正規化スキーマや JOIN の多いワークロードでも保たれるかを確かめる必要がある。乗り換えコストと移植性の判断に直結する。
+2. **自組織のワークロードで、ClickHouse を単一エンジンにするか、Postgres・DWH・DuckDB との併用にするか。** 並行度（同時クエリ数）、データ量、データ鮮度、更新頻度の4点を見れば、リアルタイム OLAP が必要か、既存 DWH を残すべきかが分かれる。
+3. **更新・削除・トランザクションの制約が、実運用の要件を満たすか。** GDPR に基づく削除保証、CDC による upsert、遅延到着データの訂正に対して、軽量削除・ミューテーション・ReplacingMergeTree・パーティション削除のどれが適合するかを、容量回収の遅延も含めて評価する。
+
+## まとめ
+
+ClickHouse の速さは、カラム指向の圧縮とスキャン、不変パーツと背景マージ、スパース主キー索引による枝刈り、ベクトル化と並列化という複数の設計が重なった結果である。同じ設計が、点問い合わせ・高頻度更新・トランザクションを苦手にする。**向く用途と向かない用途は表裏一体**であり、採用の判断は「自分のワークロードが読みと取り込みのどちらに重心を置くか」に帰着する。公開ベンチマークの第一位は出発点にすぎず、自組織での計測と、更新系の制約の見極めが導入判断の要になる。
+
+## 付録: 出典一覧
+
+- [1] ClickHouse Docs. ClickHouse とは？（Introduction）. https://clickhouse.com/docs/ja/get-started/about/intro
+- [2] ClickHouse Docs. ClickHouse はなぜこれほど高速なのか？（Why is ClickHouse so fast）. https://clickhouse.com/docs/ja/get-started/about/why-clickhouse-is-so-fast
+- [3] Schulze, R., Schreiber, T., Yatsishin, I., Dahimene, R., Milovidov, A. ClickHouse - Lightning Fast Analytics for Everyone. VLDB 2024 (PVLDB vol.17). https://www.vldb.org/pvldb/vol17/p3731-schulze.pdf
+- [4] ClickHouse Docs. Architecture overview（Academic overview）. https://clickhouse.com/docs/concepts/core-concepts/academic-overview
+- [5] ClickHouse Docs. MergeTree table engine. https://clickhouse.com/docs/reference/engines/table-engines/mergetree-family/mergetree
+- [6] ClickHouse Docs. What are table parts in ClickHouse? https://clickhouse.com/docs/concepts/core-concepts/parts
+- [7] ClickHouse Docs. What are part merges in ClickHouse? https://clickhouse.com/docs/concepts/core-concepts/merges
+- [8] ClickHouse Blog. Handling Updates and Deletes in ClickHouse（2023-03-10）. https://clickhouse.com/blog/handling-updates-and-deletes-in-clickhouse
+- [9] ClickHouse Docs. Minimize and optimize JOINs. https://clickhouse.com/docs/concepts/best-practices/minimize-optimize-joins
+- [10] ClickHouse Docs. Choosing a primary key. https://clickhouse.com/docs/concepts/best-practices/choosing-a-primary-key
+- [11] ClickHouse Docs. Incremental materialized view. https://clickhouse.com/docs/concepts/features/materialized-views/incremental-materialized-view
+- [12] ClickHouse Docs. ClickHouse Keeper（deployment and scaling）. https://clickhouse.com/docs/guides/oss/deployment-and-scaling/keeper
+- [13] ClickHouse Blog. ClickHouse Keeper: A ZooKeeper alternative written in C++（2023-09-27）. https://clickhouse.com/blog/clickhouse-keeper-a-zookeeper-alternative-written-in-cpp
+- [14] ClickHouse Blog. Yandex Opensources ClickHouse（2016-06-15）. https://clickhouse.com/blog/yandex-opensources-click-house
+- [15] ClickHouse Docs (GitHub). History. https://github.com/ClickHouse/clickhouse-docs/blob/main/docs/about-us/history.md
+- [16] Wikipedia. ClickHouse. https://en.wikipedia.org/wiki/ClickHouse
+- [17] ClickBench — a Benchmark For Analytical DBMS. https://benchmark.clickhouse.com/
+- [18] ClickHouse Resources. The fastest OLAP databases in 2026 (ranked by ClickBench). https://clickhouse.com/resources/engineering/fastest-olap-databases
+- [19] Tigerdata. Not All Analytics Are Equal: Benchmarking Databases for Real-Time Analytics Applications（2025-03-26）. https://www.tigerdata.com/blog/benchmarking-databases-for-real-time-analytics-applications
+- [20] ChistaDATA. Not to use ClickHouse: When to Avoid It and Key Limitations（2025-12-26）. https://chistadata.com/when-not-to-use-clickhouse/
+- [21] ClickHouse Docs. Cloud architecture. https://clickhouse.com/docs/products/cloud/reference/architecture
+- [22] ClickHouse Blog. No more disks: the architecture behind stateless compute（2025-07-09）. https://clickhouse.com/blog/clickhouse-cloud-stateless-compute
+- [23] ClickHouse Blog. What's new in ClickHouse – 2025 roundup（2026-01-20）. https://clickhouse.com/blog/clickhouse-2025-roundup
+- [24] ClickHouse (GitHub). ClickHouse roadmap 2026（Issue #93288）. https://github.com/ClickHouse/ClickHouse/issues/93288
+- [25] ClickHouse Blog. ClickHouse raises $350 million Series C to power analytics for the AI era（2025-05-29）. https://clickhouse.com/blog/clickhouse-raises-350-million-series-c-to-power-analytics-for-ai-era
+- [26] ClickHouse Blog. Trouble will find you: How Cloudflare uses ClickHouse to scale analytics at quadrillion-row scale. https://clickhouse.com/blog/cloudflare
+- [27] eBay Inc. Our Online Analytical Processing Journey with ClickHouse on Kubernetes（2020-09-22）. https://innovation.ebayinc.com/stories/ou-online-analytical-processing/
+- [28] Layerbase. ClickHouse vs DuckDB（2026-03-11）. https://layerbase.com/blog/clickhouse-vs-duckdb
+- [29] NeverBlink. DuckDB vs ClickHouse: Embedded Analytics vs Distributed OLAP. https://neverblink.ai/kb/duckdb-vs-clickhouse
+- [30] ClickHouse Docs. How columnar storage works. https://clickhouse.com/resources/engineering/what-is-columnar-storage
+- [31] ClickHouse Docs. How ClickHouse executes a query in parallel. https://clickhouse.com/docs/concepts/core-concepts/query-parallelism
+- [32] ClickHouse Resources. Real-time analytics platforms: a practical comparison（2026-04-17）. https://clickhouse.com/resources/engineering/real-time-analytics-platforms-a-practical-comparison
+- [33] ClickHouse Docs. Using Grafana and ClickHouse for observability. https://clickhouse.com/docs/guides/use-cases/observability/build-your-own/grafana
+- [34] ClickHouse Blog. Building a logging platform with ClickHouse and saving millions over Datadog. https://clickhouse.com/blog/building-a-logging-platform-with-clickhouse-and-saving-millions-over-datadog
+- [35] DB-Engines. DB-Engines Ranking. https://db-engines.com/en/ranking
+- [36] ClickHouse Blog. ClickHouse Release 25.10（2025-11-06）. https://clickhouse.com/blog/clickhouse-release-25-10
+- [37] Altinity. Migrating from Druid to Next-Gen OLAP on ClickHouse: eBay's Experience (case study). https://altinity.com/case-studies/migrating-from-druid-to-next-gen-olap-on-clickhouse-ebays-experience
+- [38] ClickHouse Docs. A practical introduction to primary indexes in ClickHouse. https://clickhouse.com/docs/guides/clickhouse/data-modelling/sparse-primary-indexes
