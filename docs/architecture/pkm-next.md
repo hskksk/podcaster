@@ -199,7 +199,7 @@ Chrome 拡張・最小 Web UI は後追い可。curl / CLI / ショートカッ�
 - ingest は既存 `{ title, content }` を維持し、任意で `content_path` 等を受け取る。UNIQUE 衝突は **409**
 - Git 正本は `.mdoc`。パイプラインへ渡す前に frontmatter 除去 + 既知タグの textify
 - Actions: `podcast: queued` を検知 → ingest → **同じ job が `published` + `contentSha` を書き戻す**
-- `podcast-research` は mdoc を書いて PR。queued は明示
+- `podcast-research` / `podcast-research2` は mdoc を書いて PR（既定 `podcast: queued`）
 - 移行済み web-clips 4 本は **queued にしない**（黙って TTS しない）
 
 mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではない。
