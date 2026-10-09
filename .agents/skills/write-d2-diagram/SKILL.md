@@ -10,7 +10,6 @@ metadata:
 ## When to use me
 
 - アーキテクチャ図、ER、コンテナ階層、値流れ（VSM）など **ノードとコンテナが多い図**
-- `podcast-research2` の主張マップ型 Mermaid テンプレート **以外** の概観図（主張マップは `podcast-research2` の Mermaid 規約のまま）
 
 他スキルで図を書く前に、D2 を選ぶなら **このスキルを読んでから** ソースを書く。
 
