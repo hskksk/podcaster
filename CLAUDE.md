@@ -112,7 +112,7 @@ Never keep a second copy of a skill under `.claude/skills/`. Other agents (Curso
 
 A skill that calls another follows `skill-orchestration`. Name that skill and when to read it. Do not name files inside it.
 
-**External skills** from [hskksk/agent-skills](https://skills.sh/hskksk/agent-skills) (`japanese-writing`, `how-to-survey`, `survey-report`) install into `.agents/skills/` via `npx skills add hskksk/agent-skills --skill <name>`. `podcast-research2` loads `how-to-survey`, `survey-report`, and (for Japanese prose) `japanese-writing` by skill name. It does not ship copies of their references.
+**External skills** from [hskksk/agent-skills](https://skills.sh/hskksk/agent-skills) (`japanese-writing`, `how-to-survey`, `survey-report`, `skill-orchestration`) install into `.agents/skills/` via `npx skills add hskksk/agent-skills --skill <name>`. `podcast-research2` loads `how-to-survey`, `survey-report`, and (for Japanese prose) `japanese-writing` by skill name. It does not ship copies of their references.
 
 ## Database Migrations
 
