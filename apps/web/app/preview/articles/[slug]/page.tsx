@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArticleCoverHero, ArticleHeader } from "../../../../components/ArticleHeader";
 import { ArticlePager } from "../../../../components/ArticlePager";
-import { ArticleToc } from "../../../../components/ArticleToc";
+import { ArticleMinimapLayout } from "../../../../components/ArticleMinimapLayout";
 import { EpisodePlayer } from "../../../../components/EpisodePlayer";
 import { ReadingProgress } from "../../../../components/ReadingProgress";
 import { SiteShell } from "../../../../components/SiteShell";
@@ -77,7 +77,7 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
   const audioUrl = audioForPublicDoc(audioMap, doc);
   const coverImageUrl = imageForPublicDoc(imageMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
-  const { content, toc } = prepareMarkdoc(renderSource);
+  const { content } = prepareMarkdoc(renderSource);
   const { prev, next } = await adjacentPublicDocsForRequest(slug);
   const rss = feedUrl();
 
@@ -109,16 +109,11 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
           {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
         </div>
 
-        <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-          <article className="mx-auto w-full min-w-0 max-w-3xl lg:mx-0">
-            <div className="markdoc">
-              <MarkdocArticleBody content={content} />
-            </div>
-          </article>
-          <aside className="mx-auto w-full max-w-3xl lg:mx-0">
-            <ArticleToc entries={toc} />
-          </aside>
-        </div>
+        <ArticleMinimapLayout source={renderSource}>
+          <div className="markdoc">
+            <MarkdocArticleBody content={content} />
+          </div>
+        </ArticleMinimapLayout>
 
         <div className="mx-auto max-w-3xl">
           <ArticlePager prev={prev} next={next} basePath="/preview/articles" />
