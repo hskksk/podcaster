@@ -79,17 +79,18 @@ body {
 }
 
 @media (min-width: 721px) {
-  .article-minimap-layout .markdoc-minimap.article-minimap {
+  .article-minimap-layout .markdoc-treemap-host.article-minimap {
     top: 6rem;
   }
 }
 
 @media (max-width: 720px) {
-  .article-minimap-layout .markdoc-minimap.article-minimap {
+  .article-minimap-layout[data-minimap-variant='treemap'] .markdoc-treemap-host.article-minimap {
+    order: -1;
     position: sticky;
     top: 3.5rem;
     z-index: 10;
-    padding-bottom: 0.5rem;
+    max-height: min(40vh, 16rem);
     background: color-mix(in srgb, var(--color-bg) 92%, transparent);
     backdrop-filter: blur(8px);
   }
