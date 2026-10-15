@@ -133,9 +133,55 @@ body {
 
   .article-minimap-layout .markdoc-treemap-host.article-minimap {
     max-height: min(60vh, 28rem);
+    min-height: 14rem;
     border-radius: 0;
     border-inline: 0;
     border-bottom: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Treemap defaults to designWidth 760 and scales down; mobile shell width keeps scale at 1. */
+  .article-minimap-layout .article-minimap-mobile .tm {
+    font-size: 15px;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-tile b {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-tile small {
+    font-size: 12px;
+    -webkit-line-clamp: 4;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-ch > h2,
+  .article-minimap-layout .article-minimap-mobile .tm-grp > h3 {
+    font-size: 13px;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-tiles {
+    gap: 1rem;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-gap {
+    height: 2.5rem;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-grp {
+    min-width: 10rem;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-tile {
+    min-width: 8.5rem;
+    min-height: 4.25rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-num {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.8125rem;
   }
 }
 

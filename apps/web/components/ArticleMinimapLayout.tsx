@@ -5,9 +5,12 @@ import { ChevronDown, ChevronUp, Map } from "lucide-react";
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { parseFrontmatter } from "../../../scripts/lib/mdoc";
 import { useTheme } from "./ThemeProvider";
+import { useTreemapDesignWidth } from "./useTreemapDesignWidth";
 
 export function ArticleMinimapLayout(props: { source: string; children: ReactNode }) {
   const scrollRef = useRef<HTMLElement>(null);
+  const mobileMinimapShellRef = useRef<HTMLDivElement>(null);
+  const treemapDesignWidth = useTreemapDesignWidth(mobileMinimapShellRef);
   const [mobileMinimapCollapsed, setMobileMinimapCollapsed] = useState(false);
   const { resolved } = useTheme();
   const body = useMemo(() => parseFrontmatter(props.source).body, [props.source]);
@@ -57,7 +60,7 @@ export function ArticleMinimapLayout(props: { source: string; children: ReactNod
       >
         {props.children}
       </article>
-      <div className="article-minimap-mobile">
+      <div ref={mobileMinimapShellRef} className="article-minimap-mobile">
         <button
           type="button"
           className="article-minimap-mobile-toggle"
@@ -80,6 +83,7 @@ export function ArticleMinimapLayout(props: { source: string; children: ReactNod
             source={body}
             mode="minimap"
             theme={resolved}
+            designWidth={treemapDesignWidth}
             scrollRoot={scrollRef}
             onSelect={onTreemapSelect}
             className="article-minimap"
