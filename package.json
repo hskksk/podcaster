@@ -39,14 +39,19 @@
         "d2:validate": "tsx scripts/d2-validate.ts",
         "d2:render": "tsx scripts/d2-render.ts",
         "d2:check": "tsx scripts/d2-check.ts",
-        "markdoc:check-config": "pnpm --filter @podcaster/web markdoc:check-config"
+        "markdoc:check-config": "pnpm --filter @podcaster/web markdoc:check-config",
+        "treemap:extract": "tsx scripts/article-treemap/extract_nodes.ts",
+        "treemap:validate": "tsx scripts/article-treemap/validate_treemap.ts"
     },
     "devDependencies": {
+        "@hskksk/markdoc-react": "^0.6.2",
         "@hskksk/mem-ai-cli": "latest",
         "@terrastruct/d2": "0.1.33",
+        "@types/js-yaml": "^4.0.9",
         "@types/node": "^22.0.0",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
+        "js-yaml": "^4.3.2",
         "tsx": "^4.19.0",
         "typescript": "^5.7.0"
     },
