@@ -160,3 +160,108 @@ nodes:
   more92:
     title: 他 18 件
     subtitle: GMOあおぞらネット銀行「オープンAPI仕様書 法人口座編」PDF https://gmo-aozora.com/bu… GitHub hirano00o…
+links:
+  - from: ch1
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch8
+    type: flow
+  - from: ch8
+    to: ch9
+    type: flow
+  - from: ch9
+    to: ch10
+    type: flow
+  - from: ch10
+    to: ch11
+    type: flow
+  - from: ch11
+    to: ch15
+    type: flow
+  - from: ch15
+    to: ch16
+    type: flow
+  - from: ch16
+    to: ch17
+    type: flow
+  - from: ch17
+    to: ch18
+    type: flow
+  - from: ch18
+    to: ch19
+    type: flow
+  - from: ch19
+    to: ch20
+    type: flow
+  - from: ch20
+    to: ch24
+    type: flow
+  - from: ch24
+    to: ch25
+    type: flow
+  - from: i2
+    to: i3
+    type: seq
+  - from: i3
+    to: i4
+    type: seq
+  - from: i4
+    to: i5
+    type: seq
+  - from: i5
+    to: i6
+    type: seq
+  - from: p60
+    to: p61
+    type: seq
+  - from: p61
+    to: p62
+    type: seq
+  - from: p63
+    to: p64
+    type: seq
+  - from: p64
+    to: p65
+    type: seq
+  - from: p66
+    to: p67
+    type: seq
+  - from: p67
+    to: p68
+    type: seq
+  - from: p68
+    to: p69
+    type: seq
+  - from: p69
+    to: p70
+    type: seq
+  - from: p71
+    to: p72
+    type: seq
+  - from: p72
+    to: p73
+    type: seq
+  - from: p73
+    to: p74
+    type: seq
+  - from: p74
+    to: p75
+    type: seq
+  - from: i12
+    to: i13
+    type: seq
+chapterFlow:
+  - → 概要
+  - → 連携方式の分類軸
+  - → 論理アーキテクチャの全体像
+  - → 銀行 API 連携のフロー
+  - → スクレイピング連携のフローと実装パターン
+  - → B2B アグリゲータを挟む構成
+  - → 主要プレイヤーごとの位置づけ
+  - → データ同期・正規化・運用
+  - → 規制と契約がインフラ形を決める
+  - → グローバルとの対比（参考）
+  - → 次に解くべき3つの問い
+  - → まとめ
+  - '→ 付録: 出典一覧'

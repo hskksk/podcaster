@@ -51,7 +51,7 @@ metadata:
 | `survey-report` | Phase、重心、読者レベル、構成、提出前の計測とチェック | **本文を書き始める前と提出前。** そのスキルの `SKILL.md` を読み、手順に従う |
 | `japanese-writing` | 日本語の語彙・文・推敲 | 出力が日本語のとき、執筆前と推敲前 |
 | `write-d2-diagram` | D2 の図 | D2 を使うとき |
-| `index.mdoc` を書き終えた直後 | `article-treemap-labels` | 同ディレクトリの `treemap.yml`（章マップ用ラベル） |
+| `index.mdoc` を書き終えた直後 | `article-treemap-labels` | 同ディレクトリの `treemap.yml`（章マップ用ラベルとリンク） |
 
 `how-to-survey` と `survey-report` に同じ規則があるときは、レポートの形は `survey-report`、調査の実行は `how-to-survey` に従う。作業メモは完成原稿へ載せない。
 
@@ -103,7 +103,7 @@ flowchart TD
    ---
    ```
 
-2. **章マップラベル（`treemap.yml`）**: 本文を保存したあと、**軽量なサブエージェント**（同じ run 内の Task など）に `article-treemap-labels` を読ませる。渡すのは完成した `index.mdoc` のパスだけ。サブエージェントは同ディレクトリに `treemap.yml` を書き、検証が通るまで直す。親エージェントは YAML 全文を再執筆しない。設計の背景は `docs/architecture/article-treemap-labels.md`。
+2. **章マップ sidecar（`treemap.yml`）**: 本文を保存したあと、**軽量なサブエージェント**（同じ run 内の Task など）に `article-treemap-labels` を読ませる。渡すのは完成した `index.mdoc` のパスだけ。サブエージェントは同ディレクトリに `treemap.yml`（ノードラベル + `links` / `chapterFlow`）を書き、検証が通るまで直す。親エージェントは YAML 全文を再執筆しない。設計の背景は `docs/architecture/article-treemap-labels.md`。
 
 3. origin/main ベースの新しいブランチを作成してコミット:
 

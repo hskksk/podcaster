@@ -127,3 +127,106 @@ nodes:
   ch85:
     title: '付録: 圧縮表現・隣接語彙との接点'
     subtitle: 同種の構造を他の表現で実現する例として、構造化出力（JSON schema で LLM を縛る）、few-shot 分類器の構築（DSPy）などは、Jev…
+links:
+  - from: ch1
+    to: ch2
+    type: flow
+  - from: ch2
+    to: ch3
+    type: flow
+  - from: ch3
+    to: ch4
+    type: flow
+  - from: ch4
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch13
+    type: flow
+  - from: ch13
+    to: ch20
+    type: flow
+  - from: ch20
+    to: ch31
+    type: flow
+  - from: ch31
+    to: ch37
+    type: flow
+  - from: ch37
+    to: ch46
+    type: flow
+  - from: ch46
+    to: ch80
+    type: flow
+  - from: ch80
+    to: ch85
+    type: flow
+  - from: p86
+    to: p87
+    type: seq
+  - from: p87
+    to: p88
+    type: seq
+  - from: p89
+    to: p90
+    type: seq
+  - from: p91
+    to: p92
+    type: seq
+  - from: p92
+    to: p93
+    type: seq
+  - from: s5
+    to: s6
+    type: seq
+  - from: s8
+    to: s9
+    type: seq
+  - from: s9
+    to: s10
+    type: seq
+  - from: s10
+    to: s11
+    type: seq
+  - from: s11
+    to: s12
+    type: seq
+  - from: s14
+    to: s15
+    type: seq
+  - from: s15
+    to: i16
+    type: seq
+  - from: i16
+    to: i17
+    type: seq
+  - from: i17
+    to: i18
+    type: seq
+  - from: i18
+    to: i19
+    type: seq
+  - from: s21
+    to: i22
+    type: seq
+  - from: i22
+    to: i23
+    type: seq
+  - from: i23
+    to: i24
+    type: seq
+  - from: i24
+    to: s25
+    type: seq
+chapterFlow:
+  - → 全体像
+  - → 背景・歴史 — 文章を生成しないモデルが「System One」として分けられた
+  - → 1. 3つの質問型 — どんな入力も「選ぶ・測る・真偽」のどれかで返る
+  - → 2. 複数の質問を束ねるパターン — 1回の呼び出しで入出力を使える形に整える
+  - → 3. 実務での使いどころ — 入力と応答が動く場面の具体例
+  - → 4. 日本語での実測 — 公式の注意記載と実物の両方を見ておく
+  - → 5. 数値の読み方 — confidence と probability は別の機構
+  - → まとめ — 具体例から拾える8点
+  - '→ 付録: 出典一覧'
+  - '→ 付録: 扱わなかった枝・未確認点'
+  - '→ 付録: 圧縮表現・隣接語彙との接点'

@@ -13,7 +13,7 @@ import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { EpisodePlayer } from "../../../components/EpisodePlayer";
 import { ReadingProgress } from "../../../components/ReadingProgress";
 import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
-import { loadTreemapLabels } from "../../../lib/site/treemap-labels";
+import { loadTreemapSidecar } from "../../../lib/site/treemap-labels";
 import { MarkdocArticleBody } from "../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
 import { prepareMarkdoc } from "../../../lib/markdoc";
@@ -75,7 +75,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   const audioUrl = audioForPublicDoc(audioMap, doc);
   const coverImageUrl = imageForPublicDoc(imageMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
-  const treemapLabels = loadTreemapLabels("docs", doc.dir, renderSource);
+  const treemapSidecar = loadTreemapSidecar("docs", doc.dir, renderSource);
   const { content } = prepareMarkdoc(renderSource);
   const { prev, next } = adjacentPublicDocs(slug);
   const rss = feedUrl();
@@ -108,7 +108,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
           {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
         </div>
 
-        <ArticleMinimapLayout source={renderSource} treemapLabels={treemapLabels}>
+        <ArticleMinimapLayout source={renderSource} treemapSidecar={treemapSidecar}>
           <div className="markdoc">
             <MarkdocArticleBody content={content} />
           </div>

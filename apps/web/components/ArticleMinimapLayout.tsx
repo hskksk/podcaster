@@ -5,14 +5,14 @@ import { ChevronDown, ChevronUp, Map } from "lucide-react";
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { parseFrontmatter } from "../../../scripts/lib/mdoc";
 import { useTheme } from "./ThemeProvider";
-import type { TreemapLabels } from "../lib/site/treemap-labels-types";
+import type { TreemapSidecarContent } from "../lib/site/treemap-labels-types";
 import { useTreemapDesignWidth } from "./useTreemapDesignWidth";
 import { createStaticTreemapAi } from "../lib/treemap/createStaticTreemapAi";
 import { useTreemapSidecarTitleOverrides } from "./useTreemapSidecarLabels";
 
 export function ArticleMinimapLayout(props: {
   source: string;
-  treemapLabels?: TreemapLabels | null;
+  treemapSidecar?: TreemapSidecarContent | null;
   children: ReactNode;
 }) {
   const scrollRef = useRef<HTMLElement>(null);
@@ -24,11 +24,15 @@ export function ArticleMinimapLayout(props: {
   const body = useMemo(() => parseFrontmatter(props.source).body, [props.source]);
   const sectionCount = useMemo(() => extractMinimapOutline(body).sections.length, [body]);
   const treemapAi = useMemo(
-    () => createStaticTreemapAi(props.treemapLabels),
-    [props.treemapLabels],
+    () => createStaticTreemapAi(props.treemapSidecar),
+    [props.treemapSidecar],
   );
   const treemapRevision = `${body.length}:${treemapDesignWidth}:${resolved}`;
-  useTreemapSidecarTitleOverrides(treemapPanelRef, props.treemapLabels, treemapRevision);
+  useTreemapSidecarTitleOverrides(
+    treemapPanelRef,
+    props.treemapSidecar?.nodes,
+    treemapRevision,
+  );
 
   const onTreemapSelect = useCallback(
     (detail: { id: string; title: string; line?: number }) => {

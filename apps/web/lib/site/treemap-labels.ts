@@ -6,14 +6,27 @@ import path from "node:path";
 import yaml from "js-yaml";
 import { parseFrontmatter } from "../../../../scripts/lib/mdoc";
 import { getRepoRoot } from "../repo-root";
-import type { TreemapLabels } from "./treemap-labels-types";
+import type {
+  TreemapLabels,
+  TreemapLink,
+  TreemapSidecarContent,
+} from "./treemap-labels-types";
+import { TREEMAP_LINK_TYPES } from "./treemap-labels-types";
 
-export type { TreemapLabelEntry, TreemapLabels } from "./treemap-labels-types";
+export type {
+  TreemapLabelEntry,
+  TreemapLabels,
+  TreemapLink,
+  TreemapLinkType,
+  TreemapSidecarContent,
+} from "./treemap-labels-types";
 
-type TreemapSidecar = {
+type TreemapSidecarFile = {
   version?: number;
   sourceSha256?: string;
   nodes?: TreemapLabels;
+  links?: TreemapLink[];
+  chapterFlow?: string[];
 };
 
 function bodySha256(body: string): string {
@@ -41,18 +54,30 @@ function shaCandidates(
   return [...shas];
 }
 
-/** Load `treemap.yml` when present and `sourceSha256` matches the article body. */
-export function loadTreemapLabels(
+function normalizeLinks(raw: TreemapLink[] | undefined): TreemapLink[] {
+  if (!raw?.length) return [];
+  const allowed = new Set<string>(TREEMAP_LINK_TYPES);
+  return raw.filter(
+    (l) =>
+      l.from?.trim() &&
+      l.to?.trim() &&
+      allowed.has(l.type) &&
+      l.from !== l.to,
+  );
+}
+
+/** Load full `treemap.yml` when present and `sourceSha256` matches the article body. */
+export function loadTreemapSidecar(
   collection: "docs" | "web-clips",
   dir: string,
   treemapSource: string,
-): TreemapLabels | null {
+): TreemapSidecarContent | null {
   const ymlPath = path.join(collectionRoot(collection), dir, "treemap.yml");
   if (!existsSync(ymlPath)) return null;
 
-  let sidecar: TreemapSidecar;
+  let sidecar: TreemapSidecarFile;
   try {
-    sidecar = yaml.load(readFileSync(ymlPath, "utf8")) as TreemapSidecar;
+    sidecar = yaml.load(readFileSync(ymlPath, "utf8")) as TreemapSidecarFile;
   } catch (err) {
     console.warn(`[treemap] failed to parse ${ymlPath}:`, err);
     return null;
@@ -71,5 +96,18 @@ export function loadTreemapLabels(
     return null;
   }
 
-  return sidecar.nodes;
+  return {
+    nodes: sidecar.nodes,
+    links: normalizeLinks(sidecar.links),
+    chapterFlow: sidecar.chapterFlow?.map((s) => String(s).trim()).filter(Boolean),
+  };
+}
+
+/** @deprecated Prefer `loadTreemapSidecar` for links; returns nodes only. */
+export function loadTreemapLabels(
+  collection: "docs" | "web-clips",
+  dir: string,
+  treemapSource: string,
+): TreemapLabels | null {
+  return loadTreemapSidecar(collection, dir, treemapSource)?.nodes ?? null;
 }

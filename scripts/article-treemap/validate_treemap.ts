@@ -18,6 +18,18 @@ if (!mdocPath) {
   process.exit(2);
 }
 
+const LINK_TYPES = new Set([
+  "flow",
+  "seq",
+  "cause",
+  "evidence",
+  "apply",
+  "contrast",
+  "rec",
+  "end",
+  "ref",
+]);
+
 const abs = resolve(mdocPath);
 const ymlPath = join(dirname(abs), "treemap.yml");
 if (!existsSync(ymlPath)) {
@@ -30,6 +42,7 @@ const { attrs, body } = parseFrontmatter(source);
 const expectedSha = createHash("sha256").update(body, "utf8").digest("hex");
 const doc = parseTreemapDocument(body, { title: attrs.title });
 const flat = flattenTreemapNodes(doc);
+const knownIds = new Set(flat.map(({ node }) => node.id));
 
 const needsLabel = new Set(flat.filter(nodeNeedsLabel).map(({ node }) => node.id));
 
@@ -37,6 +50,8 @@ type Sidecar = {
   version?: number;
   sourceSha256?: string;
   nodes?: Record<string, { title?: string; subtitle?: string }>;
+  links?: Array<{ from?: string; to?: string; type?: string }>;
+  chapterFlow?: string[];
 };
 
 const sidecar = yaml.load(readFileSync(ymlPath, "utf8")) as Sidecar;
@@ -56,9 +71,35 @@ for (const id of needsLabel) {
 }
 
 for (const id of Object.keys(labeled)) {
-  if (!flat.some(({ node }) => node.id === id)) {
+  if (!knownIds.has(id)) {
     errors.push(`nodes.${id}: unknown id (not in current treemap)`);
   }
+}
+
+const links = sidecar.links ?? [];
+for (let i = 0; i < links.length; i++) {
+  const link = links[i];
+  const from = link.from?.trim();
+  const to = link.to?.trim();
+  const type = link.type?.trim();
+  if (!from || !to || !type) {
+    errors.push(`links[${i}]: from, to, type required`);
+    continue;
+  }
+  if (!LINK_TYPES.has(type)) errors.push(`links[${i}]: invalid type ${type}`);
+  if (!knownIds.has(from)) errors.push(`links[${i}]: unknown from id ${from}`);
+  if (!knownIds.has(to)) errors.push(`links[${i}]: unknown to id ${to}`);
+  if (from === to) errors.push(`links[${i}]: from and to must differ`);
+}
+
+if (links.length > 30) {
+  errors.push(`links: at most 30 (treemap display limit); got ${links.length}`);
+}
+
+const chapterFlow = sidecar.chapterFlow ?? [];
+const maxFlow = Math.max(0, doc.chapters.length - 1);
+if (chapterFlow.length > maxFlow) {
+  errors.push(`chapterFlow: at most ${maxFlow} entries for this document`);
 }
 
 if (errors.length) {
@@ -67,5 +108,5 @@ if (errors.length) {
 }
 
 console.log(
-  `ok: treemap.yml (${Object.keys(labeled).length} nodes, ${needsLabel.size} required labels satisfied)`,
+  `ok: treemap.yml (${Object.keys(labeled).length} nodes, ${links.length} links, ${needsLabel.size} required labels satisfied)`,
 );

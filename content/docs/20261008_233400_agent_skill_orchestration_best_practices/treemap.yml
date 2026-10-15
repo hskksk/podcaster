@@ -49,3 +49,101 @@ nodes:
   i49:
     title: '[10] Agent Skills'
     subtitle: '[10] Agent Skills. “Optimizing skill descriptions.” https://agentskills.io/sk…'
+links:
+  - from: ch1
+    to: ch6
+    type: flow
+  - from: ch6
+    to: ch8
+    type: flow
+  - from: ch8
+    to: ch16
+    type: flow
+  - from: ch16
+    to: ch26
+    type: flow
+  - from: ch26
+    to: ch31
+    type: flow
+  - from: ch31
+    to: ch39
+    type: flow
+  - from: i2
+    to: i3
+    type: seq
+  - from: i3
+    to: i4
+    type: seq
+  - from: i4
+    to: i5
+    type: seq
+  - from: s9
+    to: i10
+    type: seq
+  - from: i10
+    to: i11
+    type: seq
+  - from: i11
+    to: i12
+    type: seq
+  - from: i12
+    to: i13
+    type: seq
+  - from: i13
+    to: s14
+    type: seq
+  - from: s14
+    to: s15
+    type: seq
+  - from: s17
+    to: i18
+    type: seq
+  - from: i18
+    to: i19
+    type: seq
+  - from: i19
+    to: i20
+    type: seq
+  - from: i20
+    to: i21
+    type: seq
+  - from: i21
+    to: i22
+    type: seq
+  - from: i22
+    to: i23
+    type: seq
+  - from: i23
+    to: s24
+    type: seq
+  - from: s24
+    to: s25
+    type: seq
+  - from: i27
+    to: i28
+    type: seq
+  - from: i28
+    to: i29
+    type: seq
+  - from: i29
+    to: i30
+    type: seq
+  - from: i32
+    to: i33
+    type: seq
+  - from: i33
+    to: i34
+    type: seq
+  - from: i34
+    to: i35
+    type: seq
+  - from: i35
+    to: i36
+    type: seq
+chapterFlow:
+  - → スキルとオーケストレーターの担当を分ける
+  - → 合成しやすいスキルの作り方
+  - → 複数スキルを連携させる
+  - → 効果を評価し、改善する
+  - → 実務での設計チェック
+  - '→ 付録: 出典一覧'

@@ -9,6 +9,7 @@ import { writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import yaml from "js-yaml";
 import { execSync } from "node:child_process";
+import { suggestLinksFromManifest } from "./suggest_links.ts";
 
 const mdocPath = resolve(process.argv[2] ?? "");
 if (!mdocPath) {
@@ -22,6 +23,9 @@ const json = execSync(`pnpm exec tsx scripts/article-treemap/extract_nodes.ts "$
 });
 const manifest = JSON.parse(json) as {
   sourceSha256: string;
+  orderedNodeIds: string[];
+  chapters: Array<{ id: string; title: string }>;
+  explicitLinks?: Array<{ from: string; to: string; type?: string }>;
   nodes: Array<{
     id: string;
     path: string;
@@ -125,12 +129,18 @@ for (const node of manifest.nodes) {
   };
 }
 
+const { links, chapterFlow } = suggestLinksFromManifest(manifest);
+
 const sidecar = {
   version: 1,
   sourceSha256: manifest.sourceSha256,
   nodes,
+  links,
+  chapterFlow,
 };
 
 const outPath = join(dirname(mdocPath), "treemap.yml");
 writeFileSync(outPath, yaml.dump(sidecar, { lineWidth: 120, noRefs: true }), "utf8");
-console.log(`wrote ${outPath} (${Object.keys(nodes).length} nodes)`);
+console.log(
+  `wrote ${outPath} (${Object.keys(nodes).length} nodes, ${links.length} links)`,
+);

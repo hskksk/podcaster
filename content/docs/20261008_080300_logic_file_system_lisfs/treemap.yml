@@ -115,3 +115,103 @@ nodes:
   more53:
     title: '[14] Yoann Padioleau'
     subtitle: '[14] Yoann Padioleau. "aryx/lfs [15] Mendel Rosenblum, John K. Ousterhout. "T…'
+links:
+  - from: ch1
+    to: ch6
+    type: flow
+  - from: ch6
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch12
+    type: flow
+  - from: ch12
+    to: ch15
+    type: flow
+  - from: ch15
+    to: ch19
+    type: flow
+  - from: ch19
+    to: ch23
+    type: flow
+  - from: ch23
+    to: ch27
+    type: flow
+  - from: ch27
+    to: ch32
+    type: flow
+  - from: i2
+    to: i3
+    type: seq
+  - from: i3
+    to: i4
+    type: seq
+  - from: i4
+    to: i5
+    type: seq
+  - from: p48
+    to: p49
+    type: seq
+  - from: p49
+    to: p50
+    type: seq
+  - from: p50
+    to: p51
+    type: seq
+  - from: p51
+    to: p52
+    type: seq
+  - from: s8
+    to: s9
+    type: seq
+  - from: s9
+    to: s10
+    type: seq
+  - from: s10
+    to: s11
+    type: seq
+  - from: s13
+    to: s14
+    type: seq
+  - from: s16
+    to: s17
+    type: seq
+  - from: s17
+    to: s18
+    type: seq
+  - from: s20
+    to: s21
+    type: seq
+  - from: s21
+    to: s22
+    type: seq
+  - from: s24
+    to: s25
+    type: seq
+  - from: s25
+    to: s26
+    type: seq
+  - from: i28
+    to: i29
+    type: seq
+  - from: i29
+    to: i30
+    type: seq
+  - from: i30
+    to: i31
+    type: seq
+  - from: i33
+    to: i34
+    type: seq
+  - from: i34
+    to: i35
+    type: seq
+chapterFlow:
+  - '→ 背景: 1つの場所に置けないファイル'
+  - → パスは論理式である
+  - → 実装と計測値
+  - → 従来方式との違い
+  - '→ 支える理論: Logic Information Systems'
+  - → 何が新しく、何が残ったか
+  - → 調査しなかった枝
+  - '→ 付録: 出典一覧'
