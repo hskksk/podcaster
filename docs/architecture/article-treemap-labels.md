@@ -48,7 +48,7 @@ nodes:
 
 1. `loadTreemapLabels(collection, dir, renderSource)` — `content/{collection}/{dir}/treemap.yml`（無ければ `null`）。
 2. `sourceSha256` が **レンダー用本文**または **ディスク上の `index.mdoc` 本文**のどちらかと一致しないときは警告し、sidecar を無視する。
-3. `ArticleMinimapLayout` の `treemapLabels` → `useTreemapSidecarLabels` で treemap タイルの `title` / `subtitle` を上書き（upstream `labels` prop 追加後に差し替え可）。
+3. `ArticleMinimapLayout` — `subtitle` は `createStaticTreemapAi`（`describeNodes`）、`title` はマウント後の短い再適用のみ（treemap の再描画と Observer で競合しない）。
 
 ## 関連
 

@@ -7,7 +7,8 @@ import { parseFrontmatter } from "../../../scripts/lib/mdoc";
 import { useTheme } from "./ThemeProvider";
 import type { TreemapLabels } from "../lib/site/treemap-labels-types";
 import { useTreemapDesignWidth } from "./useTreemapDesignWidth";
-import { useTreemapSidecarLabels } from "./useTreemapSidecarLabels";
+import { createStaticTreemapAi } from "../lib/treemap/createStaticTreemapAi";
+import { useTreemapSidecarTitleOverrides } from "./useTreemapSidecarLabels";
 
 export function ArticleMinimapLayout(props: {
   source: string;
@@ -22,7 +23,12 @@ export function ArticleMinimapLayout(props: {
   const { resolved } = useTheme();
   const body = useMemo(() => parseFrontmatter(props.source).body, [props.source]);
   const sectionCount = useMemo(() => extractMinimapOutline(body).sections.length, [body]);
-  useTreemapSidecarLabels(treemapPanelRef, props.treemapLabels);
+  const treemapAi = useMemo(
+    () => createStaticTreemapAi(props.treemapLabels),
+    [props.treemapLabels],
+  );
+  const treemapRevision = `${body.length}:${treemapDesignWidth}:${resolved}`;
+  useTreemapSidecarTitleOverrides(treemapPanelRef, props.treemapLabels, treemapRevision);
 
   const onTreemapSelect = useCallback(
     (detail: { id: string; title: string; line?: number }) => {
@@ -92,6 +98,7 @@ export function ArticleMinimapLayout(props: {
             mode="minimap"
             theme={resolved}
             designWidth={treemapDesignWidth}
+            ai={treemapAi}
             scrollRoot={scrollRef}
             onSelect={onTreemapSelect}
             className="article-minimap"
