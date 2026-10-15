@@ -1,12 +1,17 @@
 "use client";
 
 import { MarkdocTreemap, extractMinimapOutline } from "@hskksk/markdoc-react";
-import { useCallback, useMemo, useRef, type ReactNode } from "react";
+import { ChevronDown, ChevronUp, Map } from "lucide-react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { parseFrontmatter } from "../../../scripts/lib/mdoc";
 import { useTheme } from "./ThemeProvider";
+import { useTreemapDesignWidth } from "./useTreemapDesignWidth";
 
 export function ArticleMinimapLayout(props: { source: string; children: ReactNode }) {
   const scrollRef = useRef<HTMLElement>(null);
+  const mobileMinimapShellRef = useRef<HTMLDivElement>(null);
+  const treemapDesignWidth = useTreemapDesignWidth(mobileMinimapShellRef);
+  const [mobileMinimapCollapsed, setMobileMinimapCollapsed] = useState(false);
   const { resolved } = useTheme();
   const body = useMemo(() => parseFrontmatter(props.source).body, [props.source]);
   const sectionCount = useMemo(() => extractMinimapOutline(body).sections.length, [body]);
@@ -46,6 +51,7 @@ export function ArticleMinimapLayout(props: { source: string; children: ReactNod
     <div
       className="markdoc-reader article-minimap-layout mx-auto w-full min-w-0 max-w-6xl"
       data-minimap-variant="treemap"
+      data-minimap-collapsed={mobileMinimapCollapsed ? "true" : undefined}
     >
       <article
         ref={scrollRef}
@@ -54,14 +60,36 @@ export function ArticleMinimapLayout(props: { source: string; children: ReactNod
       >
         {props.children}
       </article>
-      <MarkdocTreemap
-        source={body}
-        mode="minimap"
-        theme={resolved}
-        scrollRoot={scrollRef}
-        onSelect={onTreemapSelect}
-        className="article-minimap"
-      />
+      <div ref={mobileMinimapShellRef} className="article-minimap-mobile">
+        <button
+          type="button"
+          className="article-minimap-mobile-toggle"
+          aria-expanded={!mobileMinimapCollapsed}
+          aria-controls="article-minimap-panel"
+          onClick={() => setMobileMinimapCollapsed((collapsed) => !collapsed)}
+        >
+          <span className="article-minimap-mobile-toggle__label">
+            <Map className="size-4 shrink-0 opacity-70" strokeWidth={1.75} aria-hidden />
+            章マップ
+          </span>
+          {mobileMinimapCollapsed ? (
+            <ChevronDown className="size-4 shrink-0 opacity-70" strokeWidth={1.75} aria-hidden />
+          ) : (
+            <ChevronUp className="size-4 shrink-0 opacity-70" strokeWidth={1.75} aria-hidden />
+          )}
+        </button>
+        <div id="article-minimap-panel">
+          <MarkdocTreemap
+            source={body}
+            mode="minimap"
+            theme={resolved}
+            designWidth={treemapDesignWidth}
+            scrollRoot={scrollRef}
+            onSelect={onTreemapSelect}
+            className="article-minimap"
+          />
+        </div>
+      </div>
     </div>
   );
 }

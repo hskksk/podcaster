@@ -85,14 +85,118 @@ body {
 }
 
 @media (max-width: 720px) {
-  .article-minimap-layout[data-minimap-variant='treemap'] .markdoc-treemap-host.article-minimap {
+  .article-minimap-layout .article-minimap-mobile {
     order: -1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Sticky only the toggle — not the open panel (tall sticky boxes scroll their top off-screen). */
+  .article-minimap-mobile-toggle {
     position: sticky;
     top: 3.5rem;
-    z-index: 10;
-    max-height: min(40vh, 16rem);
+    z-index: 11;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
     background: color-mix(in srgb, var(--color-bg) 92%, transparent);
     backdrop-filter: blur(8px);
+    color: var(--color-fg);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .article-minimap-mobile-toggle:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  .article-minimap-mobile-toggle__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .article-minimap-layout[data-minimap-collapsed='true'] #article-minimap-panel {
+    display: none;
+  }
+
+  .article-minimap-layout #article-minimap-panel {
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  }
+
+  .article-minimap-layout .markdoc-treemap-host.article-minimap {
+    max-height: min(60vh, 28rem);
+    min-height: 14rem;
+    border-radius: 0;
+    border-inline: 0;
+    border-bottom: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Treemap defaults to designWidth 760 and scales down; mobile shell width keeps scale at 1. */
+  .article-minimap-layout .article-minimap-mobile .tm {
+    font-size: 15px;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-tile b {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-tile small {
+    font-size: 12px;
+    -webkit-line-clamp: 4;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-ch > h2,
+  .article-minimap-layout .article-minimap-mobile .tm-grp > h3 {
+    font-size: 13px;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-tiles {
+    gap: 1rem;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-gap {
+    height: 2.5rem;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-grp {
+    min-width: 10rem;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-tile {
+    min-width: 8.5rem;
+    min-height: 4.25rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .article-minimap-layout .article-minimap-mobile .tm-num {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.8125rem;
+  }
+}
+
+@media (min-width: 721px) {
+  .article-minimap-mobile-toggle {
+    display: none;
+  }
+
+  .article-minimap-mobile,
+  .article-minimap-mobile > #article-minimap-panel {
+    display: contents;
   }
 }
 
