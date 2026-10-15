@@ -16,6 +16,7 @@ import { getDraftPreviewContext } from "../../../../lib/site/draft-context";
 import { articleOpenGraph } from "../../../../lib/site/open-graph";
 import { MarkdocArticleBody } from "../../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
+import { loadTreemapLabels } from "../../../../lib/site/treemap-labels";
 import { prepareMarkdoc } from "../../../../lib/markdoc";
 import { textify } from "../../../../../../scripts/lib/mdoc";
 
@@ -65,6 +66,7 @@ export default async function PreviewWebClipPage({ params }: { params: Promise<P
   const cfg = loadSiteConfig();
   const clips = await loadPublicWebClipsForRequest();
   const renderSource = mdocBodyForRender(clip.source, clip.title);
+  const treemapLabels = loadTreemapLabels("web-clips", clip.dir, renderSource);
   const { content } = prepareMarkdoc(renderSource);
   const { prev, next } = await adjacentWebClipsForRequest(slug);
   const rss = feedUrl();
@@ -97,7 +99,7 @@ export default async function PreviewWebClipPage({ params }: { params: Promise<P
           />
         </div>
 
-        <ArticleMinimapLayout source={renderSource}>
+        <ArticleMinimapLayout source={renderSource} treemapLabels={treemapLabels}>
           <div className="markdoc">
             <MarkdocArticleBody content={content} />
           </div>

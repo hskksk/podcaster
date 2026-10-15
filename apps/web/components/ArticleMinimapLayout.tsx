@@ -5,16 +5,24 @@ import { ChevronDown, ChevronUp, Map } from "lucide-react";
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { parseFrontmatter } from "../../../scripts/lib/mdoc";
 import { useTheme } from "./ThemeProvider";
+import type { TreemapLabels } from "../lib/site/treemap-labels-types";
 import { useTreemapDesignWidth } from "./useTreemapDesignWidth";
+import { useTreemapSidecarLabels } from "./useTreemapSidecarLabels";
 
-export function ArticleMinimapLayout(props: { source: string; children: ReactNode }) {
+export function ArticleMinimapLayout(props: {
+  source: string;
+  treemapLabels?: TreemapLabels | null;
+  children: ReactNode;
+}) {
   const scrollRef = useRef<HTMLElement>(null);
   const mobileMinimapShellRef = useRef<HTMLDivElement>(null);
+  const treemapPanelRef = useRef<HTMLDivElement>(null);
   const treemapDesignWidth = useTreemapDesignWidth(mobileMinimapShellRef);
   const [mobileMinimapCollapsed, setMobileMinimapCollapsed] = useState(false);
   const { resolved } = useTheme();
   const body = useMemo(() => parseFrontmatter(props.source).body, [props.source]);
   const sectionCount = useMemo(() => extractMinimapOutline(body).sections.length, [body]);
+  useTreemapSidecarLabels(treemapPanelRef, props.treemapLabels);
 
   const onTreemapSelect = useCallback(
     (detail: { id: string; title: string; line?: number }) => {
@@ -78,7 +86,7 @@ export function ArticleMinimapLayout(props: { source: string; children: ReactNod
             <ChevronUp className="size-4 shrink-0 opacity-70" strokeWidth={1.75} aria-hidden />
           )}
         </button>
-        <div id="article-minimap-panel">
+        <div id="article-minimap-panel" ref={treemapPanelRef}>
           <MarkdocTreemap
             source={body}
             mode="minimap"

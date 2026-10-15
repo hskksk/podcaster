@@ -6,7 +6,7 @@
 
 - 知識の正は `index.mdoc` の本文。要約は **メタデータ**（`treemap.yml`）だけ。
 - 生成は **記事作成スキルの最終段**（サブエージェント）。CI や `next build` では走らせない。
-- サイトはビルド時に sidecar を読むだけ（将来 `ArticleMinimapLayout` + `@hskksk/markdoc-react` の同期 `labels` マージ）。
+- サイトはビルド時に sidecar を読むだけ（`loadTreemapLabels` → `ArticleMinimapLayout`）。`markdoc-react` に同期 `labels` が無い間は DOM でタイルに反映する。
 
 ## ファイル配置
 
@@ -44,11 +44,11 @@ nodes:
 
 サブエージェントは軽量モデルでよい。入力は `extract_nodes` の JSON と本文抜粋だけ。
 
-## サイト側（未実装）
+## サイト側
 
-1. `loadPublicDoc` 相当で隣の `treemap.yml` を読む（無ければ従来どおり）。
-2. `sourceSha256` が本文と一致しないときはログ警告し、sidecar を無視する。
-3. `MarkdocTreemap` に upstream の `labels` prop（または同等）で `nodes` をマージ。
+1. `loadTreemapLabels(collection, dir, renderSource)` — `content/{collection}/{dir}/treemap.yml`（無ければ `null`）。
+2. `sourceSha256` が **レンダー用本文**または **ディスク上の `index.mdoc` 本文**のどちらかと一致しないときは警告し、sidecar を無視する。
+3. `ArticleMinimapLayout` の `treemapLabels` → `useTreemapSidecarLabels` で treemap タイルの `title` / `subtitle` を上書き（upstream `labels` prop 追加後に差し替え可）。
 
 ## 関連
 
