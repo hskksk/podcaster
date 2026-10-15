@@ -87,18 +87,16 @@ body {
 @media (max-width: 720px) {
   .article-minimap-layout .article-minimap-mobile {
     order: -1;
-    position: sticky;
-    top: 3.5rem;
-    z-index: 10;
     display: flex;
     flex-direction: column;
     gap: 0;
-    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--color-border);
   }
 
+  /* Sticky only the toggle — not the open panel (tall sticky boxes scroll their top off-screen). */
   .article-minimap-mobile-toggle {
+    position: sticky;
+    top: 3.5rem;
+    z-index: 11;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -107,7 +105,9 @@ body {
     margin: 0;
     padding: 0.5rem 0.75rem;
     border: 0;
-    background: transparent;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    backdrop-filter: blur(8px);
     color: var(--color-fg);
     font: inherit;
     font-size: 0.875rem;
@@ -129,6 +129,10 @@ body {
 
   .article-minimap-layout[data-minimap-collapsed='true'] #article-minimap-panel {
     display: none;
+  }
+
+  .article-minimap-layout #article-minimap-panel {
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
   }
 
   .article-minimap-layout .markdoc-treemap-host.article-minimap {
