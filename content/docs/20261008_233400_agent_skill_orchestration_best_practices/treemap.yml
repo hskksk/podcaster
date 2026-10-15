@@ -1,0 +1,51 @@
+version: 1
+sourceSha256: 6d532ca445f77abc88e6a7e5a1a0818fa3493f35c136c5a198da46046a5c2223
+nodes:
+  i3:
+    title: 説明文は発見条件
+    subtitle: SKILL.md の description は対象タスクと非対象の境界を書き、実プロンプトで誤起動・起動漏れを測る。
+  i4:
+    title: 依存グラフで連携
+    subtitle: 必要なスキルだけ選び、入出力と検証条件から依存を組み、独立段階だけ並列化する。
+  i5:
+    title: 同課題で段階比較
+    subtitle: スキルなし・単体・複数・構造化連携を同じ課題で比べ、品質に加え誤選択・トークン・時間も記録する。
+  s7:
+    title: 直列・分岐・並列・評価ループを使い分ける
+    subtitle: Anthropic は、固定された段階をつなぐ連鎖、入力に応じた振り分け、独立作業の並列化、中央役が下位作業を分解する方式、評価と修正を繰り返す方式を別々…
+  i11:
+    title: 特定の場合だけ必要な仕様・例・テンプレ…
+    subtitle: 特定の場合だけ必要な仕様・例・テンプレートは references/ や assets/ に置き、どの条件で読むかを本文から直接指定する。
+  s14:
+    title: 説明文をスキル選択のインターフェースとして…
+    subtitle: 仕様上、name と description は必須であり、説明文には何を行うかと、いつ使うかを含める [2]。多くのエージェントは最初に説明文だけを見て…
+  s15:
+    title: 手順の具体度を失敗コストに合わせる
+    subtitle: 複数の方法が許容され、文脈に応じた判断が必要なら、目的や判断材料を示してエージェントに選択の余地を残す。順序を誤るとデータを壊すなど、操作が壊れやすい場合…
+  s24:
+    title: スキル・サブエージェント・ワークフローの選…
+    subtitle: スキルは専門的な手順を現在のエージェントに与える。サブエージェントは別の指示・ツール範囲を持つ独立した作業者として委譲する仕組みで、必要に応じて並列調査や…
+  s25:
+    title: 過剰な合成が得とは限らない
+    subtitle: SkillsBench は86課題・11領域・7つのモデルとエージェント構成を評価し、厳選スキルが平均成功率を16.2ポイント上げた一方、84課題中16件…
+  i40:
+    title: '[1] Anthropic'
+    subtitle: '[1] Anthropic. “Skill authoring best practices.” https://platform.claude.com/…'
+  i41:
+    title: '[2] Agent Skills'
+    subtitle: '[2] Agent Skills. “Specification.” https://agentskills.io/specification'
+  i42:
+    title: '[3] OpenCode'
+    subtitle: '[3] OpenCode. “Agent Skills.” https://opencode.ai/docs/skills'
+  i44:
+    title: '[5] Anthropic'
+    subtitle: '[5] Anthropic. “Building effective agents.” 2024-12-19. https://www.anthropic…'
+  i47:
+    title: '[8] Hao Li et al'
+    subtitle: '[8] Hao Li et al. “Organizing, Orchestrating, and Benchmarking Agent Skills a…'
+  i48:
+    title: '[9] Agent Skills'
+    subtitle: '[9] Agent Skills. “Evaluating skill output quality.” https://agentskills.io/s…'
+  i49:
+    title: '[10] Agent Skills'
+    subtitle: '[10] Agent Skills. “Optimizing skill descriptions.” https://agentskills.io/sk…'
