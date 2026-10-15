@@ -65,5 +65,6 @@ metadata:
 
 ## Notes
 
+- `scripts/article-treemap/build_sidecar.ts` は機械バックフィル用。**2文目以降を subtitle にするだけ**で、要約の代わりにはならない。新規記事はこのスキルで書く。
 - 本文を直したあとは **必ず** マニフェストを再実行し、`sourceSha256` とノード id を揃え直す。
 - `@hskksk/markdoc-react` の treemap パーサと同じ id 規則に依存する。パッケージのメジャー変更時は sidecar を再生成する。

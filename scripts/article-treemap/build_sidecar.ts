@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
- * Build treemap.yml from index.mdoc using manifest heuristics (for backfill / CI-free batch).
- * Human-authored labels in article-treemap-labels skill are preferred for new articles.
+ * Mechanical backfill for treemap.yml (titles + non-opening subtitles).
+ * New articles should use the `article-treemap-labels` skill for real summaries.
  *
  *   pnpm exec tsx scripts/article-treemap/build_sidecar.ts content/docs/<slug>/index.mdoc
  */
@@ -36,40 +36,81 @@ function leafPath(path: string): string {
   return parts[parts.length - 1] ?? path;
 }
 
+function parentPath(path: string): string | undefined {
+  const parts = path.split(" > ");
+  if (parts.length < 2) return undefined;
+  return parts[parts.length - 2];
+}
+
 function clip(s: string, max: number): string {
   const t = s.replace(/\s+/g, " ").trim();
   if (t.length <= max) return t;
   return t.slice(0, max - 1) + "…";
 }
 
-function firstSentence(text: string): string {
-  const m = text.replace(/\s+/g, " ").match(/^(.+?[。！？])(?:\s|$)/);
-  if (m) return m[1].trim();
-  const line = text.split(/\n/)[0]?.trim() ?? text;
-  return clip(line, 80);
+function sentences(text: string): string[] {
+  return text
+    .replace(/\s+/g, " ")
+    .split(/(?<=[。！？])\s*/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+function looksLikeOpeningSnippet(title: string, excerpt: string): boolean {
+  const t = title.replace(/\s+/g, "").replace(/…$/g, "");
+  const e = excerpt.replace(/\s+/g, "");
+  if (!t || t.length < 8) return false;
+  return e.startsWith(t) || title.endsWith("…");
 }
 
 function suggestTitle(node: {
+  id: string;
   path: string;
   title: string;
   excerpt: string;
 }): string {
   const leaf = leafPath(node.path);
+  const parent = parentPath(node.path);
+
   if (/^\[\d+\]/.test(node.excerpt.trim())) {
     const cite = node.excerpt.trim().match(/^\[(\d+)\]\s*([^.”]+)/);
     if (cite) return clip(`[${cite[1]}] ${cite[2]}`, 22);
   }
+
+  if (node.excerpt.startsWith("[表]") || node.excerpt.startsWith("[コード")) {
+    return clip(leaf, 22);
+  }
+
+  if (looksLikeOpeningSnippet(node.title, node.excerpt) && parent) {
+    return clip(parent, 22);
+  }
+
   if (leaf.length <= 22 && !leaf.endsWith("…")) return leaf;
-  if (leaf.length <= 28) return clip(leaf, 22);
-  return clip(firstSentence(node.excerpt), 20);
+  if (parent && parent.length <= 22) return parent;
+
+  const sents = sentences(node.excerpt);
+  if (sents.length >= 2) return clip(sents[1], 20);
+
+  return clip(leaf, 20);
 }
 
-function suggestSubtitle(node: { excerpt: string; path: string }): string {
+/** Prefer 2nd+ sentences so the tile is not a duplicate of the auto first-line title. */
+function suggestSubtitle(node: { path: string; title: string; excerpt: string }): string {
   if (/^\[\d+\]/.test(node.excerpt.trim())) {
     return clip(node.excerpt.replace(/\s+/g, " ").trim(), 78);
   }
-  const sent = firstSentence(node.excerpt);
-  return clip(sent.length >= 24 ? sent : node.excerpt.replace(/\s+/g, " "), 78);
+
+  const sents = sentences(node.excerpt);
+  if (sents.length >= 2) {
+    return clip(sents.slice(1, 3).join(""), 78);
+  }
+
+  const parent = parentPath(node.path);
+  if (parent && looksLikeOpeningSnippet(node.title, node.excerpt)) {
+    return clip(`${parent}：${sents[0] ?? node.excerpt}`, 78);
+  }
+
+  return clip(sents[0] ?? node.excerpt, 78);
 }
 
 const nodes: Record<string, { title?: string; subtitle?: string }> = {};
@@ -78,14 +119,10 @@ for (const node of manifest.nodes) {
   if (!node.needsLabel) continue;
   const title = suggestTitle(node);
   const subtitle = suggestSubtitle(node);
-  const entry: { title?: string; subtitle?: string } = {};
-  if (title && title !== node.title.slice(0, title.length)) entry.title = title;
-  else if (title) entry.title = title;
-  if (subtitle && subtitle !== entry.title) entry.subtitle = subtitle;
-  if (!entry.title?.trim() && !entry.subtitle?.trim()) {
-    entry.subtitle = clip(node.excerpt, 78);
-  }
-  nodes[node.id] = entry;
+  nodes[node.id] = {
+    title: title.trim(),
+    subtitle: subtitle.trim(),
+  };
 }
 
 const sidecar = {
