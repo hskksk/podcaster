@@ -19,7 +19,7 @@ export function ArticleMinimapLayout(props: {
   const mobileMinimapShellRef = useRef<HTMLDivElement>(null);
   const treemapPanelRef = useRef<HTMLDivElement>(null);
   const treemapDesignWidth = useTreemapDesignWidth(mobileMinimapShellRef);
-  const [mobileMinimapCollapsed, setMobileMinimapCollapsed] = useState(false);
+  const [mobileMinimapCollapsed, setMobileMinimapCollapsed] = useState(true);
   const { resolved } = useTheme();
   const body = useMemo(() => parseFrontmatter(props.source).body, [props.source]);
   const sectionCount = useMemo(() => extractMinimapOutline(body).sections.length, [body]);
@@ -37,12 +37,14 @@ export function ArticleMinimapLayout(props: {
       const byId = root.querySelector(`#${CSS.escape(detail.id)}`);
       if (byId) {
         byId.scrollIntoView({ behavior: "smooth", block: "start" });
+        setMobileMinimapCollapsed(true);
         return;
       }
       const target = detail.title.trim();
       for (const heading of root.querySelectorAll(".markdoc-heading")) {
         if (heading.textContent?.trim() === target) {
           heading.scrollIntoView({ behavior: "smooth", block: "start" });
+          setMobileMinimapCollapsed(true);
           return;
         }
       }

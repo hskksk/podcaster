@@ -85,35 +85,49 @@ body {
 }
 
 @media (max-width: 720px) {
-  .article-minimap-layout .article-minimap-mobile {
-    order: -1;
+  .article-minimap-layout {
     display: flex;
     flex-direction: column;
     gap: 0;
   }
 
-  /* Sticky only the toggle — not the open panel (tall sticky boxes scroll their top off-screen). */
+  .article-minimap-layout .article-minimap-mobile {
+    order: -1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
   .article-minimap-mobile-toggle {
-    position: sticky;
-    top: 3.5rem;
-    z-index: 11;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
     width: 100%;
     margin: 0;
-    padding: 0.5rem 0.75rem;
+    padding: 0.625rem 0.75rem;
     border: 0;
     border-bottom: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
-    backdrop-filter: blur(8px);
+    background: var(--color-muted);
     color: var(--color-fg);
     font: inherit;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
     text-align: left;
+  }
+
+  .article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile {
+    margin-bottom: 0.75rem;
+    border-bottom: 0;
+  }
+
+  .article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile-toggle {
+    border-bottom: 0;
+    border-radius: var(--radius-card);
   }
 
   .article-minimap-mobile-toggle:focus-visible {
@@ -132,16 +146,21 @@ body {
   }
 
   .article-minimap-layout #article-minimap-panel {
-    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    width: 100%;
+    background: var(--color-bg);
   }
 
+  /* Open: full treemap height above the article (no viewport-clipped sticky frame). */
   .article-minimap-layout .markdoc-treemap-host.article-minimap {
-    max-height: min(60vh, 28rem);
-    min-height: 14rem;
+    max-height: none;
+    min-height: 0;
     border-radius: 0;
-    border-inline: 0;
-    border-bottom: 0;
-    -webkit-overflow-scrolling: touch;
+    border: 0;
+    overflow: visible;
+  }
+
+  .article-minimap-layout .markdoc-treemap-host.article-minimap .tm {
+    overflow: visible;
   }
 
   /* Treemap defaults to designWidth 760 and scales down; mobile shell width keeps scale at 1. */
