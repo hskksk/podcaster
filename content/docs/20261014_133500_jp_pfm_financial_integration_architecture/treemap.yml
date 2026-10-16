@@ -2,164 +2,164 @@ version: 1
 sourceSha256: 2ba31e25657cb5d0439d1359109d07138667e9c2ac7c03c5814230d5ca47829f
 nodes:
   i2:
-    title: 日本の Zaim・マネーフォワード ME など…
-    subtitle: 日本の Zaim・マネーフォワード ME などは、口座明細を集める「接続層」と、家計簿用に正規化する「アプリ層」を分け、接続層では公式 API とスクレイピング（画面代行取得）を金融機関ごとに併用する。
+    title: 接続層とアプリ層を分離する
+    subtitle: 日本の Zaim・マネーフォワード ME などは口座明細を集める接続層と家計簿正規化のアプリ層を分け、接続層で公式 API とスクレイピングを金融機関ごとに併用する典型形を示す。
   i3:
-    title: 銀行向け API 連携は OAuth 2.0 …
-    subtitle: 銀行向け API 連携は OAuth 2.0 系の認可で銀行発行トークンを使うため、PFM 側はログインパスワードを預からず、トークン更新と再認可の運用がアーキテクチャの中心になる。
+    title: 銀行 API はトークン運用が中心
+    subtitle: 銀行向け API 連携は OAuth 2.0 系認可で銀行発行トークンを使うため PFM はログインパスワードを預からず、トークン更新と再認可の運用がアーキテクチャの要になる。
   i4:
-    title: スクレイピング連携は暗号化した認証情報とブラウ…
-    subtitle: スクレイピング連携は暗号化した認証情報とブラウザ自動化で Web 明細を読む方式で、UI 変更・追加認証・取得不可期間への耐性が設計の難所になる。
+    title: スクレイピングは耐性が難所
+    subtitle: 暗号化した認証情報とブラウザ自動化で Web 明細を読む方式は、UI 変更・追加認証・取得不可期間への耐性が設計上のボトルネックとなり、接続層の状態管理が重くなる。
   i5:
-    title: Moneytree LINK や MoneyL…
-    subtitle: Moneytree LINK や MoneyLook のように、接続を B2B で束ねるアグリゲータを挟む構成では、PFM や会計 SaaS は単一の REST API と正規化済みスキーマだけを実装すればよい。
+    title: B2B アグリゲータで接続集約
+    subtitle: Moneytree LINK や MoneyLook のように接続を B2B で束ねる構成では、PFM や会計 SaaS は単一 REST API と正規化済みスキーマだけを実装すれば足りる。
   i6:
-    title: 2018 年改正銀行法に基づく電子決済等代行業…
+    title: 電代業登録が方式を規律する
     subtitle: 2018 年改正銀行法に基づく電子決済等代行業登録と金融機関との API／スクレイピング契約が、接続方式の選択肢と再委託の可否を決める法的フレームである。
   p60:
-    title: 複数の銀行・カード・証券口座を一つの家計簿に載…
-    subtitle: Zaim（くふう）やマネーフォワード ME は、利用者の同意のもとで各金融機関から入出金明細や残高を取り込み、カテゴリ分類やレポート用の内部データに変換する。
+    title: PFM の本体は集約処理
+    subtitle: 複数口座を一つの家計簿に載せる PFM は見た目はアプリだが裏側は金融データのアグリゲーションが本体で、Zaim や MF は同意の下で明細・残高を取り込み内部データへ変換する。
   p61:
-    title: 本レポートは、システム間連携部分——誰がどのプ…
-    subtitle: 対象は日本の消費者向け PFM（Zaim、マネーフォワード ME）と、同種の接続を B2B で提供する Moneytree LINK・MoneyLook。米欧の Plaid 型アグリゲータは比較の補助として触れる。各社…
+    title: 本稿は連携部分の論理像
+    subtitle: 誰がどのプロトコルで金融機関と話し認証をどこに置きいつ再取得するかを整理する。公開ドキュメントと業界標準から論理アーキテクチャを再構成し非公開実装は扱わない。
   p62:
-    title: 読者の前提は実務とする。
-    subtitle: HTTP API、OAuth、バッチジョブ、暗号化保存といった語は説明せず、電子決済等代行業や日本の銀行 API の特殊性は本文で足場を置く。
+    title: 読者は実務前提とする
+    subtitle: HTTP API、OAuth、バッチ、暗号化保存は説明しない。電子決済等代行業や日本の銀行 API の特殊性は本文で足場を置き、設計議論に直接入る想定の読者層を明示する。
   p63:
-    title: 金融機関との接続は、プロトコルと認証の組み合わ…
-    subtitle: 金融機関との接続は、プロトコルと認証の組み合わせで分類すると設計の議論が揃う。日本の PFM で実際に併用される方式を表にまとめる。
+    title: プロトコルと認証で分類
+    subtitle: 金融機関との接続はプロトコルと認証の組み合わせで分類すると設計の議論が揃う。日本の PFM で実際に併用される方式を一覧表の前提として先に示す。
   p64:
-    title: 表：方式認証の置き場所データ取得の実体主な長所…
-    subtitle: '[表] 方式認証の置き場所データ取得の実体主な長所主な短所銀行オープン API（参照系）銀行の認可画面で利用者が同意；PFM はアクセストークン等のみ保持銀行が公開した HTTPS API（残高・明細）パスワード非預か…'
+    title: 表（連携方式の四類型）
+    subtitle: 銀行オープン API、スクレイピング、ファイル手動取込、B2B アグリゲータ経由を、認証の置き場所・取得の実体・長所と短所の軸で横並びに比較する方式一覧表である。
   p65:
-    title: 銀行が公式 API を提供している場合、金融庁…
-    subtitle: カード会社・証券・ポイントサイトは API 整備が遅れがちで、PFM は長期間スクレイピングとファイル取込が残る。
+    title: 銀行は API 接続が前提
+    subtitle: 公式 API を提供する銀行では金融庁の整理によりスクレイピングのみは想定されず API が前提になる。カード・証券・ポイントは API 整備が遅くスクレイピングと手動取込が残る。
   p66:
-    title: 消費者向け PFM の連携部分は、次の四層に分…
-    subtitle: 消費者向け PFM の連携部分は、次の四層に分けて説明できる。各社の製品名は異なるが、責務の分割は似ている。
+    title: 連携は四層に分割できる
+    subtitle: 消費者向け PFM の連携部分はクライアント、アプリ・ドメイン、接続・オーケストレーション、外部の四層に分けて説明できる。製品名は異なるが責務分割は各社で似ている。
   p67:
-    title: 図（mermaid）
-    subtitle: '[コード:mermaid]'
+    title: 図（四層アーキテクチャ）
+    subtitle: モバイル／Web から家計簿 DB と連携ジョブへ至り、ボルトと金融機関アダプタが銀行 API・Web 明細・アグリゲータ API に伸びる四層構成を flowchart で示す。
   p68:
-    title: クライアントは連携登録の UI を提供する。
-    subtitle: API 方式ではアプリ内ブラウザやシステムブラウザで銀行の認可画面へ遷移し、利用者が銀行側でログイン・口座選択・同意を行う[2][5]。スクレイピング方式ではアプリ上で ID・パスワードを入力し、サーバへ送る[2]。
+    title: クライアントは登録 UI を担う
+    subtitle: API 方式はアプリ内ブラウザで銀行認可画面へ遷移し利用者が口座選択・同意する。スクレイピング方式はアプリで ID・パスワードを入力しサーバへ送る UI 差がある。
   p69:
-    title: 接続層が本題である。
-    subtitle: 金融機関ごとにアダプタ（コネクタ）を持ち、取得スケジュール、リトライ、レート制限、エラー分類を共通化する。マネーフォワードは取得データと銀行認証情報を別サーバに暗号化保存し、アクセスを制限していると公表している[2]。…
+    title: 接続層がアダプタの要
+    subtitle: 金融機関ごとにコネクタを持ち取得スケジュール・リトライ・レート制限・エラー分類を共通化する。MF は認証情報を別サーバ暗号化、Zaim は分離保管し API では ID 非保存と公表する。
   p70:
-    title: アプリ層は、取り込んだ明細を口座・取引エンティ…
-    subtitle: Moneytree LINK はここに近い正規化を接続層の手前で行い、クライアントには /link/v1/accounts や transactions など統一 JSON を返す[8][9]。
+    title: アプリ層は明細をマップ
+    subtitle: 取り込んだ明細を口座・取引エンティティにマッピングする層である。Moneytree LINK は手前で正規化し、クライアントへ accounts や transactions の統一 JSON を返す。
   p71:
-    title: 日本の参照系銀行 API は、OAuth 2.…
-    subtitle: 全銀協の電文仕様標準は残高照会・入出金明細照会などの項目の目安を定め、銀行は協議で拡張する[10]。FISC の API 接続先チェックリストは、接続事業者のセキュリティ審査の共通言語として使われる[11]。
+    title: 参照系 API は OAuth 基盤
+    subtitle: 日本の参照系銀行 API は OAuth 2.0 認可と銀行別エンドポイントの組み合わせが多い。全銀協電文仕様は項目の目安、FISC チェックリストは接続事業者審査の共通言語になる。
   p72:
-    title: 典型的な参照系フローは次のとおりである。
-    subtitle: 典型的な参照系フローは次のとおりである。
+    title: 参照系フローの導入文
+    subtitle: 典型的な参照系フローを次のシーケンス図で示す直前の一文であり、以降の OAuth コード交換と定期同期の図解への入口として読者を誘導する。
   p73:
-    title: '[コード:mermaid]'
-    subtitle: '[コード:mermaid]'
+    title: 図（参照系 OAuth シーケンス）
+    subtitle: 連携開始から銀行画面での同意、認可コードとトークン取得、Bearer による明細・残高照会の定期同期までを sequence 図で示す参照系 API の標準的な往復である。
   p74:
-    title: マネーフォワード ME とセブン銀行の公式連携…
-    subtitle: マネーフォワード クラウドの API 連携では、アクセス許可が30 日から 100 日で失効し、再認証が必要と案内されている[13]。この失効設計は、接続層にトークンライフサイクル管理（期限監視、利用者への再認可プロン…
+    title: トークン失効が運用を規定
+    subtitle: MF とセブン銀行連携は参照系 API と OAuth 2.0 基盤が明記される。クラウド API 許可は 30〜100 日で失効し、期限監視・再認可プロンプト・リフレッシュを接続層に必須とする。
   p75:
-    title: GMO あおぞら銀行の公開仕様書のように、スコ…
-    subtitle: PFM が扱うのは参照系が中心だが、会計 SaaS や MoneyLook BIZ は更新系 API や総合振込系に触れる製品もある。
+    title: 参照系と更新系スコープ分離
+    subtitle: GMO あおぞらのように private:account と corp:transfer で参照と更新が分かれる銀行もある。PFM は参照中心だが会計 SaaS や MoneyLook BIZ は振込系 API に触れる。
   p76:
-    title: 自社で数百金融機関と契約・実装するコストを避け…
-    subtitle: 自社で数百金融機関と契約・実装するコストを避けるため、PFM 以外の多くのフィンテックはアグリゲーション基盤を利用する。
+    title: 内製数百接続はコスト大
+    subtitle: 自社で数百金融機関と契約・実装するコストを避けるため、PFM 以外の多くのフィンテックはアグリゲーション基盤を利用し接続実装を外部製品へ寄せる選択を取る。
   p77:
-    title: Moneytree LINK は、ゲストユーザ…
-    subtitle: 認可は Authorization Code + PKCE が前提で、state は必須パラメータとされる[17][18]。金融機関側の API とスクレイピングの差異を LINK 内部で吸収し、クライアントは OAu…
+    title: Moneytree LINK の役割
+    subtitle: ゲストユーザー口座を継続取得し標準化 API で提供する基盤。認可は Authorization Code と PKCE、state 必須。FI 側 API とスクレイピング差を内部吸収しクライアントは OAuth と REST だけ実装する。
   p78:
-    title: MoneyLook（SBI 系）は法人向けに、…
-    subtitle: 「電子決済等代行業登録や個別銀行契約が不要」という売り文句は、接続責務が MoneyLook 側に集約されることを意味する[21]。
+    title: MoneyLook は法人向け束ね
+    subtitle: SBI 系 MoneyLook は銀行 API とスクレイピング契約を束ね ERP へ API または CSV で渡す。電代業登録や個別銀行契約不要の売りは接続責務が MoneyLook 側に集約される意味である。
   p79:
-    title: この構成の論理図は次のとおりである。
-    subtitle: この構成の論理図は次のとおりである。
+    title: アグリゲータ図の導入
+    subtitle: B2B アグリゲータを挟む構成の論理図を次に示す直前の一文で、以降の flowchart が自社サービスと統一 API・数百コネクタ・金融機関の関係を視覚化する。
   p80:
-    title: 図（mermaid）（2）
-    subtitle: '[コード:mermaid]'
+    title: 図（B2B アグリゲータ構成）
+    subtitle: 会計 SaaS や PFM が OAuth と REST で LINK に接続し、内部コネクタが銀行 API と Web 明細へ伸びる。自社は統一 API 境界だけを実装する論理構成を示す。
   p81:
-    title: Zaim は電子決済等代行業者として金融機関と…
-    subtitle: つまり Zaim 単体でも接続層を内製しているが、法的には再委託チェーンをアーキテクチャ図に描ける。
+    title: Zaim の再委託チェーン
+    subtitle: Zaim は電代業として API またはスクレイピング契約を公表し、再委託者への指導・契約・金融機関の停止権まで条文で示す。内製接続層でも法的に再委託チェーンを図示できる。
   p82:
-    title: 表：観点Zaimマネーフォワード ME / ク…
-    subtitle: '[表] 観点Zaimマネーフォワード ME / クラウドMoneytree LINKMoneyLook主な利用者個人家計簿個人 PF＋法人会計フィンテック開発者法人経理・業務システム接続の公開面銀行 API へ順次移行…'
+    title: 表（主要四社の接続比較）
+    subtitle: Zaim、マネーフォワード、Moneytree LINK、MoneyLook を主な利用者・接続の公開面・認証情報の扱い・開発者向け API の観点で横並びに整理した比較表である。
   p83:
-    title: マネーフォワード公式 note では、2018…
-    subtitle: マネーフォワード公式 note では、2018 年銀行法改正後に銀行口座は可能な限り API、スクレイピング継続には契約が必要になったことが、接続戦略の転換点として語られている[25]。
+    title: 2018 銀行法が戦略転換点
+    subtitle: MF 公式 note は銀行法改正後、銀行口座は可能な限り API へ、スクレイピング継続には契約が必要になった点を接続戦略の転換点として語っている。
   p84:
-    title: 接続層が金融機関から生データを受け取った後の処…
-    subtitle: 接続層が金融機関から生データを受け取った後の処理も、アーキテクチャの一部である。
+    title: 取得後処理もアーキの一部
+    subtitle: 接続層が金融機関から生データを受け取った後の増分・冪等・正規化・ジョブ運用もアーキテクチャの一部として扱い、家計簿表示の手前までのデータライフサイクルを完結させる。
   p85:
-    title: 連携開始日や最終取得日時を口座単位で保持し、照…
-    subtitle: 増分取得 — 連携開始日や最終取得日時を口座単位で保持し、照会可能期間の上限は金融機関依存とマネーフォワードが注意している[16]。遅れて連携すると過去明細が取り残される。
+    title: 増分取得と照会期間上限
+    subtitle: 連携開始日や最終取得日時を口座単位で保持し、照会可能期間の上限は金融機関依存と MF が注意する。遅れて連携すると過去明細が取り残される運用上のリスクがある。
   p86:
-    title: 同一明細の二重登録を防ぐため、金融機関側の取引…
-    subtitle: 冪等な取込 — 同一明細の二重登録を防ぐため、金融機関側の取引 ID、または日付・金額・摘要のハッシュでユニーク制約を張るのが一般的である。公開資料で実装名は確認できない。
+    title: 冪等取込で二重登録防止
+    subtitle: 同一明細の二重登録を防ぐため金融機関側取引 ID または日付・金額・摘要のハッシュでユニーク制約を張るのが一般的である。公開資料では具体実装名は確認できない。
   p87:
-    title: Moneytree は AI による支出仕訳で…
-    subtitle: 正規化 — Moneytree は AI による支出仕訳で明細を加工すると公表している[26]。PFM はカテゴリマスタとルールエンジンをアプリ層に置く。
+    title: 正規化とカテゴリエンジン
+    subtitle: Moneytree は AI 支出仕訳で明細を加工すると公表する。PFM はカテゴリマスタとルールエンジンをアプリ層に置き、接続層の生データを家計簿表示用に変換する。
   p88:
-    title: 個人向けは夜間バッチと手動「更新」ボタンの併用…
-    subtitle: ジョブ運用 — 個人向けは夜間バッチと手動「更新」ボタンの併用が多い。障害時は口座状態を error / auth_required のように表面化し、サポート FAQ と一致させる。
+    title: ジョブ運用と口座状態表示
+    subtitle: 個人向けは夜間バッチと手動更新ボタンの併用が多い。障害時は口座を error や auth_required として表面化し、サポート FAQ と UI 表示を一致させる。
   p89:
-    title: 接続アーキテクチャは技術だけで完結しない。
-    subtitle: 銀行法上の電子決済等代行業登録、金融機関との API 利用契約、再委託の連鎖接続通知が、どのコネクタを本番に載せられるかを決める[4][27]。
+    title: 技術だけでは完結しない
+    subtitle: 電代業登録、金融機関との API 利用契約、再委託の連鎖接続通知が、どのコネクタを本番に載せられるかを決める。接続アーキテクチャは法と契約と一体で設計する。
   p90:
-    title: フジタ総合法律事務所の整理では、API 方式は…
-    subtitle: 三井住友信託銀行の公表契約例では、再委託先への情報提供時に同等の安全管理義務と金融機関の停止権が明記される[28]。
+    title: API とスクレイピングの法分類
+    subtitle: フジタ法律事務所は API を銀行同意とトークン、スクレイピングを電代業者が認証を預かるレガシー認証と整理する。三井住友信託の契約例は再委託先の安全管理義務と停止権を明記する。
   p91:
-    title: SBI ビジネス・ソリューションズは、再委託で…
-    subtitle: これは、PFM が接続を外部 SaaS に丸ごと委ねるときのサプライチェーンリスクとして設計レビューに入れるべき項目である。
+    title: 再委託のサプライチェーンリスク
+    subtitle: SBI ビジネス・ソリューションズは再委託 API 接続で金融機関が不適切と判断すれば停止を求められる旨を公表する。外部 SaaS に接続を委ねる際の設計レビュー項目となる。
   ch19:
-    title: 米国では Plaid 型の commercia…
-    subtitle: 銀行側ネットワーク（Akoya など）は credential を共有しない API 100% を掲げる動きもある[30]。日本は全銀フォーマットベースの銀行ごと仕様と FISC チェックリストが中心で、EU の PS…
+    title: 米欧アグリゲータと日本の差
+    subtitle: 米国では Plaid 型が OAuth とスクレイピング fallback を組み合わせ、Akoya は credential 非共有 API を掲げる。日本は全銀ベースの銀行別仕様と FISC が中心で PSD2 級の単一規格には至らない。
   i21:
-    title: 銀行 API の標準化が進んだとき、PFM 内…
-    subtitle: 全銀協の電文仕様は目安に留まり、銀行ごとの拡張が残るため[10]、アダプタ削減の経済性は銀行単位の保守コスト試算が要る。
+    title: 内製コネクタ共通化の経済性
+    subtitle: 銀行 API 標準化が進んでも全銀協電文は目安に留まり銀行ごと拡張が残る。PFM 内製コネクタをどこまで共通ライブラリに統合できるかは銀行単位の保守コスト試算が要る。
   i22:
-    title: スクレイピング依存口座を、追加認証多発の環境で…
-    subtitle: 人手再取得を前提にするか、利用者へのプッシュ通知で都度認証させるかで、接続層の状態機械と UX が変わる[16]。
+    title: 追加認証下の自動化限界
+    subtitle: スクレイピング依存口座を追加認証多発環境でどこまで自動化するか。人手再取得を前提にするかプッシュで都度認証させるかで、接続層の状態機械と UX が変わる。
   i23:
-    title: B2B アグリゲータ依存と内製接続の境界を、ど…
-    subtitle: 契約・再委託・データ二次利用条項の違いが、マルチテナント SaaS のコンプライアンス境界を決める[4][21]。
+    title: アグリゲータと内製の境界
+    subtitle: B2B アグリゲータ依存と内製接続の境界をどの製品フェーズで引くか。契約・再委託・データ二次利用条項の違いがマルチテナント SaaS のコンプライアンス境界を決める。
   ch24:
-    title: Zaim やマネーフォワードがユーザーに見せる…
-    subtitle: 銀行は API と OAuth へ移行しつつ、カード・証券・レガシー Web はスクレイピングと手動ファイルが残る。Moneytree LINK や MoneyLook はその接続層を製品化し、自社サービスは統一 AP…
+    title: 接続層中心の設計要点
+    subtitle: 家計簿の背後にはアダプタ群・認証保管・同期オーケストレータがある。銀行は API へ移行しつつレガシー Web はスクレイピングが残り、方式ごとの認証と失効と法制度がコネクタを規律する。
   i27:
-    title: マネーフォワード ME サポート「金融機関のデ…
-    subtitle: マネーフォワード ME サポート「金融機関のデータ管理とログイン情報はどうなっていますか」 https://support.me.moneyforward.com/hc/ja/articles/900004397063
+    title: 出典［2］MF データ管理 FAQ
+    subtitle: マネーフォワード ME サポートが公表する金融機関データとログイン情報の保管方針。API とスクレイピングで認証情報の置き場と暗号化の扱いがどう分かれるかを示す。
   i28:
-    title: Moneytree「APIとスクレイピングとは…
-    subtitle: Moneytree「APIとスクレイピングとは」LINK Blog https://getmoneytree.com/link-blog-article-jp/what-is-api-and-scraping
+    title: 出典［3］API とスクレイピング解説
+    subtitle: Moneytree LINK Blog が API 接続とスクレイピングの違いを整理した記事。金融庁整理と併せて銀行向け接続方式の前提知識として本文で参照される。
   i30:
-    title: マネーフォワード ME サポート「金融関連サー…
-    subtitle: マネーフォワード ME サポート「金融関連サービス口座の登録方法」 https://support.me.moneyforward.com/hc/ja/articles/13480029279897
+    title: 出典［5］MF 口座登録手順
+    subtitle: マネーフォワード ME サポートの金融関連サービス口座登録方法。アプリ内ブラウザで銀行認可画面へ遷移する API 連携 UI の具体手順を裏付ける公開ドキュメントである。
   i32:
-    title: Zaim FAQ「API に対応している連携先…
-    subtitle: Zaim FAQ「API に対応している連携先が知りたい」 https://content.zaim.net/questions/show/961
+    title: 出典［7］Zaim API 対応先 FAQ
+    subtitle: Zaim FAQ が API 対応連携先一覧を維持する公式回答。銀行 API への順次移行と対応先リスト更新が接続層の公開面としてどう運用されるかを示す。
   i33:
-    title: Moneytree LINK Docs「製品・…
-    subtitle: Moneytree LINK Docs「製品・技術概要」 https://docs.link.getmoneytree.com/docs/product-and-tech-overview
+    title: 出典［8］LINK 製品技術概要
+    subtitle: Moneytree LINK Docs の製品・技術概要。ゲストユーザー口座の継続取得と標準化 API 提供という B2B アグリゲータ基盤の論理像を技術文書で説明する。
   i34:
-    title: Moneytree「LINK API」製品ペー…
-    subtitle: Moneytree「LINK API」製品ページ https://getmoneytree.com/jp/link/link-api
+    title: 出典［9］LINK API 製品ページ
+    subtitle: Moneytree の LINK API 製品ページ。統一 REST と正規化データ提供、仕訳精度などクライアントが実装すべき境界の外側に何があるかを製品観点で示す。
   i35:
-    title: 全国銀行協会「銀行分野のオープンAPIに係る電…
-    subtitle: 全国銀行協会「銀行分野のオープンAPIに係る電文仕様標準について（第2版）」PDF https://www.zenginkyo.or.jp/fileadmin/res/news/news301227_3.pdf
+    title: 出典［10］全銀協電文仕様標準
+    subtitle: 全国銀行協会のオープン API 電文仕様標準第 2 版 PDF。残高照会・入出金明細照会などの項目目安を定め、銀行ごと拡張が残る標準化の実態を示す。
   i36:
-    title: FISC「API接続先チェックリスト」2025…
-    subtitle: FISC「API接続先チェックリスト」2025年12月版 PDF https://www.fisc.or.jp/document/fintech/file/API_Checklist_202512.pdf
+    title: 出典［11］FISC API チェックリスト
+    subtitle: FISC の API 接続先チェックリスト 2025 年 12 月版。接続事業者のセキュリティ審査の共通言語として本文の銀行 API 連携章で参照される公式資料である。
   i37:
-    title: PRTIMES「マネーフォワード、セブン銀行提…
-    subtitle: PRTIMES「マネーフォワード、セブン銀行提供の個人向け参照系APIとの公式連携を開始」 https://prtimes.jp/main/html/rd/p/000000306.000008962.html
+    title: 出典［12］MF×セブン銀行連携
+    subtitle: PRTIMES のマネーフォワードとセブン銀行個人向け参照系 API 公式連携開始リリース。OAuth 2.0 準拠認証と参照系 API の実例としてトークン運用章を裏付ける。
   i38:
-    title: マネーフォワード クラウドサポート「API連携…
-    subtitle: マネーフォワード クラウドサポート「API連携のメリット」 https://biz.moneyforward.com/support/account/faq/specificinformation/sp06.html
+    title: 出典［13］MF クラウド API 期限
+    subtitle: マネーフォワード クラウドサポートの API 連携メリット FAQ。アクセス許可が 30 日から 100 日で失効し再認証が必要と案内する一次情報で失効設計の根拠となる。
   more92:
-    title: GMOあおぞらネット銀行「オープンAPI仕様書…
-    subtitle: GMOあおぞらネット銀行「オープンAPI仕様書 法人口座編」PDF https://gmo-aozora.com/bu… GitHub hirano00o/acctf マネーフォワード クラウドサポート「データ連携機能…
+    title: 出典ほか 18 件まとめ
+    subtitle: GMO あおぞら API 仕様、Playwright CSV 取得例、LINK OAuth 文書、MoneyLook 各種、銀行契約条文例、Open Banking 解説など脚注残りの参照群を一タイルに集約する。
 links:
   - from: ch1
     to: ch7
@@ -205,25 +205,15 @@ links:
     type: seq
   - from: i3
     to: i4
-    type: seq
+    type: contrast
+    label: 方式対比
   - from: i4
     to: i5
     type: seq
   - from: i5
     to: i6
-    type: seq
-  - from: p60
-    to: p61
-    type: seq
-  - from: p61
-    to: p62
-    type: seq
-  - from: p63
-    to: p64
-    type: seq
-  - from: p64
-    to: p65
-    type: seq
+    type: cause
+    label: 法制度
   - from: p66
     to: p67
     type: seq
@@ -237,31 +227,46 @@ links:
     to: p70
     type: seq
   - from: p71
-    to: p72
-    type: seq
-  - from: p72
     to: p73
-    type: seq
-  - from: p73
-    to: p74
-    type: seq
+    type: evidence
+    label: フロー図
   - from: p74
     to: p75
+    type: contrast
+    label: 参照と更新
+  - from: p76
+    to: p77
+    type: apply
+  - from: p77
+    to: p78
+    type: contrast
+    label: LINKとML
+  - from: p89
+    to: p90
+    type: evidence
+  - from: p90
+    to: p91
     type: seq
-  - from: i12
-    to: i13
+  - from: i21
+    to: i22
     type: seq
+  - from: i22
+    to: i23
+    type: seq
+  - from: ch18
+    to: ch24
+    type: end
 chapterFlow:
-  - → 概要
-  - → 連携方式の分類軸
-  - → 論理アーキテクチャの全体像
-  - → 銀行 API 連携のフロー
-  - → スクレイピング連携のフローと実装パターン
-  - → B2B アグリゲータを挟む構成
-  - → 主要プレイヤーごとの位置づけ
-  - → データ同期・正規化・運用
-  - → 規制と契約がインフラ形を決める
-  - → グローバルとの対比（参考）
-  - → 次に解くべき3つの問い
-  - → まとめ
-  - '→ 付録: 出典一覧'
+  - 概要へ下り、連携の論点を具体化
+  - 方式分類の表で議論の軸を揃える
+  - 四層モデルで全体像を固定する
+  - 銀行 API と OAuth の典型フロー
+  - スクレイピング実装と追加認証の壁
+  - B2B アグリゲータで接続を製品化
+  - 主要プレイヤーの接続姿勢を比較
+  - 同期・正規化・ジョブの運用設計
+  - 規制と契約が載せ方を決める
+  - 米欧モデルとの対比（参考）
+  - 残る設計上の三つの問い
+  - 接続層中心の要点を総括
+  - 脚注・出典一覧へ
