@@ -1,0 +1,237 @@
+version: 1
+sourceSha256: 9d347ee46b75a47a20b1088ceb096f7647412183f65573792dbdea105ad6c74a
+nodes:
+  p86:
+    title: 三つの型に収束する使用場面
+    subtitle: Jevは文章を生成せずChoice・Score・Noulの型つき答えだけを返す判断モデルで、具体例を横断するとサポート振り分け・RAG絞り込み・生成出力検証の三型にほぼ収束する。
+  p87:
+    title: 実例一覧で預ける判断を掴む
+    subtitle: 公式資料と日本語実測を横断し入力と応答の対応を一覧化する。目的は機能説明ではなく「何をJevに預け何をコードに残すか」を実例で掴むこと。数字は公開直後の小規模実測として読む。
+  p88:
+    title: 九月の公式資料と実測まで
+    subtitle: 調査は2026年9月15〜26日の一次資料と解説・実測記事に限定する。料金や応答時間は出典時点の値とし、SDK導入やエージェントスキルは本文外で付録に要点のみ置く。
+  p89:
+    title: 入力応答の全体像を示す図
+    subtitle: 問い・stateとquestionsの軸・三つの分かったこと・答え・調査範囲と扱わない枝を示す全体像。型選択から並列質問とコード境界へ至る読み筋を一枚のmermaid図にまとめている。
+  p90:
+    title: 全体像に沿った本文の流れ
+    subtitle: 分かったこと1から2への連鎖と、分かったこと3が答えの成立範囲を横から狭める構造を示したあと、入力応答対応表・束ねパターン・向き不向き・しきい値設計の順で本文を追う。
+  p91:
+    title: 生成出力のパースが結合点
+    subtitle: LLM主流は文章出力を呼び出し側がパースする。Diogo Almeidaはソフトウェア向け出力でパースが壊れやすい点を結合点とみなし、文章生成の最適化は自動化と相性が悪いと診断する。
+  p92:
+    title: 非公開開発からの早期公開
+    subtitle: TypeSafeは約二年の非公開開発の末2026年9月15日にJevをSystem One第一弾として公開。名前はカーネマンのSystem1/2とジェヴォンスの石炭パラドックス（知能コスト低下で用途が増える）に由来する。
+  p93:
+    title: 事前定義出力と桁違い効率
+    subtitle: JSON拘束でも形が崩れる生成系と対し、Jevは選択肢・段階・真偽を事前定義し確率つきで返す。生成を捨てたことで公式申告では同判断で速度・費用がそれぞれ二桁改善した。
+  s5:
+    title: リクエスト最小構成二部品
+    subtitle: 入力はstate（判断材料）とquestions（型つき質問辞書）のみ。POSTで質問IDごとに型つき答えが並ぶ。返金Noul一問の最短例では数値がそのままif分岐に直結しパース不要である。
+  s6:
+    title: 三型の問いと返り値一覧表
+    subtitle: Choiceは候補選択と確率・confidence（最大255候補）。Scoreは2〜10段の加重平均と各段確率。Noulは真偽確率のみでconfidenceは付かない。Scoreは段間の小数となり閾値設計が要る。
+  s8:
+    title: 束ねる五つの定型パターン
+    subtitle: 同一stateに質問を並べれば独立並列評価される。fan-out・confidence gate・composite・カスケード検証・rerankingの五パターンが公式と実装報告で形として定まっている。
+  s11:
+    title: Score寸法とコード側重み
+    subtitle: 評価を一問に押し込まず寸法ごとにScoreを分け、コードで重み付け合算する。候補者例は重み0.40/0.25/0.35。段階数差を抑えるため段階数マイナス1で正規化してから足す。
+  s14:
+    title: 実務場面ごとの型成果一覧
+    subtitle: 問い合わせ可否NoulでAUC0.984、RAG断片絞り込み、CLERC引用照合、LLM引用Choice、安全ゲート、請求異常、ゲーム操作、Wikipediaリンクなど実装報告の場面・型・応答を表で横断する。
+  i17:
+    title: 翻訳時表記揺れで誤判増加
+    subtitle: 向かない判断の一例として、PAWS-Xで英文を日本語に訳したデータでは同語のひらがな表記揺れ（ネジロベル／ナジロベル）が誤判を増やした。公式が挙げるぎざぎざの一部が日本語実測でも現れた。
+  i22:
+    title: 四十八回呼び出しの一致率
+    subtitle: 日本語問い合わせ16文×3回の48呼び出しで担当部署と返金要求は全一致、緊急度は45一致。応答時間中央値286ミリ秒で、短文分類が実用域で動いた日本語実測の代表例である。
+  i23:
+    title: 返金不要文と引用例の区別
+    subtitle: 同一48回で返金Noulは否定文・FAQ引用例・完了報告を低確率（0.02〜0.04）で区別した。返金不要・非要求・完了済みのニュアンスが数値として分かれ、if分岐に直結する典型である。
+  i26:
+    title: 言い換え判定の十二点低下
+    subtitle: 約2.8万リクエスト検証では意図分類・含意判定は日英で有意差なし一方、PAWS-X言い換えは日本語が英語より12ポイント低く（70.2％対82.6％）、翻訳表記揺れが一因とされる。
+  i27:
+    title: 追記攻撃での日本語誤分類
+    subtitle: 入力に攻撃文を追記して分類を歪める構成では日本語23.2％・英語9.0％の誤分類が起き、入力文が短いほど追記の影響が大きい。プロンプト注入耐性は運用設計の前提になる。
+  i28:
+    title: 日英同応答・部署信頼低下
+    subtitle: 三問同時の例では怒り度と緊急性は日英で同じ応答だが、担当部署のconfidenceは日本語で0.36まで落ち、英語0.54より分布が尖りにくい。しきい値設計の材料として読む。
+  i29:
+    title: 日英四十件試行と段階ずれ
+    subtitle: 店舗運営者の公開報告では日本語指示40件・英語39件が正解し、三回試行のうち急ぐべきかのScore段階が一問だけ期待とずれた。定義の曖昧さが段階Scoreに効く例である。
+  s30:
+    title: 信頼低下もしきい値で補う
+    subtitle: confidenceが落ちる場面でもしきい値設計で自動と人手の割合を調整できる。日本語50問で0.6なら94％、MASSIVEで0.9以上採用なら93.9％・自動72.2％などの報告がある。
+  s32:
+    title: 信頼度は確率分布の尖り度
+    subtitle: confidenceはChoice/Scoreの分布集中度であり「90％正しい」意味ではない。Noulは確率自体が不確かさの指標でconfidenceは付かない。真偽は両側閾値で中央を人手に回す設計が推奨される。
+  i35:
+    title: 信頼零点九以上の採用効果
+    subtitle: confidence0.9以上だけ採用し残りを人手に回すと、採用分の正解率94〜96％・自動化率72〜77％という結果が複数のデータセットで再現した実測読みである。
+  i36:
+    title: 下振れ回答の誤答率三成超
+    subtitle: 閾値を下回った回答の誤答率は36〜52％に達し、全エラーの67〜78％が低信頼の約三割に集中する。難案例がこの帯に集まるため、人手側の負担設計を先に考えておくべきである。
+  i41:
+    title: まとめとして五パターン列挙
+    subtitle: fan-out・confidence gate・composite・カスケード検証・rerankingの五パターンが定着していることを、具体例から拾える八項目の一つとして本文末で再掲する。
+  i43:
+    title: 実用例を五類型へ集約する
+    subtitle: 問い合わせ自動分類・RAG事前絞り込み・生成結果検証・エージェント安全ゲート・操作判断の五つに、公開された実用例が集約できるとまとめの項目で述べる。入力応答の型選びの指針になる。
+  i44:
+    title: 日本語は揺れと短文に弱い
+    subtitle: 分類の実測は実用同等な一方、表記揺れや短文文脈ではずれが確認され、しきい値調整が前提になる点を八項目の日本語項として読者に残す。運用では判定の踏み込み方を抑える。
+  i47:
+    title: "[1] System One発表"
+    subtitle: Diogo Almeida／TypeSafe AI「Introducing System One Models & Jev」（2026-09-15）。Jev公開とSystem One構想の公式ブログ出典。
+  i48:
+    title: "[2] 公式APIドキュメント"
+    subtitle: TypeSafe AI公式ドキュメント（Quickstart／API／Primitives）（2026-09）。state・questionsと三型のAPI仕様の一次参照。
+  i50:
+    title: "[4] jaggedness文書"
+    subtitle: TypeSafe公式jev-1.13 jaggedness（モデルのぎざぎざ）。苦手九モードと数値・日付・数え上げをコード側に置く推奨を述べる一次ドキュメントの出典。
+  i51:
+    title: "[5] Noulの定義解説"
+    subtitle: Sanity「What is a Noul in the Jev API?」。Noulの読み方とChoice/Scoreとの違い、confidenceが付かない理由を補う用語解説の出典。
+  i53:
+    title: "[7] 日本語48回試行"
+    subtitle: Zenn acrosstudioblog「文章を生成しないAI Jevを日本語で48回試した」（2026-09-18）。一致率・返金区別・286msの実測記事。
+  i56:
+    title: "[10] Jev解説記事"
+    subtitle: Neil Agarwal／Refix「What is Jev? TypeSafe AI explained」（2026-09-18）。反復呼び出しで部署選択が崩れる例などの解説。
+  i57:
+    title: "[11] 二点八万リクエスト"
+    subtitle: Zenn biscuit「Jev実効性能検証レポート（約2.8万リクエスト）」（2026-09-19）。日英差・PAWS-X・攻撃文・confidence帯の大規模実測。
+  i58:
+    title: "[12] confidenceゲート"
+    subtitle: Learn Jev「confidence gating and thresholds」（2026-09）。行動ごとに壁を変えるしきい値設計のチュートリアル出典。
+  i59:
+    title: "[13] 検証カスケード"
+    subtitle: OpenRouter「Cut LLM Cost with a Jev-Verified Cascade」（2026-09）。下書き検証から上位モデルへ回すカスケードの料理書き。
+  more94:
+    title: 一覧に載せず束ねた出典群
+    subtitle: fan-outチュートリアル、Spring AIデモ、RAG本番、日本語ボット実測、Toolbox、岡田note、Zenn入門、AppTime導入など本文引用の残り出典を一タイルにまとめた。
+  i81:
+    title: 料金とレート制限の経路差
+    subtitle: 0.042ドル／百万トークン等の数字は複数資料で一致するが早期アクセス中でVercel・OpenRouter・Cloudflare等経路により表記と課金実体が異なる。本稿は動作例説明に限定した未確認枝。
+  i82:
+    title: モデル学習データは未確認
+    subtitle: RLCD訓練の名前と概要は公式発表にあるが、重みの公開や学習データ構成の詳細は本稿では確認していない。モデル内部は付録の未確認点として扱い、仕様判断には使わない。
+  i83:
+    title: 日本語の大規模実測は稀少
+    subtitle: 日本語実測はZenn biscuitの約2.8万件以外は数百件規模が多い。業種語や長文での差を確かめるには自社データでの検証が前提となる。公開値だけでは一般化しない。
+  i84:
+    title: リアルタイム課金数値の変動
+    subtitle: 実測は一週間程度の桁で動き、無償枠や初回登録ユーザー向け待遇も変わり得る。リアルタイム課金の実務数値については安定性や継続性を断定せず、各出典時点の値として読む。
+  ch85:
+    title: JSON出力と隣接手法の群
+    subtitle: 本稿の例は出力形を事前決定して選ばせる同一構造に収まる。JSON schema拘束やDSPy等は隣接手法であり、生成・算術・日付比較は別ツールか明示的なfallback前提とする。
+links:
+  - from: ch1
+    to: ch2
+    type: flow
+  - from: ch2
+    to: ch3
+    type: flow
+  - from: ch3
+    to: ch4
+    type: flow
+  - from: ch4
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch13
+    type: flow
+  - from: ch13
+    to: ch20
+    type: flow
+  - from: ch20
+    to: ch31
+    type: flow
+  - from: ch31
+    to: ch37
+    type: flow
+  - from: ch37
+    to: ch46
+    type: end
+  - from: p86
+    to: p87
+    type: seq
+  - from: p87
+    to: p88
+    type: seq
+  - from: p89
+    to: p90
+    type: seq
+  - from: p91
+    to: p92
+    type: seq
+  - from: p92
+    to: p93
+    type: cause
+    label: 設計思想
+  - from: p93
+    to: s5
+    type: apply
+    label: APIへ
+  - from: s5
+    to: s6
+    type: evidence
+  - from: s6
+    to: s8
+    type: apply
+  - from: s8
+    to: s11
+    type: seq
+  - from: s14
+    to: i17
+    type: contrast
+    label: 不向き
+  - from: i22
+    to: i26
+    type: contrast
+    label: ずれ
+  - from: i26
+    to: s30
+    type: rec
+    label: しきい値
+  - from: s32
+    to: i35
+    type: evidence
+  - from: i35
+    to: i36
+    type: contrast
+  - from: ch31
+    to: ch37
+    type: end
+  - from: i41
+    to: i43
+    type: seq
+  - from: i44
+    to: ch80
+    type: ref
+  - from: ch80
+    to: ch85
+    type: flow
+  - from: ch3
+    to: p91
+    type: cause
+  - from: s11
+    to: s12
+    type: seq
+  - from: i23
+    to: i22
+    type: evidence
+chapterFlow:
+  - → 三型に収束する使用場面と調査の目的
+  - → 入力応答の全体像（図）
+  - → System Oneとして分離された背景
+  - → state・questionsと三つの質問型
+  - → 複数質問を束ねる五パターン
+  - → 実務例と向き不向き
+  - → 日本語実測の成功とずれ
+  - → confidenceの読み方としきい値
+  - → 八項目のまとめ
+  - → 出典一覧
+  - → 未確認の枝と隣接手法

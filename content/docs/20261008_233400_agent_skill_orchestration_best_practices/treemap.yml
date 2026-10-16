@@ -1,0 +1,138 @@
+version: 1
+sourceSha256: 6d532ca445f77abc88e6a7e5a1a0818fa3493f35c136c5a198da46046a5c2223
+nodes:
+  i3:
+    title: 説明文は発見条件
+    subtitle: description は対象タスクと対象外の境界を書き、実プロンプトで誤起動と起動漏れを測る。ルーティング用のインターフェースとして扱う。
+  i4:
+    title: 依存グラフで連携
+    subtitle: 必要なスキルだけ選び、各段の入出力と検証から依存を組む。依存のない段だけ並列化し、受け渡し前に検査する。
+  i5:
+    title: 四段階で効果比較
+    subtitle: スキルなし・単体・複数フラット・構造化連携を同課題で比べ、品質に加え誤選択・トークン・時間も記録してオーケストレーションの効果を切り分ける。
+  s7:
+    title: 五つの連携パターン
+    subtitle: 直列・条件分岐・並列・オーケストレーター＋ワーカー・評価反復を依存関係から選ぶ。表で向く状況と、早い段の誤り伝播や統合コストなどの注意を整理する。
+  i11:
+    title: 条件付き詳細は references
+    subtitle: 常に要る指示は SKILL.md に、場合依存の仕様・例・テンプレートは references/ や assets/ に置き、本文からいつ読むか明示する。
+  s14:
+    title: description はルーティング API
+    subtitle: name/description は必須で、エージェントは説明文だけで本文を読むか決める。具体語と対象外の近接依頼を書き、肯定・否定例でトリガーを評価する。
+  s15:
+    title: 具体度は失敗コスト次第
+    subtitle: 壊れやすい操作はコマンド・順序・確認ゲートを固定し、柔軟な判断が要る場面は目的と材料を渡す。入力・出力・検証・失敗時を手順に含める。
+  s24:
+    title: スキル・委譲・WF の使い分け
+    subtitle: スキルは手順、サブエージェントは別コンテキストの委譲、コード WF は決定的な順序。最終統合の責任者を一つにし、書き込み競合を避ける。
+  s25:
+    title: スキル追加は万能ではない
+    subtitle: SkillsBench は厳選スキルで平均向上も悪化例あり。AgentSkillOS は DAG 連携がフラット提示より有利とするが、課題依存なので選択と依存全体を測る。
+  i40:
+    title: '[1] Anthropic ベストプラクティス'
+    subtitle: Skill authoring best practices。スキル本文の分量、説明文、手順の書き方など作成指針の一次資料。
+  i41:
+    title: '[2] Agent Skills 仕様'
+    subtitle: SKILL.md のメタデータと本文、参照資産の形式を定める Agent Skills 仕様書。
+  i42:
+    title: '[3] OpenCode の Skills'
+    subtitle: OpenCode でスキルをロード・利用する方法とクライアント側の前提。
+  i44:
+    title: '[5] 効果的なエージェント'
+    subtitle: Anthropic のエージェント設計パターン（連鎖・分岐・並列・評価ループ等）の解説。
+  i47:
+    title: '[8] AgentSkillOS / DAG'
+    subtitle: スキル群の整理・オーケストレーション・ベンチマーク。DAG 実行がフラット提示より高評価だった報告。
+  i48:
+    title: '[9] スキル出力の評価'
+    subtitle: スキルありとなしで成果物を比較し、形式や件数をスクリプト検証する評価手順。
+  i49:
+    title: '[10] description 最適化'
+    subtitle: 説明文の改善と、近接対象外クエリを含むトリガー評価のガイド。
+links:
+  - from: ch1
+    to: ch6
+    type: flow
+  - from: ch6
+    to: ch8
+    type: flow
+  - from: ch8
+    to: ch16
+    type: flow
+  - from: ch16
+    to: ch26
+    type: flow
+  - from: ch26
+    to: ch31
+    type: flow
+  - from: ch31
+    to: ch39
+    type: flow
+  - from: i3
+    to: i4
+    type: seq
+  - from: i4
+    to: i5
+    type: seq
+  - from: i5
+    to: ch6
+    type: rec
+    label: 評価設計
+  - from: ch6
+    to: s7
+    type: apply
+    label: パターン選択
+  - from: s7
+    to: ch8
+    type: seq
+  - from: ch8
+    to: s14
+    type: seq
+  - from: i11
+    to: s14
+    type: seq
+  - from: s14
+    to: s15
+    type: seq
+  - from: s15
+    to: ch16
+    type: seq
+  - from: ch16
+    to: s24
+    type: apply
+  - from: s24
+    to: s25
+    type: contrast
+    label: 過剰合成
+  - from: s25
+    to: ch26
+    type: cause
+    label: 測定の必要性
+  - from: ch26
+    to: ch31
+    type: rec
+  - from: i40
+    to: s14
+    type: evidence
+  - from: i41
+    to: i11
+    type: ref
+  - from: i44
+    to: s7
+    type: evidence
+  - from: i47
+    to: s25
+    type: evidence
+  - from: i48
+    to: ch26
+    type: ref
+  - from: i49
+    to: i3
+    type: ref
+chapterFlow:
+  - → スキルとオーケストレーターの分担
+  - → 合成しやすいスキルの設計
+  - → 複数スキルの連携と DAG
+  - → 評価と改善の手順
+  - → 実務チェックリスト
+  - → 出典一覧

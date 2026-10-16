@@ -7,8 +7,12 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { flattenTreemapNodes, parseTreemapDocument } from "@hskksk/markdoc-react";
+import {
+  flattenTreemapNodes,
+  parseTreemapDocument,
+} from "@hskksk/markdoc-react";
 import { parseFrontmatter } from "../lib/mdoc.ts";
+import { TREEMAP_LINK_TYPE_GUIDE } from "./link-types.ts";
 import { nodeNeedsLabel } from "./shared.ts";
 
 const mdocPath = process.argv[2];
@@ -44,6 +48,10 @@ const payload = {
   sourceSha256,
   nodeCount: nodes.length,
   needsLabelCount: nodes.filter((n) => n.needsLabel).length,
+  orderedNodeIds: flat.map(({ node }) => node.id),
+  chapters: doc.chapters.map((ch) => ({ id: ch.id, title: ch.title })),
+  explicitLinks: doc.explicitLinks ?? [],
+  linkTypes: TREEMAP_LINK_TYPE_GUIDE,
   nodes,
 };
 

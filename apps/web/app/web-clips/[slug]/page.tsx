@@ -12,6 +12,7 @@ import { articleOpenGraph } from "../../../lib/site/open-graph";
 import { MarkdocArticleBody } from "../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
 import { prepareMarkdoc } from "../../../lib/markdoc";
+import { loadTreemapSidecar } from "../../../lib/site/treemap-labels";
 import { loadPublicWebClip, loadPublicWebClips } from "../../../lib/site/web-clips";
 import { textify } from "../../../../../scripts/lib/mdoc";
 
@@ -65,6 +66,7 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
   const cfg = loadSiteConfig();
   const clips = loadPublicWebClips();
   const renderSource = mdocBodyForRender(clip.source, clip.title);
+  const treemapSidecar = loadTreemapSidecar("web-clips", clip.dir, renderSource);
   const { content } = prepareMarkdoc(renderSource);
   const { prev, next } = adjacentWebClips(slug);
   const rss = feedUrl();
@@ -97,7 +99,7 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
           />
         </div>
 
-        <ArticleMinimapLayout source={renderSource}>
+        <ArticleMinimapLayout source={renderSource} treemapSidecar={treemapSidecar}>
           <div className="markdoc">
             <MarkdocArticleBody content={content} />
           </div>
