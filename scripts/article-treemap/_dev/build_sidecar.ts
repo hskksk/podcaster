@@ -1,9 +1,9 @@
 #!/usr/bin/env tsx
 /**
- * Mechanical backfill for treemap.yml (titles + non-opening subtitles).
- * New articles should use the `article-treemap-labels` skill for real summaries.
+ * DEV ONLY — mechanical stub. Do not use in article workflow.
+ * Production sidecars are authored by an agent via `article-treemap-labels`.
  *
- *   pnpm exec tsx scripts/article-treemap/build_sidecar.ts content/docs/<slug>/index.mdoc
+ *   pnpm exec tsx scripts/article-treemap/_dev/build_sidecar.ts content/docs/<slug>/index.mdoc
  */
 import { writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -20,7 +20,7 @@ if (!mdocPath) {
 
 const json = execSync(`pnpm exec tsx scripts/article-treemap/extract_nodes.ts "${mdocPath}"`, {
   encoding: "utf8",
-  cwd: resolve(import.meta.dirname, "../.."),
+  cwd: resolve(import.meta.dirname, "../../.."),
 });
 const manifest = JSON.parse(json) as {
   sourceSha256: string;

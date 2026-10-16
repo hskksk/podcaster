@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 /**
- * Re-suggest node titles/subtitles in treemap.yml (keeps links/chapterFlow).
+ * DEV ONLY — overwrites nodes with heuristics. Never use for wiki articles.
  *
- *   pnpm exec tsx scripts/article-treemap/refresh_sidecar_nodes.ts content/docs/<slug>/index.mdoc
+ *   pnpm exec tsx scripts/article-treemap/_dev/refresh_sidecar_nodes.ts content/docs/<slug>/index.mdoc
  */
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -24,7 +24,7 @@ if (!existsSync(ymlPath)) {
 
 const json = execSync(`pnpm exec tsx scripts/article-treemap/extract_nodes.ts "${mdocPath}"`, {
   encoding: "utf8",
-  cwd: resolve(import.meta.dirname, "../.."),
+  cwd: resolve(import.meta.dirname, "../../.."),
 });
 const manifest = JSON.parse(json) as {
   sourceSha256: string;

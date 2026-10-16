@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 /**
- * Merge suggested links + chapterFlow into an existing treemap.yml (keeps nodes).
+ * DEV ONLY — mechanical link stub. Not for production sidecars.
  *
- *   pnpm exec tsx scripts/article-treemap/patch_sidecar_links.ts content/docs/<slug>/index.mdoc
+ *   pnpm exec tsx scripts/article-treemap/_dev/patch_sidecar_links.ts content/docs/<slug>/index.mdoc
  */
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -24,7 +24,7 @@ if (!existsSync(ymlPath)) {
 
 const json = execSync(`pnpm exec tsx scripts/article-treemap/extract_nodes.ts "${mdocPath}"`, {
   encoding: "utf8",
-  cwd: resolve(import.meta.dirname, "../.."),
+  cwd: resolve(import.meta.dirname, "../../.."),
 });
 const manifest = JSON.parse(json) as {
   sourceSha256: string;

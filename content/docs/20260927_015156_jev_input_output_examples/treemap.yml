@@ -54,7 +54,7 @@ nodes:
     subtitle: 一方、「言い換え判定 PAWS-X」では日本語が12ポイント低く（70.2％ vs 82.6％）、翻訳時の表記揺れが一因だった [11]
   i27:
     title: 同じプロンプト系の入力に対し、攻撃文を入力文に…
-    subtitle: 入力文が短いほど追加の攻撃文の影響が大きくなる [11]
+    subtitle: 同じプロンプト系の入力に対し、攻撃文を入力文に追記した構成で強制された分類は日本語で23.2％、英語で9.0％の誤分類が起きた [11]。入力文が短いほど追加の攻撃文の影響が大きくなる [11]
   i28:
     title: 日本語の指示で3つの質問を投げた例では、怒り度…
     subtitle: 日本語の指示で3つの質問を投げた例では、怒り度と緊急性は日英で同じ応答を返したが、担当部署の confidence は日本語で0.54ではなく0.36に落ちた [21]
@@ -96,7 +96,7 @@ nodes:
     subtitle: '[5] Sanity, What is a Noul in the Jev API? Definition and examples（2026-09）'
   i53:
     title: '[7] Zenn / acrosstudiob…'
-    subtitle: 速さより面白かったのは「迷い」（2026-09-18）
+    subtitle: '[7] Zenn / acrosstudioblog, 文章を生成しないAI「Jev」を日本語で48回試した。速さより面白かったのは「迷い」（2026-09-18）'
   i56:
     title: '[10] Neil Agarwal / Ref…'
     subtitle: '[10] Neil Agarwal / Refix, What is Jev? TypeSafe AI explained（2026-09-18）'

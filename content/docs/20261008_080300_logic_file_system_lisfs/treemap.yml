@@ -75,7 +75,7 @@ nodes:
     subtitle: LIS の理論側の詳細（ラベル付け作用素、亜種の論理、確信度を含む索引）は [8][10] にあり、実装の挙動への影響を追っていない。
   i30:
     title: LtU の会議レポートは、当時のプロトタイプが…
-    subtitle: これは一次資料ではないため、本文では報告として扱った。
+    subtitle: LtU の会議レポートは、当時のプロトタイプが Prolog 解釈系を内蔵していたと伝えている [5]。これは一次資料ではないため、本文では報告として扱った。
   i33:
     title: '[1] Yoann Padioleau, Ol…'
     subtitle: '[1] Yoann Padioleau, Olivier Ridoux. "A Logic File System." USENIX Annual Technical Conference, 2003. https:/…'

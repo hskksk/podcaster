@@ -1,4 +1,4 @@
-import type { TreemapLinkType } from "../../apps/web/lib/site/treemap-labels-types.ts";
+import type { TreemapLinkType } from "../../../apps/web/lib/site/treemap-labels-types.ts";
 
 export type LinkManifest = {
   orderedNodeIds: string[];
