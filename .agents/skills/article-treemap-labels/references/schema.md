@@ -16,10 +16,10 @@
 
 | キー | 型 | 説明 |
 |------|-----|------|
-| `title` | string? | タイル太字の上書き |
-| `subtitle` | string? | タイル下段・ツールチップ向け要約 |
+| `title` | string? | タイル太字。段落ごと **一意** の短い一文（親見出しの使い回し禁止） |
+| `subtitle` | string? | タイル下段。同段落の長め要約（**80〜110 字**目安） |
 
-少なくとも `title` か `subtitle` の一方が必要（`needsLabel: true` の id）。
+`needsLabel: true` の id には `title` と `subtitle` の両方を推奨。`title` の重複は `validate_treemap.ts` でエラー。
 
 ## `links[]`
 

@@ -2,35 +2,35 @@ version: 1
 sourceSha256: 6d532ca445f77abc88e6a7e5a1a0818fa3493f35c136c5a198da46046a5c2223
 nodes:
   i3:
-    title: 説明文は発見条件
-    subtitle: description は対象と非対象の境界を書き、実プロンプトで誤起動・起動漏れを測る。
+    title: SKILL.md の短い説明文は発見条件であり…
+    subtitle: SKILL.md の短い説明文は発見条件であり、対象タスクと対象外の近接タスクを分けて書き、実際のプロンプトで誤起動と起動漏れを測る。
   i4:
-    title: 依存グラフで連携
-    subtitle: 必要なスキルだけ選び、入出力と検証から依存を組み、独立段階だけ並列化する。
+    title: 複数スキルを使うなら、必要なものだけを選び、各…
+    subtitle: 複数スキルを使うなら、必要なものだけを選び、各段階の入力・出力・検証条件から依存グラフを組み、依存しない段階だけ並列化する。
   i5:
-    title: 同課題で段階比較
-    subtitle: スキルなし・単体・複数・構造化連携を同課題で比べ、誤選択・トークン・時間も記録する。
+    title: 評価はスキルなし・単体・複数のフラットな利用・…
+    subtitle: 評価はスキルなし・単体・複数のフラットな利用・構造化した連携を同じ課題で比べ、品質だけでなく誤選択・トークン・時間も記録する。
   s7:
-    title: 直列・分岐・並列・評価ループを使い分ける
-    subtitle: スキルを組み合わせる場合も、まず仕事の依存関係からパターンを選ぶ。[表] 形向く状況注意点直列後段が前段の結果を必要とする（調査 → 執筆 → 検証）早い…
+    title: Anthropic は、固定された段階をつなぐ…
+    subtitle: スキルを組み合わせる場合も、まず仕事の依存関係からパターンを選ぶ。[表] 形向く状況注意点直列後段が前段の結果を必要とする（調査 → 執筆 → 検証）早い段階の誤りが後続へ伝わるため、受け渡し前に検査する条件分岐タスク…
   i11:
-    title: 1つのスキルを一貫した仕事の単位にする
-    subtitle: 1つのスキルを一貫した仕事の単位にする：特定の場合だけ必要な仕様・例・テンプレートは references/ や assets/ に置き、どの条件で読むか…
+    title: 特定の場合だけ必要な仕様・例・テンプレートは …
+    subtitle: 特定の場合だけ必要な仕様・例・テンプレートは references/ や assets/ に置き、どの条件で読むかを本文から直接指定する。
   s14:
-    title: 合成しやすいスキルの作り方
-    subtitle: 多くのエージェントは最初に説明文だけを見て本文を読むか判断するため、これは単なる紹介文ではなく検索・ルーティング用のインターフェースである [1][10]…
+    title: 仕様上、name と description …
+    subtitle: 多くのエージェントは最初に説明文だけを見て本文を読むか判断するため、これは単なる紹介文ではなく検索・ルーティング用のインターフェースである [1][10]。説明文には具体的なユーザー意図や対象ファイル・用語を入れ、隣接…
   s15:
-    title: 手順の具体度を失敗コストに合わせる
-    subtitle: 順序を誤るとデータを壊すなど、操作が壊れやすい場合は、正確なコマンド・順序・確認ゲートを指定する [1]。どちらの場合も「これをする」だけでなく、判断の理…
+    title: 複数の方法が許容され、文脈に応じた判断が必要な…
+    subtitle: 順序を誤るとデータを壊すなど、操作が壊れやすい場合は、正確なコマンド・順序・確認ゲートを指定する [1]。どちらの場合も「これをする」だけでなく、判断の理由を伝えると、想定外の入力に応じて適用しやすい。よい手順には、該…
   s24:
-    title: 複数スキルを連携させる
-    subtitle: サブエージェントは別の指示・ツール範囲を持つ独立した作業者として委譲する仕組みで、必要に応じて並列調査やコンテキストの分離に使う。コード化されたワークフロ…
+    title: スキルは専門的な手順を現在のエージェントに与え…
+    subtitle: サブエージェントは別の指示・ツール範囲を持つ独立した作業者として委譲する仕組みで、必要に応じて並列調査やコンテキストの分離に使う。コード化されたワークフローは順序や合否判定を決定的にする。OpenCode では ski…
   s25:
-    title: 過剰な合成が得とは限らない
-    subtitle: また、2〜3個の焦点を絞ったスキルは包括的な説明より有利だったと報告する [7]。これは全タスクで「2〜3個」が最適という意味ではない。
+    title: SkillsBench は86課題・11領域・…
+    subtitle: また、2〜3個の焦点を絞ったスキルは包括的な説明より有利だったと報告する [7]。これは全タスクで「2〜3個」が最適という意味ではない。ベンチマークの課題・利用可能なハーネス・採点方式に依存する観察であり、実運用では必…
   i40:
     title: '[1] Anthropic'
-    subtitle: '[1] Anthropic. “Skill authoring best practices.” https://platform.claude.com/…'
+    subtitle: '[1] Anthropic. “Skill authoring best practices.” https://platform.claude.com/docs/en/agents-and-tools/agent-s…'
   i41:
     title: '[2] Agent Skills'
     subtitle: '[2] Agent Skills. “Specification.” https://agentskills.io/specification'
@@ -39,16 +39,16 @@ nodes:
     subtitle: '[3] OpenCode. “Agent Skills.” https://opencode.ai/docs/skills'
   i44:
     title: '[5] Anthropic'
-    subtitle: '[5] Anthropic. “Building effective agents.” 2024-12-19. https://www.anthropic…'
+    subtitle: '[5] Anthropic. “Building effective agents.” 2024-12-19. https://www.anthropic.com/engineering/building-effect…'
   i47:
     title: '[8] Hao Li et al'
-    subtitle: '[8] Hao Li et al. “Organizing, Orchestrating, and Benchmarking Agent Skills a…'
+    subtitle: '[8] Hao Li et al. “Organizing, Orchestrating, and Benchmarking Agent Skills at Ecosystem Scale.” arXiv:2603.0…'
   i48:
     title: '[9] Agent Skills'
-    subtitle: '[9] Agent Skills. “Evaluating skill output quality.” https://agentskills.io/s…'
+    subtitle: '[9] Agent Skills. “Evaluating skill output quality.” https://agentskills.io/skill-creation/evaluating-skills'
   i49:
     title: '[10] Agent Skills'
-    subtitle: '[10] Agent Skills. “Optimizing skill descriptions.” https://agentskills.io/sk…'
+    subtitle: '[10] Agent Skills. “Optimizing skill descriptions.” https://agentskills.io/skill-creation/optimizing-descript…'
 links:
   - from: ch1
     to: ch6

@@ -27,7 +27,8 @@ sourceSha256: "a1b2c3…"
 nodes:
   s_abc12:
     title: "12〜20字の短いラベル"      # 任意。太字を上書き
-    subtitle: "40〜80字の要約。本文にない主張は書かない"
+    title: "段落ごと一意の短い一文"
+    subtitle: "80〜110字の要約。本文にない主張は書かない"
   p_def34:
     subtitle: "パラグラフ箱向けの要約だけでも可"
 links:

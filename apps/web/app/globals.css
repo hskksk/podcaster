@@ -78,6 +78,23 @@ body {
   overflow: visible;
 }
 
+/* Treemap tiles: short unique title + longer summary (less reliance on auto snippet). */
+.article-minimap-layout .tm-tile b {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.article-minimap-layout .tm-tile small {
+  font-size: 12.5px;
+  line-height: 1.45;
+  -webkit-line-clamp: 5;
+}
+
 @media (min-width: 721px) {
   .article-minimap-layout .markdoc-treemap-host.article-minimap {
     top: 6rem;

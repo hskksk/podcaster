@@ -76,6 +76,22 @@ for (const id of Object.keys(labeled)) {
   }
 }
 
+const titleToIds = new Map<string, string[]>();
+for (const id of needsLabel) {
+  const t = labeled[id]?.title?.trim();
+  if (!t) continue;
+  const list = titleToIds.get(t) ?? [];
+  list.push(id);
+  titleToIds.set(t, list);
+}
+for (const [title, ids] of titleToIds) {
+  if (ids.length > 1) {
+    errors.push(
+      `duplicate tile title "${title}" on nodes ${ids.join(", ")} (use a unique short summary per paragraph)`,
+    );
+  }
+}
+
 const links = sidecar.links ?? [];
 for (let i = 0; i < links.length; i++) {
   const link = links[i];

@@ -2,119 +2,119 @@ version: 1
 sourceSha256: e07bd56d7126275fd948ccff663d95dde9392a35c6917e93a7f45ead52bc737b
 nodes:
   i2:
-    title: TL;DR
-    subtitle: TL;DR：LISFS はディレクトリのパスを論理式として解釈し、クエリ結果のなかを仮想のディレクトリとして移動できる研究プロトタイプで、Padiolea…
+    title: LISFS はディレクトリのパスを論理式として…
+    subtitle: LISFS はディレクトリのパスを論理式として解釈し、クエリ結果のなかを仮想のディレクトリとして移動できる研究プロトタイプで、Padioleau と Ridoux が USENIX ATC 2003 で発表した [1]。
   i4:
-    title: TL;DR
-    subtitle: TL;DR：検索は find より速い一方、ファイル作成は索引の更新が要るため桁違いに遅く、作成中心の負荷が実用化の課題になった [1]。
+    title: 検索は find より速い一方、ファイル作成は…
+    subtitle: 検索は find より速い一方、ファイル作成は索引の更新が要るため桁違いに遅く、作成中心の負荷が実用化の課題になった [1]。
   i5:
-    title: TL;DR
-    subtitle: TL;DR：名前が似た Log-structured File System (LFS) は更新をログに追記するストレージ方式で、LISFS とは別の研究…
+    title: 名前が似た Log-structured Fi…
+    subtitle: 名前が似た Log-structured File System (LFS) は更新をログに追記するストレージ方式で、LISFS とは別の研究である [1][15]。
   p48:
-    title: '背景: 1つの場所に置けないファイル'
-    subtitle: 階層型では1つのファイルに到達する経路が1本しかなく、経路を正確に覚えているか、たまたま見つけるしかない。しかも1つのファイルを複数の独立した概念（価格と…
+    title: ファイルを探す場面では、階層型のファイルシステ…
+    subtitle: 階層型では1つのファイルに到達する経路が1本しかなく、経路を正確に覚えているか、たまたま見つけるしかない。しかも1つのファイルを複数の独立した概念（価格と重さなど）で表すこともできない [1]。
   p49:
-    title: '背景: 1つの場所に置けないファイル'
+    title: キーワード検索は複数の語の組み合わせから同じフ…
     subtitle: 候補が長くなるほど、次の語を当てる作業はユーザーに委ねられる [1]。
   p50:
-    title: データベースは size
+    title: データベースは size > 45 のような値…
     subtitle: 当時の論文は、UNIX シェルの習得に1時間、SQL に40時間という対比を掲げて、この学習コストを階層型との差として示した [1]。
   p51:
-    title: '[表] パラダイム例強み弱み階層UNIX …'
-    subtitle: '背景: 1つの場所に置けないファイル：[表] パラダイム例強み弱み階層UNIX のディレクトリ、Yahoo!階段式に絞り込むヒントが出る経路が1本、配置先…'
+    title: 表：パラダイム例強み弱み階層UNIX のディレ…
+    subtitle: '[表] パラダイム例強み弱み階層UNIX のディレクトリ、Yahoo!階段式に絞り込むヒントが出る経路が1本、配置先も1つブールGoogle などの検索連言・選言・否定を書ける結果は一覧で、絞り込みの手がかりがないリレ…'
   p52:
-    title: '背景: 1つの場所に置けないファイル'
+    title: LISFS はこの3つを1つのインターフェース…
     subtitle: パスの語法を保ったまま、階層のナビゲーションとブール式の表現力を両方使う [1]。
   s8:
-    title: / は連言、| は選言、! は否定
-    subtitle: 区切りの / は論理和ではなく論理積を意味するので、lib/usr と usr/lib は同じ場所になる [1]。式は合取標準形で書ける。
+    title: LISFS では属性名を mkdir で登録し…
+    subtitle: 区切りの / は論理和ではなく論理積を意味するので、lib/usr と usr/lib は同じ場所になる [1]。式は合取標準形で書ける。たとえば cd /music/!bad/disco|rock は「bad のタグ…
   s9:
-    title: 外延と increments
-    subtitle: 根 / は恒真式を表すので、根の ls は全ファイルの集合になる [1]。ls の答えは2つに分かれる。
+    title: ある式 φ の外延 (extension) は…
+    subtitle: 根 / は恒真式を表すので、根の ls は全ファイルの集合になる [1]。ls の答えは2つに分かれる。1つは現在地の式を真に広げる性質を並べた仮想のサブディレクトリ（increments）で、もう1つはそれ以上に関連…
   s10:
-    title: タクソノミは mkdir が作る公理
-    subtitle: そこで mkdir を入れ子にすることで分類を足す。cd /OperatingSystem; mkdir Unix は公理「Unix ⇒ Operatin…
+    title: 性質が増えると根の ls は候補だらけになる。
+    subtitle: そこで mkdir を入れ子にすることで分類を足す。cd /OperatingSystem; mkdir Unix は公理「Unix ⇒ OperatingSystem」を宣言するもので、分類の関係は有向非巡回グラフに…
   s11:
-    title: 仮想ディレクトリへの書き込み
-    subtitle: mv p1/f1 p2/f2 は f1 の名前を変え、説明から p1 の属性を外して p2 の属性を付ける。このとき集合の定義と整合しない書き込みが起きな…
+    title: 仮想ディレクトリは読み取り専用ではない。
+    subtitle: mv p1/f1 p2/f2 は f1 の名前を変え、説明から p1 の属性を外して p2 の属性を付ける。このとき集合の定義と整合しない書き込みが起きないよう、削除や属性変更はファイルの所有者に限られる [1]。パス…
   s13:
-    title: プロトタイプの構成
-    subtitle: メタデータの更新は Berkeley DB のトランザクションで事故に備える [1]。中心の表は keyword->objects（各性質が含むファイル）…
+    title: 2003年時点のプロトタイプはユーザー空間のフ…
+    subtitle: メタデータの更新は Berkeley DB のトランザクションで事故に備える [1]。中心の表は keyword->objects（各性質が含むファイル）と object->keywords（各ファイルが持つ性質）で、…
   s14:
-    title: 計測された性能
-    subtitle: '[表] 処理EXT2PerlFSLISFS（transducer なし）LISFS（transducer あり）Copy1.3595.94313.2124…'
+    title: Andrew ベンチマークの計測（合計時間、秒…
+    subtitle: '[表] 処理EXT2PerlFSLISFS（transducer なし）LISFS（transducer あり）Copy1.3595.94313.21246.296Scan2.5065.1415.3486.638Rea…'
   s16:
-    title: 従来方式との違い
-    subtitle: LISFS の transducer はこの考え方を引き継いでいる [1]。LISFS が異なる点は、属性をユーザーが自由に付けられることと、仮想ディレク…
+    title: Semantic File System (S…
+    subtitle: LISFS の transducer はこの考え方を引き継いでいる [1]。LISFS が異なる点は、属性をユーザーが自由に付けられることと、仮想ディレクトリの中をさらに移動できることである。2003年論文の整理では、…
   s17:
-    title: 他の非階層ファイルシステム
-    subtitle: '[表] システム方針この研究が見た限界SFS (1991)属性の仮想ディレクトリ、transducer属性は自動抽出のみ、結果内ナビゲーションなしHAC …'
+    title: 同時期には類似の試みが複数あり、それぞれ1つだ…
+    subtitle: '[表] システム方針この研究が見た限界SFS (1991)属性の仮想ディレクトリ、transducer属性は自動抽出のみ、結果内ナビゲーションなしHAC (1999)階層と内容ベース検索を併用クエリの答えを実ディレクト…'
   s18:
-    title: デスクトップ検索との位置づけ
+    title: ICSE 2006 の論文は、同時期の Goo…
     subtitle: どちらも検索は別アプリケーションが受け持つ。LISFS は索引だけでなく検索手段そのものをファイルシステムに置く [2]。
   s20:
-    title: FCA から論理概念分析へ
-    subtitle: データベースのスキーマの代わりに論理式の体系が入り、オブジェクトの説明もクエリも同じ論理式で書ける [8]。土台は形式概念分析 (FCA) である。
+    title: LISFS の背後には Logic Infor…
+    subtitle: データベースのスキーマの代わりに論理式の体系が入り、オブジェクトの説明もクエリも同じ論理式で書ける [8]。土台は形式概念分析 (FCA) である。FCA はオブジェクトと属性の対応から概念格を組み、格の移動をナビゲー…
   s21:
-    title: ファイルの中身まで
-    subtitle: 後者は Parts-of-file File System (PofFS) として USENIX 2005 で報告され、10万行のファイルを効率よく扱える…
+    title: LISFS にはファイル単位のinter-fi…
+    subtitle: 後者は Parts-of-file File System (PofFS) として USENIX 2005 で報告され、10万行のファイルを効率よく扱えるとした [3]。ファイルをマウント点とみなし、性質で部分を選び出…
   s22:
-    title: 応用の広がり
-    subtitle: 「contains:foo」と書けばヒット一覧ではなく、そこへ至るincrements を計算する方式だった [2]。ソフトウェア工数の文脈では、型同型・…
+    title: メール16万件の実験では、送信者・件名・スレッ…
+    subtitle: 「contains:foo」と書けばヒット一覧ではなく、そこへ至るincrements を計算する方式だった [2]。ソフトウェア工数の文脈では、型同型・継承関係・命名規約・コメントの語といった複数の基準を1つの索引に…
   s24:
-    title: 新しさだった点
-    subtitle: 仮想ディレクトリへ書き込んでも整合が保たれ、自動抽出する intrinsic な属性と、ユーザーが付ける extrinsic な属性を同じ式で扱える [1…
+    title: 成果は、問い合わせとナビゲーションをファイルシ…
+    subtitle: 仮想ディレクトリへ書き込んでも整合が保たれ、自動抽出する intrinsic な属性と、ユーザーが付ける extrinsic な属性を同じ式で扱える [1]。検索と移動の操作が区別されなくなった点は、先行研究との差とし…
   s25:
-    title: 未解決だった点
-    subtitle: 作成が実質的なオンライン索引構築であり、分類グラフの祖先まで書き換えるコストが大きい。台数が増えたときにどう分散するかは、当時の計測では1万ファイル付近で…
+    title: 最大の課題は索引更新である。
+    subtitle: 作成が実質的なオンライン索引構築であり、分類グラフの祖先まで書き換えるコストが大きい。台数が増えたときにどう分散するかは、当時の計測では1万ファイル付近で頭打ちになった [1]。制約も残る。述語は1オブジェクトに1つの…
   s26:
-    title: 名前が似た別研究
-    subtitle: LISFS が論じるのはファイルの置き場所と検索のモデルであり、LFS が論じるのはディスクへの書き込み方である。LISFS という略が使われるのは、この…
+    title: Log-structured File Sys…
+    subtitle: LISFS が論じるのはファイルの置き場所と検索のモデルであり、LFS が論じるのはディスクへの書き込み方である。LISFS という略が使われるのは、この混同を避けるためだった [1]。
   i29:
-    title: 調査しなかった枝
-    subtitle: 調査しなかった枝：LIS の理論側の詳細（ラベル付け作用素、亜種の論理、確信度を含む索引）は [8][10] にあり、実装の挙動への影響を追っていない。
+    title: LIS の理論側の詳細（ラベル付け作用素、亜種…
+    subtitle: LIS の理論側の詳細（ラベル付け作用素、亜種の論理、確信度を含む索引）は [8][10] にあり、実装の挙動への影響を追っていない。
   i30:
-    title: 調査しなかった枝
+    title: LtU の会議レポートは、当時のプロトタイプが…
     subtitle: これは一次資料ではないため、本文では報告として扱った。
   i33:
-    title: '[1] Yoann Padioleau, …'
-    subtitle: '[1] Yoann Padioleau, Olivier Ridoux. "A Logic File System." USENIX Annual Tec…'
+    title: '[1] Yoann Padioleau, Ol…'
+    subtitle: '[1] Yoann Padioleau, Olivier Ridoux. "A Logic File System." USENIX Annual Technical Conference, 2003. https:/…'
   i34:
-    title: '[2] Yoann Padioleau, …'
-    subtitle: '[2] Yoann Padioleau, Benjamin Sigonneau, Olivier Ridoux, Sébastien Ferré, Mir…'
+    title: '[2] Yoann Padioleau, Be…'
+    subtitle: '[2] Yoann Padioleau, Benjamin Sigonneau, Olivier Ridoux, Sébastien Ferré, Mireille Ducassé, Peggy Cellier, Ol…'
   i35:
-    title: '[3] Yoann Padioleau, …'
-    subtitle: '[3] Yoann Padioleau, Olivier Ridoux. "A Parts-of-File File System." USENIX An…'
+    title: '[3] Yoann Padioleau, Ol…'
+    subtitle: '[3] Yoann Padioleau, Olivier Ridoux. "A Parts-of-File File System." USENIX Annual Technical Conference, 2005.…'
   i36:
     title: '[4] Wikipedia'
-    subtitle: '[4] Wikipedia. "Logic File System." https://en.wikipedia.org/wiki/Logic_File_…'
+    subtitle: '[4] Wikipedia. "Logic File System." https://en.wikipedia.org/wiki/Logic_File_System'
   i37:
-    title: '[5] Lambda the Ultima…'
-    subtitle: '[5] Lambda the Ultimate. "A Logic File System (conference report)." 2003. htt…'
+    title: '[5] Lambda the Ultimate'
+    subtitle: '[5] Lambda the Ultimate. "A Logic File System (conference report)." 2003. http://lambda-the-ultimate.org/clas…'
   i38:
     title: '[6] David K'
-    subtitle: '[6] David K. Gifford, Pierre Jouvelot, Mark A. Sheldon, James W. O''Toole Jr. …'
+    subtitle: '[6] David K. Gifford, Pierre Jouvelot, Mark A. Sheldon, James W. O''Toole Jr. "Semantic File Systems." SOSP, 1…'
   i39:
-    title: '[7] Burra Gopal, Udi …'
-    subtitle: '[7] Burra Gopal, Udi Manber. "Integrating Content-based Access Mechanisms wit…'
+    title: '[7] Burra Gopal, Udi Ma…'
+    subtitle: '[7] Burra Gopal, Udi Manber. "Integrating Content-based Access Mechanisms with Hierarchical File Systems." OS…'
   i40:
-    title: '[8] Sébastien Ferré, …'
-    subtitle: '[8] Sébastien Ferré, Olivier Ridoux. "Introduction to Logical Information Sys…'
+    title: '[8] Sébastien Ferré, Ol…'
+    subtitle: '[8] Sébastien Ferré, Olivier Ridoux. "Introduction to Logical Information Systems." INRIA RR-4540 / Informati…'
   i41:
-    title: '[9] Benjamin Sigonnea…'
-    subtitle: '[9] Benjamin Sigonneau, Olivier Ridoux. "Software Engineering Applications of…'
+    title: '[9] Benjamin Sigonneau,…'
+    subtitle: '[9] Benjamin Sigonneau, Olivier Ridoux. "Software Engineering Applications of Logic File System." MSR, 2006. …'
   i42:
-    title: '[10] Sébastien Ferré,…'
-    subtitle: '[10] Sébastien Ferré, Olivier Ridoux, Benjamin Sigonneau. "Arbitrary Relation…'
+    title: '[10] Sébastien Ferré, O…'
+    subtitle: '[10] Sébastien Ferré, Olivier Ridoux, Benjamin Sigonneau. "Arbitrary Relations in Formal Concept Analysis and…'
   i44:
-    title: '[12] "Richer File Sys…'
-    subtitle: '[12] "Richer File System Metadata Using Links and Attributes" (LiFS). MSST, 2…'
+    title: '[12] "Richer File Syste…'
+    subtitle: '[12] "Richer File System Metadata Using Links and Attributes" (LiFS). MSST, 2005. https://users.soe.ucsc.edu/…'
   i45:
     title: '[13] IRISA Team-LIS'
-    subtitle: '[13] IRISA Team-LIS. "LISFS activity report 2006." http://www.irisa.fr/LIS/co…'
+    subtitle: '[13] IRISA Team-LIS. "LISFS activity report 2006." http://www.irisa.fr/LIS/common/ra2006/RA2006/lis/uid36.html'
   more53:
     title: '[14] Yoann Padioleau'
-    subtitle: '[14] Yoann Padioleau. "aryx/lfs [15] Mendel Rosenblum, John K. Ousterhout. "T…'
+    subtitle: '[14] Yoann Padioleau. "aryx/lfs [15] Mendel Rosenblum, John K. Ousterhout. "The Design and …'
 links:
   - from: ch1
     to: ch6
