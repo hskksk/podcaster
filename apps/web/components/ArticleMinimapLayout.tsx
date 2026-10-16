@@ -9,6 +9,7 @@ import type { TreemapSidecarContent } from "../lib/site/treemap-labels-types";
 import { useTreemapDesignWidth } from "./useTreemapDesignWidth";
 import { createStaticTreemapAi } from "../lib/treemap/createStaticTreemapAi";
 import { useTreemapSidecarTitleOverrides } from "./useTreemapSidecarLabels";
+import { useTreemapTileExpand } from "./useTreemapTileExpand";
 
 export function ArticleMinimapLayout(props: {
   source: string;
@@ -33,6 +34,7 @@ export function ArticleMinimapLayout(props: {
     props.treemapSidecar?.nodes,
     treemapRevision,
   );
+  useTreemapTileExpand(treemapPanelRef, treemapRevision);
 
   const onTreemapSelect = useCallback(
     (detail: { id: string; title: string; line?: number }) => {
