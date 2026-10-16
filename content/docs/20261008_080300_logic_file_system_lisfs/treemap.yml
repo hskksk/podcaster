@@ -42,10 +42,10 @@ nodes:
     subtitle: PerlFS上にBerkeley DBでメタデータを置き本体はEXT2。性質とファイルの双方向索引で外延を事前計算する。作成は祖先更新が重いが、lsは疎な行列演算とディレクトリinodeキャッシュで軽量に保たれた。
   s14:
     title: ベンチマークと検索の逆転
-    subtitle: Andrewベンチでは作成中心のCopyが特に遅いが読み取り系はPerlFS同程度。関数検索はfind約2.9秒に対しlookupは0.08秒級。lsは分類道筋付きのincrementsを返し件数はaproposより抑えられる。
+    subtitle: Andrewベンチでは作成中心のCopyが特に遅いが読み取り系はPerlFS同程度。関数検索はfind約2.9秒に対lookupは0.08秒級。lsは分類道筋付きincrementsを返しaproposより件数を抑える。
   s16:
     title: SFSとの差は属性付与と内部移動
-    subtitle: SFSはtransducerで属性を自動抽出し仮想ディレクトリを問い合わせとする1991年の先行研究。LISFSは手付け属性と結果集合内のさらなる移動を同一モードで扱い、ナビゲーションを切り替えない点が論文の差分として整理される。
+    subtitle: SFSはtransducerで属性を自動抽出し仮想ディレクトリを問い合わせとする1991年の先行研究。LISFSは手付け属性と結果内移動を同一モードで扱い、ナビゲーション切替が不要な点が差分として整理される。
   s17:
     title: 表：非階層FS各方式の限界整理
     subtitle: SFSは自動属性のみで結果内移動なし。HACはクエリ答えを実ディレクトリ化し矛盾を書ける。BeFSはUNIX非互換。Nebulaは名前付きクエリだが答えの中は移動不可。LiFSはフラッシュ想定で内容は扱わない。
@@ -93,7 +93,7 @@ nodes:
     subtitle: Lambda the Ultimate「A Logic File System (conference report).」2003。Prolog内蔵の伝承を含む二次報告で、本文では一次資料ではない旨を注記している。
   i38:
     title: 出典6：SFS原論文1991
-    subtitle: GiffordらのSemantic File Systems (SOSP 1991)。transducerによる属性抽出と仮想ディレクトリ問い合わせの先行研究。LISFSがtransducerを継承しつつ内部移動で差を取る比較の基準。
+    subtitle: GiffordらのSemantic File Systems (SOSP 1991)。transducerによる属性抽出と仮想ディレクトリの先行研究。LISFSが継承しつつ結果内移動で差を取る比較の基準文献。
   i39:
     title: 出典7：HAC OSDI1999
     subtitle: HAC (OSDI 1999)。階層FSと内容ベース検索の統合。クエリ結果を実ディレクトリにすると書き込みが問い合わせと矛盾しうる点を、LISFSとの比較で本文が指摘する根拠。
@@ -111,7 +111,7 @@ nodes:
     subtitle: LiFS (MSST 2005)。リンクと属性でメタデータを豊かにする方式。フラッシュメモリ想定でファイル内容は扱わない点が、非階層FS比較表でLISFSとの差として整理される。
   i45:
     title: 出典13：IRISA活動報告2006
-    subtitle: IRISA Team-LISの2006活動報告。PofFSやLISFS周辺の研究活動の整理資料。本文では補助的な背景として触れ、実装詳細の一次根拠ではない。
+    subtitle: IRISA Team-LISの2006活動報告。PofFSやLISFS周辺の研究活動の整理資料。本文では補助的な背景として触れ、実装挙動の一次根拠としては扱っていない。
   more53:
     title: 出典14・15：ミラーとLFS原論文
     subtitle: "[14]はGitHubのソースミラーで公式配布終了後もコードを読める。[15]はログ構造化ファイルシステム原論文。TL;DRと末尾でLISFS略称がLFSと混同されない旨を補う。"
