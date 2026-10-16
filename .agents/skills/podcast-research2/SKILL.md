@@ -103,7 +103,7 @@ flowchart TD
    ---
    ```
 
-2. **章マップ sidecar（`treemap.yml`）**: 本文を保存したあと、**軽量なサブエージェント**（同じ run 内の Task など）に `article-treemap-labels` を読ませる。渡すのは完成した `index.mdoc` のパスだけ。サブエージェントは `extract_nodes` でマニフェストを取り、**本文を読んで** `treemap.yml`（ノードラベル + `links` / `chapterFlow`）を **自分で執筆**し、`validate_treemap` が通るまで直す。`scripts/article-treemap/_dev/` の機械生成は使わない。親エージェントは YAML 全文を再執筆しない。設計の背景は `docs/architecture/article-treemap-labels.md`。
+2. **章マップ sidecar（`treemap.yml`）**: 本文を保存したあと、**同じエージェント**が `article-treemap-labels` を読み、手順どおり `treemap.yml` を書く（サブエージェントに委譲しない）。構成と論旨は執筆直後の頭の中にあるので、ラベルと `links` / `chapterFlow` もここで一気に決める。`extract_nodes` → 執筆 → `validate_treemap` が通るまで直す。`scripts/article-treemap/_dev/` は使わない。設計の背景は `docs/architecture/article-treemap-labels.md`。
 
 3. origin/main ベースの新しいブランチを作成してコミット:
 

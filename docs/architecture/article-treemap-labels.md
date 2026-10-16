@@ -5,7 +5,7 @@
 ## 原則
 
 - 知識の正は `index.mdoc` の本文。要約は **メタデータ**（`treemap.yml`）だけ。
-- 生成は **記事作成スキルの最終段**（サブエージェントが `article-treemap-labels` で **YAML を執筆**）。CI や `next build` では走らせない。
+- 生成は **記事作成スキルの最終段**（**記事を書いた同じエージェント**が `article-treemap-labels` で **YAML を執筆**）。サブエージェント委譲はしない。CI や `next build` では走らせない。
 - TypeScript は **`extract_nodes`（マニフェスト）と `validate_treemap`（検証）だけ**。`scripts/article-treemap/_dev/` の機械生成はローカル用で、記事ワークフローでは使わない。
 - サイトはビルド時に sidecar を読むだけ（`loadTreemapLabels` → `ArticleMinimapLayout`）。`markdoc-react` に同期 `labels` が無い間は DOM でタイルに反映する。
 
@@ -48,10 +48,10 @@ chapterFlow:
 ## ワークフロー
 
 1. 親スキル（例: `podcast-research2`）が `index.mdoc` を書き終える。
-2. **サブエージェント**に `article-treemap-labels` を読ませ、マニフェストと **本文**を読んで同じディレクトリに `treemap.yml` を **書く**（`_dev` スクリプトで上書きしない）。
-3. `validate_treemap.ts` が通ったら、親が `git add` して PR（mdoc + yml を同コミット）。
+2. **同じ run の同じエージェント**が `article-treemap-labels` を読み、マニフェストと **本文**を見て `treemap.yml` を **書く**（`_dev` スクリプトは使わない）。
+3. `validate_treemap.ts` が通ったら PR（mdoc + yml を同コミット）。
 
-サブエージェントは軽量モデルでよいが、要約とリンクはエージェントの判断が正。スクリプトは id と SHA の整合だけ補助する。
+要約とリンクは執筆時の論旨に依存するので、記事作者が続けて書くのが正。スクリプトは id と SHA の整合だけ補助する。
 
 ## サイト側
 

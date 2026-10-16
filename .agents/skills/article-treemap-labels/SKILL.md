@@ -1,6 +1,6 @@
 ---
 name: article-treemap-labels
-description: After an index.mdoc exists, author treemap.yml sidecar (tile labels plus inferred-style links between nodes) from a node manifest and the article body. Use when finishing a wiki article or when a parent skill delegates minimap generation. Returns treemap.yml next to the mdoc.
+description: After an index.mdoc exists, author treemap.yml sidecar (tile labels plus inferred-style links between nodes) from a node manifest and the article body. Use in the same run as the article author (e.g. podcast-research2 step 3b), not via a subagent. Returns treemap.yml next to the mdoc.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -18,10 +18,12 @@ metadata:
 
 ## When to use me
 
-- 親スキルが wiki 記事の `index.mdoc` を書き終えた直後（サブエージェント向け）
-- ユーザーが章マップ用 sidecar の再生成だけを依頼したとき
+- **記事を書いた同じエージェント**が `index.mdoc` を保存した直後（`podcast-research2` のステップ 3 の一部）
+- ユーザーが既存記事の章マップ sidecar だけ再生成を依頼したとき
 
-使わない: 本文の調査・執筆、PR 作成（親スキルの仕事）
+委譲しない: サブエージェント（Task）への丸投げは想定しない。要約とリンクは執筆時の文脈が要る。
+
+使わない: 本文の調査・執筆そのもの（親スキルの前段）、PR 作成だけの依頼
 
 ## What you must not do
 
@@ -31,9 +33,7 @@ metadata:
 
 ## Inputs
 
-親から受け取るもの:
-
-- **`mdocPath`**: `content/docs/<slug>/index.mdoc` など、完成した Markdoc ファイルのパス（1 本）
+- **`mdocPath`**: いま書き終えた `content/docs/<slug>/index.mdoc`（自分が保存したパス）
 
 ## Instructions
 
@@ -81,7 +81,7 @@ metadata:
 ## Output
 
 - 成果物: 記事ディレクトリの **`treemap.yml`**
-- 親エージェントへ: 検証が通ったこと、ラベルしたノード数とリンク本数の一行だけ（YAML 全文をチャットに貼らない）
+- 続けて親スキルの PR 手順へ（mdoc と yml を同コミット）。チャットには検証 OK とノード数・リンク数の一行だけ（YAML 全文を貼らない）
 
 ## Notes
 
