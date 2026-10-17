@@ -1,0 +1,140 @@
+version: 1
+sourceSha256: "1d40f421b466b03be41c78e062211b3b6ba737a46c7c0315cd3fcd237d82a149"
+nodes:
+  i2:
+    title: "科学的方法と第一原理"
+    subtitle: "意思決定は問い・証拠・公理・反証のループと、類推を避けた分解の二層で語られる。出典は Rolling Stone 取材と CNBC まとめ。"
+  i3:
+    title: "五段階アルゴリズム"
+    subtitle: "製造では要件疑義化から削除・簡素化・加速・自動化の順が守られ、Model 3 生産地獄から抽出されたと Isaacson 伝記が描く。"
+  i4:
+    title: "使命と垂直統合の束"
+    subtitle: "多惑星種から逆算した物理上限、内製、工場設計 the machine that builds the machine が事業戦略として一括で語られる。"
+  i5:
+    title: "50%期限と律速要因"
+    subtitle: "攻めた内部期限と、進捗を止める一点への時間集中がセットで説明される。対外コミットとは区別して読む必要がある。"
+  i6:
+    title: "転用の限界と批判"
+    subtitle: "スピードの裏に安全・規制・予測精度の論点があり、一般組織は削除順序と二層目標に絞るのが現実的とまとめる。"
+  p46:
+    title: "戦略談話の四層分解"
+    subtitle: "使命・思考・設計・時間の層が重なり、上から許容範囲を決め、下から工場と期限が使命に近づいたかを測る地図として整理する。"
+  p47:
+    title: "図（mermaid）四層"
+    subtitle: "使命から思考・設計・時間へ流れ、生産実績と反証が思考層へ戻る閉ループを示す関係図。"
+  p48:
+    title: "層ごとの典型フレーズ"
+    subtitle: "各層のキーフレーズ、効く場面、よくある誤読を表で対照し、使命を全発言の戦略と読む誤りなどを示す。"
+  s21:
+    title: "類推拒否と意味の木"
+    subtitle: "TED 2013 で第一原理が類推と対比され、電池は材料市場価格から下限を見積もる例が繰り返し引用される。"
+  s22:
+    title: "イディオット指数"
+    subtitle: "完成品価格と原材料費の倍率で削減余地を見る指標。ロケット材料分解と物理不可能案の早期除外がセットで語られる。"
+  s24:
+    title: "削除が先のアルゴリズム"
+    subtitle: "要件に名前を付けて疑い、存在すべきでない工程の最適化を防ぐ。順序を誤れば自動化先行の逆走になると回顧される。"
+  s25:
+    title: "垂直統合と工場設計"
+    subtitle: "サプライヤー依存を減らし設計と製造の同日フィードバックを回す。Reuters は学んでから内製へ寄せる筋道を報じる。"
+  s27:
+    title: "多惑星種と再使用"
+    subtitle: "CBS では旗と足跡ではなく基地・都市を語り、完全再使用なしではコストが成立しないと述べられる。"
+  s28:
+    title: "攻めた期限の哲学"
+    subtitle: "スケジュールの気体膨張への対抗、対外と内部の区別、50パーセンタイル期限と律速要因集中が一連の時間戦略として説明される。"
+  s35:
+    title: "転用できる三つの型"
+    subtitle: "削除順序・イディオット指数・必達とストレッチの分離を表で示し、NRC は VC 向き分散が万能ではないと論じる。"
+  s36:
+    title: "安全と圧力の副作用"
+    subtitle: "Reuters と Business Insider の証言から、時間層だけ輸入すると疲弊や安全文化の問題が支配的になりうると警告する。"
+  s37:
+    title: "運用規則として読む"
+    subtitle: "ビジョン文ではなく疑う順序・削除順・時間配分の集合として理解し、自社の律速要因へ落とすと実務価値が残る。"
+  i44:
+    title: "McNeill 著を追う"
+    subtitle: "Jon McNeill The Algorithm は Tesla 内ストレッチ目標の一次叙述として再調査候補に挙げる。"
+  i45:
+    title: "伝記ページ参照"
+    subtitle: "Isaacson 原著アルゴリズム節のページは二次報道のみ確認とし、原著での突合が未了と明記する。"
+links:
+  - from: ch1
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch12
+    type: flow
+  - from: ch12
+    to: ch13
+    type: flow
+  - from: ch13
+    to: ch23
+    type: flow
+  - from: ch23
+    to: ch26
+    type: flow
+  - from: ch26
+    to: ch29
+    type: flow
+  - from: ch29
+    to: ch38
+    type: flow
+  - from: i2
+    to: s21
+    type: seq
+    label: 思考層へ
+  - from: i3
+    to: s24
+    type: seq
+  - from: i4
+    to: s25
+    type: seq
+  - from: i5
+    to: s28
+    type: seq
+  - from: p46
+    to: p47
+    type: evidence
+  - from: p46
+    to: p48
+    type: seq
+  - from: s21
+    to: s22
+    type: seq
+  - from: s24
+    to: s25
+    type: seq
+  - from: s27
+    to: s28
+    type: seq
+  - from: ch12
+    to: ch13
+    type: cause
+    label: 思考層
+  - from: ch13
+    to: ch23
+    type: cause
+    label: 設計層
+  - from: ch23
+    to: ch26
+    type: cause
+    label: 時間層
+  - from: s35
+    to: s36
+    type: contrast
+    label: 副作用
+  - from: s36
+    to: s37
+    type: rec
+  - from: i6
+    to: s35
+    type: apply
+chapterFlow:
+  - "範囲と次に解く三問を示す"
+  - "四層の地図で全体を固定する"
+  - "科学的方法と第一原理を深掘り"
+  - "アルゴリズムと垂直統合へ"
+  - "使命・期限・律速要因の時間戦略"
+  - "転用限界と批判を統合する"
+  - "出典と未採用枝を残す"
