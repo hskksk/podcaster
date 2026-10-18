@@ -45,6 +45,7 @@ CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）�
 - **形式**: `type(optional-scope): subject`（例: `feat(web): add capture patch`、`docs(agents): note conventional commits`、`chore: bump dependency`）
 - **type**（よく使うもの）: `feat`, `fix`, `docs`, `refactor`, `chore`, `ci`, `build`, `test`, `perf`, `style`, `revert`
 - **PR タイトル**もコミットと同じ規約にする（スカッシュマージ後の履歴になる）
+- **最終メッセージの 1 行目が PR タイトルとして使われる**（インフラが PR 作成時に採用する）。1 行目を必ず `type(scope): subject` にし、報告本文は 2 行目以降に書く。日本語の報告文を 1 行目に置くと `semantic-pull-request` が失敗する
 - コミット本文は任意。subject は命令形・小文字始まりが無難
 
 ### Key gotchas
