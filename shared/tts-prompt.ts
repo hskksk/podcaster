@@ -69,19 +69,21 @@ export function buildTtsPrompt(input: BuildTtsPromptInput): string {
  * Gemini 3.1 Flash TTS loses ~5-6 dB within the first minute or so of a single
  * generation and keeps sliding for the rest of it (measured on a ~8 min script;
  * the same script on 2.5 Flash stays flat and ~8 dB louder). Splitting at
- * speaker-turn boundaries into ~2 min chunks resets the slide: level of the last
+ * speaker-turn boundaries into short chunks resets the slide: level of the last
  * quarter of the episode -23…-26 dB vs -28…-31 dB for one request, worst 30 s
  * window -27…-29 dB vs -30…-33 dB. Each chunk still decays a few dB after its
  * loud start, so the episode is not flat (2 runs each; not tuned further).
- * ~7 chars/s of Japanese speech → 800 chars ≈ 2 min.
+ * ~7 chars/s of Japanese speech → 120 chars ≈ 17 s (tunable via
+ * `tts.chunk_max_chars`, minimum 100).
  */
-export const DEFAULT_TTS_CHUNK_MAX_CHARS = 800;
+export const DEFAULT_TTS_CHUNK_MAX_CHARS = 120;
 
 /**
  * Split a `Speaker: text` script into chunks of at most `maxChars`, breaking
- * only between speaker turns so every chunk starts with a speaker label (which
- * multi-speaker TTS requires). A turn longer than `maxChars` stays whole, and a
- * very short trailing chunk is merged back into the previous one.
+ * between speaker turns and, when a single turn exceeds `maxChars`, splitting
+ * its text into multiple turns that reuse the same speaker label (multi-speaker
+ * TTS requires every request to start with a label). A very short trailing
+ * chunk is merged back into the previous one.
  * Lines without a known speaker label continue the previous turn.
  */
 export function splitTranscriptIntoChunks(
@@ -100,9 +102,14 @@ export function splitTranscriptIntoChunks(
     else turns[turns.length - 1] += `\n${line}`;
   }
 
+  const segments: string[] = [];
+  for (const turn of turns) {
+    segments.push(...splitLongSpeakerTurn(turn, maxChars, speakerNames));
+  }
+
   const chunks: string[][] = [];
   let size = 0;
-  for (const turn of turns) {
+  for (const turn of segments) {
     const last = chunks[chunks.length - 1];
     if (last && size + turn.length <= maxChars) {
       last.push(turn);
@@ -122,4 +129,40 @@ export function splitTranscriptIntoChunks(
     }
   }
   return chunks.map((c) => c.join("\n"));
+}
+
+/** Split one speaker turn so every piece is at most `maxChars` and starts with a label. */
+function splitLongSpeakerTurn(
+  turn: string,
+  maxChars: number,
+  speakerNames: readonly string[],
+): string[] {
+  if (turn.length <= maxChars) return [turn];
+
+  const firstLine = turn.split("\n")[0] ?? turn;
+  let label = "";
+  for (const name of speakerNames) {
+    if (firstLine.startsWith(`${name}:`)) {
+      label = `${name}:`;
+      break;
+    }
+    if (firstLine.startsWith(`${name}：`)) {
+      label = `${name}：`;
+      break;
+    }
+  }
+  if (!label) return [turn];
+
+  const lines = turn.split("\n");
+  const firstBody = lines[0].slice(label.length).trimStart();
+  const body = lines.length > 1 ? `${firstBody}\n${lines.slice(1).join("\n")}` : firstBody;
+  const prefix = `${label} `;
+  const maxBody = maxChars - prefix.length;
+  if (maxBody < 1) return [turn];
+
+  const parts: string[] = [];
+  for (let i = 0; i < body.length; i += maxBody) {
+    parts.push(`${prefix}${body.slice(i, i + maxBody)}`);
+  }
+  return parts.length > 0 ? parts : [turn];
 }

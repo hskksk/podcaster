@@ -8,6 +8,8 @@ cover_image = "cover.png"
 [tts]
 model = "gemini-3.1-flash-tts-preview"
 response_format = "wav"
+# ~7 文字/秒 → 120 文字 ≈ 17 秒。3.1 の音量ドリフト対策（100 未満は無視）。
+chunk_max_chars = 120
 instructions = "これは2人のスピーカーによるポッドキャストの会話です。自然な会話のトーンで、スピーカーの切り替わりに適切な間を置いて話してください。Hostが議論をリードし、CoHostは質問をしながら興味深く反応します。"
 selection_mode = "random"                                                                                                # fixed | random
 

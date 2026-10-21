@@ -72,10 +72,16 @@ const turn = (who: string, n: number) => `${who}: ${"あ".repeat(n - who.length 
   for (const c of chunks) assert.ok(c.length <= 800 + 1); // + the joining newline
 }
 
-// an over-long single turn is never cut
+// an over-long single turn is split; each piece keeps the speaker label
 {
   const long = turn("Host", 2000);
-  assert.deepEqual(splitTranscriptIntoChunks(long, { maxChars: 800, speakerNames }), [long]);
+  const chunks = splitTranscriptIntoChunks(long, { maxChars: 800, speakerNames });
+  assert.ok(chunks.length > 1);
+  for (const c of chunks) assert.ok(c.startsWith("Host:"));
+  for (const c of chunks) assert.ok(c.length <= 800);
+  const stripLabel = (line: string) => line.replace(/^Host:\s*/, "");
+  const spoken = chunks.flatMap((c) => c.split("\n")).map(stripLabel).join("");
+  assert.equal(spoken, stripLabel(long));
 }
 
 // unlabeled lines continue the previous turn; blank lines are dropped
