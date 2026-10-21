@@ -449,7 +449,7 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 | `gemini.api_path` | `/v1beta` | Gemini API のパス（`api_root` と結合して利用） |
 | `download.monitor_interval_seconds` | `60` | `download-monitor` の監視間隔（cron） |
 | `tts.model` | `gemini-3.1-flash-tts-preview` | TTS モデル |
-| `tts.chunk_max_chars` | `120` | 台本をこの文字数（日本語おおよそ 7 文字/秒 → 120 ≈ 17 秒）以下のチャンクに分割し、1つの Batch ジョブ内の別リクエストとして生成する。話者の切り替わりで区切り、1 ターンが長い場合は同じ話者ラベルでさらに分割。3.1 は1回の生成が長いと音量が下がるため。`config.toml` の `[tts] chunk_max_chars` から seed 可。省略時もコード既定は `120`（`100` 未満は無視） |
+| `tts.chunk_max_chars` | `200` | 台本をこの文字数（日本語おおよそ 7 文字/秒 → 200 ≈ 30 秒）以下のチャンクに分割し、1つの Batch ジョブ内の別リクエストとして生成する。話者の切り替わりで区切り、1 ターンが長い場合は同じ話者ラベルでさらに分割。3.1 は1回の生成が長いと音量が下がるため。`config.toml` の `[tts] chunk_max_chars` から seed 可。省略時もコード既定は `200`（`100` 未満は無視） |
 | `tts.instructions` | *(自然な会話トーンで…)* | TTS への合成指示 |
 | `tts.host.name` | `Host` | ホストのスクリプト上の名前 |
 | `tts.host.voice` | `Charon` | ホストの音声 |

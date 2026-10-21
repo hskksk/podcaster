@@ -112,7 +112,7 @@ const defaults: Record<string, unknown> = {
   "podcast.description": config.podcast.description,
   "podcast.cover_url": coverUrl,
   "tts.model": config.tts.model,
-  "tts.chunk_max_chars": config.tts.chunk_max_chars ?? 120,
+  "tts.chunk_max_chars": config.tts.chunk_max_chars ?? 200,
   "tts.instructions": config.tts.instructions,
   "tts.selection_mode": config.tts.selection_mode ?? "fixed",
   "tts.host.name": config.tts.speakers.host.name,

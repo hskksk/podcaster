@@ -73,10 +73,10 @@ export function buildTtsPrompt(input: BuildTtsPromptInput): string {
  * quarter of the episode -23…-26 dB vs -28…-31 dB for one request, worst 30 s
  * window -27…-29 dB vs -30…-33 dB. Each chunk still decays a few dB after its
  * loud start, so the episode is not flat (2 runs each; not tuned further).
- * ~7 chars/s of Japanese speech → 120 chars ≈ 17 s (tunable via
+ * ~7 chars/s of Japanese speech → 200 chars ≈ 30 s (tunable via
  * `tts.chunk_max_chars`, minimum 100).
  */
-export const DEFAULT_TTS_CHUNK_MAX_CHARS = 120;
+export const DEFAULT_TTS_CHUNK_MAX_CHARS = 200;
 
 /**
  * Split a `Speaker: text` script into chunks of at most `maxChars`, breaking
