@@ -611,7 +611,7 @@ export async function startGeneratingAudio(opts: {
     };
 
     // Gemini 3.1 TTS loses volume within a long single generation, so the script is
-    // split at speaker turns into ~2 min chunks — one request each, one batch job.
+    // split into short chunks (speaker turns, and long turns by label) — one request each, one batch job.
     const configuredChunkChars = Number(cfg["tts.chunk_max_chars"]);
     const chunkMaxChars = Number.isFinite(configuredChunkChars) && configuredChunkChars >= 100
       ? configuredChunkChars
