@@ -482,6 +482,14 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 
 スキル同士の呼び方は `skill-orchestration`（`hskksk/agent-skills` から import。`.agents/skills/skill-orchestration/SKILL.md`）に従う。呼び出し側は相手のファイルを指さない。
 
+### SAPIX小学5年生・日本史（週次物語教材）
+
+```
+/sapix-grade5-history-weekly
+```
+
+- `sapix-grade5-history-weekly`（`.agents/skills/sapix-grade5-history-weekly/SKILL.md`）: 現在の日付と SAPIX 540 系カリキュラムから該当テキストを選び、月〜金の物語教材を **5 つの Markdown ファイル**（`content/sapix-grade5-history/week-<月曜>/`）として作成。くまぴー・とらぴー・ねこぴー・きつぴーの会話形式。ZIP や物語外クイズは付けない
+
 ---
 
 ## トラブルシューティング
