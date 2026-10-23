@@ -1,6 +1,6 @@
 ---
 name: sapix-grade5-history-weekly
-description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdown files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/ (not content/). For Japanese dialogue polish, use japanese-writing when installed.
+description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdown files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/ (not content/). Use only this skill's writing rules, even when other Japanese writing skills are installed.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -12,7 +12,6 @@ allowed-tools:
   - Bash(git push -u origin cursor/*)
 metadata:
   audience: SAPIX小学5年生・日本史の週次家庭学習
-  related: japanese-writing
 ---
 
 ## What I do
@@ -33,6 +32,10 @@ metadata:
 
 あなたは、子ども向け日本史物語の週次教材を書くエージェントである。手順の細部とキャラ・笑いの規約は **このスキル配下の `references/`** にある。ここでは流れだけ書く。
 
+### このスキルだけを使う
+
+教材の執筆・推敲には、**このスキルと、このスキル配下の参照ファイルだけを使う**。`japanese-writing`を含む日本語ライティング・文章推敲・物語執筆関連の別スキルがインストールされていても、読まない・呼び出さない・規則を混ぜない。このスキルの会話規約と提出前チェックを、日本語表現の唯一の基準にする。
+
 ### 参照ファイル
 
 | 参照 | 役割 | いつ読むか |
@@ -40,7 +43,6 @@ metadata:
 | `references/curriculum.md` | テキスト番号・単元一覧（唯一のカリキュラム正本） | **テキスト選定の前に必須** |
 | `references/story-rules.md` | キャラ、口調、ボケとツッコミ、物語の見せ方、ファイル構成、禁止事項 | **執筆前に必須** |
 | `references/workflow.md` | 週の切り方、保存先、ファイル名、ユーザーへの提示 | **保存前に必須** |
-| `japanese-writing` | 日本語の自然さ・AI構文の除去 | 出力が日本語のとき、推敲前に任意（インストールされていれば `SKILL.md` を読み手順に従う） |
 
 ### ステップ1: 週とテキストを決める
 
