@@ -19,7 +19,7 @@ export function ArticleMinimapLayout(props: {
   const scrollRef = useRef<HTMLElement>(null);
   const mobileMinimapShellRef = useRef<HTMLDivElement>(null);
   const treemapPanelRef = useRef<HTMLDivElement>(null);
-  const treemapDesignWidth = useTreemapDesignWidth(mobileMinimapShellRef);
+  const treemapDesignWidth = useTreemapDesignWidth(treemapPanelRef);
   const [mobileMinimapCollapsed, setMobileMinimapCollapsed] = useState(true);
   const { resolved } = useTheme();
   const body = useMemo(() => parseFrontmatter(props.source).body, [props.source]);

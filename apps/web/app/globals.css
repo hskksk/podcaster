@@ -73,9 +73,58 @@ body {
 }
 
 /* Minimap: document scroll (not the package default scrollport) */
+.article-minimap-layout.markdoc-reader {
+  grid-template-columns: minmax(0, 1fr) min(400px, 36vw);
+  gap: 1rem;
+}
+
 .article-minimap-layout .markdoc-reader__main {
   max-height: none;
   overflow: visible;
+}
+
+/* Treemap palette: match site stone / amber tokens (package default is slate/sky). */
+.article-minimap-layout .tm {
+  --bg: var(--color-bg);
+  --fg: var(--color-fg);
+  --muted: var(--color-muted-fg);
+  --ch: var(--color-muted);
+  --chline: var(--color-border);
+  --tile: var(--color-surface);
+  --halo: var(--color-bg);
+  --act: var(--color-accent);
+  --c-flow: #a16207;
+  --c-apply: #047857;
+  --c-vs: #b45309;
+  --c-rec: #6d28d9;
+  --c-end: #be185d;
+  --c-ref: #78716c;
+  --c-cause: #b91c1c;
+  --c-evid: #0e7490;
+  --k0: #b45309;
+  --k1: #047857;
+  --k2: #57534e;
+  --k3: #0e7490;
+  --k4: #7c2d12;
+  --k5: #a16207;
+  font-family: var(--font-sans);
+}
+
+.dark .article-minimap-layout .tm.tm-dark {
+  --c-flow: #fbbf24;
+  --c-apply: #34d399;
+  --c-vs: #f59e0b;
+  --c-rec: #a78bfa;
+  --c-end: #f472b6;
+  --c-ref: #a8a29e;
+  --c-cause: #f87171;
+  --c-evid: #22d3ee;
+  --k0: #f59e0b;
+  --k1: #34d399;
+  --k2: #a8a29e;
+  --k3: #22d3ee;
+  --k4: #fb923c;
+  --k5: #fbbf24;
 }
 
 /* Treemap tiles: compact by default; subtitle expands via .tm-tile-expand */
@@ -147,6 +196,73 @@ body {
 @media (min-width: 721px) {
   .article-minimap-layout .markdoc-treemap-host.article-minimap {
     top: 6rem;
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    max-height: min(85vh, 52rem);
+  }
+
+  .article-minimap-layout .tm-root {
+    padding: 6px;
+  }
+
+  .article-minimap-layout .tm-row {
+    gap: 6px;
+    grid-template-columns: 36px 1fr;
+  }
+
+  .article-minimap-layout .tm-num {
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-top: 4px;
+    font-size: 0.75rem;
+  }
+
+  .article-minimap-layout .tm-gap {
+    height: 1.5rem;
+  }
+
+  .article-minimap-layout .tm-ch {
+    padding: 6px 8px 8px;
+    border-radius: var(--radius-card);
+  }
+
+  .article-minimap-layout .tm-tiles {
+    gap: 0.625rem;
+  }
+
+  .article-minimap-layout .tm-grp {
+    min-width: 8.5rem;
+    padding: 4px 6px 6px;
+    border-radius: calc(var(--radius-card) - 2px);
+  }
+
+  .article-minimap-layout .tm-tile {
+    min-width: 7.25rem;
+    min-height: 3rem;
+    padding: 5px 6px;
+    border-radius: calc(var(--radius-card) - 4px);
+  }
+
+  .article-minimap-layout .tm-tile b {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .article-minimap-layout .tm-tile small {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .article-minimap-layout .tm-ch > h2,
+  .article-minimap-layout .tm-grp > h3 {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .article-minimap-layout .tm-ov text {
+    font-size: 10px;
   }
 }
 

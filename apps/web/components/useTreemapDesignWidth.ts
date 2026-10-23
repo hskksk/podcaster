@@ -2,56 +2,69 @@
 
 import { type RefObject, useEffect, useState } from "react";
 
-const DESKTOP_TREEMAP_DESIGN_WIDTH = 760;
-const MOBILE_MINIMAP_MEDIA = "(max-width: 720px)";
+const MIN_TREEMAP_DESIGN_WIDTH = 280;
+const FALLBACK_TREEMAP_DESIGN_WIDTH = 360;
 
-function readMobileDesignWidth(container: HTMLElement): number {
-  const width = container.clientWidth;
-  return Math.max(320, Math.round(width));
+function readHostDesignWidth(host: HTMLElement): number {
+  const width = host.clientWidth;
+  return Math.max(MIN_TREEMAP_DESIGN_WIDTH, Math.round(width));
 }
 
 function initialDesignWidth(): number {
-  if (typeof window === "undefined") return DESKTOP_TREEMAP_DESIGN_WIDTH;
-  if (!window.matchMedia(MOBILE_MINIMAP_MEDIA).matches) return DESKTOP_TREEMAP_DESIGN_WIDTH;
-  return Math.max(320, Math.round(window.innerWidth));
+  if (typeof window === "undefined") return FALLBACK_TREEMAP_DESIGN_WIDTH;
+  return Math.max(MIN_TREEMAP_DESIGN_WIDTH, Math.round(window.innerWidth));
 }
 
-/** Match treemap `designWidth` to the mobile minimap shell so tiles are not scaled down. */
-export function useTreemapDesignWidth(containerRef: RefObject<HTMLElement | null>): number {
+/**
+ * Match treemap `designWidth` to the rendered host width so minimap mode does not
+ * scale content down (desktop sidebar uses `display: contents`, so measure `.markdoc-treemap-host`).
+ */
+export function useTreemapDesignWidth(panelRef: RefObject<HTMLElement | null>): number {
   const [designWidth, setDesignWidth] = useState(initialDesignWidth);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const panel = panelRef.current;
+    if (!panel) return;
 
     let frame = 0;
-    const sync = () => {
-      const mobile = window.matchMedia(MOBILE_MINIMAP_MEDIA).matches;
-      if (!mobile) {
-        setDesignWidth(DESKTOP_TREEMAP_DESIGN_WIDTH);
-        return;
-      }
-      const next = readMobileDesignWidth(container);
+    let resizeObserver: ResizeObserver | null = null;
+    let mutationObserver: MutationObserver | null = null;
+
+    const sync = (host: HTMLElement) => {
+      const next = readHostDesignWidth(host);
       setDesignWidth((prev) => (prev === next ? prev : next));
     };
 
-    const schedule = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(sync);
+    const attach = (host: HTMLElement) => {
+      const schedule = () => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => sync(host));
+      };
+      resizeObserver = new ResizeObserver(schedule);
+      resizeObserver.observe(host);
+      schedule();
     };
 
-    const mq = window.matchMedia(MOBILE_MINIMAP_MEDIA);
-    mq.addEventListener("change", schedule);
-    const ro = new ResizeObserver(schedule);
-    ro.observe(container);
-    schedule();
+    const host = panel.querySelector<HTMLElement>(".markdoc-treemap-host");
+    if (host) {
+      attach(host);
+    } else {
+      mutationObserver = new MutationObserver(() => {
+        const nextHost = panel.querySelector<HTMLElement>(".markdoc-treemap-host");
+        if (!nextHost) return;
+        mutationObserver?.disconnect();
+        mutationObserver = null;
+        attach(nextHost);
+      });
+      mutationObserver.observe(panel, { childList: true, subtree: true });
+    }
 
     return () => {
       cancelAnimationFrame(frame);
-      mq.removeEventListener("change", schedule);
-      ro.disconnect();
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
     };
-  }, [containerRef]);
+  }, [panelRef]);
 
   return designWidth;
 }
