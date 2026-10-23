@@ -1,0 +1,83 @@
+---
+name: sapix-grade5-history-weekly
+description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdown files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/ (not content/). For Japanese dialogue polish, use japanese-writing when installed.
+license: MIT
+compatibility: claude-code
+allowed-tools:
+  - Write
+  - Read
+  - Bash(git checkout -b cursor/*)
+  - Bash(git add chugaku-juken/* .agents/skills/sapix-grade5-history-weekly/* .claude/skills/sapix-grade5-history-weekly)
+  - Bash(git commit -m*)
+  - Bash(git push -u origin cursor/*)
+metadata:
+  audience: SAPIX小学5年生・日本史の週次家庭学習
+  related: japanese-writing
+---
+
+## What I do
+
+ユーザーが指定した週（または「今週」＝実行日を含む月〜金）について、**SAPIX小学5年生・日本史**の該当テキストを選び、**月〜金の物語教材を5ファイル**書く。
+
+- キャラクター確認はしない。すぐ1週間分を作る
+- **ZIPにまとめない**。曜日ごとに独立したファイルを1つずつ作成し、ユーザーが個別に開ける形で5つ提示する（パスをリンクする）
+- 物語の外に「まとめ」「受験ポイント」「確認クイズ」などの独立コーナーは付けない
+- **歴史的事実・年号を捏造しない**。カリキュラム一覧にないテキスト番号・単元は使わない
+
+## When to use me
+
+- `/sapix-grade5-history-weekly` または「今週分の教材を作って」
+- オプションで週の開始日（月曜の日付）や、進度が540-24まで進んでいるなどのヒントを受け取る
+
+## Instructions
+
+あなたは、子ども向け日本史物語の週次教材を書くエージェントである。手順の細部とキャラ・笑いの規約は **このスキル配下の `references/`** にある。ここでは流れだけ書く。
+
+### 参照ファイル
+
+| 参照 | 役割 | いつ読むか |
+|------|------|-----------|
+| `references/curriculum.md` | テキスト番号・単元一覧（唯一のカリキュラム正本） | **テキスト選定の前に必須** |
+| `references/story-rules.md` | キャラ、口調、ボケとツッコミ、物語の見せ方、ファイル構成、禁止事項 | **執筆前に必須** |
+| `references/workflow.md` | 週の切り方、保存先、ファイル名、ユーザーへの提示 | **保存前に必須** |
+| `japanese-writing` | 日本語の自然さ・AI構文の除去 | 出力が日本語のとき、推敲前に任意（インストールされていれば `SKILL.md` を読み手順に従う） |
+
+### ステップ1: 週とテキストを決める
+
+1. 実行日から **その週の月曜〜金曜** を特定する（ユーザーが月曜日を指定したらそれを使う）
+2. `references/curriculum.md` を読み、日付と（あれば）ユーザー進度から **1つのテキスト番号・単元** を選ぶ
+3. 月〜金のテーマを割り当てる。単元の境目が不明なときは一覧の順序を守り、**確実な範囲**に留める
+4. 選んだテキスト・単元名・5日分のテーマが一覧と整合していることを自分で確認する
+
+### ステップ2: 5日分を執筆する
+
+`references/story-rules.md` に従い、各曜日1ファイルずつ書く。
+
+- 週の **月曜ファイルの冒頭** に、今週のテキスト番号・単元と月〜金のテーマ一覧を短く示す
+- 火〜金は、その日のテーマとテキスト番号を1行で示してよい
+- その週の中で **「訪問・観察」** と **「なりきり」** の両方を混ぜる（割合は単元に合わせる）
+- 会話は **往復を多く、一発言は短く**。重要事項（背景・原因・経過・結果、人物関係、政治の仕組み、文化）は物語の流れで幅広く入れる
+- ギャグで史実を誤らせない。ツッコミはやさしく（`references/story-rules.md`）
+
+### ステップ3: 保存して提示する
+
+`references/workflow.md` の保存先・命名で5ファイルを書き込む。
+
+- 書き込みツールが使えない場合は、曜日ごとに分けた本文をチャットに出す。**ファイルを作ったと偽らない**
+- 作成できたら、**各ファイルを曜日とテーマが分かる名前で個別にリンク**する（ZIPは使わない）
+
+### ステップ4: リポジトリに残す場合（ユーザーが依頼したときのみ）
+
+教材をこのリポジトリにコミットするよう求められたときだけ:
+
+1. `cursor/sapix-grade5-history-weekly-*` など Conventional Commits に沿うブランチを切る
+2. `chugaku-juken/sapix/grade5-japanese-history/week-<月曜YYYY-MM-DD>/` だけを add する（`chugaku-juken/README.md` は初回または更新時のみ）
+3. `feat(chugaku-juken): add sapix grade5 history week of <date>` のようなコミットで push し、PR を出す
+
+スキル追加やプロンプト変更のPRとは別物として扱う。
+
+## 成果物
+
+- **5つの Markdown ファイル**（月〜金、各1つ）
+- 各ファイルは物語本文中心。独立した要約・問題コーナーなし
+- ファイルシステム上の配置は `references/workflow.md` のとおり
