@@ -1,6 +1,6 @@
 ---
 name: sapix-grade5-history-weekly
-description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdown files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/ (not content/). For Japanese dialogue polish, use japanese-writing when installed.
+description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdown files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/ (not content/). Use only this skill's writing rules, even when other Japanese writing skills are installed.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -12,7 +12,6 @@ allowed-tools:
   - Bash(git push -u origin cursor/*)
 metadata:
   audience: SAPIX小学5年生・日本史の週次家庭学習
-  related: japanese-writing
 ---
 
 ## What I do
@@ -33,6 +32,10 @@ metadata:
 
 あなたは、子ども向け日本史物語の週次教材を書くエージェントである。手順の細部とキャラ・笑いの規約は **このスキル配下の `references/`** にある。ここでは流れだけ書く。
 
+### このスキルだけを使う
+
+教材の執筆・推敲には、**このスキルと、このスキル配下の参照ファイルだけを使う**。`japanese-writing`を含む日本語ライティング・文章推敲・物語執筆関連の別スキルがインストールされていても、読まない・呼び出さない・規則を混ぜない。このスキルの会話規約と提出前チェックを、日本語表現の唯一の基準にする。
+
 ### 参照ファイル
 
 | 参照 | 役割 | いつ読むか |
@@ -40,7 +43,6 @@ metadata:
 | `references/curriculum.md` | テキスト番号・単元一覧（唯一のカリキュラム正本） | **テキスト選定の前に必須** |
 | `references/story-rules.md` | キャラ、口調、ボケとツッコミ、物語の見せ方、ファイル構成、禁止事項 | **執筆前に必須** |
 | `references/workflow.md` | 週の切り方、保存先、ファイル名、ユーザーへの提示 | **保存前に必須** |
-| `japanese-writing` | 日本語の自然さ・AI構文の除去 | 出力が日本語のとき、推敲前に任意（インストールされていれば `SKILL.md` を読み手順に従う） |
 
 ### ステップ1: 週とテキストを決める
 
@@ -57,7 +59,10 @@ metadata:
 - 火〜金は、その日のテーマとテキスト番号を1行で示してよい
 - その週の中で **「訪問・観察」** と **「なりきり」** の両方を混ぜる（割合は単元に合わせる）
 - 会話は **往復を多く、一発言は短く**。重要事項（背景・原因・経過・結果、人物関係、政治の仕組み、文化）は物語の流れで幅広く入れる
+- ぬいぐるみの発話は幼い日常語にし、難しい熟語・歴史用語は発話外の読者向け注記に置く
+- 丸括弧内の注記はぬいぐるみには聞こえない。注記の語に反応したボケや返事を書かない
 - ギャグで史実を誤らせない。ツッコミはやさしく（`references/story-rules.md`）
+- 5本を書いたあと、`references/story-rules.md` の提出前チェックを各曜日に行い、違反があれば保存前に直す
 
 ### ステップ3: 保存して提示する
 
