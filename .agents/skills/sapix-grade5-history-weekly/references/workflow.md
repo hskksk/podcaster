@@ -10,9 +10,13 @@
 
 **保存先（リポジトリ内）:**
 
+中学受験向け教材は `content/`（Wiki・クリップ）と分離し、次のパスを使う。
+
 ```
-content/sapix-grade5-history/week-<月曜のYYYY-MM-DD>/
+chugaku-juken/sapix/grade5-japanese-history/week-<月曜のYYYY-MM-DD>/
 ```
+
+`chugaku-juken/README.md` にディレクトリの目的を書いてある。Keystatic・公開サイト・ポッドキャスト ingest の対象ではない。
 
 **ファイル数:** 5（月〜金で各1つ）。ZIPにまとめない。
 

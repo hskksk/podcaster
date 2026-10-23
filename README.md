@@ -488,7 +488,7 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 /sapix-grade5-history-weekly
 ```
 
-- `sapix-grade5-history-weekly`（`.agents/skills/sapix-grade5-history-weekly/SKILL.md`）: 現在の日付と SAPIX 540 系カリキュラムから該当テキストを選び、月〜金の物語教材を **5 つの Markdown ファイル**（`content/sapix-grade5-history/week-<月曜>/`）として作成。くまぴー・とらぴー・ねこぴー・きつぴーの会話形式。ZIP や物語外クイズは付けない
+- `sapix-grade5-history-weekly`（`.agents/skills/sapix-grade5-history-weekly/SKILL.md`）: 現在の日付と SAPIX 540 系カリキュラムから該当テキストを選び、月〜金の物語教材を **5 つの Markdown ファイル**（`chugaku-juken/sapix/grade5-japanese-history/week-<月曜>/`）として作成。`content/` の Wiki とは別の中学受験向けディレクトリ。くまぴー・とらぴー・ねこぴー・きつぴーの会話形式。ZIP や物語外クイズは付けない
 
 ---
 
