@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { ThemeToggle } from "../ThemeToggle";
+import { JukenAiNotice } from "./JukenAiNotice";
 
 export function JukenCrumbs(props: { items: { href?: string; label: string }[] }) {
   return (
@@ -80,6 +81,9 @@ export function JukenShell(props: {
           </nav>
         </div>
       </header>
+      <div className={cn("mx-auto w-full px-4 pt-6 sm:px-6", width)}>
+        <JukenAiNotice />
+      </div>
       {props.hero}
       <main className={cn("mx-auto w-full flex-1 px-4 py-8 sm:px-6 sm:py-10", width)}>{props.children}</main>
       <footer className="mt-auto border-t border-border/80 bg-surface/80">

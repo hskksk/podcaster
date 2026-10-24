@@ -534,6 +534,11 @@ body {
   --j-tora: #ef7a1a;
   --j-neko: #5463d8;
   --j-kitsu: #e06a32;
+  --j-miju: #e85d8a;
+  --j-ichi: #d63b5c;
+  --j-nasu: #6b4bb3;
+  --j-tako: #c45c2a;
+  --j-ramen: #c4312e;
   --j-study: #2f7d57;
   background-color: var(--color-bg);
   background-image: radial-gradient(rgb(224 164 96 / 0.45) 1.1px, transparent 1.1px);
@@ -560,6 +565,11 @@ body {
   --j-tora: #ff9a4a;
   --j-neko: #a8b2ff;
   --j-kitsu: #ff9a62;
+  --j-miju: #ff8eb8;
+  --j-ichi: #ff6b8a;
+  --j-nasu: #b39cff;
+  --j-tako: #ff9a62;
+  --j-ramen: #ff8b84;
   --j-study: #8fd0a8;
   background-image: radial-gradient(rgb(90 70 140 / 0.7) 1.1px, transparent 1.1px);
 }
@@ -642,6 +652,31 @@ body {
 .j-line[data-tone="kitsu"],
 [data-tone="kitsu"] {
   --tone: var(--j-kitsu);
+}
+
+.j-line[data-tone="miju"],
+[data-tone="miju"] {
+  --tone: var(--j-miju);
+}
+
+.j-line[data-tone="ichi"],
+[data-tone="ichi"] {
+  --tone: var(--j-ichi);
+}
+
+.j-line[data-tone="nasu"],
+[data-tone="nasu"] {
+  --tone: var(--j-nasu);
+}
+
+.j-line[data-tone="tako"],
+[data-tone="tako"] {
+  --tone: var(--j-tako);
+}
+
+.j-line[data-tone="ramen"],
+[data-tone="ramen"] {
+  --tone: var(--j-ramen);
 }
 
 .j-avatar {

@@ -3,6 +3,11 @@ export const CHARACTERS = [
   { id: "tora", name: "とらぴー", emoji: "🐯", tone: "tora" },
   { id: "neko", name: "ねこぴー", emoji: "🐱", tone: "neko" },
   { id: "kitsu", name: "きつぴー", emoji: "🦊", tone: "kitsu" },
+  { id: "miju", name: "みじゅぴー", emoji: "🧃", tone: "miju" },
+  { id: "ichi", name: "いちぴー", emoji: "🍓", tone: "ichi" },
+  { id: "nasu", name: "なすぴー", emoji: "🍆", tone: "nasu" },
+  { id: "tako", name: "たこぴー", emoji: "🐙", tone: "tako" },
+  { id: "ramen", name: "らーぴー", emoji: "🍜", tone: "ramen" },
 ] as const;
 
 export type CharacterId = (typeof CHARACTERS)[number]["id"];
