@@ -19,6 +19,7 @@ export type LessonFrontmatter = {
   textCode: string;
   unit: string;
   focus?: string;
+  mode?: LessonMode;
   cast: LessonCast;
   weekCast?: CharacterId[];
   weekOutline?: WeekOutlineEntry[];
@@ -106,6 +107,12 @@ export function parseLessonFile(source: string): ParsedLessonFile {
         textCode,
         unit: readString(record.unit),
         focus: readString(record.focus) || undefined,
+        mode:
+          readString(record.mode) === "roleplay"
+            ? "roleplay"
+            : readString(record.mode) === "observation"
+              ? "observation"
+              : undefined,
         cast: parseCast(record.cast),
         weekCast: parseWeekCast(record.weekCast),
         weekOutline: parseWeekOutline(record.weekOutline),
@@ -125,6 +132,22 @@ export function textLabelFromFrontmatter(fm: LessonFrontmatter): string {
 
 export function todayLabelFromFrontmatter(fm: LessonFrontmatter): string {
   return fm.focus ?? "";
+}
+
+export function lessonModeLabel(mode: LessonMode): string {
+  return mode === "roleplay" ? "人物体験" : "訪問・観察";
+}
+
+/** Resolve observation vs roleplay from day frontmatter, Monday weekOutline, or cast. */
+export function resolveLessonMode(
+  dayId: string,
+  fm: LessonFrontmatter,
+  weekOutline?: WeekOutlineEntry[],
+): LessonMode {
+  if (fm.mode) return fm.mode;
+  const fromOutline = weekOutline?.find((entry) => entry.day === dayId);
+  if (fromOutline) return fromOutline.mode;
+  return Object.keys(fm.cast).length > 0 ? "roleplay" : "observation";
 }
 
 const SAY_CHARACTER_RE = /{%\s*say\s+[^%]*character="([^"]+)"/g;

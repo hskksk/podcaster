@@ -5,10 +5,14 @@ import path from "node:path";
 import yaml from "js-yaml";
 import { getRepoRoot } from "../repo-root";
 import {
+  lessonModeLabel,
   parseLessonFile,
+  resolveLessonMode,
   textLabelFromFrontmatter,
   todayLabelFromFrontmatter,
   type LessonCast,
+  type LessonMode,
+  type WeekOutlineEntry,
 } from "./lesson-meta";
 import { jukenPlainTextFromTree } from "./plain-text";
 import { prepareJukenMarkdoc } from "./prepare";
@@ -39,6 +43,8 @@ export type JukenLesson = {
   theme: string;
   textLabel: string;
   todayLabel: string;
+  mode: LessonMode;
+  modeLabel: string;
   href: string;
   source: string;
   cast: LessonCast;
@@ -147,6 +153,7 @@ function lessonFromFile(props: {
   courseTitle: string;
   series: string;
   week: string;
+  weekOutline?: WeekOutlineEntry[];
 }): JukenLesson | null {
   const match = LESSON_FILE.exec(props.filename);
   if (!match) return null;
@@ -155,6 +162,7 @@ function lessonFromFile(props: {
   const source = fs.readFileSync(props.filePath, "utf8");
   const parsed = parseLessonFile(source);
   const { content } = prepareJukenMarkdoc(source);
+  const mode = resolveLessonMode(weekday.id, parsed.frontmatter, props.weekOutline);
   return {
     school: props.school,
     course: props.course,
@@ -167,6 +175,8 @@ function lessonFromFile(props: {
     theme: clean(match[2] ?? ""),
     textLabel: clean(textLabelFromFrontmatter(parsed.frontmatter)),
     todayLabel: clean(todayLabelFromFrontmatter(parsed.frontmatter)),
+    mode,
+    modeLabel: lessonModeLabel(mode),
     href: lessonHref(props.school, props.course, props.week, weekday.id),
     source,
     cast: parsed.frontmatter.cast,
@@ -195,9 +205,16 @@ function readCatalog(): JukenCourse[] {
         for (const weekDir of fs.readdirSync(weeksPath, { withFileTypes: true })) {
           if (!weekDir.isDirectory() || !WEEK_DIR.test(weekDir.name)) continue;
           const weekPath = path.join(weeksPath, weekDir.name);
-          const lessons = fs
+          const weekFiles = fs
             .readdirSync(weekPath, { withFileTypes: true })
-            .filter((entry) => entry.isFile() && entry.name.endsWith(".mdoc"))
+            .filter((entry) => entry.isFile() && entry.name.endsWith(".mdoc"));
+          const mondayEntry = weekFiles.find((entry) => entry.name.startsWith("月曜_"));
+          const weekOutline = mondayEntry
+            ? parseLessonFile(
+                fs.readFileSync(path.join(weekPath, mondayEntry.name), "utf8"),
+              ).frontmatter.weekOutline
+            : undefined;
+          const lessons = weekFiles
             .map((entry) =>
               lessonFromFile({
                 filePath: path.join(weekPath, entry.name),
@@ -207,6 +224,7 @@ function readCatalog(): JukenCourse[] {
                 courseTitle: meta.title,
                 series: meta.series,
                 week: weekDir.name,
+                weekOutline,
               }),
             )
             .filter((lesson): lesson is JukenLesson => lesson !== null)
