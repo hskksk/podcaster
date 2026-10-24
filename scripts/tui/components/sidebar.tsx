@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
+import { SIDEBAR_WIDTH } from '../layout.js';
 
 interface Props {
   currentView: string;
@@ -9,14 +10,14 @@ interface Props {
 }
 
 const VIEWS = [
-  { key: 'pipeline', label: '1. Pipeline', glyph: '◫' },
-  { key: 'episodes', label: '2. Episodes', glyph: '♪' },
-  { key: 'articles', label: '3. Articles', glyph: '¶' },
-  { key: 'audio',    label: '4. Audio',    glyph: '~' },
-  { key: 'logs',     label: '5. Logs',     glyph: '$' },
-  { key: 'inbox',    label: '6. Inbox',    glyph: '↘' },
-  { key: 'config',   label: '7. Config',   glyph: '⚙' },
-  { key: 'rss',      label: '8. RSS',      glyph: '⌘' },
+  { key: 'pipeline', label: '1.Pipeline', glyph: '◫' },
+  { key: 'episodes', label: '2.Episodes', glyph: '♪' },
+  { key: 'articles', label: '3.Articles', glyph: '¶' },
+  { key: 'audio',    label: '4.Audio',    glyph: '~' },
+  { key: 'logs',     label: '5.Logs',     glyph: '$' },
+  { key: 'inbox',    label: '6.Inbox',    glyph: '↘' },
+  { key: 'config',   label: '7.Config',   glyph: '⚙' },
+  { key: 'rss',      label: '8.RSS',      glyph: '⌘' },
 ];
 
 export const Sidebar: React.FC<Props> = ({ currentView, onSelect, focus, keyboardEnabled }) => {
@@ -37,13 +38,13 @@ export const Sidebar: React.FC<Props> = ({ currentView, onSelect, focus, keyboar
   });
 
   return (
-    <Box flexDirection="column" width={20} borderStyle="single" borderColor={focus ? "cyan" : "gray"} height="100%">
-      <Box paddingX={1} marginBottom={1} flexShrink={0} borderStyle="single" borderColor={focus ? "cyan" : "gray"}>
+    <Box flexDirection="column" width={SIDEBAR_WIDTH} borderStyle="single" borderColor={focus ? "cyan" : "gray"} height="100%">
+      <Box paddingX={1} flexShrink={0}>
         <Text bold color={focus ? "cyan" : "white"}>
           podcaster {focus ? "●" : ""}
         </Text>
       </Box>
-      <Box flexDirection="column" flexGrow={1}>
+      <Box flexDirection="column" flexGrow={1} marginTop={1}>
         {VIEWS.map(v => (
           <Box key={v.key} paddingX={1}>
             <Text color={currentView === v.key ? "yellow" : "white"} bold={currentView === v.key}>

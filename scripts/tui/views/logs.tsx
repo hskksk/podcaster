@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { Article, Episode, ProcessingLog } from '../data/types.js';
 import { matchesTextFilter } from '../utils/text-filter.js';
+import { SIDEBAR_WIDTH } from '../layout.js';
 
 const COL = {
   timestamp: 20,
@@ -103,8 +104,8 @@ export const LogsView: React.FC<Props> = ({
   });
 
   const visibleLogs = filteredLogs.slice(offset, offset + limit);
-  /** Main pane width minus sidebar (22) and padding/border slack. */
-  const rowInnerWidth = Math.max(48, columns - 22 - 6);
+  /** Main pane width minus the sidebar and padding/border slack. */
+  const rowInnerWidth = Math.max(48, columns - SIDEBAR_WIDTH - 6);
 
   return (
     <Box flexDirection="column" height="100%" width="100%" flexGrow={1} minWidth={0}>
