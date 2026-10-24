@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { DayCards } from "../../../../../../components/juken/DayCards";
 import { JukenCrumbs, JukenShell } from "../../../../../../components/juken/JukenShell";
 import { JukenPager } from "../../../../../../components/juken/JukenPager";
+import { LessonModeChip } from "../../../../../../components/juken/LessonModeChip";
 import { StoryBody } from "../../../../../../components/juken/StoryBody";
 import { ReadingProgress } from "../../../../../../components/ReadingProgress";
 import {
@@ -66,7 +67,8 @@ export default async function JukenLessonPage({ params }: { params: Promise<Para
         <h1 className="mt-1 font-serif text-3xl font-black leading-tight tracking-tight sm:text-4xl">
           {lesson.theme}
         </h1>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <LessonModeChip mode={lesson.mode} label={lesson.modeLabel} />
           {lesson.textLabel ? <span className="j-chip">{lesson.textLabel}</span> : null}
           {lesson.todayLabel ? <span className="j-chip">{lesson.todayLabel}</span> : null}
         </div>

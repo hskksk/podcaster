@@ -606,6 +606,30 @@ body {
   line-height: 1.45;
 }
 
+.j-mode {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+}
+
+.j-mode--observation {
+  border: 1px solid color-mix(in srgb, var(--j-study) 55%, var(--color-border));
+  background: color-mix(in srgb, var(--j-study) 16%, var(--color-surface));
+  color: color-mix(in srgb, var(--j-study) 72%, var(--color-fg));
+}
+
+.j-mode--roleplay {
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-accent) 85%, var(--color-fg));
+}
+
 .j-story {
   margin-top: 0.5rem;
 }
