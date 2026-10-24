@@ -7,15 +7,23 @@ Phase 4: Next.js が公開サイト（一覧・記事・プレイヤー）。`/k
 ```bash
 # from repo root
 pnpm web:dev
-# Public site: http://127.0.0.1:3000/
-# Keystatic:   http://127.0.0.1:3000/keystatic
+# Portal:    http://127.0.0.1:3000/
+# Podcast:   http://127.0.0.1:3000/podcast
+# ふしぎ旅:  http://127.0.0.1:3000/juken
+# Keystatic: http://127.0.0.1:3000/keystatic
 ```
 
 ## Vercel（推奨）
 
 モノレポなので、Vercel の Project Settings → Root Directory を **`apps/web`** にする（Import 画面の Edit でも可）。`rootDirectory` は vercel.json には書けない。
 
-公開ページ（`/` と `/articles/[slug]`）は GitHub Pages の `scripts/build-web.ts` と同じく **ビルド時に静的 HTML を焼く**（`force-static`）。`content/docs` は Vercel の git clone に含まれているので `next build` から読める。サーバーレス関数に `content/` を同梱しない。Keystatic は GitHub storage のまま（管理画面にドキュメントがあっても、公開面はデプロイ時の Git スナップショット）。
+公開ページは **ビルド時に静的 HTML を焼く**（`force-static`）。
+
+- `/` は hskksk の入口
+- `/podcast` と `/podcast/articles/[slug]` は wiki とポッドキャスト。旧 `/`・`/articles/[slug]`・`/search`・`/web-clips` はここへリダイレクトする
+- `/juken` は `chugaku-juken/` の週次物語
+
+`content/docs` と `chugaku-juken/` は Vercel の git clone に含まれているので `next build` から読める。サーバーレス関数に `content/` を同梱しない。Keystatic は GitHub storage のまま（管理画面にドキュメントがあっても、公開面はデプロイ時の Git スナップショット）。
 
 記事本文は `@markdoc/next.js`（`mode: "static"`）と同じスキーマ（`apps/web/markdoc/`）で `@markdoc/markdoc` がコンパイルする。Keystatic の正本は `content/docs/{entry}/index.mdoc` なので、プラグインが要求する `app/**/*.mdoc` へは置かない（slug は `legacyFilename`、ディレクトリ名ではない）。
 

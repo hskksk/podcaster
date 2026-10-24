@@ -7,7 +7,7 @@ export function ArticlePager(props: {
   next: PagerItem | null;
   basePath?: string;
 }) {
-  const base = props.basePath ?? "/articles";
+  const base = props.basePath ?? "/podcast/articles";
   if (!props.prev && !props.next) return null;
 
   return (

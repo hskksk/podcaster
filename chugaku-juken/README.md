@@ -1,14 +1,25 @@
-# 中学受験向け教材（リポジトリ外周）
+# 中学受験向け教材
 
-このディレクトリは、**中学受験（主に小学高学年）向けの家庭学習用教材**を置く場所です。
+家庭学習用の物語を置く場所です。公開サイトの `/juken`（ふしぎ旅）が、このツリーをそのまま読みます。
 
-- `content/docs/`（Wiki・Keystatic）や `content/web-clips/` とは **別系統** です。公開サイトの記事群やポッドキャスト ingest の対象ではありません。
-- スキルで生成する週次物語などは、科目・塾コースごとのサブディレクトリに保存します。
+`content/docs/`（Wiki・Keystatic）や `content/web-clips/` とは別系統です。ポッドキャスト ingest の対象ではありません。
 
-## 現在のレイアウト
+## レイアウト
 
 | パス | 内容 |
 |------|------|
-| `sapix/grade5-japanese-history/week-<月曜YYYY-MM-DD>/` | SAPIX 小学5年・日本史の週次物語（`sapix-grade5-history-weekly` スキル） |
+| `<塾>/<コース>/course.yml` | コース名、学年、科目、紹介。サイトのコースページに出る |
+| `<塾>/<コース>/weeks/<月曜YYYY-MM-DD>/` | その週の月〜金。ファイル名は `月曜_テーマ.md` のように曜日で始める |
 
-他の塾・科目を追加する場合は、`sapix/` や `yotsuya/` など **コース名の下に科目** を切る想定です。
+例: `sapix/grade5-japanese-history/weeks/2026-10-19/月曜_藤原氏のひみつ.md`
+
+公開 URL はディレクトリに対応します。
+
+- `/juken`
+- `/juken/sapix/grade5-japanese-history`
+- `/juken/sapix/grade5-japanese-history/2026-10-19`
+- `/juken/sapix/grade5-japanese-history/2026-10-19/mon`
+
+曜日のパスは `mon` `tue` `wed` `thu` `fri` です。テーマはファイル名と見出しから取ります。
+
+他の塾・科目を足すときは、`sapix/` や `yotsuya/` の下にコースディレクトリを切り、`course.yml` と `weeks/` を置きます。

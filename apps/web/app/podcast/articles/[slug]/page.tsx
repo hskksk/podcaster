@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArticleCoverHero, ArticleHeader } from "../../../components/ArticleHeader";
-import { ArticlePager } from "../../../components/ArticlePager";
-import { ArticleMinimapLayout } from "../../../components/ArticleMinimapLayout";
-import { SiteShell } from "../../../components/SiteShell";
-import { adjacentPublicDocs } from "../../../lib/site/adjacent-docs";
-import { audioForPublicDoc, fetchArticleAudioMap } from "../../../lib/site/audio";
-import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
-import { fetchArticleImageMap, imageForPublicDoc } from "../../../lib/site/episode-images";
-import { articleOpenGraph } from "../../../lib/site/open-graph";
-import { EpisodePlayer } from "../../../components/EpisodePlayer";
-import { ReadingProgress } from "../../../components/ReadingProgress";
-import { loadPublicDoc, loadPublicDocs } from "../../../lib/site/docs";
-import { loadTreemapSidecar } from "../../../lib/site/treemap-labels";
-import { MarkdocArticleBody } from "../../../components/MarkdocArticleBody";
-import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
-import { prepareMarkdoc } from "../../../lib/markdoc";
-import { textify } from "../../../../../scripts/lib/mdoc";
+import { ArticleCoverHero, ArticleHeader } from "../../../../components/ArticleHeader";
+import { ArticlePager } from "../../../../components/ArticlePager";
+import { ArticleMinimapLayout } from "../../../../components/ArticleMinimapLayout";
+import { SiteShell } from "../../../../components/SiteShell";
+import { adjacentPublicDocs } from "../../../../lib/site/adjacent-docs";
+import { audioForPublicDoc, fetchArticleAudioMap } from "../../../../lib/site/audio";
+import { feedUrl, loadSiteConfig } from "../../../../lib/site/config";
+import { fetchArticleImageMap, imageForPublicDoc } from "../../../../lib/site/episode-images";
+import { articleOpenGraph } from "../../../../lib/site/open-graph";
+import { EpisodePlayer } from "../../../../components/EpisodePlayer";
+import { ReadingProgress } from "../../../../components/ReadingProgress";
+import { loadPublicDoc, loadPublicDocs } from "../../../../lib/site/docs";
+import { loadTreemapSidecar } from "../../../../lib/site/treemap-labels";
+import { MarkdocArticleBody } from "../../../../components/MarkdocArticleBody";
+import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
+import { prepareMarkdoc } from "../../../../lib/markdoc";
+import { textify } from "../../../../../../scripts/lib/mdoc";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -95,7 +95,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
         ) : null}
         <div className="mx-auto max-w-3xl">
           <p className="mb-8 text-sm">
-            <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
+            <Link href="/podcast" className="font-medium text-muted-fg no-underline hover:text-fg">
               ← 記事一覧
             </Link>
           </p>
@@ -108,7 +108,11 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
           {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
         </div>
 
-        <ArticleMinimapLayout source={renderSource} treemapSidecar={treemapSidecar}>
+        <ArticleMinimapLayout
+          source={renderSource}
+          treemapSidecar={treemapSidecar}
+          pagefindSite="podcast"
+        >
           <div className="markdoc">
             <MarkdocArticleBody content={content} />
           </div>

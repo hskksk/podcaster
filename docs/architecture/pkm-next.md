@@ -17,7 +17,7 @@
 | 知識の器 | `apps/web` の Next.js + Keystatic。ローカルは FS、Vercel は GitHub storage |
 | 編集 UI | `/keystatic` が Vercel 上で GitHub ログインできる |
 | 知識ファイル | `content/docs`（公開 wiki）と `content/web-clips`（クリップ）。正本は `index.mdoc`（36+4 本移行済み） |
-| 公開サイト | Next.js（`/`・`/articles/[slug]`）。GitHub Pages は旧 URL リダイレクト（Phase 4） |
+| 公開サイト | Next.js。`/` は hskksk の入口。`/podcast` と `/podcast/articles/[slug]` が wiki・podcast。`/juken` が `chugaku-juken/` の物語。GitHub Pages は旧 URL から `/podcast` へリダイレクト |
 | 投入待ち | web-clips 既定 `podcast: none`。`queued` は `pnpm ingest:queued` / Actions（Phase 3） |
 | 配信 | Supabase ingest → pgflow → TTS → RSS（`content_path` 対応済み） |
 | Capture | ✅ `POST` / `PATCH /api/capture`（#87）。CLI `pnpm capture`。クライアント手順は [capture-clients.md](../guides/capture-clients.md) |
@@ -208,7 +208,7 @@ mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではな�
 
 ## 7. Phase 4 — 公開サイト（完了 #90, #94）
 
-- Next.js が記事一覧・詳細・プレイヤーを描画（`/` と `/articles/[slug]`）
+- Next.js が記事一覧・詳細・プレイヤーを描画（`/podcast` と `/podcast/articles/[slug]`）。`/` は hskksk の入口。中学受験の物語は `/juken`
 - GitHub Pages ワークフローは旧 URL の meta-refresh リダイレクトだけ出す（`NEXT_PUBLIC_SITE_URL`）
 - `web/template.html` / `scripts/build-web.ts` は `archive/` へ
 - `/keystatic` は非公開のまま（GitHub OAuth。必要なら Basic Auth 追加）

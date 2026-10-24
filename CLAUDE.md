@@ -50,7 +50,7 @@ curl -s http://localhost:54331/functions/v1/craft-episode-worker -H "Authorizati
 
 ## Architecture
 
-Git + Markdoc (`content/`) is the designed knowledge store. Wiki lives in `content/docs/**/index.mdoc`, clips in `content/web-clips/**/index.mdoc`. Keystatic edits those files. The public site is Next.js (`apps/web`: `/` and `/articles/[slug]`). GitHub Pages only publishes redirects to that origin. The podcast factory (ingest → pgflow → TTS → RSS) is unchanged.
+Git + Markdoc (`content/`) is the designed knowledge store. Wiki lives in `content/docs/**/index.mdoc`, clips in `content/web-clips/**/index.mdoc`. Keystatic edits those files. The public site is Next.js (`apps/web`): `/` is the hskksk portal, `/podcast` is the wiki and podcast (old `/` and `/articles/[slug]` redirect here), and `/juken` publishes `chugaku-juken/`. GitHub Pages only publishes redirects to that origin. The podcast factory (ingest → pgflow → TTS → RSS) is unchanged.
 
 Article text enters via the `ingest` Edge Function and starts a **pgflow** DAG run:
 

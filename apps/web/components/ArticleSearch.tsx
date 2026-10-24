@@ -17,7 +17,7 @@ export function ArticleSearch(props: {
   basePath?: string;
   searchPlaceholder?: string;
 }) {
-  const basePath = props.basePath ?? "/articles";
+  const basePath = props.basePath ?? "/podcast/articles";
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();

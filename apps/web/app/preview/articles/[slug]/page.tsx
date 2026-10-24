@@ -63,7 +63,7 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
   const draft = await getDraftPreviewContext();
   if (!draft.enabled) {
     const { slug } = await params;
-    redirect(`/articles/${encodeURIComponent(slug)}`);
+    redirect(`/podcast/articles/${encodeURIComponent(slug)}`);
   }
 
   const { slug } = await params;
@@ -98,7 +98,7 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
         ) : null}
         <div className="mx-auto max-w-3xl">
           <p className="mb-8 text-sm">
-            <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
+            <Link href="/podcast" className="font-medium text-muted-fg no-underline hover:text-fg">
               ← 記事一覧
             </Link>
           </p>

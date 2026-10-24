@@ -57,7 +57,7 @@ export default async function PreviewWebClipPage({ params }: { params: Promise<P
   const draft = await getDraftPreviewContext();
   if (!draft.enabled) {
     const { slug } = await params;
-    redirect(`/web-clips/${encodeURIComponent(slug)}`);
+    redirect(`/podcast/web-clips/${encodeURIComponent(slug)}`);
   }
 
   const { slug } = await params;
@@ -83,11 +83,11 @@ export default async function PreviewWebClipPage({ params }: { params: Promise<P
       >
         <div className="mx-auto max-w-3xl">
           <p className="mb-8 text-sm">
-            <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
-              メインサイト
+            <Link href="/podcast" className="font-medium text-muted-fg no-underline hover:text-fg">
+              Podcast
             </Link>
             <span className="text-muted-fg"> / </span>
-            <Link href="/web-clips" className="font-medium text-muted-fg no-underline hover:text-fg">
+            <Link href="/podcast/web-clips" className="font-medium text-muted-fg no-underline hover:text-fg">
               Web Clips
             </Link>
           </p>

@@ -43,9 +43,9 @@ export function publicWebClipFromMdocSource(dir: string, source: string): Public
 }
 
 export function publicPathForDocEntry(source: string, entryDir: string): string {
-  return `/articles/${publicDocFromMdocSource(entryDir, source).slug}`;
+  return `/podcast/articles/${publicDocFromMdocSource(entryDir, source).slug}`;
 }
 
 export function publicPathForWebClipEntry(source: string, entryDir: string): string {
-  return `/web-clips/${publicWebClipFromMdocSource(entryDir, source).slug}`;
+  return `/podcast/web-clips/${publicWebClipFromMdocSource(entryDir, source).slug}`;
 }

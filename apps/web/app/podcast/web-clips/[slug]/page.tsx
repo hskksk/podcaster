@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArticleHeader } from "../../../components/ArticleHeader";
-import { ArticlePager } from "../../../components/ArticlePager";
-import { ArticleMinimapLayout } from "../../../components/ArticleMinimapLayout";
-import { ReadingProgress } from "../../../components/ReadingProgress";
-import { SiteShell } from "../../../components/SiteShell";
-import { adjacentWebClips } from "../../../lib/site/adjacent-web-clips";
-import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
-import { articleOpenGraph } from "../../../lib/site/open-graph";
-import { MarkdocArticleBody } from "../../../components/MarkdocArticleBody";
-import { mdocBodyForRender } from "../../../lib/site/strip-duplicate-title";
-import { prepareMarkdoc } from "../../../lib/markdoc";
-import { loadTreemapSidecar } from "../../../lib/site/treemap-labels";
-import { loadPublicWebClip, loadPublicWebClips } from "../../../lib/site/web-clips";
-import { textify } from "../../../../../scripts/lib/mdoc";
+import { ArticleHeader } from "../../../../components/ArticleHeader";
+import { ArticlePager } from "../../../../components/ArticlePager";
+import { ArticleMinimapLayout } from "../../../../components/ArticleMinimapLayout";
+import { ReadingProgress } from "../../../../components/ReadingProgress";
+import { SiteShell } from "../../../../components/SiteShell";
+import { adjacentWebClips } from "../../../../lib/site/adjacent-web-clips";
+import { feedUrl, loadSiteConfig } from "../../../../lib/site/config";
+import { articleOpenGraph } from "../../../../lib/site/open-graph";
+import { MarkdocArticleBody } from "../../../../components/MarkdocArticleBody";
+import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
+import { prepareMarkdoc } from "../../../../lib/markdoc";
+import { loadTreemapSidecar } from "../../../../lib/site/treemap-labels";
+import { loadPublicWebClip, loadPublicWebClips } from "../../../../lib/site/web-clips";
+import { textify } from "../../../../../../scripts/lib/mdoc";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -83,11 +83,11 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
       >
         <div className="mx-auto max-w-3xl">
           <p className="mb-8 text-sm">
-            <Link href="/" className="font-medium text-muted-fg no-underline hover:text-fg">
-              メインサイト
+            <Link href="/podcast" className="font-medium text-muted-fg no-underline hover:text-fg">
+              Podcast
             </Link>
             <span className="text-muted-fg"> / </span>
-            <Link href="/web-clips" className="font-medium text-muted-fg no-underline hover:text-fg">
+            <Link href="/podcast/web-clips" className="font-medium text-muted-fg no-underline hover:text-fg">
               Web Clips
             </Link>
           </p>
@@ -106,7 +106,7 @@ export default async function WebClipPage({ params }: { params: Promise<Params> 
         </ArticleMinimapLayout>
 
         <div className="mx-auto max-w-3xl">
-          <ArticlePager prev={prev} next={next} basePath="/web-clips" />
+          <ArticlePager prev={prev} next={next} basePath="/podcast/web-clips" />
         </div>
       </SiteShell>
     </>

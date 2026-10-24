@@ -14,6 +14,8 @@ import { useTreemapTileExpand } from "./useTreemapTileExpand";
 export function ArticleMinimapLayout(props: {
   source: string;
   treemapSidecar?: TreemapSidecarContent | null;
+  /** Pagefind filter value for `site`, so podcast search stays on podcast pages. */
+  pagefindSite?: string;
   children: ReactNode;
 }) {
   const scrollRef = useRef<HTMLElement>(null);
@@ -63,6 +65,7 @@ export function ArticleMinimapLayout(props: {
       <article
         className="mx-auto w-full min-w-0 max-w-3xl"
         data-pagefind-body
+        data-pagefind-filter={props.pagefindSite ? `site:${props.pagefindSite}` : undefined}
       >
         {props.children}
       </article>
@@ -79,6 +82,7 @@ export function ArticleMinimapLayout(props: {
         ref={scrollRef}
         className="markdoc-reader__main mx-auto w-full min-w-0 max-w-3xl lg:mx-0"
         data-pagefind-body
+        data-pagefind-filter={props.pagefindSite ? `site:${props.pagefindSite}` : undefined}
       >
         {props.children}
       </article>
