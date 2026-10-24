@@ -1,5 +1,5 @@
 version: 1
-sourceSha256: "9c1d5b367082791f11818c4805483b5ecc9e8264a1102cb91bee910ea9aa507e"
+sourceSha256: "a2084e107c4dcb01fbfa75521f31c20876681099e58b3c9cc7b985a892d9fb61"
 nodes:
   i2:
     title: "GitとAI作業をひとつにまとめる"
