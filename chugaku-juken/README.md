@@ -11,7 +11,9 @@
 | `<塾>/<コース>/course.yml` | コース名、学年、科目、紹介。サイトのコースページに出る |
 | `<塾>/<コース>/weeks/<月曜YYYY-MM-DD>/` | その週の月〜金。ファイル名は `月曜_テーマ.md` のように曜日で始める |
 
-例: `sapix/grade5-japanese-history/weeks/2026-10-19/月曜_藤原氏のひみつ.md`
+例: `sapix/grade5-japanese-history/weeks/2026-10-19/月曜_藤原氏のひみつ.mdoc`
+
+各レッスンは **YAML frontmatter**（テキスト番号・単元・配役など）と **Markdoc 本文**（`{% scene %}` / `{% say %}`）で書く。詳細は `sapix-grade5-history-weekly` スキルの `references/workflow.md`。
 
 公開 URL はディレクトリに対応します。
 
