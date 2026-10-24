@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { cn } from "../../lib/cn";
+import type { LessonMode } from "../../lib/juken/lesson-meta";
+import { LessonModeChip } from "./LessonModeChip";
 
 export function DayCards(props: {
   lessons: {
@@ -8,6 +10,8 @@ export function DayCards(props: {
     weekdayLabel: string;
     weekdayLong: string;
     theme: string;
+    mode: LessonMode;
+    modeLabel: string;
   }[];
   currentDay?: string;
   layout?: "grid" | "list";
@@ -32,7 +36,10 @@ export function DayCards(props: {
               <span className="j-stamp" aria-hidden>
                 {lesson.weekdayLabel}
               </span>
-              <span className="min-w-0 font-bold leading-snug text-fg">{lesson.theme}</span>
+              <span className={cn("min-w-0 flex flex-col gap-1.5", list ? "flex-1" : "sm:w-full")}>
+                <LessonModeChip mode={lesson.mode} label={lesson.modeLabel} />
+                <span className="font-bold leading-snug text-fg">{lesson.theme}</span>
+              </span>
             </Link>
           </li>
         );
