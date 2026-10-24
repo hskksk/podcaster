@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@google/genai':
-        specifier: ^1.52.0
-        version: 1.52.0(@modelcontextprotocol/sdk@1.30.0(zod@4.6.5))
+        specifier: ^2.31.0
+        version: 2.31.0(@modelcontextprotocol/sdk@1.30.0(zod@4.6.5))
       '@supabase/supabase-js':
         specifier: ^2.49.0
         version: 2.104.0
@@ -477,8 +477,8 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@google/genai@1.52.0':
-    resolution: {integrity: sha512-gwSvbpiN/17O9TbsqSsE/OzZcpv5Fo4RQjdngGgogtuB9RsyJ8ZHhX5KjHj1bp5N9snN2eK8LDGXSaWW2hof8Q==}
+  '@google/genai@2.31.0':
+    resolution: {integrity: sha512-u1fw0qEiuWwNcjZixJFRfQF0awQnHb/rBBQUeiYGF+nmTXQCvcgpR2UMhKU9KNdnZdYhahY5jwS6nJ2V2tGtDA==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@modelcontextprotocol/sdk': ^1.25.2
@@ -3820,7 +3820,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@google/genai@1.52.0(@modelcontextprotocol/sdk@1.30.0(zod@4.6.5))':
+  '@google/genai@2.31.0(@modelcontextprotocol/sdk@1.30.0(zod@4.6.5))':
     dependencies:
       google-auth-library: 10.6.2
       p-retry: 4.6.2

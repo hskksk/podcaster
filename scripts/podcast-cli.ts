@@ -12,6 +12,7 @@
 //   pnpm cli requeue regenerate-script <episode_id> [--yes]
 //   pnpm cli requeue regenerate-audio  <episode_id> [--yes]
 //   pnpm cli requeue regenerate-image  <episode_id> [--yes]
+//   pnpm cli backfill images [--limit N] [--dry-run] [--yes]
 //   pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
 //   pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]
 
@@ -75,6 +76,7 @@ function usage(): never {
   pnpm cli requeue regenerate-script <episode_id> [--yes]
   pnpm cli requeue regenerate-audio  <episode_id> [--yes]
   pnpm cli requeue regenerate-image  <episode_id> [--yes]
+  pnpm cli backfill images [--limit N] [--dry-run] [--yes]
   pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
   pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]`);
   process.exit(1);
@@ -563,6 +565,89 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
 }
 
 // ---------------------------------------------------------------------------
+// Backfill
+// ---------------------------------------------------------------------------
+
+type BackfillEpisodeRow = {
+  id: string;
+  title: string | null;
+  created_at: string;
+  image_url: string | null;
+  audio_files: Array<{ storage_path: string | null }> | null;
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function backfillImages(opts: {
+  limit: number;
+  dryRun: boolean;
+  yes: boolean;
+}): Promise<void> {
+  const { data, error } = await db
+    .from("episodes")
+    .select("id, title, created_at, image_url, status, audio_files(storage_path)")
+    .eq("status", "published")
+    .order("created_at", { ascending: true })
+    .limit(1000);
+
+  if (error) { console.error("Error:", error.message); process.exit(1); }
+
+  const targets = ((data ?? []) as BackfillEpisodeRow[]).filter((row) => {
+    if (row.image_url?.trim()) return false;
+    return (row.audio_files ?? []).some((af) => af?.storage_path);
+  });
+
+  if (targets.length === 0) {
+    console.log("No published episode is missing an image.");
+    return;
+  }
+
+  const selected = opts.limit > 0 ? targets.slice(0, opts.limit) : targets;
+
+  console.log(`${targets.length} published episode(s) have audio but no image.`);
+  printLong(selected.map((row) => ({
+    "Episode ID": row.id,
+    "Title": row.title ?? "",
+    "Created At": fmtDate(row.created_at),
+  })));
+
+  if (opts.dryRun) {
+    console.log("Dry run: nothing queued.");
+    return;
+  }
+  if (!opts.yes) {
+    const ok = await confirm(`Queue image generation for ${selected.length} episode(s)?`);
+    if (!ok) { console.log("Aborted."); process.exit(0); }
+  }
+
+  let queued = 0;
+  let failed = 0;
+  for (const row of selected) {
+    const { error: flowErr } = await db.schema("pgflow").rpc("start_flow", {
+      flow_slug: "craftEpisodeSubmit",
+      input: { episodeId: row.id, startFrom: "image", trigger: "manual" },
+    });
+    if (flowErr) {
+      failed++;
+      console.error(`  failed  ${shortId(row.id)}  ${flowErr.message}`);
+      continue;
+    }
+    queued++;
+    console.log(`  queued  ${shortId(row.id)}  ${truncate(row.title ?? "", 40)}`);
+    // Keep the queue shallow so the worker is not flooded with image jobs.
+    await sleep(500);
+  }
+
+  console.log(`Queued ${queued} image job(s), ${failed} failed.`);
+  if (queued > 0) {
+    console.log("The podcast feed keeps the old artwork until RSS is regenerated:");
+    console.log(`  pnpm cli requeue rss <episode_id> --yes`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Dispatch
 // ---------------------------------------------------------------------------
 
@@ -597,6 +682,17 @@ if (cmd === "list") {
     process.exit(1);
   }
   await requeueCmd(sub, param, flagBool("--yes"));
+} else if (cmd === "backfill") {
+  if (sub === "images") {
+    await backfillImages({
+      limit: flag("--limit", 0),
+      dryRun: flagBool("--dry-run"),
+      yes: flagBool("--yes"),
+    });
+  } else {
+    console.error("Usage: pnpm cli backfill images [--limit N] [--dry-run] [--yes]");
+    process.exit(1);
+  }
 } else {
   usage();
 }
