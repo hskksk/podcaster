@@ -8,7 +8,7 @@ import { FilterInput } from './components/filter-input.js';
 import { CommandPalette } from './components/command-palette.js';
 import { ConfirmModal } from './components/confirm-modal.js';
 import { Toast, ToastTone } from './components/toast.js';
-import { PipelineView } from './views/pipeline.js';
+import { PipelineView, PIPELINE_LANE_COUNT } from './views/pipeline.js';
 import { EpisodesView } from './views/episodes.js';
 import { ArticlesView } from './views/articles.js';
 import { AudioView } from './views/audio.js';
@@ -18,9 +18,12 @@ import { ConfigView } from './views/config.js';
 import { RssView } from './views/rss.js';
 import { DataClient } from './data/client.js';
 import { filterPaletteCommands } from './commands/registry.js';
+import { SIDEBAR_WIDTH } from './layout.js';
 import type { OpenConfirmPayload } from './confirm-types.js';
 
 type UiMode = 'normal' | 'help' | 'filter' | 'command' | 'confirm';
+
+type Focus = 'sidebar' | 'list' | 'detail' | `pipeline_${number}`;
 
 type ConfirmState = OpenConfirmPayload;
 
@@ -34,7 +37,7 @@ export const App: React.FC<Props> = ({ isMock }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
-  const [focus, setFocus] = useState<'sidebar' | 'list' | 'detail' | 'pipeline_0' | 'pipeline_1' | 'pipeline_2' | 'pipeline_3'>('sidebar');
+  const [focus, setFocus] = useState<Focus>('sidebar');
   const [dimensions, setDimensions] = useState({
     rows: process.stdout.rows,
     columns: process.stdout.columns
@@ -374,11 +377,13 @@ export const App: React.FC<Props> = ({ isMock }) => {
           setFocus('sidebar');
         }
       } else if (v === 'pipeline') {
-        if (f === 'pipeline_0') setFocus('sidebar');
-        else if (f === 'pipeline_1') setFocus('pipeline_0');
-        else if (f === 'pipeline_2') setFocus('pipeline_1');
-        else if (f === 'pipeline_3') setFocus('pipeline_2');
-        else setFocus('sidebar');
+        if (f.startsWith('pipeline_')) {
+          const lane = Number(f.slice('pipeline_'.length));
+          if (lane > 0) setFocus(`pipeline_${lane - 1}`);
+          else setFocus('sidebar');
+        } else {
+          setFocus('sidebar');
+        }
       } else {
         if (f === 'detail') setFocus('list');
         else if (f === 'list') setFocus('sidebar');
@@ -391,9 +396,10 @@ export const App: React.FC<Props> = ({ isMock }) => {
         }
       } else if (v === 'pipeline') {
         if (f === 'sidebar') setFocus('pipeline_0');
-        else if (f === 'pipeline_0') setFocus('pipeline_1');
-        else if (f === 'pipeline_1') setFocus('pipeline_2');
-        else if (f === 'pipeline_2') setFocus('pipeline_3');
+        else if (f.startsWith('pipeline_')) {
+          const lane = Number(f.slice('pipeline_'.length));
+          if (lane + 1 < PIPELINE_LANE_COUNT) setFocus(`pipeline_${lane + 1}`);
+        }
       } else {
         if (f === 'sidebar') setFocus('list');
         else if (f === 'list') setFocus('detail');
@@ -425,7 +431,7 @@ export const App: React.FC<Props> = ({ isMock }) => {
       <TopBar view={view} isMock={isMock} filterQuery={globalFilter} />
       <Box flexDirection="column" flexGrow={1} minHeight={0}>
         <Box flexGrow={1} minHeight={0} flexDirection="row">
-          <Box flexShrink={0} flexGrow={0} width={22}>
+          <Box flexShrink={0} flexGrow={0} width={SIDEBAR_WIDTH}>
             <Sidebar currentView={view} onSelect={setView} focus={focus === 'sidebar'} keyboardEnabled={keyboardEnabled} />
           </Box>
           <Box flexGrow={1} minHeight={0}>
