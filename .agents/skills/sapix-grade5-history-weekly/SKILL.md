@@ -1,6 +1,6 @@
 ---
 name: sapix-grade5-history-weekly
-description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdown files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/weeks/ (not content/). Published at /juken. Use only this skill's writing rules, even when other Japanese writing skills are installed.
+description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdoc (.mdoc) files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/weeks/ (not content/). Published at /juken. Use only this skill's writing rules, even when other Japanese writing skills are installed.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -56,8 +56,8 @@ metadata:
 
 `references/story-rules.md` に従い、各曜日1ファイルずつ書く。
 
-- 週の **月曜ファイルの冒頭** に、今週のテキスト番号・単元と月〜金のテーマ一覧を短く示す
-- 火〜金は、その日のテーマとテキスト番号を1行で示してよい
+- 週の **月曜ファイルの frontmatter** に `sapixText`・`unit`・`weekOutline` を書く（本文に重複しない）
+- 火〜金は frontmatter に `sapixText`・`unit`・`focus` を書く。人物体験日は `cast`（キャラ ID → 歴史人物名）を書く
 - 曜日形式は固定しない。5日間に、**ナレーション的な訪問・観察を主とする日を2日以上、歴史人物を体験する日を2日以上**入れる
 - 人物体験の日は、短い寸劇を挟むだけでなく、一日の中心場面を通して割り当てられた歴史人物の立場・目的・選択を体験する
 - 「人物体験」は執筆計画だけの言葉である。場面内のぬいぐるみは自分が役を演じていると知らず、その場の本人として困り、望み、決める。「役」「体験」「なったつもり」などのメタ発言や終了後の感想会を書かない
@@ -65,7 +65,7 @@ metadata:
 - 人物体験でも、ぬいぐるみ自身のキャラクター・ため口・男の子の口調を変えない。歴史人物の口調をまねない
 - 一人称は必ず話しているぬいぐるみ自身の名前にする。「ぼく」「わたし」「おれ」やその複数形は使わない
 - 人物体験で相手を呼ぶ・指すときは、歴史人物の名前や役職ではなく、相手のぬいぐるみ名を使う
-- 人物体験の場面では、発話行の話者表記に毎回 `🐻くまぴー（歴史人物名）` のように括弧で配役を示す（初登場だけにしない）
+- 本文の会話は `{% say character="kuma" %}` など Markdoc タグ（`references/workflow.md`）。配役表示は frontmatter の `cast` からサイトが付ける
 - ぬいぐるみの発話は幼い日常語にし、難しい熟語・歴史用語は発話外の読者向け注記に置く
 - 丸括弧内の注記はぬいぐるみには聞こえない。注記の語に反応したボケや返事を書かない
 - ボケ・勘違い・ふざけた提案の直後は、別のぬいぐるみがその内容へ必ず具体的に反応する。無視して説明や次の史実へ進まない
@@ -91,6 +91,6 @@ metadata:
 
 ## 成果物
 
-- **5つの Markdown ファイル**（月〜金、各1つ）
+- **5つの Markdoc ファイル（`.mdoc`）**（月〜金、各1つ）
 - 各ファイルは物語本文中心。独立した要約・問題コーナーなし
 - ファイルシステム上の配置は `references/workflow.md` のとおり

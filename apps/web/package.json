@@ -9,7 +9,8 @@
     "postbuild": "pagefind --site .next/server/app --output-path public/pagefind --force-language ja",
     "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
-    "markdoc:check-config": "tsx scripts/markdoc-site-config-check.ts"
+    "markdoc:check-config": "tsx scripts/markdoc-site-config-check.ts",
+    "markdoc:check-juken": "tsx scripts/juken-markdoc-check.ts"
   },
   "dependencies": {
     "@hskksk/markdoc-react": "^0.6.2",

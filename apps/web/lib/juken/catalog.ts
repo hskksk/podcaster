@@ -4,11 +4,18 @@ import fs from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
 import { getRepoRoot } from "../repo-root";
-import { extractTextLabel, extractTodayLabel, parseStory, storyPlainText } from "./story";
+import {
+  parseLessonFile,
+  textLabelFromFrontmatter,
+  todayLabelFromFrontmatter,
+  type LessonCast,
+} from "./lesson-meta";
+import { jukenPlainTextFromTree } from "./plain-text";
+import { prepareJukenMarkdoc } from "./prepare";
 
 const SEGMENT = /^[\w.-]+$/;
 const WEEK_DIR = /^(\d{4})-(\d{2})-(\d{2})$/;
-const LESSON_FILE = /^(月曜|火曜|水曜|木曜|金曜)_(.+)\.md$/;
+const LESSON_FILE = /^(月曜|火曜|水曜|木曜|金曜)_(.+)\.mdoc$/;
 
 export const WEEKDAYS = [
   { id: "mon", label: "月", long: "月曜日", filePrefix: "月曜" },
@@ -34,6 +41,7 @@ export type JukenLesson = {
   todayLabel: string;
   href: string;
   source: string;
+  cast: LessonCast;
   plainText: string;
 };
 
@@ -145,7 +153,8 @@ function lessonFromFile(props: {
   const weekday = WEEKDAYS.find((day) => day.filePrefix === match[1]);
   if (!weekday) return null;
   const source = fs.readFileSync(props.filePath, "utf8");
-  const blocks = parseStory(source);
+  const parsed = parseLessonFile(source);
+  const { content } = prepareJukenMarkdoc(source);
   return {
     school: props.school,
     course: props.course,
@@ -156,11 +165,12 @@ function lessonFromFile(props: {
     weekdayLabel: weekday.label,
     weekdayLong: weekday.long,
     theme: clean(match[2] ?? ""),
-    textLabel: clean(extractTextLabel(source)),
-    todayLabel: clean(extractTodayLabel(source)),
+    textLabel: clean(textLabelFromFrontmatter(parsed.frontmatter)),
+    todayLabel: clean(todayLabelFromFrontmatter(parsed.frontmatter)),
     href: lessonHref(props.school, props.course, props.week, weekday.id),
     source,
-    plainText: storyPlainText(blocks),
+    cast: parsed.frontmatter.cast,
+    plainText: jukenPlainTextFromTree(content),
   };
 }
 
@@ -187,7 +197,7 @@ function readCatalog(): JukenCourse[] {
           const weekPath = path.join(weeksPath, weekDir.name);
           const lessons = fs
             .readdirSync(weekPath, { withFileTypes: true })
-            .filter((entry) => entry.isFile())
+            .filter((entry) => entry.isFile() && entry.name.endsWith(".mdoc"))
             .map((entry) =>
               lessonFromFile({
                 filePath: path.join(weekPath, entry.name),

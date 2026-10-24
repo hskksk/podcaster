@@ -71,7 +71,7 @@ export default async function JukenLessonPage({ params }: { params: Promise<Para
           {lesson.todayLabel ? <span className="j-chip">{lesson.todayLabel}</span> : null}
         </div>
         <div className="mt-8">
-          <StoryBody source={lesson.source} />
+          <StoryBody source={lesson.source} cast={lesson.cast} />
         </div>
         <div className="mt-10">
           <h2 className="mb-3 text-xs font-black tracking-[0.14em] text-muted-fg">この週</h2>
