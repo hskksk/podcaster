@@ -26,7 +26,7 @@ export function JukenCrumbs(props: { items: { href?: string; label: string }[] }
 }
 
 export function JukenShell(props: {
-  variant?: "home" | "search";
+  variant?: "home" | "search" | "characters";
   hero?: ReactNode;
   children: ReactNode;
   width?: "wide" | "story";
@@ -53,12 +53,23 @@ export function JukenShell(props: {
               href="/juken"
               className={cn(
                 "rounded-full px-3 py-1.5 text-sm font-bold no-underline",
-                props.variant === "search"
-                  ? "text-muted-fg hover:bg-muted hover:text-fg"
-                  : "bg-muted text-fg",
+                props.variant === "home" || props.variant === undefined
+                  ? "bg-muted text-fg"
+                  : "text-muted-fg hover:bg-muted hover:text-fg",
               )}
             >
               物語
+            </Link>
+            <Link
+              href="/juken/characters"
+              className={cn(
+                "rounded-full px-3 py-1.5 text-sm font-bold no-underline",
+                props.variant === "characters"
+                  ? "bg-muted text-fg"
+                  : "text-muted-fg hover:bg-muted hover:text-fg",
+              )}
+            >
+              ぬいぐるみ
             </Link>
             <Link
               href="/juken/search"
