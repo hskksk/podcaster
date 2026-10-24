@@ -26,7 +26,7 @@ const DIALOGUE =
   /^(?:(\p{Extended_Pictographic}\uFE0F?)\s*)?([^\s：（「]{1,24})(?:（([^）]+)）)?[：:]「([^」]*)」\s*(?:（([^）]*)）)?\s*$/u;
 
 function escapeAttr(value: string): string {
-  return value.replace(/"/g, '\\"');
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
 function parseWeekOutline(lines: string[]) {
