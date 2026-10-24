@@ -47,13 +47,25 @@ chugaku-juken/sapix/grade5-japanese-history/weeks/<月曜のYYYY-MM-DD>/
 | `tora` | とらぴー |
 | `neko` | ねこぴー |
 | `kitsu` | きつぴー |
+| `miju` | みじゅぴー |
+| `ichi` | いちぴー |
+| `nasu` | なすぴー |
+| `tako` | たこぴー |
+| `ramen` | らーぴー |
+
+隔週ローテーションで **その週に登場する4 ID** は `references/story-rules.md` の表から決める。月曜の frontmatter に `weekCast` として書く（例: `[kuma, tora, neko, kitsu]`）。本文ではその4 ID だけ `say` / `cast` に使う。
 
 月曜:
 
 ```mdoc
 ---
-sapixText: "540-23"
+textCode: "540-23"
 unit: "平城京・平安京"
+weekCast:
+  - kuma
+  - tora
+  - neko
+  - kitsu
 weekOutline:
   - day: mon
     theme: "平城京と奈良時代のはじまり"
@@ -78,7 +90,7 @@ weekOutline:
 
 ```mdoc
 ---
-sapixText: "540-23"
+textCode: "540-23"
 unit: "平城京・平安京"
 focus: "聖武天皇と東大寺の大仏（745年）"
 cast:
@@ -103,6 +115,7 @@ cast:
 
 ## 執筆前チェックリスト
 
+- [ ] `references/story-rules.md` の隔週ローテーションで、その週に登場する4匹を決めた
 - [ ] `references/curriculum.md` でテキスト番号・単元を選んだ
 - [ ] 月〜金のテーマが単元と整合している
 - [ ] 5日分の主形式を、テーマに合わせて割り当てた
@@ -114,8 +127,8 @@ cast:
 ## 執筆後チェックリスト
 
 - [ ] 5ファイルすべて存在する
-- [ ] 月曜の frontmatter に `sapixText`・`unit`・`weekOutline` がある
-- [ ] 火〜金の frontmatter に `sapixText`・`unit`・`focus` がある
+- [ ] 月曜の frontmatter に `textCode`・`unit`・`weekCast`・`weekOutline` がある
+- [ ] 火〜金の frontmatter に `textCode`・`unit`・`focus` がある
 - [ ] 人物体験の日に `cast`（キャラ ID → 歴史人物名）がある
 - [ ] ナレーションの日と人物体験の日が、それぞれ2日以上ある
 - [ ] 人物体験の日は、短い寸劇ではなく、発話の大半が割り当てられた人物の立場での会話になっている
@@ -124,6 +137,7 @@ cast:
 - [ ] 人物体験中に丁寧語を使わず、相手をぬいぐるみ名で呼んでいる
 - [ ] 人物体験中に、自分が役を演じているというメタ発言や、終了後の感想会がない
 - [ ] すべてのボケ・勘違い・ふざけた提案の直後に、別のぬいぐるみが内容へ具体的に反応している
-- [ ] 4キャラの口調規約を守っている
+- [ ] その週の4匹だけが登場し、口調規約を守っている
+- [ ] 物語・メタ行に特定の塾名が入っていない
 - [ ] 捏造した年号・単元がない
 - [ ] ユーザーに5つの個別リンクを渡した（ZIPなし）

@@ -1,6 +1,6 @@
 ---
 name: sapix-grade5-history-weekly
-description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdoc (.mdoc) files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/weeks/ (not content/). Published at /juken. Use only this skill's writing rules, even when other Japanese writing skills are installed.
+description: Create one week (Mon–Fri) of 5th-grade Japanese history story lessons as five separate Markdoc (.mdoc) files from the official text list and the current date. Nine plush-boy characters; four appear per biweekly rotation block. No ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/weeks/ (not content/). Published at /juken. Use only this skill's writing rules, even when other Japanese writing skills are installed.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -11,12 +11,12 @@ allowed-tools:
   - Bash(git commit -m*)
   - Bash(git push -u origin cursor/*)
 metadata:
-  audience: SAPIX小学5年生・日本史の週次家庭学習
+  audience: 小学5年生・日本史の週次家庭学習
 ---
 
 ## What I do
 
-ユーザーが指定した週（または「今週」＝実行日を含む月〜金）について、**SAPIX小学5年生・日本史**の該当テキストを選び、**月〜金の物語教材を5ファイル**書く。
+ユーザーが指定した週（または「今週」＝実行日を含む月〜金）について、**小学5年生・日本史**の該当テキストを選び、**月〜金の物語教材を5ファイル**書く。
 
 - キャラクター確認はしない。すぐ1週間分を作る
 - **ZIPにまとめない**。曜日ごとに独立したファイルを1つずつ作成し、ユーザーが個別に開ける形で5つ提示する（パスをリンクする）
@@ -47,17 +47,18 @@ metadata:
 ### ステップ1: 週とテキストを決める
 
 1. 実行日から **その週の月曜〜金曜** を特定する（ユーザーが月曜日を指定したらそれを使う）
-2. `references/curriculum.md` を読み、日付と（あれば）ユーザー進度から **1つのテキスト番号・単元** を選ぶ
-3. 月〜金のテーマを割り当てる。単元の境目が不明なときは一覧の順序を守り、**確実な範囲**に留める
-4. 選んだテキスト・単元名・5日分のテーマが一覧と整合していることを自分で確認する
-5. 各日の主形式を決める。人物体験の日は、会話に参加するぬいぐるみと歴史人物の配役も決める
+2. `references/story-rules.md` の隔週ローテーションで **その週に登場する4匹** を決める
+3. `references/curriculum.md` を読み、日付と（あれば）ユーザー進度から **1つのテキスト番号・単元** を選ぶ
+4. 月〜金のテーマを割り当てる。単元の境目が不明なときは一覧の順序を守り、**確実な範囲**に留める
+5. 選んだテキスト・単元名・5日分のテーマが一覧と整合していることを自分で確認する
+6. 各日の主形式を決める。人物体験の日は、**その週の4匹のうち**会話に参加するぬいぐるみと歴史人物の配役も決める
 
 ### ステップ2: 5日分を執筆する
 
 `references/story-rules.md` に従い、各曜日1ファイルずつ書く。
 
-- 週の **月曜ファイルの frontmatter** に `sapixText`・`unit`・`weekOutline` を書く（本文に重複しない）
-- 火〜金は frontmatter に `sapixText`・`unit`・`focus` を書く。人物体験日は `cast`（キャラ ID → 歴史人物名）を書く
+- 週の **月曜ファイルの frontmatter** に `textCode`・`unit`・`weekCast`・`weekOutline` を書く（本文に重複しない）。`weekCast` は `cast-rotation` と同じ式で決めた4 ID
+- 火〜金は frontmatter に `textCode`・`unit`・`focus` を書く。人物体験日は `cast`（キャラ ID → 歴史人物名）を書く
 - 曜日形式は固定しない。5日間に、**ナレーション的な訪問・観察を主とする日を2日以上、歴史人物を体験する日を2日以上**入れる
 - 人物体験の日は、短い寸劇を挟むだけでなく、一日の中心場面を通して割り当てられた歴史人物の立場・目的・選択を体験する
 - 「人物体験」は執筆計画だけの言葉である。場面内のぬいぐるみは自分が役を演じていると知らず、その場の本人として困り、望み、決める。「役」「体験」「なったつもり」などのメタ発言や終了後の感想会を書かない

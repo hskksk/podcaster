@@ -98,7 +98,7 @@ function migrateFile(mdPath: string) {
   const source = fs.readFileSync(mdPath, "utf8");
   const lines = source.replace(/\r\n/g, "\n").split("\n");
 
-  let sapixText = "";
+  let textCode = "";
   let unit = "";
   let focus = "";
   let weekOutline: unknown;
@@ -109,13 +109,13 @@ function migrateFile(mdPath: string) {
       const chunk = line.replace(/\*\*今週のテキスト\*\*\s*/, "");
       const m = chunk.match(/^(\S+?)「(.+?)」/);
       if (m) {
-        sapixText = m[1]!;
+        textCode = m[1]!;
         unit = m[2]!;
       }
     }
     const dayText = line.match(/\*\*テキスト\*\*\s*(\S+?)「(.+?)」/);
     if (dayText) {
-      sapixText = dayText[1]!;
+      textCode = dayText[1]!;
       unit = dayText[2]!;
     }
     const today = line.match(/\*\*今日\*\*\s*(.+)$/);
@@ -129,7 +129,7 @@ function migrateFile(mdPath: string) {
 
   const { body, cast } = convertBody(lines);
   const frontmatter: Record<string, unknown> = {
-    sapixText,
+    textCode,
     unit,
   };
   if (focus) frontmatter.focus = focus;
