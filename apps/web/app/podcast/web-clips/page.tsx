@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { ArticleSearch } from "../../components/ArticleSearch";
-import { SiteShell } from "../../components/SiteShell";
-import { feedUrl, loadSiteConfig } from "../../lib/site/config";
-import { loadPublicWebClips } from "../../lib/site/web-clips";
+import { ArticleSearch } from "../../../components/ArticleSearch";
+import { SiteShell } from "../../../components/SiteShell";
+import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
+import { loadPublicWebClips } from "../../../lib/site/web-clips";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -33,7 +33,7 @@ export default async function WebClipsPage() {
       <div className="mt-8">
         <ArticleSearch
           articles={cards}
-          basePath="/web-clips"
+          basePath="/podcast/web-clips"
           searchPlaceholder="Web Clipsを検索…"
         />
       </div>

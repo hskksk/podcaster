@@ -1,6 +1,7 @@
 # GitHub Pages no longer hosts the article site (Phase 4: Next.js).
 # This job publishes meta-refresh redirects so
-# https://hskksk.github.io/podcaster/articles/{slug}.html keeps working.
+# https://hskksk.github.io/podcaster/articles/{slug}.html keeps working
+# by landing on /podcast/articles/{slug}.
 name: Redirect GitHub Pages to Next.js
 
 on:

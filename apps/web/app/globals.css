@@ -451,3 +451,245 @@ body {
 .diagram-source {
   @apply mt-2 text-xs text-muted-fg;
 }
+
+/* hskksk portal. Nested cards opt into the podcast or ふしぎ旅 tokens. */
+.portal {
+  --color-bg: #f3efe7;
+  --color-surface: #fffdf9;
+  --color-fg: #1c1917;
+  --color-muted: #ebe4d8;
+  --color-muted-fg: #6f675e;
+  --color-border: #e3d9cb;
+  --color-accent: #9a3412;
+  --color-accent-fg: #fffdf9;
+  --color-link: #44403c;
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(900px 420px at 8% -10%, rgb(180 83 9 / 0.16), transparent 55%),
+    radial-gradient(760px 460px at 100% 0%, rgb(226 61 61 / 0.12), transparent 52%);
+  color: var(--color-fg);
+}
+
+.dark .portal {
+  --color-bg: #12100e;
+  --color-surface: #1c1916;
+  --color-fg: #fafaf9;
+  --color-muted: #29241e;
+  --color-muted-fg: #a8a29e;
+  --color-border: #3f3832;
+  --color-accent: #fdba74;
+  --color-accent-fg: #1c1917;
+  --color-link: #e7e5e4;
+  background-image:
+    radial-gradient(900px 420px at 8% -10%, rgb(245 158 11 / 0.16), transparent 55%),
+    radial-gradient(760px 460px at 100% 0%, rgb(251 113 133 / 0.12), transparent 52%);
+}
+
+.podcast-theme {
+  --color-bg: #fafaf9;
+  --color-surface: #ffffff;
+  --color-fg: #1c1917;
+  --color-muted: #f5f5f4;
+  --color-muted-fg: #78716c;
+  --color-border: #e7e5e4;
+  --color-accent: #b45309;
+  --color-accent-fg: #ffffff;
+  --color-link: #44403c;
+  --font-sans: "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Noto Serif JP", ui-serif, Georgia, serif;
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+.dark .podcast-theme {
+  --color-bg: #0c0a09;
+  --color-surface: #1c1917;
+  --color-fg: #fafaf9;
+  --color-muted: #292524;
+  --color-muted-fg: #a8a29e;
+  --color-border: #44403c;
+  --color-accent: #f59e0b;
+  --color-accent-fg: #1c1917;
+  --color-link: #d6d3d1;
+}
+
+/* ふしぎ旅: study-notebook colors, round type, character tones. */
+.juken {
+  --color-bg: #fff4e4;
+  --color-surface: #fffdf8;
+  --color-fg: #2b2218;
+  --color-muted: #ffe8c8;
+  --color-muted-fg: #6a5140;
+  --color-border: #f0d2ae;
+  --color-accent: #c4312e;
+  --color-accent-fg: #fffdf8;
+  --color-link: #1d4f9c;
+  --font-sans: "Zen Maru Gothic", "Noto Sans JP", ui-sans-serif, sans-serif;
+  --font-serif: "Zen Maru Gothic", "Noto Sans JP", sans-serif;
+  --radius-card: 1.15rem;
+  --shadow-card: 0 1px 0 rgb(120 72 24 / 0.08), 0 8px 20px rgb(120 72 24 / 0.08);
+  --shadow-card-hover: 0 12px 28px rgb(120 72 24 / 0.16);
+  --j-kuma: #e0a106;
+  --j-tora: #ef7a1a;
+  --j-neko: #5463d8;
+  --j-kitsu: #e06a32;
+  --j-study: #2f7d57;
+  background-color: var(--color-bg);
+  background-image: radial-gradient(rgb(224 164 96 / 0.45) 1.1px, transparent 1.1px);
+  background-size: 18px 18px;
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.dark .juken {
+  --color-bg: #1a1430;
+  --color-surface: #271d42;
+  --color-fg: #fff6ea;
+  --color-muted: #342654;
+  --color-muted-fg: #d7c6b0;
+  --color-border: #4d3d72;
+  --color-accent: #ff8b84;
+  --color-accent-fg: #2a1020;
+  --color-link: #b9ccff;
+  --shadow-card: 0 8px 20px rgb(0 0 0 / 0.28);
+  --shadow-card-hover: 0 14px 28px rgb(0 0 0 / 0.4);
+  --j-kuma: #f5c451;
+  --j-tora: #ff9a4a;
+  --j-neko: #a8b2ff;
+  --j-kitsu: #ff9a62;
+  --j-study: #8fd0a8;
+  background-image: radial-gradient(rgb(90 70 140 / 0.7) 1.1px, transparent 1.1px);
+}
+
+.juken a:focus-visible,
+.portal a:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.j-stamp {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  font-size: 0.95rem;
+  font-weight: 900;
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.12);
+}
+
+.j-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 0.2rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.j-story {
+  margin-top: 0.5rem;
+}
+
+.j-meta {
+  margin: 0.35rem 0;
+  color: var(--color-muted-fg);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.j-scene {
+  margin: 1.15rem 0;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--j-study) 14%, var(--color-surface));
+  padding: 0.85rem 1rem;
+  color: var(--color-fg);
+  font-size: 0.98rem;
+  line-height: 1.75;
+}
+
+.j-line {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0.75rem;
+  margin: 0.9rem 0;
+}
+
+.j-line[data-tone="kuma"],
+[data-tone="kuma"] {
+  --tone: var(--j-kuma);
+}
+
+.j-line[data-tone="tora"],
+[data-tone="tora"] {
+  --tone: var(--j-tora);
+}
+
+.j-line[data-tone="neko"],
+[data-tone="neko"] {
+  --tone: var(--j-neko);
+}
+
+.j-line[data-tone="kitsu"],
+[data-tone="kitsu"] {
+  --tone: var(--j-kitsu);
+}
+
+.j-avatar {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tone, var(--color-muted)) 34%, var(--color-surface));
+}
+
+.j-name {
+  margin: 0;
+  color: var(--tone, var(--color-fg));
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.j-role {
+  margin-left: 0.45rem;
+  color: var(--color-muted-fg);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.j-say {
+  margin: 0.25rem 0 0;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem 1rem 1rem 0.4rem;
+  background: var(--color-surface);
+  padding: 0.7rem 0.9rem;
+  box-shadow: var(--shadow-card);
+  line-height: 1.75;
+}
+
+.j-note {
+  margin: 0.4rem 0 0;
+  color: var(--color-muted-fg);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.j-note::before {
+  content: "ことば · ";
+  color: var(--j-study);
+  font-weight: 900;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .j-day {
+    transition: none;
+  }
+}

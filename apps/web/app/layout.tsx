@@ -3,23 +3,26 @@ import type { ReactNode } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { DraftModeBanner } from "../components/DraftModeBanner";
 import { ThemeProvider } from "../components/ThemeProvider";
-import { loadSiteConfig } from "../lib/site/config";
-import { ogImageUrls, siteOpenGraphDefaults } from "../lib/site/open-graph";
 import "./globals.css";
 
+const portalDescription = "調べた記事と音声、中学受験の週次ものがたり。";
+
 export async function generateMetadata(): Promise<Metadata> {
-  const cfg = loadSiteConfig();
-  const og = siteOpenGraphDefaults(cfg);
   return {
-    title: { default: cfg.siteTitle, template: `%s | ${cfg.siteTitle}` },
-    description: cfg.siteDescription,
+    title: { default: "hskksk", template: "%s" },
+    description: portalDescription,
     robots: { index: true, follow: true },
-    openGraph: og,
+    openGraph: {
+      type: "website",
+      siteName: "hskksk",
+      title: "hskksk",
+      description: portalDescription,
+      locale: "ja_JP",
+    },
     twitter: {
       card: "summary_large_image",
-      title: cfg.siteTitle,
-      description: cfg.siteDescription || undefined,
-      images: ogImageUrls(og.images),
+      title: "hskksk",
+      description: portalDescription,
     },
   };
 }
@@ -34,7 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@500;600;700&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap"
           rel="stylesheet"
         />
         <link

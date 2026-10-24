@@ -13,7 +13,7 @@ export function SiteHeader(props: {
     <header className="sticky top-0 z-50 border-b border-border/70 bg-surface/85 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link
-          href="/"
+          href="/podcast"
           className="group flex min-w-0 flex-col gap-0.5 no-underline"
         >
           <span className="truncate font-serif text-base font-semibold tracking-tight text-fg group-hover:text-fg/90 sm:text-lg">
@@ -24,7 +24,7 @@ export function SiteHeader(props: {
 
         <nav className="flex flex-wrap items-center gap-1 sm:gap-2" aria-label="サイト">
           <Link
-            href="/"
+            href="/podcast"
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium no-underline transition-colors",
               props.variant === "public"
@@ -36,14 +36,14 @@ export function SiteHeader(props: {
             記事
           </Link>
           <Link
-            href="/search"
+            href="/podcast/search"
             className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-fg no-underline transition-colors hover:bg-muted/80 hover:text-fg"
           >
             <Search className="size-4 shrink-0 opacity-70" strokeWidth={1.75} />
             <span className="hidden sm:inline">検索</span>
           </Link>
           <Link
-            href="/web-clips"
+            href="/podcast/web-clips"
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium no-underline transition-colors",
               props.variant === "clips"
@@ -71,6 +71,12 @@ export function SiteHeader(props: {
               <span className="sm:hidden">RSS</span>
             </a>
           ) : null}
+          <Link
+            href="/"
+            className="inline-flex items-center rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-fg no-underline transition-colors hover:bg-muted/80 hover:text-fg"
+          >
+            hskksk
+          </Link>
           <ThemeToggle className="ml-0.5 sm:ml-2" />
         </nav>
       </div>

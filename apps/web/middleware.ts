@@ -7,7 +7,7 @@ const WEB_CLIPS_RETURN_COOKIE = "web-clips-return-to";
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  if (pathname === "/web-clips" || pathname.startsWith("/web-clips/")) {
+  if (pathname === "/podcast/web-clips" || pathname.startsWith("/podcast/web-clips/")) {
     return webClipsGate(req);
   }
 
@@ -22,7 +22,7 @@ export async function middleware(req: NextRequest) {
 }
 
 /**
- * Gate /web-clips behind the same GitHub OAuth login Keystatic uses
+ * Gate /podcast/web-clips behind the same GitHub OAuth login Keystatic uses
  * (`keystatic-gh-access-token`, set by @keystatic/core's GitHub storage
  * flow). Only the repo owner's GitHub account is let through, since that's
  * who Keystatic itself trusts to write content.
@@ -72,7 +72,8 @@ async function returnToRequestedWebClips(req: NextRequest): Promise<NextResponse
 
   if (
     target.origin !== req.nextUrl.origin ||
-    (target.pathname !== "/web-clips" && !target.pathname.startsWith("/web-clips/"))
+    (target.pathname !== "/podcast/web-clips" &&
+      !target.pathname.startsWith("/podcast/web-clips/"))
   ) {
     return null;
   }
@@ -145,7 +146,7 @@ export const config = {
     "/keystatic",
     "/keystatic/:path*",
     "/api/keystatic/:path*",
-    "/web-clips",
-    "/web-clips/:path*",
+    "/podcast/web-clips",
+    "/podcast/web-clips/:path*",
   ],
 };

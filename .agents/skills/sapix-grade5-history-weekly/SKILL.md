@@ -1,6 +1,6 @@
 ---
 name: sapix-grade5-history-weekly
-description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdown files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/ (not content/). Use only this skill's writing rules, even when other Japanese writing skills are installed.
+description: Create one week (Mon–Fri) of SAPIX 5th-grade Japanese history story lessons as five separate Markdown files from the official text list and the current date. Plush-boy characters (くまぴー, とらぴー, ねこぴー, きつぴー) teach in dialogue; no ZIP, no post-story quizzes. Saves under chugaku-juken/sapix/grade5-japanese-history/weeks/ (not content/). Published at /juken. Use only this skill's writing rules, even when other Japanese writing skills are installed.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -83,7 +83,7 @@ metadata:
 教材をこのリポジトリにコミットするよう求められたときだけ:
 
 1. `cursor/sapix-grade5-history-weekly-*` など Conventional Commits に沿うブランチを切る
-2. `chugaku-juken/sapix/grade5-japanese-history/week-<月曜YYYY-MM-DD>/` だけを add する（`chugaku-juken/README.md` は初回または更新時のみ）
+2. `chugaku-juken/sapix/grade5-japanese-history/weeks/<月曜YYYY-MM-DD>/` だけを add する（`course.yml` と `chugaku-juken/README.md` は初回または更新時のみ）
 3. `feat(chugaku-juken): add sapix grade5 history week of <date>` のようなコミットで push し、PR を出す
 
 スキル追加やプロンプト変更のPRとは別物として扱う。

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { PagefindSearch } from "../../components/PagefindSearch";
-import { SiteShell } from "../../components/SiteShell";
-import { feedUrl, loadSiteConfig } from "../../lib/site/config";
-import { loadPublicDocs } from "../../lib/site/docs";
+import { PagefindSearch } from "../../../components/PagefindSearch";
+import { SiteShell } from "../../../components/SiteShell";
+import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
+import { loadPublicDocs } from "../../../lib/site/docs";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -22,7 +22,7 @@ export default async function SearchPage() {
       <h1 className="font-serif text-3xl font-semibold tracking-tight">検索</h1>
       <p className="mt-2 text-sm text-muted-fg">公開記事の全文検索（ビルド時インデックス）</p>
       <div className="mt-10">
-        <PagefindSearch />
+        <PagefindSearch site="podcast" />
       </div>
     </SiteShell>
   );

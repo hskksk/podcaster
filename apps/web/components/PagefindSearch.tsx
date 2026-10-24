@@ -12,7 +12,10 @@ type PagefindResult = {
 
 type PagefindModule = {
   init: () => Promise<void>;
-  search: (query: string) => Promise<{ results: { data: () => Promise<PagefindResult> }[] }>;
+  search: (
+    query: string,
+    options?: { filters?: Record<string, string> },
+  ) => Promise<{ results: { data: () => Promise<PagefindResult> }[] }>;
 };
 
 declare global {
@@ -21,7 +24,7 @@ declare global {
   }
 }
 
-export function PagefindSearch() {
+export function PagefindSearch(props: { site?: string }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<PagefindResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,14 +70,17 @@ export function PagefindSearch() {
       }
       setLoading(true);
       try {
-        const res = await window.pagefind.search(needle);
+        const res = await window.pagefind.search(
+          needle,
+          props.site ? { filters: { site: props.site } } : undefined,
+        );
         const items = await Promise.all(res.results.slice(0, 20).map((r) => r.data()));
         setResults(items);
       } finally {
         setLoading(false);
       }
     },
-    [ready],
+    [ready, props.site],
   );
 
   useEffect(() => {

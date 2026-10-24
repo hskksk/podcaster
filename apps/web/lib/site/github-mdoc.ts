@@ -96,5 +96,5 @@ export async function resolvePublicPathForEntry(
   if (ref) {
     return collection === "docs" ? `/preview/articles/${slug}` : `/preview/web-clips/${slug}`;
   }
-  return collection === "docs" ? `/articles/${slug}` : `/web-clips/${slug}`;
+  return collection === "docs" ? `/podcast/articles/${slug}` : `/podcast/web-clips/${slug}`;
 }

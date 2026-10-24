@@ -61,8 +61,12 @@ podcaster/
 ├── apps/
 │   └── web/                        # Next.js + Keystatic (local admin; Vercel は GitHub storage)
 ├── content/
-│   ├── docs/                       # Wiki Markdoc（公開サイトの入力）
-│   └── web-clips/                  # クリップ & メモ（サイト非掲載、podcast: none）
+│   ├── docs/                       # Wiki Markdoc（公開サイト /podcast の入力）
+│   └── web-clips/                  # クリップ & メモ（/podcast/web-clips、要ログイン）
+├── chugaku-juken/                  # 中学受験の物語（公開サイト /juken）
+│   └── sapix/grade5-japanese-history/
+│       ├── course.yml
+│       └── weeks/<月曜YYYY-MM-DD>/
 ├── public/
 │   └── cover.png                   # ポッドキャストカバー画像
 ├── scripts/
@@ -488,7 +492,7 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 /sapix-grade5-history-weekly
 ```
 
-- `sapix-grade5-history-weekly`（`.agents/skills/sapix-grade5-history-weekly/SKILL.md`）: 現在の日付と SAPIX 540 系カリキュラムから該当テキストを選び、月〜金の物語教材を **5 つの Markdown ファイル**（`chugaku-juken/sapix/grade5-japanese-history/week-<月曜>/`）として作成。`content/` の Wiki とは別の中学受験向けディレクトリ。くまぴー・とらぴー・ねこぴー・きつぴーの会話形式。ZIP や物語外クイズは付けない
+- `sapix-grade5-history-weekly`（`.agents/skills/sapix-grade5-history-weekly/SKILL.md`）: 現在の日付と SAPIX 540 系カリキュラムから該当テキストを選び、月〜金の物語教材を **5 つの Markdown ファイル**（`chugaku-juken/sapix/grade5-japanese-history/weeks/<月曜>/`）として作成。公開サイトは `/juken`。`content/` の Wiki やポッドキャスト ingest とは別。くまぴー・とらぴー・ねこぴー・きつぴーの会話形式。ZIP や物語外クイズは付けない
 
 ---
 

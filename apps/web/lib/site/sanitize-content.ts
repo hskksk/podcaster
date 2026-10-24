@@ -20,9 +20,9 @@ export function sanitizePublicSlug(slug: string, fallbackDir: string): string {
 }
 
 export function articleHref(slug: string): string {
-  return `/articles/${encodeURIComponent(slug)}`;
+  return `/podcast/articles/${encodeURIComponent(slug)}`;
 }
 
 export function webClipHref(slug: string): string {
-  return `/web-clips/${encodeURIComponent(slug)}`;
+  return `/podcast/web-clips/${encodeURIComponent(slug)}`;
 }

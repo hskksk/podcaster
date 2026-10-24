@@ -2,7 +2,8 @@
 /**
  * GitHub Pages is no longer the public site (Phase 4).
  * This writes meta-refresh stubs so
- * https://hskksk.github.io/podcaster/articles/{slug}.html still lands on Next.js.
+ * https://hskksk.github.io/podcaster/articles/{slug}.html still lands on Next.js
+ * at /podcast/articles/{slug}. The Pages index lands on /podcast.
  *
  * Requires NEXT_PUBLIC_SITE_URL (no trailing slash), e.g. https://podcaster.vercel.app
  */
@@ -69,9 +70,9 @@ if (!origin) {
 const slugs = loadSlugs();
 fs.rmSync(OUT_DIR, { recursive: true, force: true });
 fs.mkdirSync(ARTICLES_OUT_DIR, { recursive: true });
-fs.writeFileSync(path.join(OUT_DIR, "index.html"), redirectHtml(origin + "/", "Articles"));
+fs.writeFileSync(path.join(OUT_DIR, "index.html"), redirectHtml(origin + "/podcast", "Podcast"));
 for (const { slug, title } of slugs) {
-  const dest = `${origin}/articles/${encodeURIComponent(slug)}`;
+  const dest = `${origin}/podcast/articles/${encodeURIComponent(slug)}`;
   fs.writeFileSync(path.join(ARTICLES_OUT_DIR, `${slug}.html`), redirectHtml(dest, title));
 }
 console.log(`Wrote ${slugs.length} Pages redirects → ${origin}`);

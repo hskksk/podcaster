@@ -27,7 +27,27 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/articles/:slug.html",
-        destination: "/articles/:slug",
+        destination: "/podcast/articles/:slug",
+        permanent: true,
+      },
+      {
+        source: "/articles/:slug",
+        destination: "/podcast/articles/:slug",
+        permanent: true,
+      },
+      {
+        source: "/search",
+        destination: "/podcast/search",
+        permanent: true,
+      },
+      {
+        source: "/web-clips",
+        destination: "/podcast/web-clips",
+        permanent: true,
+      },
+      {
+        source: "/web-clips/:slug",
+        destination: "/podcast/web-clips/:slug",
         permanent: true,
       },
     ];
