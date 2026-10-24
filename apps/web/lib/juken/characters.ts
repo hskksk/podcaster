@@ -1,5 +1,5 @@
 export const CHARACTERS = [
-  { id: "kuma", name: "くまぴー", emoji: "🐻", tone: "kuma" },
+  { id: "kuma", name: "くまぴー", emoji: "🐠", tone: "kuma" },
   { id: "tora", name: "とらぴー", emoji: "🐯", tone: "tora" },
   { id: "neko", name: "ねこぴー", emoji: "🐱", tone: "neko" },
   { id: "kitsu", name: "きつぴー", emoji: "🦊", tone: "kitsu" },
