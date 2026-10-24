@@ -1,0 +1,103 @@
+version: 1
+sourceSha256: "9c1d5b367082791f11818c4805483b5ecc9e8264a1102cb91bee910ea9aa507e"
+nodes:
+  i2:
+    title: "GitとAI作業をひとつにまとめる"
+    subtitle: "Cursor OriginはGitリポジトリをホストし、Cursorのエージェントとレビューを結ぶ有料プラン向けの早期ベータである。標準GitとWeb画面の双方から使える[1][2][8]。"
+  i3:
+    title: "正本の所在が同期方式を分ける"
+    subtitle: "GitHubから同期したrepoはGitHubが正本のまま、Origin上で作ったrepoはOriginが正本となる。プッシュとPRの行き先も違い、GitHub IssuesやActionsはミラーされない[3]。"
+  i4:
+    title: "ContinuityがS3ログを正本にする"
+    subtitle: "ContinuityはS3上の追記ログを正本とし、サーバー上のGitリポジトリを再生成できるキャッシュとして扱う。ログへの記録後に変更を公開する設計だ[4]。"
+  i5:
+    title: "20超のアプリと早期ベータの限界"
+    subtitle: "10月には20超のアプリとAPIが加わったが、Originは早期ベータである。公表された性能値もCursorの合成試験に基づき、第三者検証ではない[4][5][6]。"
+  s12:
+    title: "正本の違いで同期とレビュー先が変わる"
+    subtitle: "GitHubミラーはプッシュとPRをGitHubに残し、Originで新規作成したrepoはOriginに保存する。CIや障害時の扱いも、どちらを正本にするかで分かれる[3][8]。"
+  p27:
+    title: "コード・差分・エージェントを連結する"
+    subtitle: "Cursorのエージェントはコード閲覧時の質問に答え、変更をプッシュしたりPRを作ったりする。ミラーrepoではGitHubへ、新規Origin repoではOriginへPRを出す[1][10]。"
+  p28:
+    title: "GitイベントからクラウドAgentを起動"
+    subtitle: "ブランチへのプッシュやPRイベントを自動化のトリガーにし、クラウドエージェントを起動できる。複数の作業をコードとレビューの流れに接続する[10]。"
+  p29:
+    title: "外部アプリ市場を20超へ拡張"
+    subtitle: "Origin App Marketplaceはデプロイ・CI・レビュー・セキュリティなどの20超のアプリを提供し、Origin APIを使った開発者からの公開申請も受け付ける[5][6]。"
+  p30:
+    title: "外部アプリはOrigin正本でのみ動作"
+    subtitle: "GitHubからミラーしたrepoはOrigin Appsの対象外である。機能連携を増やすならOriginを正本にする必要があり、ミラー方式との間に差が残る[3][5]。"
+  p31:
+    title: "Gitの正本を複製から切り離す"
+    subtitle: "Gitホスティングでは更新内容とブランチ参照を複数サーバーで一致させる必要があり、合意を得る仕組みが書き込み遅延と拡張性を左右する[4]。"
+  p32:
+    title: "S3ログが正本、ローカルrepoはキャッシュ"
+    subtitle: "Continuityはプッシュ内容と参照更新をS3の追記ログに記録し、サーバー上の通常のGitリポジトリをキャッシュとして再生成可能にする[4]。"
+  p33:
+    title: "性能値はCursorの合成試験による"
+    subtitle: "Cursorは読み込みで100複製、S3 Standardで毎秒120プッシュ、S3 Expressで300超を報告する。自社試験の数値であり、本番性能の保証ではない[4][11]。"
+  p34:
+    title: "設計の説明と本番保証を区別"
+    subtitle: "Continuityの仕組みは設計意図を示すが、公表値は第三者による追試ではない。復旧時間・長期可用性・本番負荷の性能は別途確かめる必要がある[4][11]。"
+  ch21:
+    title: "運用・契約・レビュー効果を検証"
+    subtitle: "次はGitHubミラーとOrigin正本の運用差、Continuityの本番性能と復旧実績、エージェント向けレビューが統合作業を減らす効果を、公開資料と実測を分けて調べる。"
+links:
+  - from: ch1
+    to: ch6
+    type: flow
+  - from: ch6
+    to: ch11
+    type: flow
+  - from: ch11
+    to: ch13
+    type: flow
+  - from: ch13
+    to: ch14
+    type: flow
+  - from: ch14
+    to: ch15
+    type: flow
+  - from: ch15
+    to: ch21
+    type: flow
+  - from: ch21
+    to: ch22
+    type: flow
+  - from: i3
+    to: s12
+    type: apply
+    label: 運用の内訳
+  - from: s12
+    to: p30
+    type: contrast
+    label: ミラーとアプリの境界
+  - from: p27
+    to: p28
+    type: seq
+    label: 自動化へ
+  - from: p29
+    to: p30
+    type: contrast
+    label: 利用条件
+  - from: p31
+    to: p32
+    type: cause
+    label: Continuityの選択
+  - from: p32
+    to: p33
+    type: evidence
+    label: 公表試験
+  - from: p33
+    to: p34
+    type: evidence
+    label: 数値の限界
+chapterFlow:
+  - "→ 問いと調査範囲"
+  - "→ Originの基本モデル"
+  - "→ エージェントとの連携"
+  - "→ 保存基盤の設計"
+  - "→ ベータの利用条件"
+  - "→ 次に検証する課題"
+  - "→ 出典と調査外の枝"
