@@ -93,7 +93,7 @@ export default function PortalPage() {
               </Link>
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-fg sm:text-base">
-              くまぴー、とらぴー、ねこぴー、きつぴーが、週のテキストを会話で歩く。
+              ぬいぐるみたちが、週のテキストを会話で歩く。隔週で4匹ずつ登場します。
             </p>
             <ul className="mt-4 flex flex-wrap gap-2">
               {CHARACTERS.map((character) => (

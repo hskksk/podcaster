@@ -1,6 +1,6 @@
 import yaml from "js-yaml";
 import type { CharacterId } from "./characters";
-import { CHARACTER_IDS } from "./characters";
+import { CHARACTER_IDS, characterById } from "./characters";
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
@@ -16,10 +16,11 @@ export type WeekOutlineEntry = {
 export type LessonCast = Partial<Record<CharacterId, string>>;
 
 export type LessonFrontmatter = {
-  sapixText: string;
+  textCode: string;
   unit: string;
   focus?: string;
   cast: LessonCast;
+  weekCast?: CharacterId[];
   weekOutline?: WeekOutlineEntry[];
 };
 
@@ -45,6 +46,17 @@ function parseCast(raw: unknown): LessonCast {
     if (role) cast[id] = role;
   }
   return cast;
+}
+
+function parseWeekCast(raw: unknown): CharacterId[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const ids: CharacterId[] = [];
+  for (const item of raw) {
+    const id = readString(item);
+    if (!characterById(id)) continue;
+    ids.push(id as CharacterId);
+  }
+  return ids.length > 0 ? ids : undefined;
 }
 
 function parseWeekOutline(raw: unknown): WeekOutlineEntry[] | undefined {
@@ -73,7 +85,7 @@ export function splitLessonSource(source: string): { frontmatterRaw: string | nu
 export function parseLessonFile(source: string): ParsedLessonFile {
   const { frontmatterRaw, body } = splitLessonSource(source);
   const fallback: LessonFrontmatter = {
-    sapixText: "",
+    textCode: "",
     unit: "",
     cast: {},
   };
@@ -86,12 +98,16 @@ export function parseLessonFile(source: string): ParsedLessonFile {
       return { frontmatter: fallback, body };
     }
     const record = raw as Record<string, unknown>;
+    const textCode =
+      readString(record.textCode) ||
+      readString(record.sapixText);
     return {
       frontmatter: {
-        sapixText: readString(record.sapixText),
+        textCode,
         unit: readString(record.unit),
         focus: readString(record.focus) || undefined,
         cast: parseCast(record.cast),
+        weekCast: parseWeekCast(record.weekCast),
         weekOutline: parseWeekOutline(record.weekOutline),
       },
       body,
@@ -102,11 +118,22 @@ export function parseLessonFile(source: string): ParsedLessonFile {
 }
 
 export function textLabelFromFrontmatter(fm: LessonFrontmatter): string {
-  if (!fm.sapixText && !fm.unit) return "";
-  if (fm.sapixText && fm.unit) return `${fm.sapixText}「${fm.unit}」`;
-  return fm.sapixText || fm.unit;
+  if (!fm.textCode && !fm.unit) return "";
+  if (fm.textCode && fm.unit) return `${fm.textCode}「${fm.unit}」`;
+  return fm.textCode || fm.unit;
 }
 
 export function todayLabelFromFrontmatter(fm: LessonFrontmatter): string {
   return fm.focus ?? "";
+}
+
+const SAY_CHARACTER_RE = /{%\s*say\s+[^%]*character="([^"]+)"/g;
+
+export function sayCharacterIdsInBody(body: string): CharacterId[] {
+  const found = new Set<CharacterId>();
+  for (const match of body.matchAll(SAY_CHARACTER_RE)) {
+    const id = match[1];
+    if (id && characterById(id)) found.add(id as CharacterId);
+  }
+  return [...found];
 }
