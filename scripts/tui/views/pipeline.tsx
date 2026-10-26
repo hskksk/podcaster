@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text, useInput, useStdout } from 'ink';
 import { Episode } from '../data/types.js';
 import { matchesTextFilter } from '../utils/text-filter.js';
 
@@ -17,16 +17,43 @@ interface Props {
   onRegenerateImageRequest: (episodeId: string) => void;
 }
 
-const STAGES = [
+export const PIPELINE_STAGES = [
   /** Backward-compatible: old rows used script_pending. */
   { key: 'ingested', label: 'INGESTED', statuses: ['ingested', 'script_pending'] },
-  { key: 'script_running', label: 'SCRIPT RUNNING', statuses: ['script_running'] },
-  { key: 'script_ready', label: 'SCRIPT READY', statuses: ['script_ready'] },
-  { key: 'audio_running', label: 'AUDIO PIPELINE', statuses: ['audio_running', 'audio_generated', 'audio_downloading'] },
-  { key: 'audio_ready', label: 'AUDIO READY', statuses: ['audio_ready'] },
+  { key: 'script_running', label: 'SCRIPT RUN', statuses: ['script_running'] },
+  { key: 'script_ready', label: 'SCRIPT OK', statuses: ['script_ready'] },
+  { key: 'audio_running', label: 'AUDIO RUN', statuses: ['audio_running', 'audio_generated', 'audio_downloading'] },
+  { key: 'audio_ready', label: 'AUDIO OK', statuses: ['audio_ready'] },
   { key: 'failed', label: 'FAILED', statuses: ['script_failed', 'audio_failed', 'rss_failed', 'failed'] },
   { key: 'published', label: 'PUBLISHED', statuses: ['published'] }
 ];
+
+/** Number of lanes in the pipeline board; App uses it for h/l lane movement. */
+export const PIPELINE_LANE_COUNT = PIPELINE_STAGES.length;
+
+/**
+ * Move a lane cursor by `delta` and keep the visible window in range.
+ * Clamping the offset here is what prevents a stray negative offset (which
+ * made `slice` show the tail of the lane) when pressing up at the top.
+ */
+export const moveLaneCursor = (
+  selected: number,
+  offset: number,
+  laneLength: number,
+  limit: number,
+  delta: number
+): { selected: number; offset: number } => {
+  if (laneLength === 0) return { selected: -1, offset: 0 };
+  if (selected < 0) return { selected: 0, offset: 0 };
+  const nextSelected = Math.max(0, Math.min(selected + delta, laneLength - 1));
+  let nextOffset = Math.max(0, Math.min(offset, Math.max(0, laneLength - limit)));
+  if (nextSelected < nextOffset) nextOffset = nextSelected;
+  if (nextSelected >= nextOffset + limit) nextOffset = nextSelected - limit + 1;
+  return {
+    selected: nextSelected,
+    offset: Math.max(0, Math.min(nextOffset, Math.max(0, laneLength - limit)))
+  };
+};
 
 export const PipelineView: React.FC<Props> = ({
   data,
@@ -38,9 +65,11 @@ export const PipelineView: React.FC<Props> = ({
   onRegenerateImageRequest
 }) => {
   const { episodes } = data;
-  const [offsets, setOffsets] = useState<number[]>(() => STAGES.map(() => 0));
-  const [selectedIndices, setSelectedIndices] = useState<number[]>(() => STAGES.map(() => -1));
-  const limit = 10;
+  const { stdout } = useStdout();
+  const [offsets, setOffsets] = useState<number[]>(() => PIPELINE_STAGES.map(() => 0));
+  const [selectedIndices, setSelectedIndices] = useState<number[]>(() => PIPELINE_STAGES.map(() => -1));
+  /** One line per episode, so the lane can show every row the terminal height allows. */
+  const limit = Math.max(5, (stdout?.rows ?? 24) - 8);
 
   const filteredEpisodes = useMemo(() => {
     return episodes.filter(e =>
@@ -48,12 +77,12 @@ export const PipelineView: React.FC<Props> = ({
     );
   }, [episodes, filterQuery]);
 
-  const getEpisodesByStage = (stage: (typeof STAGES)[number]) =>
+  const getEpisodesByStage = (stage: (typeof PIPELINE_STAGES)[number]) =>
     filteredEpisodes.filter(e => stage.statuses.includes(e.status));
 
   useEffect(() => {
     setSelectedIndices(prev =>
-      STAGES.map((stage, laneIndex) => {
+      PIPELINE_STAGES.map((stage, laneIndex) => {
         const lane = getEpisodesByStage(stage);
         if (lane.length === 0) return -1;
         const cur = prev[laneIndex];
@@ -63,7 +92,7 @@ export const PipelineView: React.FC<Props> = ({
     );
     setOffsets(prev =>
       prev.map((off, laneIndex) => {
-        const laneLen = getEpisodesByStage(STAGES[laneIndex]).length;
+        const laneLen = getEpisodesByStage(PIPELINE_STAGES[laneIndex]).length;
         return Math.min(off, Math.max(0, laneLen - limit));
       })
     );
@@ -72,36 +101,39 @@ export const PipelineView: React.FC<Props> = ({
   useInput((input, key) => {
     if (!keyboardEnabled || !focus.startsWith('pipeline_')) return;
     const laneIndex = parseInt(focus.split('_')[1]);
-    const laneEpisodes = getEpisodesByStage(STAGES[laneIndex]);
+    const laneEpisodes = getEpisodesByStage(PIPELINE_STAGES[laneIndex]);
 
-    if (key.downArrow || input === 'j') {
+    /**
+     * Move the lane cursor and keep it inside the visible window. Both the
+     * selection and the scroll offset are clamped so repeated up/down at
+     * either end cannot push the offset out of range.
+     */
+    const moveSelection = (delta: number) => {
+      const next = moveLaneCursor(
+        selectedIndices[laneIndex],
+        offsets[laneIndex],
+        laneEpisodes.length,
+        limit,
+        delta
+      );
       setSelectedIndices(prev => {
-        const next = [...prev];
-        next[laneIndex] = Math.min(prev[laneIndex] + 1, laneEpisodes.length - 1);
-        return next;
+        const copy = [...prev];
+        copy[laneIndex] = next.selected;
+        return copy;
       });
       setOffsets(prev => {
-        const next = [...prev];
-        if (selectedIndices[laneIndex] + 1 >= prev[laneIndex] + limit) {
-          next[laneIndex] = prev[laneIndex] + 1;
-        }
-        return next;
+        const copy = [...prev];
+        copy[laneIndex] = next.offset;
+        return copy;
       });
+    };
+
+    if (key.downArrow || input === 'j') {
+      moveSelection(1);
     }
 
     if (key.upArrow || input === 'k') {
-      setSelectedIndices(prev => {
-        const next = [...prev];
-        next[laneIndex] = Math.max(prev[laneIndex] - 1, 0);
-        return next;
-      });
-      setOffsets(prev => {
-        const next = [...prev];
-        if (selectedIndices[laneIndex] - 1 < prev[laneIndex]) {
-          next[laneIndex] = prev[laneIndex] - 1;
-        }
-        return next;
-      });
+      moveSelection(-1);
     }
 
     if (key.return) {
@@ -130,19 +162,22 @@ export const PipelineView: React.FC<Props> = ({
 
   return (
     <Box flexDirection="column" height="100%" width="100%" flexGrow={1} minWidth={0}>
-      {fq ? (
+      {(fq || keyboardEnabled) && (
         <Box paddingX={1} flexShrink={0}>
-          <Text dimColor>match: </Text>
-          <Text color="magenta">{fq}</Text>
-        </Box>
-      ) : null}
-      {keyboardEnabled && (
-        <Box paddingX={1} flexShrink={0}>
-          <Text dimColor>Ctrl+A: requeue audio │ Ctrl+I/i: regen artwork (selected card)</Text>
+          {fq ? (
+            <>
+              <Text dimColor>match: </Text>
+              <Text color="magenta">{fq}</Text>
+              <Text dimColor> │ </Text>
+            </>
+          ) : null}
+          {keyboardEnabled ? (
+            <Text dimColor>Ctrl+A requeue │ Ctrl+I regen art</Text>
+          ) : null}
         </Box>
       )}
       <Box flexDirection="row" flexGrow={1} minHeight={0}>
-        {STAGES.map((stage, index) => {
+        {PIPELINE_STAGES.map((stage, index) => {
           const stageEpisodes = getEpisodesByStage(stage);
           const isFocused = focus === `pipeline_${index}`;
           const offset = offsets[index];
@@ -156,38 +191,29 @@ export const PipelineView: React.FC<Props> = ({
               flexBasis={0}
               flexGrow={1}
               minWidth={0}
-              borderStyle="round"
+              borderStyle="single"
               marginX={0}
-              paddingX={1}
               height="100%"
               borderColor={isFocused ? 'cyan' : 'gray'}
             >
-              <Box borderStyle="single" justifyContent="center" flexShrink={0} borderColor={isFocused ? 'cyan' : 'gray'}>
-                <Text bold color={isFocused ? 'cyan' : 'white'}>
-                  {stage.label} {isFocused ? '●' : ''}
+              <Box justifyContent="center" flexShrink={0}>
+                <Text bold color={isFocused ? 'cyan' : 'white'} wrap="truncate-end">
+                  {stage.label} {stageEpisodes.length}
                 </Text>
               </Box>
-              <Box flexDirection="column" marginTop={1} flexGrow={1} overflowY="hidden">
+              <Box flexDirection="column" flexGrow={1} overflowY="hidden">
                 {visibleEpisodes.map((e, itemIndex) => {
                   const isSelected = isFocused && itemIndex + offset === selectedIndex;
                   return (
-                    <Box
-                      key={e.id}
-                      marginBottom={1}
-                      borderStyle="single"
-                      borderColor={isSelected ? 'yellow' : isFocused ? 'gray' : 'transparent'}
-                      flexShrink={0}
-                      paddingX={1}
-                    >
-                      <Text wrap="truncate-end" color={isSelected ? 'yellow' : 'white'}>
-                        {isSelected ? '▸ ' : '  '}
+                    <Box key={e.id} flexShrink={0}>
+                      <Text wrap="truncate-end" color={isSelected ? 'yellow' : 'white'} bold={isSelected}>
                         {e.title}
                       </Text>
                     </Box>
                   );
                 })}
                 {stageEpisodes.length === 0 && (
-                  <Box justifyContent="center" marginTop={2}>
+                  <Box justifyContent="center" marginTop={1}>
                     <Text color="gray" italic>
                       Empty
                     </Text>
