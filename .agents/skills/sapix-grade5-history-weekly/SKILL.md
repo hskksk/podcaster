@@ -43,6 +43,8 @@ metadata:
 | `references/curriculum.md` | テキスト番号・単元一覧（唯一のカリキュラム正本） | **テキスト選定の前に必須** |
 | `references/story-rules.md` | キャラ一覧・共通設定・性格と好み、口調、ボケとツッコミ、物語の見せ方、ファイル構成、禁止事項 | **執筆前に必須** |
 | `references/workflow.md` | 週の切り方、保存先、ファイル名、ユーザーへの提示 | **保存前に必須** |
+| `references/metaphor-tables/README.md` | テキストと比喩表ファイルの対応、**表を先にコミットする手順** | **テキスト選定の直後・執筆前に必須** |
+| `references/metaphor-tables/*.md` | 時代・単元ごとの言い換えと `term` 規約 | **その週の記事を書く前に必須**（無ければ先に作成） |
 
 ### ステップ1: 週とテキストを決める
 
@@ -52,6 +54,13 @@ metadata:
 4. 月〜金のテーマを割り当てる。単元の境目が不明なときは一覧の順序を守り、**確実な範囲**に留める
 5. 選んだテキスト・単元名・5日分のテーマが一覧と整合していることを自分で確認する
 6. 各日の主形式を決める。人物体験の日は、**その週の4匹のうち**会話に参加するぬいぐるみと歴史人物の配役も決める
+
+### ステップ1b: 時代別比喩表（記事より先）
+
+1. `references/metaphor-tables/README.md` で、選んだ **textCode に対応する比喩表ファイル** を特定する
+2. ファイルが **無い**、または今週のテーマで **表にない語を発話に載せる** 必要がある → 比喩表を **新規作成または行追加** する（`metaphor-tables/*.md`）
+3. リポジトリに残す依頼がある場合、**比喩表だけを先に commit** してから執筆に入る（例: `docs(juken): add metaphor table for 戦国`）。表なしで `.mdoc` だけ書かない
+4. 執筆中も新語が出たら、**表を更新 → その内容で発話を直す**（表より記事が先行しない）
 
 ### ステップ2: 5日分を執筆する
 
@@ -85,8 +94,9 @@ metadata:
 教材をこのリポジトリにコミットするよう求められたときだけ:
 
 1. `cursor/sapix-grade5-history-weekly-*` など Conventional Commits に沿うブランチを切る
-2. `chugaku-juken/sapix/grade5-japanese-history/weeks/<月曜YYYY-MM-DD>/` だけを add する（`course.yml` と `chugaku-juken/README.md` は初回または更新時のみ）
-3. `feat(chugaku-juken): add sapix grade5 history week of <date>` のようなコミットで push し、PR を出す
+2. **比喩表を新規・更新した週**は、`.agents/skills/sapix-grade5-history-weekly/references/metaphor-tables/` を **記事と同 PR でもよいが、可能なら先に** add する
+3. `chugaku-juken/sapix/grade5-japanese-history/weeks/<月曜YYYY-MM-DD>/` を add する（`course.yml` と `chugaku-juken/README.md` は初回または更新時のみ）
+4. `feat(chugaku-juken): add sapix grade5 history week of <date>` または `docs(juken): …` のようなコミットで push し、PR を出す
 
 スキル追加やプロンプト変更のPRとは別物として扱う。
 
