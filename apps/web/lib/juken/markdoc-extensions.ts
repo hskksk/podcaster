@@ -21,5 +21,12 @@ export const jukenMarkdocExtensions: MarkdocExtensions = {
         note: { type: String },
       },
     },
+    term: {
+      render: "JukenTerm",
+      inline: true,
+      attributes: {
+        real: { type: String, required: true },
+      },
+    },
   },
 };

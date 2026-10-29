@@ -28,7 +28,9 @@ function walkPlain(node: RenderableTreeNodes, parts: string[]): void {
       const note = tag.attributes.note;
       if (typeof note === "string" && note.trim()) parts.push(note.trim());
     }
+    // JukenTerm: only plushie wording (children); `real` is reader-only gloss
     for (const child of tag.children) walkPlain(child, parts);
+    return;
   }
 }
 

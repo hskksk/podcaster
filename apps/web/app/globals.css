@@ -734,6 +734,18 @@ body {
   line-height: 1.75;
 }
 
+.j-term {
+  white-space: normal;
+}
+
+.j-term-real {
+  margin-left: 0.1em;
+  color: var(--color-muted-fg);
+  font-size: 0.82em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .j-note {
   margin: 0.4rem 0 0;
   color: var(--color-muted-fg);
