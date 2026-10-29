@@ -7,13 +7,18 @@ import { JukenCastProvider } from "./JukenCastContext";
 import { JukenSay } from "./JukenSay";
 import { JukenScene } from "./JukenScene";
 
+import { JukenTerm } from "./JukenTerm";
+
 const jukenComponents = {
   JukenSay,
   JukenScene,
+  JukenTerm,
 };
 
 function resolveTagName(name: string) {
-  if (name === "JukenSay" || name === "JukenScene") return jukenComponents[name as keyof typeof jukenComponents];
+  if (name === "JukenSay" || name === "JukenScene" || name === "JukenTerm") {
+    return jukenComponents[name as keyof typeof jukenComponents];
+  }
   return name;
 }
 
