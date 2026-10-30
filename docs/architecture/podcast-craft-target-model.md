@@ -45,17 +45,17 @@ Web は RSS と同様 **`audio_files.storage_path` を正**としつつ、REST �
 
 to-be の前稿も **`current_*` ポインタと phase を Episode 行に載せる** 形で、本質的には可変レコードのままだった。
 
-**直し方**: Episode を **身份（Identity）だけの不変レコード** にし、表示内容と成果物の組み合わせは **リビジョン（追記のみ）** に逃がす。可変なのは **カーソル 1 行**（どのリビジョンを「下書き」「掲載中」とみなすか）と **制作進行** だけに限定する。
+**直し方**: Episode を **身份（Identity）だけの不変レコード** にし、中身は **Revision（追記のみ）**。**公開エピソード**は **`EpisodePublished` イベント（追記のみ）** が指す `revision_id` だけで定義する。`listed_revision_id` や `publication_phase` を UPDATE する Cursor は不要。
 
-### 3 分割モデル
+制作中の「今どこまで進んだか」は **進行中ジョブ（TtsJob / WorkflowRun）から導出**するか、クエリコストが高ければ **任意の `episode_production_state`（phase だけ 1 行）** に縮退する。後者は Cursor より狭い。
+
+### 2 + 1 モデル（Cursor なし）
 
 | 概念 | テーブル案 | 更新 | 役割 |
 |------|------------|------|------|
-| **EpisodeIdentity** | `episodes` | **INSERT のみ**（以降 UPDATE 禁止） | `id`, `article_id`, `created_at`。RSS `<guid>` はこの `id` 固定 |
-| **EpisodeRevision** | `episode_revisions` | **INSERT のみ** | ある時点の「エピソードの中身」のスナップショット |
-| **EpisodeCursor** | `episode_cursors` | UPDATE 可（1 行 / episode） | 下書き HEAD・掲載中リビジョン・phase だけ |
-
-成果物（ScriptDraft / EpisodeAudio / EpisodeArtwork / TtsJob）も **INSERT のみ** とし、リビジョン行がそれらの id を **参照で束ねる**。
+| **EpisodeIdentity** | `episodes` | INSERT のみ | `id`, `article_id`, `created_at` |
+| **EpisodeRevision** | `episode_revisions` | INSERT のみ | 制作上のスナップショット（追記のたびに revision_no++） |
+| **EpisodePublished** | `episode_publications` | INSERT のみ | **公開イベント**。掲載版 revision を固定参照 |
 
 ```text
 episodes (immutable)
@@ -64,66 +64,91 @@ episodes (immutable)
 episode_revisions (immutable, append)
   id, episode_id, revision_no
   title, description
-  script_draft_id, episode_audio_id, episode_artwork_id  -- すべて NULL 可（段階的に埋まる）
-  created_at, cause  -- initial | script_regenerated | audio_regenerated | artwork_regenerated | manual_edit
+  script_draft_id, episode_audio_id, episode_artwork_id
+  created_at, cause
 
-episode_cursors (mutable, 1 row per episode)
-  episode_id PK
-  head_revision_id          -- 制作上の最新スナップショット
-  listed_revision_id NULL   -- RSS / Web が参照するスナップショット（未公開なら NULL）
-  production_phase
-  publication_phase         -- draft | listed | withdrawn
+episode_publications (immutable, append)   ← 「公開エピソード」の正本
+  id, episode_id, revision_id
+  feed_snapshot_id, published_at
+  -- 将来: withdrawn 用に EpisodeUnpublished を別イベントで
 ```
 
-**ルール**
+**下書き HEAD** = その `episode_id` の **`MAX(revision_no)`**（または `ORDER BY revision_no DESC LIMIT 1`）。`head_revision_id` 列は不要。
 
-1. タイトル変更・台本差し替え・音声差し替え・画像差し替え → すべて **`episode_revisions` に新行** + `head_revision_id` 更新。旧リビジョンは残る。
-2. `listed_revision_id` は **公開（または feed 再掲）の意思決定** のときだけ更新。音声だけ差し替えて再公開 → 新リビジョン + `listed_revision_id` を新 id に。
-3. `production_phase` はカーソルだけが持つ。TtsJob の poll 状態は **TtsJob 行**（または WorkflowRun）側。Episode 行に `audio_running` を書かない。
-4. アプリケーションは **`UPDATE episodes SET ...` を禁止**（DB トリガまたはリポジトリで防御）。
+**公開エピソード** = その `episode_id` の **最新 `episode_publications` 行**（`published_at` 最大）。未公開 = publication 行が 0 件。
+
+```sql
+-- 公開中の中身（read model）
+SELECT r.*
+FROM episode_publications p
+JOIN episode_revisions r ON r.id = p.revision_id
+WHERE p.episode_id = $1
+ORDER BY p.published_at DESC
+LIMIT 1;
+```
+
+RSS / Web の「配信に出す版」は **必ずこの join** から取る。`episodes.published_at` や `status = published` は廃止。
+
+### EpisodePublished が担うこと（旧 Cursor / status の置き換え）
+
+| 旧 | 新 |
+|----|-----|
+| `listed_revision_id` UPDATE | `INSERT episode_publications (revision_id, …)` |
+| `publication_phase = listed` | publication が 1 件以上存在 |
+| `updateRss` 成功で `status = published` | **`PublishEpisode` ユースケース** が publication + FeedSnapshot を INSERT |
+| 音声再生成後の再公開 | 新 Revision → 新 **EpisodePublished**（同一 episode id、guid 不変） |
+| 画像だけ変えて feed 反映 | 新 Revision（artwork）→ **EpisodePublished**（TUI の Ctrl+Y 相当） |
+
+**ドメインイベント** `EpisodePublished` と **永続行** `episode_publications` は同じ出来事（イベントテーブルと publication テーブルを 1 つにしてもよい）。
+
+### Cursor は本当に不要か
+
+| 関心 | Cursor なしで足りるか |
+|------|------------------------|
+| 掲載中 revision | **足りる** — 最新 publication |
+| 制作 HEAD revision | **足りる** — 最新 revision_no |
+| 未公開か | **足りる** — publication 0 件 |
+| `script_running` / `audio_downloading` 等 | **そのままでは弱い** — revision は「コミット済みスナップショット」だけ |
+
+制作フェーズは次のいずれか。
+
+1. **導出（推奨・Cursor 不要）**: 未完了 `craft_workflow_runs`、pending `tts_jobs`、failed 成果物の有無から TUI/CLI 用ビューを組む。
+2. **縮退キャッシュ（任意）**: `episode_production_state(episode_id, phase)` の 1 列 UPDATE。Cursor より責務が狭く、Publication とは分離。
+
+**結論**: **公開の意味での Cursor（listed / publication_phase）は `EpisodePublished` で削除できる。** 制作 UI 用 phase だけ、導出か最小キャッシュを選ぶ。
 
 ### リビジョンをいつ切るか
 
 | トリガ | 新 `EpisodeRevision` | `cause` | 備考 |
 |--------|----------------------|---------|------|
-| ingest 直後 | 空スナップショット（タイトル仮） | `initial` | revision 0 |
-| 台本 ready | title/description + `script_draft_id` | `script_regenerated` | 音声 id は前 revision を継承可 |
-| 音声 ready | `episode_audio_id` 更新 | `audio_regenerated` | 台本・画像 id は head からコピー |
-| 画像 ready | `episode_artwork_id` 更新 | `artwork_regenerated` | 失敗時は revision を切らない |
-| feed 掲載 | `listed_revision_id := head_revision_id` | （イベント `EpisodeListedInFeed`） | `EpisodeRelease` 行を追加（後述） |
+| ingest 直後 | 仮タイトル等 | `initial` | revision 0 |
+| 台本 ready | title/description + script | `script_regenerated` | 音声・画像 id は前 revision からコピー可 |
+| 音声 ready | episode_audio_id | `audio_regenerated` | |
+| 画像 ready | episode_artwork_id | `artwork_regenerated` | 失敗時は revision なし |
+| **公開** | （必ずしも新 revision 不要） | — | **既存 head revision を指す publication を INSERT**。内容変更後の公開は **先に revision → 後 publish** |
 
-「台本だけ変えたが音声は古いまま」は **head revision 上で script だけ差し替えた行** として表現する（`episode_audio_id` を前 revision からコピー）。現行に無い UC も、この形なら自然。
-
-### 公開履歴（オプションだが RSS と相性が良い）
-
-```text
-episode_releases (immutable, append)
-  id, episode_id, revision_id, feed_snapshot_id, listed_at
-```
-
-1 回の `RepublishFeed` ごとに **Release 行** を残す。`feed.xml` は FeedSnapshot 世代で上書きされても、「いつ revision 2 が載ったか」が追える。
+`RepublishFeed` は **同じ revision_id で publication を再度 INSERT する**（feed だけ壊れた）か、**FeedSnapshot だけ**足す設計も可。意味的には「再掲」も Publish の一種。
 
 ### 読み取りモデル
 
 | 用途 | 参照 |
 |------|------|
-| TUI「現在の下書き」 | `episode_cursors.head_revision_id` → `episode_revisions` |
-| Web / プレイヤー（公開分） | `listed_revision_id` → join Audio / Artwork |
-| RSS item | `guid = episodes.id`、enclosure/image/title は **listed revision** から |
-| 履歴・監査 | 全 `episode_revisions` |
+| TUI「制作中の最新」 | `episode_revisions` WHERE episode_id ORDER BY revision_no DESC LIMIT 1 |
+| Web / プレイヤー / RSS item | **最新 `episode_publications`** → revision → Audio / Artwork |
+| 公開履歴 | 全 `episode_publications` |
+| guid | 常に `episodes.id` |
 
 ### 現行 `episodes` からの移行イメージ
 
-1. `episodes` を identity 列だけ残す（データは 1 行 1 episode のまま）。
-2. 既存行の title/description/image/audio を **revision 1** として backfill。
-3. `episode_cursors` に head = listed = revision 1、phase は現 `status` から写す。
-4. ステージコードの `UPDATE episodes SET title...` を **`CommitEpisodeRevision` ユースケース** に置換。
+1. `episodes` を identity のみに。
+2. 現行 1 行 → `episode_revisions` revision 1。
+3. `status IN (published, …)` かつ feed 載せ済み → `episode_publications` 1 行 backfill（revision 1 を指す）。
+4. `UPDATE episodes SET status/title/...` を **CommitRevision** + **PublishEpisode** に置換。
 
-### イミュータブル Episode と Job Execution 層
+### Job Execution 層との関係
 
-- WorkflowRun は **EpisodeIdentity** に紐づく。phase 更新は **Cursor** のみ。
-- ステップ成功時: 成果物 INSERT →（必要なら）Revision INSERT → Cursor 更新 → DomainEvent INSERT。
-- pgflow は引き続きインフラ。Episode の不変性とは独立。
+- `RebuildFeed` ステップ成功 → **`PublishEpisode(episodeId, revisionId?, feedSnapshotId)`**（内部で publication INSERT）。
+- WorkflowRun は EpisodeIdentity に紐づく。phase 用 Cursor は持たない。
 
 ---
 
@@ -139,9 +164,10 @@ episode_releases (immutable, append)
 
 **ここに title / status / image / audio は置かない。**
 
-### EpisodeRevision / EpisodeCursor
+### EpisodeRevision / EpisodePublished
 
-上記「3 分割モデル」参照。集約の **論理根** は Identity + Cursor。Revision は集約内の不変子エンティティ群。
+- **Revision** — 制作の追記スナップショット。HEAD は `MAX(revision_no)` で決める。
+- **Publication** — `EpisodePublished` イベント行。**公開エピソード = 最新 publication が指す revision**（Cursor 不要）。
 
 ### エンティティ: ScriptDraft（現 `scripts` の再定義）
 
@@ -169,7 +195,7 @@ TTS は **head revision** が指す `script_draft_id`（または制作中の最
 | `llm_usage`, `llm_response` | 画像 LLM |
 | `created_at` | 試行履歴 |
 
-再生成は Artwork 行を INSERT → 新 **EpisodeRevision**（`episode_artwork_id` 差し替え）→ Cursor の `head_revision_id` 更新。
+再生成は Artwork 行を INSERT → 新 **EpisodeRevision** → 公開するなら **EpisodePublished** を INSERT。
 
 ### エンティティ: TtsJob（現 `audio_files` の pending 側を分離）
 
@@ -204,10 +230,10 @@ pending 中は EpisodeAudio 行が無く、TtsJob のみ存在する — ジョ�
 
 | エンティティ | 説明 |
 |--------------|------|
-| **FeedSnapshot** | `feed.xml` の世代（`generated_at`, storage path） |
-| **EpisodeListing** | チャンネルに載せる 1 item（guid = episode id、**revision_id** 固定参照） |
+| **FeedSnapshot** | `feed.xml` の世代 |
+| **EpisodePublication** | 公開イベント（`episode_publications`）。revision + feed 世代を束ねる |
 
-`updateRss` は FeedSnapshot 追加 + `listed_revision_id` が指す revision から item を組み立て + `episode_releases` 行追加。Cursor の `publication_phase = listed`。
+`updateRss` の成功 = **`PublishEpisode`**: FeedSnapshot INSERT + **対象 revision_id で episode_publications INSERT**。feed 組み立ては **各 episode の最新 publication** から item を生成。
 
 ### その他（変更なしに近い）
 
@@ -221,8 +247,8 @@ pending 中は EpisodeAudio 行が無く、TtsJob のみ存在する — ジョ�
 ```mermaid
 erDiagram
   ARTICLE ||--o{ EPISODE : feeds
-  EPISODE ||--|| EPISODE_CURSOR : cursor
   EPISODE ||--o{ EPISODE_REVISION : revisions
+  EPISODE ||--o{ EPISODE_PUBLICATION : publishes
   EPISODE ||--o{ SCRIPT_DRAFT : attempts
   EPISODE ||--o{ EPISODE_ARTWORK : attempts
   EPISODE ||--o{ TTS_JOB : submits
@@ -230,11 +256,10 @@ erDiagram
   EPISODE_REVISION }o--|| SCRIPT_DRAFT : may_reference
   EPISODE_REVISION }o--|| EPISODE_AUDIO : may_reference
   EPISODE_REVISION }o--|| EPISODE_ARTWORK : may_reference
-  EPISODE_CURSOR }o--|| EPISODE_REVISION : head
-  EPISODE_CURSOR }o--o| EPISODE_REVISION : listed
+  EPISODE_REVISION ||--o{ EPISODE_PUBLICATION : published_as
   SCRIPT_DRAFT ||--o{ TTS_JOB : input
   TTS_JOB ||--o| EPISODE_AUDIO : produces
-  EPISODE_REVISION ||--o{ EPISODE_RELEASE : published_as
+  FEED_SNAPSHOT ||--o{ EPISODE_PUBLICATION : recorded_in
   PODCAST_CHANNEL ||--o{ FEED_SNAPSHOT : publishes
 
   EPISODE {
@@ -249,10 +274,10 @@ erDiagram
     text cause
   }
 
-  EPISODE_CURSOR {
-    uuid episode_id
-    text production_phase
-    text publication_phase
+  EPISODE_PUBLICATION {
+    uuid id
+    timestamptz published_at
+    uuid revision_id
   }
 ```
 
