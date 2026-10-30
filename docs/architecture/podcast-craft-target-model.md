@@ -34,24 +34,114 @@ Web は RSS と同様 **`audio_files.storage_path` を正**としつつ、REST �
 
 ---
 
+## Episode のイミュータブル化
+
+### 何が「イミュータブルでない」か
+
+現行 `episodes` は 1 行を何度も `UPDATE` する。
+
+- 台本後に `title` / `description` / `status`
+- 画像・音声・公開で `image_url` / 間接的に音声 / `published_at` / `status`
+
+to-be の前稿も **`current_*` ポインタと phase を Episode 行に載せる** 形で、本質的には可変レコードのままだった。
+
+**直し方**: Episode を **身份（Identity）だけの不変レコード** にし、表示内容と成果物の組み合わせは **リビジョン（追記のみ）** に逃がす。可変なのは **カーソル 1 行**（どのリビジョンを「下書き」「掲載中」とみなすか）と **制作進行** だけに限定する。
+
+### 3 分割モデル
+
+| 概念 | テーブル案 | 更新 | 役割 |
+|------|------------|------|------|
+| **EpisodeIdentity** | `episodes` | **INSERT のみ**（以降 UPDATE 禁止） | `id`, `article_id`, `created_at`。RSS `<guid>` はこの `id` 固定 |
+| **EpisodeRevision** | `episode_revisions` | **INSERT のみ** | ある時点の「エピソードの中身」のスナップショット |
+| **EpisodeCursor** | `episode_cursors` | UPDATE 可（1 行 / episode） | 下書き HEAD・掲載中リビジョン・phase だけ |
+
+成果物（ScriptDraft / EpisodeAudio / EpisodeArtwork / TtsJob）も **INSERT のみ** とし、リビジョン行がそれらの id を **参照で束ねる**。
+
+```text
+episodes (immutable)
+  id, article_id, created_at
+
+episode_revisions (immutable, append)
+  id, episode_id, revision_no
+  title, description
+  script_draft_id, episode_audio_id, episode_artwork_id  -- すべて NULL 可（段階的に埋まる）
+  created_at, cause  -- initial | script_regenerated | audio_regenerated | artwork_regenerated | manual_edit
+
+episode_cursors (mutable, 1 row per episode)
+  episode_id PK
+  head_revision_id          -- 制作上の最新スナップショット
+  listed_revision_id NULL   -- RSS / Web が参照するスナップショット（未公開なら NULL）
+  production_phase
+  publication_phase         -- draft | listed | withdrawn
+```
+
+**ルール**
+
+1. タイトル変更・台本差し替え・音声差し替え・画像差し替え → すべて **`episode_revisions` に新行** + `head_revision_id` 更新。旧リビジョンは残る。
+2. `listed_revision_id` は **公開（または feed 再掲）の意思決定** のときだけ更新。音声だけ差し替えて再公開 → 新リビジョン + `listed_revision_id` を新 id に。
+3. `production_phase` はカーソルだけが持つ。TtsJob の poll 状態は **TtsJob 行**（または WorkflowRun）側。Episode 行に `audio_running` を書かない。
+4. アプリケーションは **`UPDATE episodes SET ...` を禁止**（DB トリガまたはリポジトリで防御）。
+
+### リビジョンをいつ切るか
+
+| トリガ | 新 `EpisodeRevision` | `cause` | 備考 |
+|--------|----------------------|---------|------|
+| ingest 直後 | 空スナップショット（タイトル仮） | `initial` | revision 0 |
+| 台本 ready | title/description + `script_draft_id` | `script_regenerated` | 音声 id は前 revision を継承可 |
+| 音声 ready | `episode_audio_id` 更新 | `audio_regenerated` | 台本・画像 id は head からコピー |
+| 画像 ready | `episode_artwork_id` 更新 | `artwork_regenerated` | 失敗時は revision を切らない |
+| feed 掲載 | `listed_revision_id := head_revision_id` | （イベント `EpisodeListedInFeed`） | `EpisodeRelease` 行を追加（後述） |
+
+「台本だけ変えたが音声は古いまま」は **head revision 上で script だけ差し替えた行** として表現する（`episode_audio_id` を前 revision からコピー）。現行に無い UC も、この形なら自然。
+
+### 公開履歴（オプションだが RSS と相性が良い）
+
+```text
+episode_releases (immutable, append)
+  id, episode_id, revision_id, feed_snapshot_id, listed_at
+```
+
+1 回の `RepublishFeed` ごとに **Release 行** を残す。`feed.xml` は FeedSnapshot 世代で上書きされても、「いつ revision 2 が載ったか」が追える。
+
+### 読み取りモデル
+
+| 用途 | 参照 |
+|------|------|
+| TUI「現在の下書き」 | `episode_cursors.head_revision_id` → `episode_revisions` |
+| Web / プレイヤー（公開分） | `listed_revision_id` → join Audio / Artwork |
+| RSS item | `guid = episodes.id`、enclosure/image/title は **listed revision** から |
+| 履歴・監査 | 全 `episode_revisions` |
+
+### 現行 `episodes` からの移行イメージ
+
+1. `episodes` を identity 列だけ残す（データは 1 行 1 episode のまま）。
+2. 既存行の title/description/image/audio を **revision 1** として backfill。
+3. `episode_cursors` に head = listed = revision 1、phase は現 `status` から写す。
+4. ステージコードの `UPDATE episodes SET title...` を **`CommitEpisodeRevision` ユースケース** に置換。
+
+### イミュータブル Episode と Job Execution 層
+
+- WorkflowRun は **EpisodeIdentity** に紐づく。phase 更新は **Cursor** のみ。
+- ステップ成功時: 成果物 INSERT →（必要なら）Revision INSERT → Cursor 更新 → DomainEvent INSERT。
+- pgflow は引き続きインフラ。Episode の不変性とは独立。
+
+---
+
 ## エンティティ分解（to-be）
 
-### 集約 1: Episode（制作の根 — スリム化）
-
-Episode は「1 本のポッドキャスト項目の身份」と **現在どの成果物を指すか** だけを持つ。
+### EpisodeIdentity（`episodes` — 不変）
 
 | 属性 | 説明 |
 |------|------|
-| `id` | 不変 |
-| `article_id` | 入力スナップショットへの参照 |
-| `title`, `description` | 表示用（台本生成で更新 — 将来は Script から投影してもよい） |
-| `production_phase` | 台本・音声制作の粗いフェーズ（`ingested` … `audio_ready` など） |
-| `publication_phase` | `draft` / `listed` / `withdrawn` など（制作 phase から分離） |
-| `current_script_id` | 採用中台本 |
-| `current_audio_id` | 採用中音声成果物 |
-| `current_artwork_id` | 採用中カバー画像 |
+| `id` | 不変。RSS guid |
+| `article_id` | ingest スナップショット |
+| `created_at` | 生成時刻 |
 
-**削除・非推奨（段階的）**: `episodes.image_url` → `episode_artworks` へ、`episodes.audio_url` → `episode_audios` へ。`episodes.status` の公開意味は `publication_phase` へ移す。
+**ここに title / status / image / audio は置かない。**
+
+### EpisodeRevision / EpisodeCursor
+
+上記「3 分割モデル」参照。集約の **論理根** は Identity + Cursor。Revision は集約内の不変子エンティティ群。
 
 ### エンティティ: ScriptDraft（現 `scripts` の再定義）
 
@@ -65,7 +155,7 @@ Episode は「1 本のポッドキャスト項目の身份」と **現在どの�
 | `llm_usage`, `llm_response` | プロバイダメタ |
 | `requested_by` | `ingest` / `manual` / `workflow_run_id` |
 
-TTS は常に **採用中 ScriptDraft**（`current_script_id`）を入力とする。`order by created_at desc` をやめる。
+TTS は **head revision** が指す `script_draft_id`（または制作中の最新 ready 台本）を入力とする。
 
 ### エンティティ: EpisodeArtwork（新規 — 現 `image_url` の昇格）
 
@@ -79,7 +169,7 @@ TTS は常に **採用中 ScriptDraft**（`current_script_id`）を入力とす�
 | `llm_usage`, `llm_response` | 画像 LLM |
 | `created_at` | 試行履歴 |
 
-Episode は `current_artwork_id` のみ保持。RSS / Web は **採用中 Artwork** の path を参照。再生成は新行 insert → `current_artwork_id` 更新。
+再生成は Artwork 行を INSERT → 新 **EpisodeRevision**（`episode_artwork_id` 差し替え）→ Cursor の `head_revision_id` 更新。
 
 ### エンティティ: TtsJob（現 `audio_files` の pending 側を分離）
 
@@ -106,7 +196,7 @@ download-monitor は **TtsJob** をスキャンし、完了時にドメインサ
 | `byte_size` | 任意 |
 | `outcome` | `ready` / `failed` |
 
-`public_url` は DB 列に持たず、`SUPABASE_URL + storage_path` で組み立てる（必要なら materialized view や API 層）。**`episodes.audio_url` は廃止**し、Web/RSS は `current_audio_id` → EpisodeAudio を join。
+`public_url` は DB 列に持たず、`SUPABASE_URL + storage_path` で組み立てる。Web/RSS は **listed revision** が指す `episode_audio_id` を join。**`episodes.audio_url` は廃止**。
 
 pending 中は EpisodeAudio 行が無く、TtsJob のみ存在する — ジョブと成果物の混線を解消。
 
@@ -115,9 +205,9 @@ pending 中は EpisodeAudio 行が無く、TtsJob のみ存在する — ジョ�
 | エンティティ | 説明 |
 |--------------|------|
 | **FeedSnapshot** | `feed.xml` の世代（`generated_at`, storage path） |
-| **EpisodeListing** | チャンネルに載せる 1 item（guid = episode id、参照: current_audio_id, current_artwork_id, title, description, pub_date） |
+| **EpisodeListing** | チャンネルに載せる 1 item（guid = episode id、**revision_id** 固定参照） |
 
-`updateRss` は **FeedSnapshot を 1 件追加（または上書き世代管理）** + 対象 Episode の `publication_phase = listed`。制作 phase を `published` に書き換えない。
+`updateRss` は FeedSnapshot 追加 + `listed_revision_id` が指す revision から item を組み立て + `episode_releases` 行追加。Cursor の `publication_phase = listed`。
 
 ### その他（変更なしに近い）
 
@@ -131,41 +221,38 @@ pending 中は EpisodeAudio 行が無く、TtsJob のみ存在する — ジョ�
 ```mermaid
 erDiagram
   ARTICLE ||--o{ EPISODE : feeds
+  EPISODE ||--|| EPISODE_CURSOR : cursor
+  EPISODE ||--o{ EPISODE_REVISION : revisions
   EPISODE ||--o{ SCRIPT_DRAFT : attempts
   EPISODE ||--o{ EPISODE_ARTWORK : attempts
   EPISODE ||--o{ TTS_JOB : submits
   EPISODE ||--o{ EPISODE_AUDIO : artifacts
+  EPISODE_REVISION }o--|| SCRIPT_DRAFT : may_reference
+  EPISODE_REVISION }o--|| EPISODE_AUDIO : may_reference
+  EPISODE_REVISION }o--|| EPISODE_ARTWORK : may_reference
+  EPISODE_CURSOR }o--|| EPISODE_REVISION : head
+  EPISODE_CURSOR }o--o| EPISODE_REVISION : listed
   SCRIPT_DRAFT ||--o{ TTS_JOB : input
   TTS_JOB ||--o| EPISODE_AUDIO : produces
-  EPISODE ||--o| EPISODE_LISTING : lists
+  EPISODE_REVISION ||--o{ EPISODE_RELEASE : published_as
   PODCAST_CHANNEL ||--o{ FEED_SNAPSHOT : publishes
-  PODCAST_CHANNEL ||--o{ EPISODE_LISTING : contains
 
   EPISODE {
     uuid id
-    uuid current_script_id
-    uuid current_audio_id
-    uuid current_artwork_id
+    timestamptz created_at
+  }
+
+  EPISODE_REVISION {
+    uuid id
+    int revision_no
+    text title
+    text cause
+  }
+
+  EPISODE_CURSOR {
+    uuid episode_id
     text production_phase
     text publication_phase
-  }
-
-  EPISODE_ARTWORK {
-    uuid id
-    text storage_path
-    text outcome
-  }
-
-  TTS_JOB {
-    uuid id
-    text batch_name
-    text phase
-  }
-
-  EPISODE_AUDIO {
-    uuid id
-    text storage_path
-    text mime_type
   }
 ```
 
@@ -287,21 +374,21 @@ Episode の `audio_downloading` ロックは **TtsJob** または **WorkflowRun*
 
 | 命令 | 主に更新 | 発行イベント（例） |
 |------|----------|-------------------|
-| StartFromIngest | Episode, ScriptDraft, TtsJob, Artwork?, WorkflowRun | EpisodeCreated → Script… → TtsJobSubmitted |
-| RegenerateScriptOnly | ScriptDraft, current_script_id | ScriptGenerationCompleted（Audio は触らない） |
-| RegenerateAudio | TtsJob → EpisodeAudio, current_audio_id | TtsJobSubmitted → EpisodeAudioStored |
-| RegenerateArtwork | EpisodeArtwork, current_artwork_id | ArtworkGenerationCompleted |
-| RepublishFeed | FeedSnapshot, EpisodeListing | FeedRebuilt, EpisodeListedInFeed |
+| StartFromIngest | EpisodeIdentity, Revision 0, Cursor, ScriptDraft, … | EpisodeCreated |
+| RegenerateScriptOnly | ScriptDraft + **新 Revision**（audio/art  id 継承） | ScriptGenerationCompleted |
+| RegenerateAudio | TtsJob → EpisodeAudio + **新 Revision** | EpisodeAudioStored |
+| RegenerateArtwork | Artwork + **新 Revision** | ArtworkGenerationCompleted |
+| RepublishFeed | listed_revision 更新, FeedSnapshot, EpisodeRelease | FeedRebuilt |
 
 ---
 
 ## 移行フェーズ（推奨）
 
-1. **Phase A — 読み取りの二重化**: `episode_artworks` / `episode_audios` テーブル追加、`image_url` / ready な `audio_files` を同期。Web/RSS join を切替。
-2. **Phase B — TtsJob 分離**: pending `audio_files` を `tts_jobs` へ移行。monitor / pipeline-stages を TtsJob リポジトリ経由に。
-3. **Phase C — status 分離**: `production_phase` / `publication_phase` 追加、`episodes.status` 廃止。
-4. **Phase D — Job Execution**: `craft_workflow_runs` 導入、CLI/TUI/ingest が `JobExecutionService` のみ呼ぶ。pgflow は Adapter 内。
-5. **Phase E — ドメインイベント**: `craft_domain_events` 追加（最初は主要 5 種だけ）。`processing_logs` はテレメトリ専用のまま。
+0. **Phase 0 — Identity + Revision**: `episode_revisions` / `episode_cursors` 導入。`episodes` への title/status UPDATE を廃止し backfill。
+1. **Phase A — 成果物テーブル**: `episode_artworks` / `episode_audios`、`image_url` / ready な `audio_files` を移行。
+2. **Phase B — TtsJob 分離**: pending を `tts_jobs` へ。
+3. **Phase C — Job Execution**: `craft_workflow_runs`、pgflow Adapter。
+4. **Phase D — ドメインイベント + episode_releases**。
 
 各 Phase は独立 PR にし、**既存 migration は編集しない**（リポジトリ規約どおり新規 migration のみ）。
 

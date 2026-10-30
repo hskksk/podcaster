@@ -99,7 +99,7 @@
 
 ## 目標ドメインモデル（詳細）
 
-エンティティ分解（**EpisodeArtwork**、**EpisodeAudio** / **TtsJob** 分離）、ドメインイベント 3 層、**Craft Job Execution** レイヤー（pgflow を Adapter に閉じる）は **[podcast-craft-target-model.md](./podcast-craft-target-model.md)** を参照。
+エンティティ分解（**EpisodeIdentity + EpisodeRevision**、Artwork / TtsJob / EpisodeAudio）、ドメインイベント 3 層、**Craft Job Execution** レイヤーは **[podcast-craft-target-model.md](./podcast-craft-target-model.md)** を参照（**Episode イミュータブル化**含む）。
 
 ## リモデリング backlog（ギャップから）
 
