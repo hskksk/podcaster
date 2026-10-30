@@ -97,13 +97,18 @@
 
 実装: [scripts/podcast-cli.ts](../../scripts/podcast-cli.ts)、[scripts/tui/data/client.ts](../../scripts/tui/data/client.ts)。
 
+## 目標ドメインモデル（詳細）
+
+エンティティ分解（**EpisodeArtwork**、**EpisodeAudio** / **TtsJob** 分離）、ドメインイベント 3 層、**Craft Job Execution** レイヤー（pgflow を Adapter に閉じる）は **[podcast-craft-target-model.md](./podcast-craft-target-model.md)** を参照。
+
 ## リモデリング backlog（ギャップから）
 
-1. **制作 status** と **公開 status** の分離（または合成状態機械を 1 枚の図として明文化）。
-2. Script / AudioFile の「現在」を、`created_at` 最新クエリではなく第一級の参照で表す。
-3. 命令名と挙動の一致（`regenerate-script` が音声・画像まで走る点を UI/ドメインで明示または分割）。
-4. 公開済みエピソードのアートワーク再生成に、任意の `refreshFeed` を付けられるようにする。
-5. Gemini バッチメタを **TtsJob** 値オブジェクトまたはエンティティとして切り出し、`audio_files` の JSONB だけに頼らない。
+1. **制作 phase** と **公開 phase** の分離 — [target-model](./podcast-craft-target-model.md#エンティティ分解to-be) の `production_phase` / `publication_phase`。
+2. **`episode_artworks` テーブル** — `episodes.image_url` 廃止、`current_artwork_id`。
+3. **`tts_jobs` + `episode_audios`** — pending と ready の分離、`episodes.audio_url` 廃止。
+4. **`craft_workflow_runs` / `craft_step_runs`** — pgflow の上に Job Execution 層。
+5. **`craft_domain_events`** — `processing_logs` と scripts 行との役割分担を明確化。
+6. 命令名と挙動の一致（`regenerate-script` の連鎖を Intent モデルで明示）。
 
 ## 参照コード
 
