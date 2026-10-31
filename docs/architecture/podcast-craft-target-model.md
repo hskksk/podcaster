@@ -117,6 +117,34 @@ RSS / Web の「配信に出す版」は **必ずこの join** から取る。`e
 
 **結論**: **公開の意味での Cursor（listed / publication_phase）は `EpisodePublished` で削除できる。** 制作 UI 用 phase だけ、導出か最小キャッシュを選ぶ。
 
+### 設計判断（確定）— Revision と Publication の直交
+
+**Revision** と **Publication** は別タイムライン。公開のために revision を増やしたり UPDATE したりしない。
+
+| ストリーム | いつ増えるか | やらないこと |
+|------------|--------------|--------------|
+| `episode_revisions` | 台本・音声・アートワーク（や title/description）が変わったときだけ | `cause: published` のような revision は作らない |
+| `episode_publications` | 掲載宣言（feed / リスナー向けに有効化）のときだけ | revision 行の作成・更新 |
+
+**公開エピソード** = 最新 `episode_publications` が指す **既存** `revision_id`。  
+**同じ revision_id** で publication を複数 INSERT してよい（feed 再生成のみなど）。
+
+**`PublishEpisode` 契約**
+
+```typescript
+PublishEpisode({
+  episodeId,
+  revisionId,       // 必須 — 掲載する版を明示（省略時 HEAD は CLI 便利機能のみ）
+  feedSnapshotId,
+  reason?: "first_list" | "after_content_change" | "feed_rebuild_only",
+});
+```
+
+- 中身変更 → 先に **`CommitEpisodeRevision`**（制作 UC）→ 必要なら **`PublishEpisode(revisionId: その id)`**
+- feed だけ直す → **`PublishEpisode(revisionId: 最新掲載と同じ or 明示)`**、revision は増やさない
+
+1 行ルール: **Revision は制作の差分だけ。Publication は掲載の履歴だけ。**
+
 ### リビジョンをいつ切るか
 
 | トリガ | 新 `EpisodeRevision` | `cause` | 備考 |
@@ -302,7 +330,7 @@ erDiagram
 | `TtsJobSucceeded` | batch 成功 | tts_job_id |
 | `TtsJobFailed` | batch 失敗 | tts_job_id, error |
 | `EpisodeAudioStored` | WAV upload 完了 | episode_audio_id, storage_path |
-| `EpisodeListedInFeed` | RSS item に載った | feed_snapshot_id |
+| `EpisodePublished` | 公開イベント（`episode_publications` INSERT） | episode_id, revision_id, feed_snapshot_id |
 | `FeedRebuilt` | feed.xml 更新 | feed_snapshot_id, episode_count |
 
 `scripts` / `episode_artworks` の行は **イベントの結果としての状態**であり、イベントそのものではない（二重記録を避けるなら、将来はイベントソーシング寄りにもできるが、第 1 段階は **イベント + 状態テーブル併存** で十分）。
@@ -403,17 +431,17 @@ Episode の `audio_downloading` ロックは **TtsJob** または **WorkflowRun*
 | RegenerateScriptOnly | ScriptDraft + **新 Revision**（audio/art  id 継承） | ScriptGenerationCompleted |
 | RegenerateAudio | TtsJob → EpisodeAudio + **新 Revision** | EpisodeAudioStored |
 | RegenerateArtwork | Artwork + **新 Revision** | ArtworkGenerationCompleted |
-| RepublishFeed | listed_revision 更新, FeedSnapshot, EpisodeRelease | FeedRebuilt |
+| RepublishFeed | FeedSnapshot + **EpisodePublished**（同一または新 revision） | EpisodePublished, FeedRebuilt |
 
 ---
 
 ## 移行フェーズ（推奨）
 
-0. **Phase 0 — Identity + Revision**: `episode_revisions` / `episode_cursors` 導入。`episodes` への title/status UPDATE を廃止し backfill。
-1. **Phase A — 成果物テーブル**: `episode_artworks` / `episode_audios`、`image_url` / ready な `audio_files` を移行。
-2. **Phase B — TtsJob 分離**: pending を `tts_jobs` へ。
-3. **Phase C — Job Execution**: `craft_workflow_runs`、pgflow Adapter。
-4. **Phase D — ドメインイベント + episode_releases**。
+0. **Phase 0 — Identity + Revision + Publication**: `episode_revisions` / `episode_publications` 導入。公開 = 最新 publication。
+1. **Phase A — 成果物テーブル**: `episode_artworks` / `episode_audios`。
+2. **Phase B — TtsJob 分離**。
+3. **Phase C — Job Execution**。
+4. **Phase D — craft_domain_events**（`EpisodePublished` は publication 行と一体化可）。
 
 各 Phase は独立 PR にし、**既存 migration は編集しない**（リポジトリ規約どおり新規 migration のみ）。
 
