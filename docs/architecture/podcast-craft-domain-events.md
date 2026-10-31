@@ -91,15 +91,15 @@ erDiagram
   EPISODE ||--o{ EPISODE_AUDIO : has
   EPISODE ||--o{ EPISODE_ARTWORK : has
 
-  EPISODE_EDIT ||--o{ CRAFT_DOMAIN_EVENT : contains
+  EPISODE_EDIT ||--o{ DOMAIN_EVENT : contains
   EPISODE_EDIT ||--o| OUTCOME_FULL : may_end_with
   EPISODE_EDIT ||--o| OUTCOME_SCRIPT : may_end_with
   EPISODE_EDIT ||--o| OUTCOME_AUDIO : may_end_with
   EPISODE_EDIT ||--o| OUTCOME_ARTWORK : may_end_with
 
-  CRAFT_DOMAIN_EVENT ||--o{ EVENT_LINK : from
-  CRAFT_DOMAIN_EVENT ||--o{ EVENT_LINK : to
-  CRAFT_DOMAIN_EVENT ||--o{ EVENT_RESOURCE : attaches
+  DOMAIN_EVENT ||--o{ DOMAIN_EVENT_LINK : link_source
+  DOMAIN_EVENT ||--o{ DOMAIN_EVENT_LINK : link_target
+  DOMAIN_EVENT ||--o{ DOMAIN_EVENT_RESOURCE : attaches
 
   SCRIPT_DRAFT ||--o{ TTS_JOB : input_to
   TTS_JOB ||--|| EPISODE_AUDIO : produces
@@ -111,26 +111,26 @@ erDiagram
 
   EPISODE ||--o{ EPISODE_PUBLICATION : published
   EPISODE_PUBLICATION }o--|| PODCAST_FEED_SNAPSHOT : in_feed
-  EPISODE_PUBLICATION }o--|| CRAFT_DOMAIN_EVENT : published_by
+  EPISODE_PUBLICATION }o--|| DOMAIN_EVENT : published_by
 
-  EVENT_RESOURCE }o..|| SCRIPT_DRAFT : resource
-  EVENT_RESOURCE }o..|| TTS_JOB : resource
-  EVENT_RESOURCE }o..|| EPISODE_AUDIO : resource
-  EVENT_RESOURCE }o..|| EPISODE_ARTWORK : resource
+  DOMAIN_EVENT_RESOURCE }o--|| SCRIPT_DRAFT : script_ref
+  DOMAIN_EVENT_RESOURCE }o--|| TTS_JOB : job_ref
+  DOMAIN_EVENT_RESOURCE }o--|| EPISODE_AUDIO : audio_ref
+  DOMAIN_EVENT_RESOURCE }o--|| EPISODE_ARTWORK : artwork_ref
 
-  CRAFT_DOMAIN_EVENT {
+  DOMAIN_EVENT {
     uuid id
     text event_type
     uuid edit_id
   }
 
-  CRAFT_DOMAIN_EVENT_LINK {
+  DOMAIN_EVENT_LINK {
     uuid from_event_id
     uuid to_event_id
     text link_type
   }
 
-  CRAFT_DOMAIN_EVENT_RESOURCE {
+  DOMAIN_EVENT_RESOURCE {
     uuid event_id
     text resource_kind
     uuid resource_id
@@ -155,13 +155,15 @@ erDiagram
   }
 
   EPISODE_AUDIO {
-    uuid storage_path
+    text storage_path
   }
 
   EPISODE_ARTWORK {
-    uuid storage_path
+    text storage_path
   }
 ```
+
+図中の `DOMAIN_*` は DDL 上の `craft_domain_*` / `episode_*` に対応する（Mermaid の予約語回避のため短名）。
 
 ---
 
