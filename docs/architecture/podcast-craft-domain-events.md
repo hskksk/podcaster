@@ -10,13 +10,200 @@ to-be の **Craft 境界** ドメインイベントを一覧する。実行可�
 
 | テーブル | 役割 | 更新 |
 |----------|------|------|
-| `episode_edits` | Edit セッション | Started で INSERT、`ended_at` / `status` の UPDATE のみ |
-| `craft_domain_events` | **全ドメインイベント** append-only | INSERT のみ |
-| `episode_edit_outcomes_*` | `*EditEnded` の sealed 結果 | INSERT のみ（End 時 1 行） |
-| `podcast_feed_snapshots` | `FeedRebuilt` の成果 | INSERT のみ |
-| `episode_publications` | `EpisodePublished` の投影 | INSERT のみ |
+| `episode_edits` | Edit セッション | Started で INSERT、`status` / `ended_at` / `*_by_event_id` の UPDATE |
+| `craft_domain_events` | 全ドメインイベント | INSERT のみ |
+| `craft_domain_event_links` | **イベント間**有向エッジ | INSERT のみ |
+| `craft_domain_event_resources` | **イベント ↔ リソース** | INSERT のみ |
+| `script_drafts` / `tts_jobs` / `episode_audios` / `episode_artworks` | 成果物 | INSERT（`tts_jobs` は phase UPDATE のみ） |
+| `episode_edit_outcomes_*` | Edit End の sealed 結果 | INSERT のみ |
+| `podcast_feed_snapshots` / `episode_publications` | 公開投影 | INSERT のみ |
 
-成果物本体（`script_drafts` / `tts_jobs` / `episode_audios` / `episode_artworks`）は別 migration。イベント payload と outcome が UUID で参照する。
+既存 `articles` / `episodes` は ingest 境界（identity）。DDL 全文: [schema.sql](./podcast-craft-domain-events-schema.sql)。
+
+---
+
+## イベント間リレーション — `craft_domain_event_links`
+
+| 列 | 説明 |
+|----|------|
+| `from_event_id` | 始点 |
+| `to_event_id` | 終点 |
+| `link_type` | 下表 |
+
+| link_type | 意味 | 例 |
+|-----------|------|-----|
+| `precedes` | 同一 edit 内で to が後 | ScriptCreated → TtsSubmitted |
+| `caused_by` | to は from の直接結果 | TtsSubmitted → EpisodeAudioCreated（経由ジョブ成功後） |
+| `completes` | End が Start を閉じる | EpisodeEditStarted → EpisodeEditEnded |
+| `spawned_edit` | 新 edit セッション開始 | EpisodeCreated → EpisodeEditStarted |
+| `publishes_outcome` | Publish が End 成果を掲載 | EpisodeEditEnded → EpisodePublished |
+| `rebuilds_feed` | Feed 再生成が Publish と対 | EpisodePublished → FeedRebuilt |
+
+セッション内の **precedes チェーン** と **completes** で Edit DAG を復元できる。`edit_id` は冗長だがクエリ用にイベント列にも持つ。
+
+---
+
+## イベント ↔ リソース — `craft_domain_event_resources`
+
+| 列 | 説明 |
+|----|------|
+| `event_id` | |
+| `resource_kind` | `article` / `episode` / `edit` / `script_draft` / `tts_job` / `episode_audio` / `episode_artwork` / `feed_snapshot` / `publication` |
+| `resource_id` | 各表の PK |
+| `resource_role` | `creates` / `uses_input` / `updates` / `materializes` / `references` |
+
+| イベント | resource_role | resource_kind |
+|----------|---------------|---------------|
+| ScriptCreated | creates | script_draft |
+| TtsSubmitted | creates | tts_job |
+| TtsSubmitted | uses_input | script_draft |
+| TtsJobSucceeded | updates | tts_job |
+| EpisodeAudioCreated | creates | episode_audio |
+| ArtworkCreated | creates | episode_artwork |
+| ArtworkSkipped | creates | episode_artwork（placeholder） |
+| *EditEnded | materializes | edit（outcome 行は edit_id PK） |
+| EpisodePublished | references | publication, feed_snapshot |
+| FeedRebuilt | creates | feed_snapshot |
+
+---
+
+## 成果物リソース（抜粋）
+
+| 表 | 主要 FK | 生成イベント |
+|----|---------|--------------|
+| `script_drafts` | episode_id, edit_id, `created_by_event_id` | ScriptCreated |
+| `tts_jobs` | script_draft_id, `submitted_by_event_id` | TtsSubmitted |
+| `episode_audios` | tts_job_id, script_draft_id, `created_by_event_id` | EpisodeAudioCreated |
+| `episode_artworks` | script_draft_id, `created_by_event_id` | ArtworkCreated / Skipped |
+
+`episode_edits.started_by_event_id` / `ended_by_event_id` がセッションの Start/End イベントを指す。
+
+---
+
+## ER 図（イベント + リソース）
+
+```mermaid
+erDiagram
+  ARTICLE ||--o{ EPISODE : registers
+  EPISODE ||--o{ EPISODE_EDIT : has
+  EPISODE ||--o{ SCRIPT_DRAFT : has
+  EPISODE ||--o{ TTS_JOB : has
+  EPISODE ||--o{ EPISODE_AUDIO : has
+  EPISODE ||--o{ EPISODE_ARTWORK : has
+
+  EPISODE_EDIT ||--o{ CRAFT_DOMAIN_EVENT : contains
+  EPISODE_EDIT ||--o| OUTCOME_FULL : may_end_with
+  EPISODE_EDIT ||--o| OUTCOME_SCRIPT : may_end_with
+  EPISODE_EDIT ||--o| OUTCOME_AUDIO : may_end_with
+  EPISODE_EDIT ||--o| OUTCOME_ARTWORK : may_end_with
+
+  CRAFT_DOMAIN_EVENT ||--o{ EVENT_LINK : from
+  CRAFT_DOMAIN_EVENT ||--o{ EVENT_LINK : to
+  CRAFT_DOMAIN_EVENT ||--o{ EVENT_RESOURCE : attaches
+
+  SCRIPT_DRAFT ||--o{ TTS_JOB : input_to
+  TTS_JOB ||--|| EPISODE_AUDIO : produces
+  SCRIPT_DRAFT ||--o{ EPISODE_ARTWORK : context_for
+
+  OUTCOME_FULL }o--|| SCRIPT_DRAFT : bundles
+  OUTCOME_FULL }o--|| EPISODE_AUDIO : bundles
+  OUTCOME_FULL }o--|| EPISODE_ARTWORK : bundles
+
+  EPISODE ||--o{ EPISODE_PUBLICATION : published
+  EPISODE_PUBLICATION }o--|| PODCAST_FEED_SNAPSHOT : in_feed
+  EPISODE_PUBLICATION }o--|| CRAFT_DOMAIN_EVENT : published_by
+
+  EVENT_RESOURCE }o..|| SCRIPT_DRAFT : resource
+  EVENT_RESOURCE }o..|| TTS_JOB : resource
+  EVENT_RESOURCE }o..|| EPISODE_AUDIO : resource
+  EVENT_RESOURCE }o..|| EPISODE_ARTWORK : resource
+
+  CRAFT_DOMAIN_EVENT {
+    uuid id
+    text event_type
+    uuid edit_id
+  }
+
+  CRAFT_DOMAIN_EVENT_LINK {
+    uuid from_event_id
+    uuid to_event_id
+    text link_type
+  }
+
+  CRAFT_DOMAIN_EVENT_RESOURCE {
+    uuid event_id
+    text resource_kind
+    uuid resource_id
+    text resource_role
+  }
+
+  EPISODE_EDIT {
+    uuid id
+    text kind
+    uuid started_by_event_id
+    uuid ended_by_event_id
+  }
+
+  SCRIPT_DRAFT {
+    uuid id
+    uuid created_by_event_id
+  }
+
+  TTS_JOB {
+    uuid id
+    text batch_name
+  }
+
+  EPISODE_AUDIO {
+    uuid storage_path
+  }
+
+  EPISODE_ARTWORK {
+    uuid storage_path
+  }
+```
+
+---
+
+## イベント列 + リンク（フル edit 例）
+
+```mermaid
+flowchart LR
+  subgraph ingest
+    AR[ArticleRegistered]
+    EC[EpisodeCreated]
+  end
+
+  subgraph edit["edit_id = E1"]
+    EES[EpisodeEditStarted]
+    SC[ScriptCreated]
+    TS[TtsSubmitted]
+    TSS[TtsJobSucceeded]
+    EAC[EpisodeAudioCreated]
+    AC[ArtworkCreated]
+    EEE[EpisodeEditEnded]
+  end
+
+  subgraph pub
+    EP[EpisodePublished]
+    FR[FeedRebuilt]
+  end
+
+  AR -->|precedes| EC
+  EC -->|spawned_edit| EES
+  EES -->|precedes| SC
+  SC -->|precedes| TS
+  TS -->|precedes| TSS
+  TSS -->|precedes| EAC
+  EES -->|precedes| AC
+  EAC --> EEE
+  AC --> EEE
+  EES -->|completes| EEE
+  EEE -->|publishes_outcome| EP
+  EP -->|rebuilds_feed| FR
+```
+
+実線は `craft_domain_event_links` に INSERT するエッジ。`ScriptCreated` と `ArtworkCreated` はどちらも `EES` から `precedes`（並列枝）。
 
 ---
 
