@@ -49,39 +49,33 @@ to-be の前稿も **`current_*` ポインタと phase を Episode 行に載せ�
 
 DAG ノード対応は [production-dag](./podcast-craft-production-dag.md)。Composition / ProductionHead は **Edit モデルに置換**。
 
-### Composition + Publication（Cursor なし）
+### Edit セッション + Publication（確定方針）
 
-| 概念 | テーブル案 | 更新 | 役割 |
-|------|------------|------|------|
-| **EpisodeIdentity** | `episodes` | INSERT のみ | `id`, `article_id`, `created_at` |
-| **ProductionHead** | `episode_production_heads` | UPDATE（スロットのみ） | script / audio / artwork / title の最新参照 |
-| **EpisodeComposition** | `episode_compositions` | INSERT のみ | DAG ノード完了時の **束ねスナップショット**（`trigger_node`） |
-| **EpisodePublication** | `episode_publications` | INSERT のみ | **composition_id** を指す掲載イベント |
+| 概念 | 永続化 | 更新 |
+|------|--------|------|
+| **Episode** | `episodes` | INSERT のみ |
+| **Edit セッション** | `episode_edits` + `episode_edit_events` | Start/End とイベント append |
+| **Edit Outcome** | `episode_edit_outcomes_*`（種別ごと） | End で 1 件 INSERT、**NOT NULL のみ** |
+| **Publication** | `episode_publications` | `outcome_id` を指す INSERT |
+
+Publish は Outcome を指す。**Publish のために Outcome / Edit End を増やさない**。
+
+→ イベント列・種別表: [edit-sessions](./podcast-craft-edit-sessions.md)
 
 ```text
-episodes (immutable)
-
-episode_production_heads (mutable, 1 row / episode)
-  script_draft_id, episode_audio_id, episode_artwork_id, title, description
-
-episode_compositions (immutable)
-  id, episode_id, composition_no
-  script_draft_id, episode_audio_id, episode_artwork_id
-  title, description, trigger_node, created_at
-
-episode_publications (immutable)
-  id, episode_id, composition_id
-  feed_snapshot_id, published_at
+-- 旧 Composition 案は廃止。以下が正。
+episode_edits (edit_id, episode_id, kind, started_at)
+episode_edit_events (edit_id, seq, event_type, payload)
+episode_edit_outcomes_*  -- kind 別、End 時のみ
+episode_publications (outcome_id, feed_snapshot_id, published_at)
 ```
 
-**制作 HEAD（束ね）** = 最新 `episode_compositions` または **ProductionHead**（運用上は HEAD 表 + Commit で composition 増殖）。
-
-**公開エピソード** = 最新 `episode_publications` → **composition_id**。
+**掲載中** = 最新 `episode_publications` → **outcome_id** → 種別別 outcome 表（フィールド NULL なし）。
 
 ```sql
-SELECT c.*
+SELECT o.*
 FROM episode_publications pub
-JOIN episode_compositions c ON c.id = pub.composition_id
+JOIN episode_edit_outcomes_full o ON o.edit_id = pub.outcome_id  -- 実際は kind で分岐
 WHERE pub.episode_id = $1
 ORDER BY pub.published_at DESC
 LIMIT 1;
@@ -117,42 +111,16 @@ RSS / Web の「配信に出す版」は **必ずこの join** から取る。`e
 
 **結論**: **公開の意味での Cursor（listed / publication_phase）は `EpisodePublished` で削除できる。** 制作 UI 用 phase だけ、導出か最小キャッシュを選ぶ。
 
-### 設計判断（確定）— Composition と Publication の直交
+### 設計判断（確定）— Edit Outcome と Publication
 
-**Composition** と **Publication** は別タイムライン。公開のために composition を無理に増やさない（Publish は **既存 composition_id を指す**）。
-
-| ストリーム | いつ増えるか | やらないこと |
-|------------|--------------|--------------|
-| `episode_compositions` | DAG ノード完了時 **`CommitComposition(trigger_node)`** | `trigger_node: publish` は使わない |
-| `episode_publications` | 掲載宣言 | composition の UPDATE / 公開専用 composition |
-
-**`PublishEpisode` 契約**
+- **Edit** — `*EditStarted` … 中間イベント … `*EditEnded`。Outcome は **End で 1 回**、種別ごとに **NULL フィールドなし**。
+- **Publication** — `EpisodePublished` が **outcome_id** を指す。掲載だけの再実行は Outcome を増やさない。
 
 ```typescript
-PublishEpisode({
-  episodeId,
-  compositionId,    // 必須
-  feedSnapshotId,
-  reason?: "first_list" | "after_content_change" | "feed_rebuild_only",
-});
+PublishEpisode({ episodeId, outcomeId, feedSnapshotId, reason? });
 ```
 
-- 中身変更 → Artifact + HEAD 更新 → **`CommitComposition`** → 必要なら **`PublishEpisode(compositionId)`**
-- feed だけ → **`PublishEpisode`** のみ（同 composition_id 可）
-
-1 行ルール: **Composition は制作 DAG の差分束ね。Publication は掲載の履歴だけ。**
-
-### Composition をいつ切るか（DAG ノード単位）
-
-| DAG ノード | HEAD 更新 | Composition |
-|------------|-----------|-------------|
-| Episode 作成 | initial | `trigger_node: initial` |
-| 台本 ready | script, title | `script` |
-| 音声 ready | audio | `audio` |
-| アートワーク ready | artwork | `artwork` |
-| **Publish** | 触らない | **増やさない** |
-
-並列（音声 ∥ アートワーク）は **完成順に Commit** され、composition 行に `trigger_node` が残る。詳細 DAG は [production-dag](./podcast-craft-production-dag.md)。
+1 行ルール: **Outcome は編集 End の sealed 結果。Publication は掲載履歴だけ。**
 
 `RepublishFeed` は **同じ composition_id** で publication を再度 INSERT してよい。
 

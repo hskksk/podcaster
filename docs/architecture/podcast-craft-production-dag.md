@@ -91,7 +91,9 @@ flowchart TD
 
 ---
 
-## ProductionHead + Composition（revision の置き換え）
+## ProductionHead + Composition（→ Edit セッションへ移行）
+
+**本節の Composition / HEAD 案は [edit-sessions](./podcast-craft-edit-sessions.md) に置換。** 以下は DAG ノードとイベント名の対応メモのみ残す。
 
 ### ProductionHead（mutable・最小）
 
