@@ -68,60 +68,257 @@ DDL: [podcast-craft-domain-events-schema.sql](./podcast-craft-domain-events-sche
 
 ---
 
-## ER 図（後方リンク + リソース）
+## ER 図（フル edit・PascalCase）
+
+図上のエンティティ名は **ドメイン上の PascalCase**。DDL の `*_events` 表との対応は下表。TTS 中間（`TtsSubmitted` / `TtsJobSucceeded`）は図では `AudioCreateStarted` → `AudioCreated` に畳んでいる。
+
+| ER（PascalCase） | 主な SQL 表 |
+|------------------|-------------|
+| `ArticleRegistered` | `article_registered_events` |
+| `EpisodeCreateStarted` | `episode_edit_started_events`（先行: `episode_created_events`） |
+| `ScriptCreateStarted` | 台本生成フェーズ開始（再生成: `script_edit_started_events`） |
+| `ScriptCreated` | `script_created_events` |
+| `AudioCreateStarted` | `tts_submitted_events`（+ `tts_job_succeeded_events`） |
+| `AudioCreated` | `episode_audio_created_events` |
+| `ArtworkCreateStarted` | `artwork_edit_started_events` または artwork 生成開始 |
+| `ArtworkCreated` | `artwork_created_events` |
+| `EpisodeCreated` | `episode_edit_ended_events` |
+| `EpisodePublished` | `episode_published_events` |
+| `FeedRebuilt` | `feed_rebuilt_events` |
+| `Script` | `script_drafts` |
+| `Audio` | `episode_audios` |
+| `Artwork` | `episode_artworks` |
+| `EpisodePublication` | `episode_publications` |
+
+関係ラベル `previous` / `merge_previous` は **後続行の列**（後方リンク）。`creates` / `projects` は成果物・投影。
 
 ```mermaid
 erDiagram
-  ARTICLE_REGISTERED_EVENT ||--o{ EPISODE_CREATED_EVENT : "previous"
-  EPISODE_CREATED_EVENT ||--o{ EPISODE_EDIT_STARTED_EVENT : "previous"
-  EPISODE_EDIT_STARTED_EVENT ||--o{ SCRIPT_CREATED_EVENT : "previous"
-  SCRIPT_CREATED_EVENT ||--o{ TTS_SUBMITTED_EVENT : "previous"
-  TTS_SUBMITTED_EVENT ||--o{ TTS_JOB_SUCCEEDED_EVENT : "previous"
-  TTS_JOB_SUCCEEDED_EVENT ||--o{ EPISODE_AUDIO_CREATED_EVENT : "previous"
-  EPISODE_EDIT_STARTED_EVENT ||--o{ ARTWORK_CREATED_EVENT : "previous"
-  EPISODE_AUDIO_CREATED_EVENT ||--o{ EPISODE_EDIT_ENDED_EVENT : "previous"
-  ARTWORK_CREATED_EVENT ||--o{ EPISODE_EDIT_ENDED_EVENT : "merge_previous"
-  EPISODE_EDIT_ENDED_EVENT ||--o{ EPISODE_PUBLISHED_EVENT : "previous"
-  EPISODE_PUBLISHED_EVENT ||--o{ FEED_REBUILT_EVENT : "previous"
+  ArticleRegistered {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    uuid article_id FK
+    text content_path
+    text content_sha
+    text ingest_route
+  }
+  EpisodeCreateStarted {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    uuid edit_id FK
+    uuid episode_id FK
+    uuid workflow_run_id
+  }
+  ScriptCreateStarted {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    uuid edit_id FK
+    uuid episode_id FK
+  }
+  ScriptCreated {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    uuid edit_id FK
+    uuid episode_id FK
+    uuid script_draft_id FK
+    text title
+    text description
+  }
+  AudioCreateStarted {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    uuid edit_id FK
+    uuid episode_id FK
+    uuid tts_job_id FK
+    uuid script_draft_id FK
+    text batch_name
+  }
+  AudioCreated {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    uuid edit_id FK
+    uuid episode_id FK
+    uuid episode_audio_id FK
+    uuid tts_job_id FK
+    text storage_path
+    text mime_type
+  }
+  ArtworkCreateStarted {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    uuid edit_id FK
+    uuid episode_id FK
+    uuid input_script_draft_id FK
+  }
+  ArtworkCreated {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    uuid edit_id FK
+    uuid episode_id FK
+    uuid episode_artwork_id FK
+    uuid script_draft_id FK
+    text storage_path
+    text mime_type
+  }
+  EpisodeCreated {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    text merge_previous_event_kind
+    uuid merge_previous_event_id
+    uuid edit_id FK
+    uuid episode_id FK
+  }
+  EpisodePublished {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    uuid episode_id FK
+    uuid edit_id FK
+    text outcome_kind
+    uuid feed_snapshot_id FK
+    text publish_reason
+  }
+  FeedRebuilt {
+    uuid id PK
+    timestamptz occurred_at
+    text actor
+    uuid correlation_id
+    text previous_event_kind
+    uuid previous_event_id
+    uuid feed_snapshot_id FK
+    int episode_count
+    uuid trigger_episode_id FK
+  }
+  Script {
+    uuid id PK
+    uuid episode_id FK
+    uuid edit_id FK
+    text content
+    text outcome
+    jsonb llm_usage
+    uuid script_created_event_id FK
+    timestamptz created_at
+  }
+  Audio {
+    uuid id PK
+    uuid episode_id FK
+    uuid edit_id FK
+    uuid script_draft_id FK
+    uuid tts_job_id FK
+    text storage_path
+    text mime_type
+    bigint byte_size
+    uuid episode_audio_created_event_id FK
+    timestamptz created_at
+  }
+  Artwork {
+    uuid id PK
+    uuid episode_id FK
+    uuid edit_id FK
+    uuid script_draft_id FK
+    text storage_path
+    text mime_type
+    text outcome
+    uuid artwork_created_event_id FK
+    timestamptz created_at
+  }
+  EpisodePublication {
+    uuid id PK
+    uuid episode_id FK
+    uuid edit_id FK
+    text outcome_kind
+    uuid feed_snapshot_id FK
+    text publish_reason
+    uuid episode_published_event_id FK
+    timestamptz published_at
+  }
 
-  SCRIPT_CREATED_EVENT ||--|| SCRIPT_DRAFT : creates
-  TTS_SUBMITTED_EVENT ||--|| TTS_JOB : creates
-  EPISODE_AUDIO_CREATED_EVENT ||--|| EPISODE_AUDIO : creates
-  ARTWORK_CREATED_EVENT ||--|| EPISODE_ARTWORK : creates
-  EPISODE_EDIT_ENDED_EVENT ||--|| OUTCOME_FULL : materializes
-  EPISODE_PUBLISHED_EVENT ||--o{ EPISODE_PUBLICATION : projects
+  ArticleRegistered ||--o{ EpisodeCreateStarted : previous
+  EpisodeCreateStarted ||--o{ ScriptCreateStarted : previous
+  ScriptCreateStarted ||--o{ ScriptCreated : previous
+  ScriptCreated ||--o{ AudioCreateStarted : previous
+  AudioCreateStarted ||--o{ AudioCreated : previous
+
+  EpisodeCreateStarted ||--o{ ArtworkCreateStarted : previous
+  ArtworkCreateStarted ||--o{ ArtworkCreated : previous
+
+  AudioCreated ||--o{ EpisodeCreated : previous
+  ArtworkCreated ||--o{ EpisodeCreated : merge_previous
+
+  EpisodeCreated ||--o{ EpisodePublished : previous
+  EpisodePublished ||--o{ FeedRebuilt : previous
+
+  ScriptCreated ||--|| Script : creates
+  AudioCreated ||--|| Audio : creates
+  ArtworkCreated ||--|| Artwork : creates
+  EpisodePublished ||--o{ EpisodePublication : projects
 ```
-
-ラベル `previous` / `merge_previous` は **後続行の列** を表す（ER 上は子 → 親の読み方）。
 
 ---
 
-## フル edit の鎖（後方リンクのイメージ）
+## フル edit の鎖（PascalCase・後方リンク）
 
 ```mermaid
 flowchart LR
-  AR[article_registered]
-  EC[episode_created]
-  EES[episode_edit_started]
-  SC[script_created]
-  TS[tts_submitted]
-  TJS[tts_job_succeeded]
-  EAC[episode_audio_created]
-  AC[artwork_created]
-  EEE[episode_edit_ended]
-  EP[episode_published]
-  FR[feed_rebuilt]
+  AR[ArticleRegistered]
+  ECS[EpisodeCreateStarted]
+  SCS[ScriptCreateStarted]
+  SC[ScriptCreated]
+  ACS[AudioCreateStarted]
+  ACr[AudioCreated]
+  AwCS[ArtworkCreateStarted]
+  AwC[ArtworkCreated]
+  EC[EpisodeCreated]
+  EP[EpisodePublished]
+  FR[FeedRebuilt]
 
-  EC -->|previous| AR
-  EES -->|previous| EC
-  SC -->|previous| EES
-  TS -->|previous| SC
-  TJS -->|previous| TS
-  EAC -->|previous| TJS
-  AC -->|previous| SC
-  EEE -->|previous| EAC
-  EEE -->|merge_previous| AC
-  EP -->|previous| EEE
+  ECS -->|previous| AR
+  SCS -->|previous| ECS
+  SC -->|previous| SCS
+  ACS -->|previous| SC
+  ACr -->|previous| ACS
+  AwCS -->|previous| ECS
+  AwC -->|previous| AwCS
+  EC -->|previous| ACr
+  EC -->|merge_previous| AwC
+  EP -->|previous| EC
   FR -->|previous| EP
 ```
 
