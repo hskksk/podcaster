@@ -99,7 +99,7 @@
 
 ## 目標ドメインモデル（詳細）
 
-エンティティ分解（**EpisodeIdentity + EpisodeRevision**、Artwork / TtsJob / EpisodeAudio）、ドメインイベント 3 層、**Craft Job Execution** レイヤーは **[podcast-craft-target-model.md](./podcast-craft-target-model.md)** を参照（**Episode イミュータブル化**含む）。
+エンティティ分解（**EpisodeComposition + DAG**）、Job Execution 層は **[podcast-craft-target-model.md](./podcast-craft-target-model.md)** と **[podcast-craft-production-dag.md](./podcast-craft-production-dag.md)** を参照。
 
 ## リモデリング backlog（ギャップから）
 

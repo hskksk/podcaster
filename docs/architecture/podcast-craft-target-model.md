@@ -45,45 +45,45 @@ Web は RSS と同様 **`audio_files.storage_path` を正**としつつ、REST �
 
 to-be の前稿も **`current_*` ポインタと phase を Episode 行に載せる** 形で、本質的には可変レコードのままだった。
 
-**直し方**: Episode を **身份（Identity）だけの不変レコード** にし、中身は **Revision（追記のみ）**。**公開エピソード**は **`EpisodePublished` イベント（追記のみ）** が指す `revision_id` だけで定義する。`listed_revision_id` や `publication_phase` を UPDATE する Cursor は不要。
+**直し方**: Episode を **身份（Identity）だけの不変レコード** にし、制作 DAG の成果物は **Artifact（追記）** と **Composition（束ねの追記）**、掲載は **Publication（追記）** に分ける。DAG の詳細は **[podcast-craft-production-dag.md](./podcast-craft-production-dag.md)**。
 
-制作中の「今どこまで進んだか」は **進行中ジョブ（TtsJob / WorkflowRun）から導出**するか、クエリコストが高ければ **任意の `episode_production_state`（phase だけ 1 行）** に縮退する。後者は Cursor より狭い。
+制作中の各スロット最新は **`episode_production_heads`（mutable・最小）**。公開用 Cursor は不要。
 
-### 2 + 1 モデル（Cursor なし）
+### Composition + Publication（Cursor なし）
 
 | 概念 | テーブル案 | 更新 | 役割 |
 |------|------------|------|------|
 | **EpisodeIdentity** | `episodes` | INSERT のみ | `id`, `article_id`, `created_at` |
-| **EpisodeRevision** | `episode_revisions` | INSERT のみ | 制作上のスナップショット（追記のたびに revision_no++） |
-| **EpisodePublished** | `episode_publications` | INSERT のみ | **公開イベント**。掲載版 revision を固定参照 |
+| **ProductionHead** | `episode_production_heads` | UPDATE（スロットのみ） | script / audio / artwork / title の最新参照 |
+| **EpisodeComposition** | `episode_compositions` | INSERT のみ | DAG ノード完了時の **束ねスナップショット**（`trigger_node`） |
+| **EpisodePublication** | `episode_publications` | INSERT のみ | **composition_id** を指す掲載イベント |
 
 ```text
 episodes (immutable)
-  id, article_id, created_at
 
-episode_revisions (immutable, append)
-  id, episode_id, revision_no
-  title, description
+episode_production_heads (mutable, 1 row / episode)
+  script_draft_id, episode_audio_id, episode_artwork_id, title, description
+
+episode_compositions (immutable)
+  id, episode_id, composition_no
   script_draft_id, episode_audio_id, episode_artwork_id
-  created_at, cause
+  title, description, trigger_node, created_at
 
-episode_publications (immutable, append)   ← 「公開エピソード」の正本
-  id, episode_id, revision_id
+episode_publications (immutable)
+  id, episode_id, composition_id
   feed_snapshot_id, published_at
-  -- 将来: withdrawn 用に EpisodeUnpublished を別イベントで
 ```
 
-**下書き HEAD** = その `episode_id` の **`MAX(revision_no)`**（または `ORDER BY revision_no DESC LIMIT 1`）。`head_revision_id` 列は不要。
+**制作 HEAD（束ね）** = 最新 `episode_compositions` または **ProductionHead**（運用上は HEAD 表 + Commit で composition 増殖）。
 
-**公開エピソード** = その `episode_id` の **最新 `episode_publications` 行**（`published_at` 最大）。未公開 = publication 行が 0 件。
+**公開エピソード** = 最新 `episode_publications` → **composition_id**。
 
 ```sql
--- 公開中の中身（read model）
-SELECT r.*
-FROM episode_publications p
-JOIN episode_revisions r ON r.id = p.revision_id
-WHERE p.episode_id = $1
-ORDER BY p.published_at DESC
+SELECT c.*
+FROM episode_publications pub
+JOIN episode_compositions c ON c.id = pub.composition_id
+WHERE pub.episode_id = $1
+ORDER BY pub.published_at DESC
 LIMIT 1;
 ```
 
@@ -93,11 +93,11 @@ RSS / Web の「配信に出す版」は **必ずこの join** から取る。`e
 
 | 旧 | 新 |
 |----|-----|
-| `listed_revision_id` UPDATE | `INSERT episode_publications (revision_id, …)` |
+| `listed_revision_id` UPDATE | `INSERT episode_publications (composition_id, …)` |
 | `publication_phase = listed` | publication が 1 件以上存在 |
 | `updateRss` 成功で `status = published` | **`PublishEpisode` ユースケース** が publication + FeedSnapshot を INSERT |
-| 音声再生成後の再公開 | 新 Revision → 新 **EpisodePublished**（同一 episode id、guid 不変） |
-| 画像だけ変えて feed 反映 | 新 Revision（artwork）→ **EpisodePublished**（TUI の Ctrl+Y 相当） |
+| 音声再生成後の再公開 | CommitComposition(audio) → **PublishEpisode(compositionId)** |
+| 画像だけ変えて feed 反映 | CommitComposition(artwork) → **PublishEpisode(compositionId)** |
 
 **ドメインイベント** `EpisodePublished` と **永続行** `episode_publications` は同じ出来事（イベントテーブルと publication テーブルを 1 つにしてもよい）。
 
@@ -105,10 +105,10 @@ RSS / Web の「配信に出す版」は **必ずこの join** から取る。`e
 
 | 関心 | Cursor なしで足りるか |
 |------|------------------------|
-| 掲載中 revision | **足りる** — 最新 publication |
-| 制作 HEAD revision | **足りる** — 最新 revision_no |
+| 掲載中 | **足りる** — 最新 publication → composition |
+| 制作 HEAD | **足りる** — production_heads または最新 composition |
 | 未公開か | **足りる** — publication 0 件 |
-| `script_running` / `audio_downloading` 等 | **そのままでは弱い** — revision は「コミット済みスナップショット」だけ |
+| `script_running` / … | **TtsJob / WorkflowRun** から導出。Composition はコミット済みのみ |
 
 制作フェーズは次のいずれか。
 
@@ -117,65 +117,64 @@ RSS / Web の「配信に出す版」は **必ずこの join** から取る。`e
 
 **結論**: **公開の意味での Cursor（listed / publication_phase）は `EpisodePublished` で削除できる。** 制作 UI 用 phase だけ、導出か最小キャッシュを選ぶ。
 
-### 設計判断（確定）— Revision と Publication の直交
+### 設計判断（確定）— Composition と Publication の直交
 
-**Revision** と **Publication** は別タイムライン。公開のために revision を増やしたり UPDATE したりしない。
+**Composition** と **Publication** は別タイムライン。公開のために composition を無理に増やさない（Publish は **既存 composition_id を指す**）。
 
 | ストリーム | いつ増えるか | やらないこと |
 |------------|--------------|--------------|
-| `episode_revisions` | 台本・音声・アートワーク（や title/description）が変わったときだけ | `cause: published` のような revision は作らない |
-| `episode_publications` | 掲載宣言（feed / リスナー向けに有効化）のときだけ | revision 行の作成・更新 |
-
-**公開エピソード** = 最新 `episode_publications` が指す **既存** `revision_id`。  
-**同じ revision_id** で publication を複数 INSERT してよい（feed 再生成のみなど）。
+| `episode_compositions` | DAG ノード完了時 **`CommitComposition(trigger_node)`** | `trigger_node: publish` は使わない |
+| `episode_publications` | 掲載宣言 | composition の UPDATE / 公開専用 composition |
 
 **`PublishEpisode` 契約**
 
 ```typescript
 PublishEpisode({
   episodeId,
-  revisionId,       // 必須 — 掲載する版を明示（省略時 HEAD は CLI 便利機能のみ）
+  compositionId,    // 必須
   feedSnapshotId,
   reason?: "first_list" | "after_content_change" | "feed_rebuild_only",
 });
 ```
 
-- 中身変更 → 先に **`CommitEpisodeRevision`**（制作 UC）→ 必要なら **`PublishEpisode(revisionId: その id)`**
-- feed だけ直す → **`PublishEpisode(revisionId: 最新掲載と同じ or 明示)`**、revision は増やさない
+- 中身変更 → Artifact + HEAD 更新 → **`CommitComposition`** → 必要なら **`PublishEpisode(compositionId)`**
+- feed だけ → **`PublishEpisode`** のみ（同 composition_id 可）
 
-1 行ルール: **Revision は制作の差分だけ。Publication は掲載の履歴だけ。**
+1 行ルール: **Composition は制作 DAG の差分束ね。Publication は掲載の履歴だけ。**
 
-### リビジョンをいつ切るか
+### Composition をいつ切るか（DAG ノード単位）
 
-| トリガ | 新 `EpisodeRevision` | `cause` | 備考 |
-|--------|----------------------|---------|------|
-| ingest 直後 | 仮タイトル等 | `initial` | revision 0 |
-| 台本 ready | title/description + script | `script_regenerated` | 音声・画像 id は前 revision からコピー可 |
-| 音声 ready | episode_audio_id | `audio_regenerated` | |
-| 画像 ready | episode_artwork_id | `artwork_regenerated` | 失敗時は revision なし |
-| **公開** | （必ずしも新 revision 不要） | — | **既存 head revision を指す publication を INSERT**。内容変更後の公開は **先に revision → 後 publish** |
+| DAG ノード | HEAD 更新 | Composition |
+|------------|-----------|-------------|
+| Episode 作成 | initial | `trigger_node: initial` |
+| 台本 ready | script, title | `script` |
+| 音声 ready | audio | `audio` |
+| アートワーク ready | artwork | `artwork` |
+| **Publish** | 触らない | **増やさない** |
 
-`RepublishFeed` は **同じ revision_id で publication を再度 INSERT する**（feed だけ壊れた）か、**FeedSnapshot だけ**足す設計も可。意味的には「再掲」も Publish の一種。
+並列（音声 ∥ アートワーク）は **完成順に Commit** され、composition 行に `trigger_node` が残る。詳細 DAG は [production-dag](./podcast-craft-production-dag.md)。
+
+`RepublishFeed` は **同じ composition_id** で publication を再度 INSERT してよい。
 
 ### 読み取りモデル
 
 | 用途 | 参照 |
 |------|------|
-| TUI「制作中の最新」 | `episode_revisions` WHERE episode_id ORDER BY revision_no DESC LIMIT 1 |
-| Web / プレイヤー / RSS item | **最新 `episode_publications`** → revision → Audio / Artwork |
+| TUI「制作中の最新」 | `episode_production_heads` または最新 `episode_compositions` |
+| Web / RSS | 最新 `episode_publications` → composition |
 | 公開履歴 | 全 `episode_publications` |
 | guid | 常に `episodes.id` |
 
 ### 現行 `episodes` からの移行イメージ
 
 1. `episodes` を identity のみに。
-2. 現行 1 行 → `episode_revisions` revision 1。
-3. `status IN (published, …)` かつ feed 載せ済み → `episode_publications` 1 行 backfill（revision 1 を指す）。
-4. `UPDATE episodes SET status/title/...` を **CommitRevision** + **PublishEpisode** に置換。
+2. 現行 1 行 → composition 1 + production head。
+3. 公開済み → `episode_publications` backfill（`composition_id`）。
+4. ステージを **HEAD 更新 + CommitComposition** + **PublishEpisode** に置換。
 
 ### Job Execution 層との関係
 
-- `RebuildFeed` ステップ成功 → **`PublishEpisode(episodeId, revisionId?, feedSnapshotId)`**（内部で publication INSERT）。
+- `RebuildFeed` 成功 → **`PublishEpisode(compositionId)`** + FeedSnapshot。
 - WorkflowRun は EpisodeIdentity に紐づく。phase 用 Cursor は持たない。
 
 ---
@@ -192,10 +191,10 @@ PublishEpisode({
 
 **ここに title / status / image / audio は置かない。**
 
-### EpisodeRevision / EpisodePublished
+### EpisodeComposition / EpisodePublication
 
-- **Revision** — 制作の追記スナップショット。HEAD は `MAX(revision_no)` で決める。
-- **Publication** — `EpisodePublished` イベント行。**公開エピソード = 最新 publication が指す revision**（Cursor 不要）。
+- **Composition** — Artifact の束ね。DAG ノード完了で Commit。→ [production-dag](./podcast-craft-production-dag.md)
+- **Publication** — `composition_id` を指す掲載イベント。
 
 ### エンティティ: ScriptDraft（現 `scripts` の再定義）
 
@@ -209,7 +208,7 @@ PublishEpisode({
 | `llm_usage`, `llm_response` | プロバイダメタ |
 | `requested_by` | `ingest` / `manual` / `workflow_run_id` |
 
-TTS は **head revision** が指す `script_draft_id`（または制作中の最新 ready 台本）を入力とする。
+TTS は **production head** の `script_draft_id` を入力とする。
 
 ### エンティティ: EpisodeArtwork（新規 — 現 `image_url` の昇格）
 
@@ -223,7 +222,7 @@ TTS は **head revision** が指す `script_draft_id`（または制作中の最
 | `llm_usage`, `llm_response` | 画像 LLM |
 | `created_at` | 試行履歴 |
 
-再生成は Artwork 行を INSERT → 新 **EpisodeRevision** → 公開するなら **EpisodePublished** を INSERT。
+再生成は Artwork INSERT → HEAD 更新 → **CommitComposition(artwork)** → 公開時 **PublishEpisode**。
 
 ### エンティティ: TtsJob（現 `audio_files` の pending 側を分離）
 
@@ -250,7 +249,7 @@ download-monitor は **TtsJob** をスキャンし、完了時にドメインサ
 | `byte_size` | 任意 |
 | `outcome` | `ready` / `failed` |
 
-`public_url` は DB 列に持たず、`SUPABASE_URL + storage_path` で組み立てる。Web/RSS は **listed revision** が指す `episode_audio_id` を join。**`episodes.audio_url` は廃止**。
+Web/RSS は **掲載 composition** が指す `episode_audio_id` を join。
 
 pending 中は EpisodeAudio 行が無く、TtsJob のみ存在する — ジョブと成果物の混線を解消。
 
@@ -259,9 +258,9 @@ pending 中は EpisodeAudio 行が無く、TtsJob のみ存在する — ジョ�
 | エンティティ | 説明 |
 |--------------|------|
 | **FeedSnapshot** | `feed.xml` の世代 |
-| **EpisodePublication** | 公開イベント（`episode_publications`）。revision + feed 世代を束ねる |
+| **EpisodePublication** | `composition_id` + feed 世代 |
 
-`updateRss` の成功 = **`PublishEpisode`**: FeedSnapshot INSERT + **対象 revision_id で episode_publications INSERT**。feed 組み立ては **各 episode の最新 publication** から item を生成。
+`updateRss` 成功 = **PublishEpisode(compositionId)** + FeedSnapshot。item は各 episode の最新 publication → composition から組み立て。
 
 ### その他（変更なしに近い）
 
@@ -275,16 +274,17 @@ pending 中は EpisodeAudio 行が無く、TtsJob のみ存在する — ジョ�
 ```mermaid
 erDiagram
   ARTICLE ||--o{ EPISODE : feeds
-  EPISODE ||--o{ EPISODE_REVISION : revisions
+  EPISODE ||--o| EPISODE_PRODUCTION_HEAD : head
+  EPISODE ||--o{ EPISODE_COMPOSITION : compositions
   EPISODE ||--o{ EPISODE_PUBLICATION : publishes
   EPISODE ||--o{ SCRIPT_DRAFT : attempts
   EPISODE ||--o{ EPISODE_ARTWORK : attempts
   EPISODE ||--o{ TTS_JOB : submits
   EPISODE ||--o{ EPISODE_AUDIO : artifacts
-  EPISODE_REVISION }o--|| SCRIPT_DRAFT : may_reference
-  EPISODE_REVISION }o--|| EPISODE_AUDIO : may_reference
-  EPISODE_REVISION }o--|| EPISODE_ARTWORK : may_reference
-  EPISODE_REVISION ||--o{ EPISODE_PUBLICATION : published_as
+  EPISODE_COMPOSITION }o--|| SCRIPT_DRAFT : may_reference
+  EPISODE_COMPOSITION }o--|| EPISODE_AUDIO : may_reference
+  EPISODE_COMPOSITION }o--|| EPISODE_ARTWORK : may_reference
+  EPISODE_COMPOSITION ||--o{ EPISODE_PUBLICATION : published_as
   SCRIPT_DRAFT ||--o{ TTS_JOB : input
   TTS_JOB ||--o| EPISODE_AUDIO : produces
   FEED_SNAPSHOT ||--o{ EPISODE_PUBLICATION : recorded_in
@@ -295,17 +295,16 @@ erDiagram
     timestamptz created_at
   }
 
-  EPISODE_REVISION {
+  EPISODE_COMPOSITION {
     uuid id
-    int revision_no
+    text trigger_node
     text title
-    text cause
   }
 
   EPISODE_PUBLICATION {
     uuid id
+    uuid composition_id
     timestamptz published_at
-    uuid revision_id
   }
 ```
 
