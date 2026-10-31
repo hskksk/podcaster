@@ -177,3 +177,5 @@ erDiagram
 
 - [podcast-craft-target-model.md](./podcast-craft-target-model.md) — Publication 直交（Publish は End 後）
 - [podcast-craft-production-dag.md](./podcast-craft-production-dag.md) — ノード依存（End 条件）
+- [podcast-craft-domain-events.md](./podcast-craft-domain-events.md) — イベント型・テーブル一覧
+- [podcast-craft-domain-events-schema.sql](./podcast-craft-domain-events-schema.sql) — DDL 全文
