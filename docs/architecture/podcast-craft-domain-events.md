@@ -1,317 +1,194 @@
 # ドメインイベント — テーブル定義
 
-to-be の **Craft 境界** ドメインイベントを一覧する。実行可能 DDL は **[podcast-craft-domain-events-schema.sql](./podcast-craft-domain-events-schema.sql)**。
+**方針**: 汎用 `craft_domain_events`（1 行 = 任意 event_type）は使わない。**イベント種別ごとに専用テーブル**（1 イベント = 1 行 = 1 エンティティ）。
 
-運用テレメトリ（`processing_logs`）と Job Execution（`craft_workflow_runs` / `craft_step_runs`）は **ドメインイベントではない** — [target-model](./podcast-craft-target-model.md) の B/C 層。
-
----
-
-## テーブル一覧
-
-| テーブル | 役割 | 更新 |
-|----------|------|------|
-| `episode_edits` | Edit セッション | Started で INSERT、`status` / `ended_at` / `*_by_event_id` の UPDATE |
-| `craft_domain_events` | 全ドメインイベント | INSERT のみ |
-| `craft_domain_event_links` | **イベント間**有向エッジ | INSERT のみ |
-| `craft_domain_event_resources` | **イベント ↔ リソース** | INSERT のみ |
-| `script_drafts` / `tts_jobs` / `episode_audios` / `episode_artworks` | 成果物 | INSERT（`tts_jobs` は phase UPDATE のみ） |
-| `episode_edit_outcomes_*` | Edit End の sealed 結果 | INSERT のみ |
-| `podcast_feed_snapshots` / `episode_publications` | 公開投影 | INSERT のみ |
-
-既存 `articles` / `episodes` は ingest 境界（identity）。DDL 全文: [schema.sql](./podcast-craft-domain-events-schema.sql)。
+DDL: [podcast-craft-domain-events-schema.sql](./podcast-craft-domain-events-schema.sql)
 
 ---
 
-## イベント間リレーション — `craft_domain_event_links`
+## テーブル一覧（23 イベント + リンク + 成果物 + 投影）
+
+### セッション
+
+| テーブル | 役割 |
+|----------|------|
+| `episode_edits` | Edit セッション。`start_event_kind` / `start_event_id` で開始イベントを多態参照 |
+
+### Ingest
+
+| テーブル | 主要列 |
+|----------|--------|
+| `article_registered_events` | `article_id`, `content_path`, `content_sha`, `ingest_route` |
+| `episode_created_events` | `episode_id`, `article_id` |
+
+### Edit 開始
+
+| テーブル | 主要列 |
+|----------|--------|
+| `episode_edit_started_events` | `edit_id`, `episode_id`, `workflow_run_id` |
+| `script_edit_started_events` | `edit_id`, `episode_id` |
+| `audio_edit_started_events` | `edit_id`, `input_script_draft_id` |
+| `artwork_edit_started_events` | `edit_id`, `input_script_draft_id` |
+
+### Edit 中
+
+| テーブル | 主要列 |
+|----------|--------|
+| `script_created_events` | `script_draft_id`, `title`, `description` |
+| `script_generation_failed_events` | `error` |
+| `tts_submitted_events` | `tts_job_id`, `script_draft_id`, `batch_name` |
+| `tts_job_succeeded_events` | `tts_job_id`, `batch_name` |
+| `tts_job_failed_events` | `tts_job_id`, `error` |
+| `episode_audio_created_events` | `episode_audio_id`, `tts_job_id`, `storage_path`, `mime_type` |
+| `episode_audio_storage_failed_events` | `tts_job_id`, `error` |
+| `artwork_created_events` | `episode_artwork_id`, `script_draft_id`, `storage_path` |
+| `artwork_skipped_events` | `placeholder_artwork_id`, `reason` |
+| `artwork_generation_failed_events` | `error` |
+
+### Edit 終了
+
+| テーブル | Outcome 表 |
+|----------|------------|
+| `episode_edit_ended_events` | `episode_edit_outcomes_full` |
+| `script_edit_ended_events` | `episode_edit_outcomes_script` |
+| `audio_edit_ended_events` | `episode_edit_outcomes_audio` |
+| `artwork_edit_ended_events` | `episode_edit_outcomes_artwork` |
+
+### 公開
+
+| テーブル | 主要列 |
+|----------|--------|
+| `episode_published_events` | `edit_id`, `outcome_kind`, `feed_snapshot_id`, `publish_reason` |
+| `feed_rebuilt_events` | `feed_snapshot_id`, `episode_count`, `trigger_episode_id` |
+| `episode_unpublished_events` | `reason`（将来） |
+
+### リレーション・成果物・投影
+
+| テーブル | 役割 |
+|----------|------|
+| `craft_event_links` | イベント間エッジ（`from_event_kind` + `from_event_id` → 多態） |
+| `script_drafts` / `tts_jobs` / `episode_audios` / `episode_artworks` | リソース（作成元イベント id を FK） |
+| `episode_edit_outcomes_*` | End の sealed 結果 |
+| `podcast_feed_snapshots` / `episode_publications` | Feed / 掲載投影 |
+
+各 `*_events` 表共通: `id`, `occurred_at`, `actor`, `correlation_id`, および `edit_id` / `episode_id`（該当時）。
+
+---
+
+## イベント間リンク — `craft_event_links`
 
 | 列 | 説明 |
 |----|------|
-| `from_event_id` | 始点 |
-| `to_event_id` | 終点 |
-| `link_type` | 下表 |
+| `from_event_kind` | 始点表の snake 名（例: `script_created` → 表 `script_created_events`） |
+| `from_event_id` | 始点行 PK |
+| `to_event_kind` | 終点表 |
+| `to_event_id` | 終点行 PK |
+| `link_type` | `precedes` / `caused_by` / `completes` / `spawned_edit` / `publishes_outcome` / `rebuilds_feed` |
 
-| link_type | 意味 | 例 |
-|-----------|------|-----|
-| `precedes` | 同一 edit 内で to が後 | ScriptCreated → TtsSubmitted |
-| `caused_by` | to は from の直接結果 | TtsSubmitted → EpisodeAudioCreated（経由ジョブ成功後） |
-| `completes` | End が Start を閉じる | EpisodeEditStarted → EpisodeEditEnded |
-| `spawned_edit` | 新 edit セッション開始 | EpisodeCreated → EpisodeEditStarted |
-| `publishes_outcome` | Publish が End 成果を掲載 | EpisodeEditEnded → EpisodePublished |
-| `rebuilds_feed` | Feed 再生成が Publish と対 | EpisodePublished → FeedRebuilt |
+**kind 文字列**（`from_event_kind` / `to_event_kind`）:
 
-セッション内の **precedes チェーン** と **completes** で Edit DAG を復元できる。`edit_id` は冗長だがクエリ用にイベント列にも持つ。
+`article_registered`, `episode_created`, `episode_edit_started`, `script_edit_started`, `audio_edit_started`, `artwork_edit_started`, `script_created`, `script_generation_failed`, `tts_submitted`, `tts_job_succeeded`, `tts_job_failed`, `episode_audio_created`, `episode_audio_storage_failed`, `artwork_created`, `artwork_skipped`, `artwork_generation_failed`, `episode_edit_ended`, `script_edit_ended`, `audio_edit_ended`, `artwork_edit_ended`, `episode_published`, `feed_rebuilt`, `episode_unpublished`
 
 ---
 
-## イベント ↔ リソース — `craft_domain_event_resources`
+## 成果物 ↔ イベント（専用 FK。汎用 junction なし）
 
-| 列 | 説明 |
-|----|------|
-| `event_id` | |
-| `resource_kind` | `article` / `episode` / `edit` / `script_draft` / `tts_job` / `episode_audio` / `episode_artwork` / `feed_snapshot` / `publication` |
-| `resource_id` | 各表の PK |
-| `resource_role` | `creates` / `uses_input` / `updates` / `materializes` / `references` |
+| リソース | 作成イベント FK |
+|----------|-----------------|
+| `script_drafts` | `script_created_event_id` → `script_created_events` |
+| `tts_jobs` | `tts_submitted_event_id` → `tts_submitted_events` |
+| `episode_audios` | `episode_audio_created_event_id` → `episode_audio_created_events` |
+| `episode_artworks` | `artwork_created_event_id` または `artwork_skipped_event_id` |
 
-| イベント | resource_role | resource_kind |
-|----------|---------------|---------------|
-| ScriptCreated | creates | script_draft |
-| TtsSubmitted | creates | tts_job |
-| TtsSubmitted | uses_input | script_draft |
-| TtsJobSucceeded | updates | tts_job |
-| EpisodeAudioCreated | creates | episode_audio |
-| ArtworkCreated | creates | episode_artwork |
-| ArtworkSkipped | creates | episode_artwork（placeholder） |
-| *EditEnded | materializes | edit（outcome 行は edit_id PK） |
-| EpisodePublished | references | publication, feed_snapshot |
-| FeedRebuilt | creates | feed_snapshot |
+イベント行側にもリソース id 列（例: `script_created_events.script_draft_id`）。同一トランザクション insert 時は **DEFERRABLE FK** で循環を解く。
 
 ---
 
-## 成果物リソース（抜粋）
-
-| 表 | 主要 FK | 生成イベント |
-|----|---------|--------------|
-| `script_drafts` | episode_id, edit_id, `created_by_event_id` | ScriptCreated |
-| `tts_jobs` | script_draft_id, `submitted_by_event_id` | TtsSubmitted |
-| `episode_audios` | tts_job_id, script_draft_id, `created_by_event_id` | EpisodeAudioCreated |
-| `episode_artworks` | script_draft_id, `created_by_event_id` | ArtworkCreated / Skipped |
-
-`episode_edits.started_by_event_id` / `ended_by_event_id` がセッションの Start/End イベントを指す。
-
----
-
-## ER 図（イベント + リソース）
+## ER 図（イベント種別 + リソース）
 
 ```mermaid
 erDiagram
   ARTICLE ||--o{ EPISODE : registers
+  ARTICLE ||--o{ ARTICLE_REGISTERED_EVENT : has
+  EPISODE ||--o{ EPISODE_CREATED_EVENT : has
+
   EPISODE ||--o{ EPISODE_EDIT : has
-  EPISODE ||--o{ SCRIPT_DRAFT : has
-  EPISODE ||--o{ TTS_JOB : has
-  EPISODE ||--o{ EPISODE_AUDIO : has
-  EPISODE ||--o{ EPISODE_ARTWORK : has
+  EPISODE_EDIT ||--|| EPISODE_EDIT_STARTED_EVENT : starts_with
+  EPISODE_EDIT ||--o| EPISODE_EDIT_ENDED_EVENT : ends_with
 
-  EPISODE_EDIT ||--o{ DOMAIN_EVENT : contains
-  EPISODE_EDIT ||--o| OUTCOME_FULL : may_end_with
-  EPISODE_EDIT ||--o| OUTCOME_SCRIPT : may_end_with
-  EPISODE_EDIT ||--o| OUTCOME_AUDIO : may_end_with
-  EPISODE_EDIT ||--o| OUTCOME_ARTWORK : may_end_with
+  EPISODE_EDIT ||--o{ SCRIPT_CREATED_EVENT : includes
+  EPISODE_EDIT ||--o{ TTS_SUBMITTED_EVENT : includes
+  EPISODE_EDIT ||--o{ EPISODE_AUDIO_CREATED_EVENT : includes
+  EPISODE_EDIT ||--o{ ARTWORK_CREATED_EVENT : includes
 
-  DOMAIN_EVENT ||--o{ DOMAIN_EVENT_LINK : link_source
-  DOMAIN_EVENT ||--o{ DOMAIN_EVENT_LINK : link_target
-  DOMAIN_EVENT ||--o{ DOMAIN_EVENT_RESOURCE : attaches
+  SCRIPT_CREATED_EVENT ||--|| SCRIPT_DRAFT : creates
+  TTS_SUBMITTED_EVENT ||--|| TTS_JOB : creates
+  TTS_JOB ||--|| EPISODE_AUDIO_CREATED_EVENT : completes
+  EPISODE_AUDIO_CREATED_EVENT ||--|| EPISODE_AUDIO : creates
+  ARTWORK_CREATED_EVENT ||--|| EPISODE_ARTWORK : creates
 
-  SCRIPT_DRAFT ||--o{ TTS_JOB : input_to
-  TTS_JOB ||--|| EPISODE_AUDIO : produces
-  SCRIPT_DRAFT ||--o{ EPISODE_ARTWORK : context_for
-
+  EPISODE_EDIT_ENDED_EVENT ||--|| OUTCOME_FULL : materializes
   OUTCOME_FULL }o--|| SCRIPT_DRAFT : bundles
   OUTCOME_FULL }o--|| EPISODE_AUDIO : bundles
   OUTCOME_FULL }o--|| EPISODE_ARTWORK : bundles
 
-  EPISODE ||--o{ EPISODE_PUBLICATION : published
-  EPISODE_PUBLICATION }o--|| PODCAST_FEED_SNAPSHOT : in_feed
-  EPISODE_PUBLICATION }o--|| DOMAIN_EVENT : published_by
+  EPISODE_EDIT_ENDED_EVENT ||--o{ EPISODE_PUBLISHED_EVENT : enables
+  EPISODE_PUBLISHED_EVENT }o--|| PODCAST_FEED_SNAPSHOT : uses
+  FEED_REBUILT_EVENT }o--|| PODCAST_FEED_SNAPSHOT : creates
 
-  DOMAIN_EVENT_RESOURCE }o--|| SCRIPT_DRAFT : script_ref
-  DOMAIN_EVENT_RESOURCE }o--|| TTS_JOB : job_ref
-  DOMAIN_EVENT_RESOURCE }o--|| EPISODE_AUDIO : audio_ref
-  DOMAIN_EVENT_RESOURCE }o--|| EPISODE_ARTWORK : artwork_ref
+  EPISODE_PUBLISHED_EVENT ||--o{ EPISODE_PUBLICATION : projects
 
-  DOMAIN_EVENT {
-    uuid id
-    text event_type
-    uuid edit_id
-  }
-
-  DOMAIN_EVENT_LINK {
+  CRAFT_EVENT_LINK {
+    text from_event_kind
     uuid from_event_id
+    text to_event_kind
     uuid to_event_id
     text link_type
   }
-
-  DOMAIN_EVENT_RESOURCE {
-    uuid event_id
-    text resource_kind
-    uuid resource_id
-    text resource_role
-  }
-
-  EPISODE_EDIT {
-    uuid id
-    text kind
-    uuid started_by_event_id
-    uuid ended_by_event_id
-  }
-
-  SCRIPT_DRAFT {
-    uuid id
-    uuid created_by_event_id
-  }
-
-  TTS_JOB {
-    uuid id
-    text batch_name
-  }
-
-  EPISODE_AUDIO {
-    text storage_path
-  }
-
-  EPISODE_ARTWORK {
-    text storage_path
-  }
 ```
 
-図中の `DOMAIN_*` は DDL 上の `craft_domain_*` / `episode_*` に対応する（Mermaid の予約語回避のため短名）。
+フル edit 用の **Script / Audio / Artwork 別 Edit** は同型の `SCRIPT_EDIT_STARTED_EVENT` 等を省略（図の簡略化）。リンク行は `craft_event_links` にのみ存在し、図では `CRAFT_EVENT_LINK` エンティティで表す。
 
 ---
 
-## イベント列 + リンク（フル edit 例）
+## フル edit のリンク例
 
 ```mermaid
 flowchart LR
-  subgraph ingest
-    AR[ArticleRegistered]
-    EC[EpisodeCreated]
-  end
+  AR[article_registered_events]
+  EC[episode_created_events]
+  EES[episode_edit_started_events]
+  SC[script_created_events]
+  TS[tts_submitted_events]
+  EAC[episode_audio_created_events]
+  AC[artwork_created_events]
+  EEE[episode_edit_ended_events]
+  EP[episode_published_events]
+  FR[feed_rebuilt_events]
 
-  subgraph edit["edit_id = E1"]
-    EES[EpisodeEditStarted]
-    SC[ScriptCreated]
-    TS[TtsSubmitted]
-    TSS[TtsJobSucceeded]
-    EAC[EpisodeAudioCreated]
-    AC[ArtworkCreated]
-    EEE[EpisodeEditEnded]
-  end
-
-  subgraph pub
-    EP[EpisodePublished]
-    FR[FeedRebuilt]
-  end
-
-  AR -->|precedes| EC
-  EC -->|spawned_edit| EES
-  EES -->|precedes| SC
-  SC -->|precedes| TS
-  TS -->|precedes| TSS
-  TSS -->|precedes| EAC
-  EES -->|precedes| AC
+  AR --> EC
+  EC --> EES
+  EES --> SC
+  SC --> TS
+  TS --> EAC
+  EES --> AC
   EAC --> EEE
   AC --> EEE
-  EES -->|completes| EEE
-  EEE -->|publishes_outcome| EP
-  EP -->|rebuilds_feed| FR
+  EEE --> EP
+  EP --> FR
 ```
 
-実線は `craft_domain_event_links` に INSERT するエッジ。`ScriptCreated` と `ArtworkCreated` はどちらも `EES` から `precedes`（並列枝）。
+矢印は `craft_event_links`（`precedes` / `completes` / `publishes_outcome` / `rebuilds_feed`）の意味。表名は `_events` サフィックス付き。
 
 ---
 
-## `craft_domain_events`
+## 廃止したもの
 
-| 列 | 型 | 説明 |
-|----|-----|------|
-| `id` | uuid PK | |
-| `sequence_no` | bigint identity | 全体順序 |
-| `event_type` | text | 下表 CHECK |
-| `occurred_at` | timestamptz | |
-| `article_id` | uuid FK | ingest 系 |
-| `episode_id` | uuid FK | |
-| `edit_id` | uuid FK | Edit セッション内イベント |
-| `actor` | text | system / operator / ingest / workflow |
-| `correlation_id` | uuid | ワークフロー相関 |
-| `payload` | jsonb | 型ごと契約（SQL ファイル末尾コメント） |
-
----
-
-## イベント型一覧
-
-### Ingest / Identity
-
-| event_type | いつ | payload 必須キー |
-|------------|------|-------------------|
-| `ArticleRegistered` | ingest | `content_path?`, `content_sha?`, `ingest_route?` |
-| `EpisodeCreated` | ingest で episode INSERT 後 | — |
-
-### Edit 開始
-
-| event_type | kind | payload |
-|------------|------|---------|
-| `EpisodeEditStarted` | episode | `trigger`, `workflow_run_id?` |
-| `ScriptEditStarted` | script | `trigger` |
-| `AudioEditStarted` | audio | `trigger`, `input_script_draft_id` |
-| `ArtworkEditStarted` | artwork | `trigger`, `input_script_draft_id` |
-
-### Edit 中 — 台本
-
-| event_type | payload |
-|------------|---------|
-| `ScriptCreated` | `script_draft_id`, `title`, `description` |
-| `ScriptGenerationFailed` | `error`, `script_draft_id?` |
-
-### Edit 中 — 音声
-
-| event_type | payload |
-|------------|---------|
-| `TtsSubmitted` | `tts_job_id`, `batch_name`, `script_draft_id` |
-| `TtsJobSucceeded` | `tts_job_id`, `batch_name` |
-| `TtsJobFailed` | `tts_job_id`, `error` |
-| `EpisodeAudioCreated` | `episode_audio_id`, `tts_job_id`, `storage_path`, `mime_type` |
-| `EpisodeAudioStorageFailed` | `tts_job_id`, `error` |
-
-### Edit 中 — アートワーク
-
-| event_type | payload |
-|------------|---------|
-| `ArtworkCreated` | `episode_artwork_id`, `storage_path`, `mime_type` |
-| `ArtworkSkipped` | `reason`, `placeholder_artwork_id` |
-| `ArtworkGenerationFailed` | `error` |
-
-### Edit 終了
-
-| event_type | outcome 表 | payload |
-|------------|--------------|---------|
-| `EpisodeEditEnded` | `episode_edit_outcomes_full` | `outcome_kind: full` |
-| `ScriptEditEnded` | `episode_edit_outcomes_script` | `outcome_kind: script` |
-| `AudioEditEnded` | `episode_edit_outcomes_audio` | `outcome_kind: audio` |
-| `ArtworkEditEnded` | `episode_edit_outcomes_artwork` | `outcome_kind: artwork` |
-
-End 処理: 同一トランザクションで **outcome 行 INSERT** + `episode_edits.status = ended` + 本イベント INSERT（`domain_event_id` 相互参照）。
-
-### 公開
-
-| event_type | 投影 | payload |
-|------------|------|---------|
-| `EpisodePublished` | `episode_publications` | `outcome_kind`, `publish_reason`, `feed_snapshot_id` |
-| `FeedRebuilt` | `podcast_feed_snapshots` | `episode_count`, `trigger_episode_id?` |
-
-| event_type | 備考 |
-|------------|------|
-| `EpisodeUnpublished` | 将来。payload: `reason`, `superseded_by_publication_id?` |
-
----
-
-## Outcome 表（NOT NULL）
-
-| 表 | 列（すべて NOT NULL  unless noted） |
-|----|-------------------------------------|
-| `episode_edit_outcomes_script` | edit_id PK, episode_id, script_draft_id, title, description, domain_event_id |
-| `episode_edit_outcomes_audio` | edit_id PK, episode_id, script_draft_id, episode_audio_id, domain_event_id |
-| `episode_edit_outcomes_artwork` | edit_id PK, episode_id, script_draft_id, episode_artwork_id, domain_event_id |
-| `episode_edit_outcomes_full` | edit_id PK, episode_id, script_draft_id, episode_audio_id, episode_artwork_id, title, description, artwork_skipped, domain_event_id |
-
----
-
-## 典型イベント列（再掲）
-
-```text
-EpisodeEditStarted → ScriptCreated → TtsSubmitted → EpisodeAudioCreated
-  → ArtworkCreated | ArtworkSkipped → EpisodeEditEnded → EpisodePublished + FeedRebuilt
-
-AudioEditStarted → TtsSubmitted → EpisodeAudioCreated → AudioEditEnded → EpisodePublished
-```
+| 旧 | 新 |
+|----|-----|
+| `craft_domain_events` + `event_type` + `payload` | 種別ごと `*_events` 表 |
+| `craft_domain_event_resources` | 各 event / resource 表の **直接 FK** |
+| `craft_domain_event_links` | `craft_event_links`（多態 kind + id） |
 
 ---
 
