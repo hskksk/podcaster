@@ -45,9 +45,9 @@ Web は RSS と同様 **`audio_files.storage_path` を正**としつつ、REST �
 
 to-be の前稿も **`current_*` ポインタと phase を Episode 行に載せる** 形で、本質的には可変レコードのままだった。
 
-**直し方**: Episode を **身份（Identity）だけの不変レコード** にし、制作 DAG の成果物は **Artifact（追記）** と **Composition（束ねの追記）**、掲載は **Publication（追記）** に分ける。DAG の詳細は **[podcast-craft-production-dag.md](./podcast-craft-production-dag.md)**。
+**直し方**: Episode は **Identity のみ不変**。制作は **Edit セッション**（`*EditStarted` → 中間イベント → `*EditEnded` → 任意で `EpisodePublished`）。Outcome は End 時に **NULL なし** で 1 件。詳細は **[podcast-craft-edit-sessions.md](./podcast-craft-edit-sessions.md)**。
 
-制作中の各スロット最新は **`episode_production_heads`（mutable・最小）**。公開用 Cursor は不要。
+DAG ノード対応は [production-dag](./podcast-craft-production-dag.md)。Composition / ProductionHead は **Edit モデルに置換**。
 
 ### Composition + Publication（Cursor なし）
 
@@ -329,7 +329,7 @@ erDiagram
 | `TtsJobSucceeded` | batch 成功 | tts_job_id |
 | `TtsJobFailed` | batch 失敗 | tts_job_id, error |
 | `EpisodeAudioStored` | WAV upload 完了 | episode_audio_id, storage_path |
-| `EpisodePublished` | 公開イベント（`episode_publications` INSERT） | episode_id, revision_id, feed_snapshot_id |
+| `EpisodePublished` | publication INSERT | episode_id, composition_id, feed_snapshot_id |
 | `FeedRebuilt` | feed.xml 更新 | feed_snapshot_id, episode_count |
 
 `scripts` / `episode_artworks` の行は **イベントの結果としての状態**であり、イベントそのものではない（二重記録を避けるなら、将来はイベントソーシング寄りにもできるが、第 1 段階は **イベント + 状態テーブル併存** で十分）。
@@ -430,13 +430,13 @@ Episode の `audio_downloading` ロックは **TtsJob** または **WorkflowRun*
 | RegenerateScriptOnly | ScriptDraft + **新 Revision**（audio/art  id 継承） | ScriptGenerationCompleted |
 | RegenerateAudio | TtsJob → EpisodeAudio + **新 Revision** | EpisodeAudioStored |
 | RegenerateArtwork | Artwork + **新 Revision** | ArtworkGenerationCompleted |
-| RepublishFeed | FeedSnapshot + **EpisodePublished**（同一または新 revision） | EpisodePublished, FeedRebuilt |
+| RepublishFeed | FeedSnapshot + Publication（同 composition 可） | EpisodePublished, FeedRebuilt |
 
 ---
 
 ## 移行フェーズ（推奨）
 
-0. **Phase 0 — Identity + Revision + Publication**: `episode_revisions` / `episode_publications` 導入。公開 = 最新 publication。
+0. **Phase 0 — Identity + Composition + Publication**: [production-dag](./podcast-craft-production-dag.md) に沿い heads / compositions / publications を導入。
 1. **Phase A — 成果物テーブル**: `episode_artworks` / `episode_audios`。
 2. **Phase B — TtsJob 分離**。
 3. **Phase C — Job Execution**。

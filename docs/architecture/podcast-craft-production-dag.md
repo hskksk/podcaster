@@ -1,6 +1,6 @@
 # ポッドキャスト制作 DAG — ドメインモデル
 
-[目標ドメイン](./podcast-craft-target-model.md) の **Episode revision / composition** を、実装どおりの **DAG** に沿って組み直す。pgflow の slug ではなく **ドメイン上の制作グラフ** を先に定義する。
+[目標ドメイン](./podcast-craft-target-model.md) の制作フローを DAG で記述する。**成果物の束ねは [Edit セッション](./podcast-craft-edit-sessions.md)**（Composition 案は置換済み）。
 
 ## 制作パイプライン（DAG）
 

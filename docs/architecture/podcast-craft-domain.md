@@ -99,7 +99,7 @@
 
 ## 目標ドメインモデル（詳細）
 
-エンティティ分解（**EpisodeComposition + DAG**）、Job Execution 層は **[podcast-craft-target-model.md](./podcast-craft-target-model.md)** と **[podcast-craft-production-dag.md](./podcast-craft-production-dag.md)** を参照。
+エンティティ・Edit セッション: **[podcast-craft-edit-sessions.md](./podcast-craft-edit-sessions.md)**。DAG: **[podcast-craft-production-dag.md](./podcast-craft-production-dag.md)**。
 
 ## リモデリング backlog（ギャップから）
 
