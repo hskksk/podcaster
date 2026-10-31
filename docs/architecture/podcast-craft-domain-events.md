@@ -1,184 +1,131 @@
 # ドメインイベント — テーブル定義
 
-**方針**: 汎用 `craft_domain_events`（1 行 = 任意 event_type）は使わない。**イベント種別ごとに専用テーブル**（1 イベント = 1 行 = 1 エンティティ）。
+**方針**: 汎用 `craft_domain_events` は使わない。**イベント種別ごとに専用テーブル**（1 イベント = 1 行 = 1 エンティティ）。
+
+**リンク**: 別表のエッジは持たない。**後続イベント行が `previous_event_kind` + `previous_event_id` で直前イベントを参照**する（後方リンク）。必要な箇所は **型付き FK 列**（`previous_script_created_event_id` 等）も併記し、`previous_*` と一致させる。
 
 DDL: [podcast-craft-domain-events-schema.sql](./podcast-craft-domain-events-schema.sql)
 
 ---
 
-## テーブル一覧（23 イベント + リンク + 成果物 + 投影）
-
-### セッション
-
-| テーブル | 役割 |
-|----------|------|
-| `episode_edits` | Edit セッション。`start_event_kind` / `start_event_id` で開始イベントを多態参照 |
-
-### Ingest
-
-| テーブル | 主要列 |
-|----------|--------|
-| `article_registered_events` | `article_id`, `content_path`, `content_sha`, `ingest_route` |
-| `episode_created_events` | `episode_id`, `article_id` |
-
-### Edit 開始
-
-| テーブル | 主要列 |
-|----------|--------|
-| `episode_edit_started_events` | `edit_id`, `episode_id`, `workflow_run_id` |
-| `script_edit_started_events` | `edit_id`, `episode_id` |
-| `audio_edit_started_events` | `edit_id`, `input_script_draft_id` |
-| `artwork_edit_started_events` | `edit_id`, `input_script_draft_id` |
-
-### Edit 中
-
-| テーブル | 主要列 |
-|----------|--------|
-| `script_created_events` | `script_draft_id`, `title`, `description` |
-| `script_generation_failed_events` | `error` |
-| `tts_submitted_events` | `tts_job_id`, `script_draft_id`, `batch_name` |
-| `tts_job_succeeded_events` | `tts_job_id`, `batch_name` |
-| `tts_job_failed_events` | `tts_job_id`, `error` |
-| `episode_audio_created_events` | `episode_audio_id`, `tts_job_id`, `storage_path`, `mime_type` |
-| `episode_audio_storage_failed_events` | `tts_job_id`, `error` |
-| `artwork_created_events` | `episode_artwork_id`, `script_draft_id`, `storage_path` |
-| `artwork_skipped_events` | `placeholder_artwork_id`, `reason` |
-| `artwork_generation_failed_events` | `error` |
-
-### Edit 終了
-
-| テーブル | Outcome 表 |
-|----------|------------|
-| `episode_edit_ended_events` | `episode_edit_outcomes_full` |
-| `script_edit_ended_events` | `episode_edit_outcomes_script` |
-| `audio_edit_ended_events` | `episode_edit_outcomes_audio` |
-| `artwork_edit_ended_events` | `episode_edit_outcomes_artwork` |
-
-### 公開
-
-| テーブル | 主要列 |
-|----------|--------|
-| `episode_published_events` | `edit_id`, `outcome_kind`, `feed_snapshot_id`, `publish_reason` |
-| `feed_rebuilt_events` | `feed_snapshot_id`, `episode_count`, `trigger_episode_id` |
-| `episode_unpublished_events` | `reason`（将来） |
-
-### リレーション・成果物・投影
-
-| テーブル | 役割 |
-|----------|------|
-| `craft_event_links` | イベント間エッジ（`from_event_kind` + `from_event_id` → 多態） |
-| `script_drafts` / `tts_jobs` / `episode_audios` / `episode_artworks` | リソース（作成元イベント id を FK） |
-| `episode_edit_outcomes_*` | End の sealed 結果 |
-| `podcast_feed_snapshots` / `episode_publications` | Feed / 掲載投影 |
-
-各 `*_events` 表共通: `id`, `occurred_at`, `actor`, `correlation_id`, および `edit_id` / `episode_id`（該当時）。
-
----
-
-## イベント間リンク — `craft_event_links`
+## 共通列
 
 | 列 | 説明 |
 |----|------|
-| `from_event_kind` | 始点表の snake 名（例: `script_created` → 表 `script_created_events`） |
-| `from_event_id` | 始点行 PK |
-| `to_event_kind` | 終点表 |
-| `to_event_id` | 終点行 PK |
-| `link_type` | `precedes` / `caused_by` / `completes` / `spawned_edit` / `publishes_outcome` / `rebuilds_feed` |
+| `id`, `occurred_at`, `actor`, `correlation_id` | 全 `*_events` 表 |
+| `previous_event_kind` | 直前イベントの kind（snake、`_events` なし）。`article_registered_events` のみ NULL |
+| `previous_event_id` | 直前イベント行の PK |
+| `merge_previous_event_kind` / `merge_previous_event_id` | **`episode_edit_ended_events` のみ** — 音声枝とアートワーク枝の DAG 合流 |
 
-**kind 文字列**（`from_event_kind` / `to_event_kind`）:
-
-`article_registered`, `episode_created`, `episode_edit_started`, `script_edit_started`, `audio_edit_started`, `artwork_edit_started`, `script_created`, `script_generation_failed`, `tts_submitted`, `tts_job_succeeded`, `tts_job_failed`, `episode_audio_created`, `episode_audio_storage_failed`, `artwork_created`, `artwork_skipped`, `artwork_generation_failed`, `episode_edit_ended`, `script_edit_ended`, `audio_edit_ended`, `artwork_edit_ended`, `episode_published`, `feed_rebuilt`, `episode_unpublished`
+鎖の向き: **新しい行 → 古い行**（`SELECT ... WHERE id = :previous_event_id` で 1 手戻る）。
 
 ---
 
-## 成果物 ↔ イベント（専用 FK。汎用 junction なし）
+## テーブル一覧
+
+（23 イベント + 成果物 + 投影。`craft_event_links` は **廃止**。）
+
+### Ingest
+
+| テーブル | 後方リンク |
+|----------|------------|
+| `article_registered_events` | なし（起点） |
+| `episode_created_events` | `article_registered_event_id`（= `previous_*`） |
+
+### Edit 開始〜終了・公開
+
+各表に `previous_event_kind` / `previous_event_id`。音声 TTS 鎖など固定順序は型付き FK 付き（SQL 参照）。
+
+---
+
+## 直前イベントの期待値（フル edit の例）
+
+| イベント表 | 典型的な `previous_event_kind` | 備考 |
+|------------|-------------------------------|------|
+| `episode_created_events` | `article_registered` | 型付き FK |
+| `episode_edit_started_events` | `episode_created` | 型付き FK |
+| `script_created_events` | `episode_edit_started` または `script_edit_started` | XOR 型付き FK |
+| `tts_submitted_events` | `script_created` | 型付き FK |
+| `tts_job_succeeded_events` / `tts_job_failed_events` | `tts_submitted` | 型付き FK |
+| `episode_audio_created_events` | `tts_job_succeeded` | 型付き FK |
+| `artwork_created_events` / `artwork_skipped_events` | `script_created` または `episode_edit_started` | 並列枝 |
+| `episode_edit_ended_events` | 音声枝の末尾（例: `episode_audio_created`） | `merge_previous_*` にアートワーク枝 |
+| `episode_published_events` | `episode_edit_ended` 等（outcome に応じる） | 型付き FK は migration で種別ごとに追加可 |
+| `feed_rebuilt_events` | `episode_published` | 型付き FK |
+
+再生成 Edit（`script_edit_started` / `audio_edit_started` / `artwork_edit_started`）は、トリガー元（直前の `episode_published` や `*_edit_ended` 等）を `previous_*` に記録する。
+
+---
+
+## 成果物 ↔ イベント
 
 | リソース | 作成イベント FK |
 |----------|-----------------|
-| `script_drafts` | `script_created_event_id` → `script_created_events` |
-| `tts_jobs` | `tts_submitted_event_id` → `tts_submitted_events` |
-| `episode_audios` | `episode_audio_created_event_id` → `episode_audio_created_events` |
+| `script_drafts` | `script_created_event_id` |
+| `tts_jobs` | `tts_submitted_event_id` |
+| `episode_audios` | `episode_audio_created_event_id` |
 | `episode_artworks` | `artwork_created_event_id` または `artwork_skipped_event_id` |
-
-イベント行側にもリソース id 列（例: `script_created_events.script_draft_id`）。同一トランザクション insert 時は **DEFERRABLE FK** で循環を解く。
 
 ---
 
-## ER 図（イベント種別 + リソース）
+## ER 図（後方リンク + リソース）
 
 ```mermaid
 erDiagram
-  ARTICLE ||--o{ EPISODE : registers
-  ARTICLE ||--o{ ARTICLE_REGISTERED_EVENT : has
-  EPISODE ||--o{ EPISODE_CREATED_EVENT : has
-
-  EPISODE ||--o{ EPISODE_EDIT : has
-  EPISODE_EDIT ||--|| EPISODE_EDIT_STARTED_EVENT : starts_with
-  EPISODE_EDIT ||--o| EPISODE_EDIT_ENDED_EVENT : ends_with
-
-  EPISODE_EDIT ||--o{ SCRIPT_CREATED_EVENT : includes
-  EPISODE_EDIT ||--o{ TTS_SUBMITTED_EVENT : includes
-  EPISODE_EDIT ||--o{ EPISODE_AUDIO_CREATED_EVENT : includes
-  EPISODE_EDIT ||--o{ ARTWORK_CREATED_EVENT : includes
+  ARTICLE_REGISTERED_EVENT ||--o{ EPISODE_CREATED_EVENT : "previous"
+  EPISODE_CREATED_EVENT ||--o{ EPISODE_EDIT_STARTED_EVENT : "previous"
+  EPISODE_EDIT_STARTED_EVENT ||--o{ SCRIPT_CREATED_EVENT : "previous"
+  SCRIPT_CREATED_EVENT ||--o{ TTS_SUBMITTED_EVENT : "previous"
+  TTS_SUBMITTED_EVENT ||--o{ TTS_JOB_SUCCEEDED_EVENT : "previous"
+  TTS_JOB_SUCCEEDED_EVENT ||--o{ EPISODE_AUDIO_CREATED_EVENT : "previous"
+  EPISODE_EDIT_STARTED_EVENT ||--o{ ARTWORK_CREATED_EVENT : "previous"
+  EPISODE_AUDIO_CREATED_EVENT ||--o{ EPISODE_EDIT_ENDED_EVENT : "previous"
+  ARTWORK_CREATED_EVENT ||--o{ EPISODE_EDIT_ENDED_EVENT : "merge_previous"
+  EPISODE_EDIT_ENDED_EVENT ||--o{ EPISODE_PUBLISHED_EVENT : "previous"
+  EPISODE_PUBLISHED_EVENT ||--o{ FEED_REBUILT_EVENT : "previous"
 
   SCRIPT_CREATED_EVENT ||--|| SCRIPT_DRAFT : creates
   TTS_SUBMITTED_EVENT ||--|| TTS_JOB : creates
-  TTS_JOB ||--|| EPISODE_AUDIO_CREATED_EVENT : completes
   EPISODE_AUDIO_CREATED_EVENT ||--|| EPISODE_AUDIO : creates
   ARTWORK_CREATED_EVENT ||--|| EPISODE_ARTWORK : creates
-
   EPISODE_EDIT_ENDED_EVENT ||--|| OUTCOME_FULL : materializes
-  OUTCOME_FULL }o--|| SCRIPT_DRAFT : bundles
-  OUTCOME_FULL }o--|| EPISODE_AUDIO : bundles
-  OUTCOME_FULL }o--|| EPISODE_ARTWORK : bundles
-
-  EPISODE_EDIT_ENDED_EVENT ||--o{ EPISODE_PUBLISHED_EVENT : enables
-  EPISODE_PUBLISHED_EVENT }o--|| PODCAST_FEED_SNAPSHOT : uses
-  FEED_REBUILT_EVENT }o--|| PODCAST_FEED_SNAPSHOT : creates
-
   EPISODE_PUBLISHED_EVENT ||--o{ EPISODE_PUBLICATION : projects
-
-  CRAFT_EVENT_LINK {
-    text from_event_kind
-    uuid from_event_id
-    text to_event_kind
-    uuid to_event_id
-    text link_type
-  }
 ```
 
-フル edit 用の **Script / Audio / Artwork 別 Edit** は同型の `SCRIPT_EDIT_STARTED_EVENT` 等を省略（図の簡略化）。リンク行は `craft_event_links` にのみ存在し、図では `CRAFT_EVENT_LINK` エンティティで表す。
+ラベル `previous` / `merge_previous` は **後続行の列** を表す（ER 上は子 → 親の読み方）。
 
 ---
 
-## フル edit のリンク例
+## フル edit の鎖（後方リンクのイメージ）
 
 ```mermaid
 flowchart LR
-  AR[article_registered_events]
-  EC[episode_created_events]
-  EES[episode_edit_started_events]
-  SC[script_created_events]
-  TS[tts_submitted_events]
-  EAC[episode_audio_created_events]
-  AC[artwork_created_events]
-  EEE[episode_edit_ended_events]
-  EP[episode_published_events]
-  FR[feed_rebuilt_events]
+  AR[article_registered]
+  EC[episode_created]
+  EES[episode_edit_started]
+  SC[script_created]
+  TS[tts_submitted]
+  TJS[tts_job_succeeded]
+  EAC[episode_audio_created]
+  AC[artwork_created]
+  EEE[episode_edit_ended]
+  EP[episode_published]
+  FR[feed_rebuilt]
 
-  AR --> EC
-  EC --> EES
-  EES --> SC
-  SC --> TS
-  TS --> EAC
-  EES --> AC
-  EAC --> EEE
-  AC --> EEE
-  EEE --> EP
-  EP --> FR
+  EC -->|previous| AR
+  EES -->|previous| EC
+  SC -->|previous| EES
+  TS -->|previous| SC
+  TJS -->|previous| TS
+  EAC -->|previous| TJS
+  AC -->|previous| SC
+  EEE -->|previous| EAC
+  EEE -->|merge_previous| AC
+  EP -->|previous| EEE
+  FR -->|previous| EP
 ```
 
-矢印は `craft_event_links`（`precedes` / `completes` / `publishes_outcome` / `rebuilds_feed`）の意味。表名は `_events` サフィックス付き。
+矢印は **後続イベントが指す直前**（行の `previous_*` / `merge_previous_*`）。
 
 ---
 
@@ -186,9 +133,9 @@ flowchart LR
 
 | 旧 | 新 |
 |----|-----|
-| `craft_domain_events` + `event_type` + `payload` | 種別ごと `*_events` 表 |
-| `craft_domain_event_resources` | 各 event / resource 表の **直接 FK** |
-| `craft_domain_event_links` | `craft_event_links`（多態 kind + id） |
+| `craft_domain_events` | 種別ごと `*_events` 表 |
+| `craft_domain_event_resources` | event / resource 表の直接 FK |
+| `craft_domain_event_links` / `craft_event_links` | 各イベント行の **`previous_event_*`** |
 
 ---
 

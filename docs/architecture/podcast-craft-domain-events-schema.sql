@@ -11,6 +11,10 @@
 --   occurred_at timestamptz
 --   actor text  system | operator | ingest | workflow
 --   correlation_id uuid null
+--   previous_event_kind text null  -- 直前イベントの kind（後続行が保持する後方リンク）
+--   previous_event_id uuid null
+--   （article_registered_events のみ previous は常に NULL）
+-- episode_edit_ended_events のみ DAG 合流用に merge_previous_event_* を追加
 -- ---------------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------------
@@ -55,25 +59,39 @@ create table article_registered_events (
 );
 
 create table episode_created_events (
-  id               uuid primary key default gen_random_uuid(),
-  occurred_at      timestamptz not null default now(),
-  actor            text not null default 'system',
-  correlation_id   uuid null,
-  episode_id       uuid not null references episodes(id) on delete restrict,
-  article_id       uuid not null references articles(id) on delete restrict
+  id                          uuid primary key default gen_random_uuid(),
+  occurred_at                 timestamptz not null default now(),
+  actor                       text not null default 'system',
+  correlation_id              uuid null,
+  previous_event_kind         text not null default 'article_registered',
+  previous_event_id           uuid not null,
+  article_registered_event_id uuid not null references article_registered_events(id) on delete restrict,
+  episode_id                  uuid not null references episodes(id) on delete restrict,
+  article_id                  uuid not null references articles(id) on delete restrict,
+  constraint episode_created_previous_matches check (
+    previous_event_kind = 'article_registered'
+    and previous_event_id = article_registered_event_id
+  )
 );
 
 -- ---------------------------------------------------------------------------
 -- Edit 開始（種別ごとに別エンティティ）
 -- ---------------------------------------------------------------------------
 create table episode_edit_started_events (
-  id               uuid primary key default gen_random_uuid(),
-  occurred_at      timestamptz not null default now(),
-  actor            text not null default 'workflow',
-  correlation_id   uuid null,
-  edit_id          uuid not null references episode_edits(id) on delete restrict,
-  episode_id       uuid not null references episodes(id) on delete restrict,
-  workflow_run_id  uuid null
+  id                            uuid primary key default gen_random_uuid(),
+  occurred_at                   timestamptz not null default now(),
+  actor                         text not null default 'workflow',
+  correlation_id                uuid null,
+  previous_event_kind           text not null default 'episode_created',
+  previous_event_id             uuid not null,
+  previous_episode_created_event_id uuid not null references episode_created_events(id) on delete restrict,
+  edit_id                       uuid not null references episode_edits(id) on delete restrict,
+  episode_id                    uuid not null references episodes(id) on delete restrict,
+  workflow_run_id               uuid null,
+  constraint episode_edit_started_previous_matches check (
+    previous_event_kind = 'episode_created'
+    and previous_event_id = previous_episode_created_event_id
+  )
 );
 
 create table script_edit_started_events (
@@ -81,6 +99,8 @@ create table script_edit_started_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'operator',
   correlation_id   uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict
 );
@@ -90,6 +110,8 @@ create table audio_edit_started_events (
   occurred_at             timestamptz not null default now(),
   actor                   text not null default 'operator',
   correlation_id          uuid null,
+  previous_event_kind     text not null,
+  previous_event_id       uuid not null,
   edit_id                 uuid not null references episode_edits(id) on delete restrict,
   episode_id              uuid not null references episodes(id) on delete restrict,
   input_script_draft_id   uuid not null
@@ -100,6 +122,8 @@ create table artwork_edit_started_events (
   occurred_at             timestamptz not null default now(),
   actor                   text not null default 'operator',
   correlation_id          uuid null,
+  previous_event_kind     text not null,
+  previous_event_id       uuid not null,
   edit_id                 uuid not null references episode_edits(id) on delete restrict,
   episode_id              uuid not null references episodes(id) on delete restrict,
   input_script_draft_id   uuid not null
@@ -113,11 +137,25 @@ create table script_created_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
+  previous_episode_edit_started_event_id uuid null references episode_edit_started_events(id) on delete restrict,
+  previous_script_edit_started_event_id uuid null references script_edit_started_events(id) on delete restrict,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict,
   script_draft_id  uuid not null,
   title            text not null,
-  description      text not null
+  description      text not null,
+  constraint script_created_previous_xor check (
+    (previous_episode_edit_started_event_id is not null)::int
+    + (previous_script_edit_started_event_id is not null)::int = 1
+  ),
+  constraint script_created_previous_matches check (
+    (previous_event_kind = 'episode_edit_started'
+      and previous_event_id = previous_episode_edit_started_event_id)
+    or (previous_event_kind = 'script_edit_started'
+      and previous_event_id = previous_script_edit_started_event_id)
+  )
 );
 
 create table script_generation_failed_events (
@@ -125,6 +163,8 @@ create table script_generation_failed_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict,
   error            text not null,
@@ -139,11 +179,18 @@ create table tts_submitted_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null default 'script_created',
+  previous_event_id   uuid not null,
+  previous_script_created_event_id uuid not null references script_created_events(id) on delete restrict,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict,
   tts_job_id       uuid not null,
   script_draft_id  uuid not null,
-  batch_name       text not null
+  batch_name       text not null,
+  constraint tts_submitted_previous_matches check (
+    previous_event_kind = 'script_created'
+    and previous_event_id = previous_script_created_event_id
+  )
 );
 
 create table tts_job_succeeded_events (
@@ -151,10 +198,17 @@ create table tts_job_succeeded_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null default 'tts_submitted',
+  previous_event_id   uuid not null,
+  previous_tts_submitted_event_id uuid not null references tts_submitted_events(id) on delete restrict,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict,
   tts_job_id       uuid not null,
-  batch_name       text not null
+  batch_name       text not null,
+  constraint tts_job_succeeded_previous_matches check (
+    previous_event_kind = 'tts_submitted'
+    and previous_event_id = previous_tts_submitted_event_id
+  )
 );
 
 create table tts_job_failed_events (
@@ -162,10 +216,17 @@ create table tts_job_failed_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null default 'tts_submitted',
+  previous_event_id   uuid not null,
+  previous_tts_submitted_event_id uuid not null references tts_submitted_events(id) on delete restrict,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict,
   tts_job_id       uuid not null,
-  error            text not null
+  error            text not null,
+  constraint tts_job_failed_previous_matches check (
+    previous_event_kind = 'tts_submitted'
+    and previous_event_id = previous_tts_submitted_event_id
+  )
 );
 
 create table episode_audio_created_events (
@@ -173,12 +234,19 @@ create table episode_audio_created_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null default 'tts_job_succeeded',
+  previous_event_id   uuid not null,
+  previous_tts_job_succeeded_event_id uuid not null references tts_job_succeeded_events(id) on delete restrict,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict,
   episode_audio_id uuid not null,
   tts_job_id       uuid not null,
   storage_path     text not null,
-  mime_type        text not null
+  mime_type        text not null,
+  constraint episode_audio_created_previous_matches check (
+    previous_event_kind = 'tts_job_succeeded'
+    and previous_event_id = previous_tts_job_succeeded_event_id
+  )
 );
 
 create table episode_audio_storage_failed_events (
@@ -186,6 +254,8 @@ create table episode_audio_storage_failed_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict,
   tts_job_id       uuid not null,
@@ -200,6 +270,8 @@ create table artwork_created_events (
   occurred_at        timestamptz not null default now(),
   actor              text not null default 'system',
   correlation_id     uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
   edit_id            uuid not null references episode_edits(id) on delete restrict,
   episode_id         uuid not null references episodes(id) on delete restrict,
   episode_artwork_id uuid not null,
@@ -213,6 +285,8 @@ create table artwork_skipped_events (
   occurred_at             timestamptz not null default now(),
   actor                   text not null default 'system',
   correlation_id          uuid null,
+  previous_event_kind     text not null,
+  previous_event_id       uuid not null,
   edit_id                 uuid not null references episode_edits(id) on delete restrict,
   episode_id              uuid not null references episodes(id) on delete restrict,
   script_draft_id         uuid not null,
@@ -225,6 +299,8 @@ create table artwork_generation_failed_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict,
   error            text not null
@@ -238,8 +314,15 @@ create table episode_edit_ended_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
+  merge_previous_event_kind text null,
+  merge_previous_event_id   uuid null,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
-  episode_id       uuid not null references episodes(id) on delete restrict
+  episode_id       uuid not null references episodes(id) on delete restrict,
+  constraint episode_edit_ended_merge_pair check (
+    (merge_previous_event_kind is null) = (merge_previous_event_id is null)
+  )
 );
 
 create table script_edit_ended_events (
@@ -247,6 +330,8 @@ create table script_edit_ended_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict
 );
@@ -256,6 +341,8 @@ create table audio_edit_ended_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict
 );
@@ -265,6 +352,8 @@ create table artwork_edit_ended_events (
   occurred_at      timestamptz not null default now(),
   actor            text not null default 'system',
   correlation_id   uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
   edit_id          uuid not null references episode_edits(id) on delete restrict,
   episode_id       uuid not null references episodes(id) on delete restrict
 );
@@ -279,21 +368,13 @@ create table podcast_feed_snapshots (
   created_at       timestamptz not null default now()
 );
 
-create table feed_rebuilt_events (
-  id                 uuid primary key default gen_random_uuid(),
-  occurred_at        timestamptz not null default now(),
-  actor              text not null default 'system',
-  correlation_id     uuid null,
-  feed_snapshot_id   uuid not null references podcast_feed_snapshots(id) on delete restrict,
-  episode_count      integer not null,
-  trigger_episode_id uuid null references episodes(id) on delete set null
-);
-
 create table episode_published_events (
   id                 uuid primary key default gen_random_uuid(),
   occurred_at        timestamptz not null default now(),
   actor              text not null default 'system',
   correlation_id     uuid null,
+  previous_event_kind text not null,
+  previous_event_id   uuid not null,
   episode_id         uuid not null references episodes(id) on delete restrict,
   edit_id            uuid not null references episode_edits(id) on delete restrict,
   outcome_kind       text not null check (outcome_kind in ('full', 'script', 'audio', 'artwork')),
@@ -302,53 +383,43 @@ create table episode_published_events (
     check (publish_reason in ('first_list', 'after_content_change', 'feed_rebuild_only'))
 );
 
+create table feed_rebuilt_events (
+  id                 uuid primary key default gen_random_uuid(),
+  occurred_at        timestamptz not null default now(),
+  actor              text not null default 'system',
+  correlation_id     uuid null,
+  previous_event_kind text not null default 'episode_published',
+  previous_event_id   uuid not null,
+  previous_episode_published_event_id uuid not null references episode_published_events(id) on delete restrict,
+  feed_snapshot_id   uuid not null references podcast_feed_snapshots(id) on delete restrict,
+  episode_count      integer not null,
+  trigger_episode_id uuid null references episodes(id) on delete set null,
+  constraint feed_rebuilt_previous_matches check (
+    previous_event_kind = 'episode_published'
+    and previous_event_id = previous_episode_published_event_id
+  )
+);
+
 create table episode_unpublished_events (
   id                 uuid primary key default gen_random_uuid(),
   occurred_at        timestamptz not null default now(),
   actor              text not null default 'operator',
   correlation_id     uuid null,
+  previous_event_kind text not null default 'episode_published',
+  previous_event_id   uuid not null,
+  previous_episode_published_event_id uuid not null references episode_published_events(id) on delete restrict,
   episode_id         uuid not null references episodes(id) on delete restrict,
   reason             text not null,
-  superseded_by_publication_id uuid null
-);
-
--- ---------------------------------------------------------------------------
--- イベント間リンク（多態 — 種別テーブル id を参照）
--- ---------------------------------------------------------------------------
-create table craft_event_links (
-  id               uuid primary key default gen_random_uuid(),
-  from_event_kind  text not null,
-  from_event_id    uuid not null,
-  to_event_kind    text not null,
-  to_event_id      uuid not null,
-  link_type        text not null check (
-    link_type in (
-      'precedes',
-      'caused_by',
-      'completes',
-      'spawned_edit',
-      'publishes_outcome',
-      'rebuilds_feed'
-    )
-  ),
-  created_at       timestamptz not null default now(),
-  constraint craft_event_links_no_self check (
-    from_event_kind <> to_event_kind or from_event_id <> to_event_id
-  ),
-  constraint craft_event_links_unique unique (
-    from_event_kind, from_event_id, to_event_kind, to_event_id, link_type
+  superseded_by_publication_id uuid null,
+  constraint episode_unpublished_previous_matches check (
+    previous_event_kind = 'episode_published'
+    and previous_event_id = previous_episode_published_event_id
   )
 );
 
-create index craft_event_links_from_idx
-  on craft_event_links (from_event_kind, from_event_id);
-
-create index craft_event_links_to_idx
-  on craft_event_links (to_event_kind, to_event_id);
-
-comment on column craft_event_links.from_event_kind is
-  '例: episode_created, script_created, episode_edit_started, …（各 *_events 表の snake 名）';
-
+-- ---------------------------------------------------------------------------
+-- 後方リンク: 別表 craft_event_links は使わない。各 *_events 行の previous_* が鎖を形成する。
+-- previous_event_kind は snake 名（_events なし）。型付き FK 列がある場合は previous_* と一致させる。
 -- ---------------------------------------------------------------------------
 -- 成果物リソース（作成元イベントへの FK は一方向。event → resource id は各 event 表に保持）
 -- ---------------------------------------------------------------------------
@@ -534,7 +605,6 @@ alter table artwork_edit_ended_events enable row level security;
 alter table episode_published_events enable row level security;
 alter table feed_rebuilt_events enable row level security;
 alter table episode_unpublished_events enable row level security;
-alter table craft_event_links enable row level security;
 alter table script_drafts enable row level security;
 alter table tts_jobs enable row level security;
 alter table episode_audios enable row level security;
@@ -556,7 +626,7 @@ create policy "authenticated read episode_edits"
 -- 各 event 表: insert service_role, select authenticated（migration 生成時に macro 化可）
 
 -- ---------------------------------------------------------------------------
--- craft_event_links.from_event_kind / to_event_kind 許容値
+-- previous_event_kind 許容値（_events なし snake 名）
 -- ---------------------------------------------------------------------------
 -- article_registered, episode_created,
 -- episode_edit_started, script_edit_started, audio_edit_started, artwork_edit_started,
