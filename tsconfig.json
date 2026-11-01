@@ -11,6 +11,10 @@
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": ["scripts/**/*.ts"],
+  "include": [
+    "scripts/**/*.ts",
+    "supabase/functions/_domain/**/*.ts",
+    "supabase/functions/_adapters/**/*.ts"
+  ],
   "exclude": ["supabase/functions", "node_modules", "dist"]
 }
