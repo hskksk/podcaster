@@ -81,7 +81,7 @@ async function validateLegacy(sql: ReturnType<typeof connectPostgres>): Promise<
   const dupNullPath = await sql<Array<{ n: string }>>`
     select count(*)::text as n
     from (
-      select content_path
+      select title, content_sha
       from articles
       where content_path is null
       group by title, content_sha
