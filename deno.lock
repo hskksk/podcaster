@@ -1,0 +1,52 @@
+{
+  "version": "4",
+  "specifiers": {
+    "jsr:@std/assert@*": "1.0.19",
+    "jsr:@std/internal@^1.0.12": "1.0.14"
+  },
+  "jsr": {
+    "@std/assert@1.0.19": {
+      "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
+    "@std/internal@1.0.14": {
+      "integrity": "291516b3d4c35024d6ffbc0a9df5bf4c64116e05b50012cf846710152d2ffdf7"
+    }
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@google/genai@^1.52.0",
+        "npm:@hskksk/markdoc-react@~0.6.2",
+        "npm:@hskksk/mem-ai-cli@latest",
+        "npm:@supabase/supabase-js@^2.49.0",
+        "npm:@terrastruct/d2@0.1.33",
+        "npm:@types/js-yaml@^4.0.9",
+        "npm:@types/node@22",
+        "npm:@types/react-dom@^19.2.3",
+        "npm:@types/react@^19.2.14",
+        "npm:chalk@^5.6.2",
+        "npm:dotenv@^16.4.0",
+        "npm:ink-select-input@^6.2.0",
+        "npm:ink-spinner@5",
+        "npm:ink-text-input@6",
+        "npm:ink@^7.0.1",
+        "npm:js-yaml@^4.3.2",
+        "npm:marked-terminal@^7.3.0",
+        "npm:marked@^15.0.12",
+        "npm:open@11",
+        "npm:postgres@^3.4.7",
+        "npm:react@^19.2.5",
+        "npm:remark-math@6",
+        "npm:remark-parse@11",
+        "npm:smol-toml@^1.6.1",
+        "npm:tsx@^4.19.0",
+        "npm:typescript@^5.7.0",
+        "npm:unified@^11.0.5",
+        "npm:unist-util-visit@^5.1.0"
+      ]
+    }
+  }
+}

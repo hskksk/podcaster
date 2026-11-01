@@ -1,4 +1,6 @@
 import { createSupabaseClient } from "../_shared/db.ts";
+import { loadConfig } from "../_shared/config.ts";
+import { ingestViaEvents } from "../_services/ingest-events.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -26,10 +28,32 @@ Deno.serve(async (req) => {
     return new Response("Missing content", { status: 400 });
   }
 
+  const cfg = await loadConfig();
+  const pipelineMode = String(cfg["pipeline.mode"] ?? "legacy").replace(/"/g, "");
+
+  if (pipelineMode === "events") {
+    const db = createSupabaseClient();
+    try {
+      const result = await ingestViaEvents(db, {
+        title: body.title,
+        content,
+        mem_note_id: body.mem_note_id?.trim() ?? null,
+        source_url: body.source_url,
+        ingest_route: body.ingest_route ?? null,
+        ingest_meta: body.ingest_meta,
+        content_path: body.content_path?.trim() || null,
+        content_sha: body.content_sha?.trim() || null,
+      });
+      return Response.json({ ok: true, ...result }, { status: 202 });
+    } catch (err) {
+      console.error("ingest events path failed:", err);
+      return new Response("Internal error", { status: 500 });
+    }
+  }
+
   const resolvedTitle = body.title;
   const contentPath = body.content_path?.trim() || null;
   const contentSha = body.content_sha?.trim() || null;
-  // mem_note_id is stored as history only. The mem.ai fetch path is gone.
 
   const db = createSupabaseClient();
   const { data: article, error } = await db

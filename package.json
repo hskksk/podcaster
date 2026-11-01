@@ -47,7 +47,8 @@
         "events:replay": "tsx scripts/events-replay.ts",
         "events:reconcile": "tsx scripts/events-reconcile.ts",
         "job:run": "tsx scripts/job-run.ts",
-        "poll:external-ops": "tsx scripts/poll-external-ops.ts"
+        "poll:external-ops": "tsx scripts/poll-external-ops.ts",
+        "test:domain": "deno test -A supabase/functions/_domain/"
     },
     "devDependencies": {
         "@hskksk/markdoc-react": "^0.6.2",

@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
+export async function dispatchRunJob(db: SupabaseClient, jobId: string): Promise<void> {
+  await startRunJobFlow(db, jobId);
+}
+
 export async function startRunJobFlow(
   db: SupabaseClient,
   jobId: string,
