@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import {
   appendEvent,
+  nextStreamVersion,
   StreamVersionConflictError,
 } from "../supabase/functions/_adapters/eventstore/postgres.ts";
 import {
@@ -37,6 +38,31 @@ function storagePathFromPublicUrl(url: string | null | undefined): string | null
   return decodeURIComponent(url.slice(idx + marker.length));
 }
 
+type EpisodeRow = {
+  id: string;
+  article_id: string | null;
+  title: string;
+  description: string;
+  status: string;
+  image_url: string | null;
+  audio_url: string | null;
+  published_at: Date | null;
+  created_at: Date;
+};
+
+function pickCanonicalEpisode(eps: EpisodeRow[]): EpisodeRow {
+  const byCreated = [...eps].sort(
+    (a, b) => a.created_at.getTime() - b.created_at.getTime(),
+  );
+  const published = byCreated.filter((e) => e.status === "published");
+  if (published.length > 0) {
+    return published.sort(
+      (a, b) => (b.published_at?.getTime() ?? 0) - (a.published_at?.getTime() ?? 0),
+    )[0]!;
+  }
+  return byCreated[byCreated.length - 1]!;
+}
+
 async function validateLegacy(sql: ReturnType<typeof connectPostgres>): Promise<void> {
   const multiEpisode = await sql<Array<{ article_id: string; n: string }>>`
     select article_id, count(*)::text as n
@@ -46,8 +72,9 @@ async function validateLegacy(sql: ReturnType<typeof connectPostgres>): Promise<
     having count(*) > 1
   `;
   if (multiEpisode.length > 0) {
-    throw new Error(
-      `1 article に複数 episodes があります。手動対応が必要です: ${multiEpisode.map((r) => r.article_id).join(", ")}`,
+    console.warn(
+      "1 article に複数 episodes があります。canonical episode 1 本 + 複数 episode revision として移行します:\n" +
+        multiEpisode.map((r) => `  ${r.article_id} (${r.n} rows)`).join("\n"),
     );
   }
 
@@ -163,27 +190,18 @@ async function main(): Promise<void> {
     order by created_at asc
   `;
 
-  type EpisodeRow = {
-    id: string;
-    article_id: string | null;
-    title: string;
-    description: string;
-    status: string;
-    image_url: string | null;
-    audio_url: string | null;
-    published_at: Date | null;
-    created_at: Date;
-  };
-
   const episodes = await sql<EpisodeRow[]>`
     select id, article_id, title, description, status, image_url, audio_url, published_at, created_at
     from episodes
     order by created_at asc
   `;
 
-  const episodeByArticle = new Map<string, EpisodeRow>();
+  const episodesByArticle = new Map<string, EpisodeRow[]>();
   for (const ep of episodes) {
-    if (ep.article_id) episodeByArticle.set(ep.article_id, ep);
+    if (!ep.article_id) continue;
+    const list = episodesByArticle.get(ep.article_id) ?? [];
+    list.push(ep);
+    episodesByArticle.set(ep.article_id, list);
   }
 
   const revisionByEpisode = new Map<string, string>();
@@ -220,143 +238,122 @@ async function main(): Promise<void> {
       },
     });
 
-    const episode = episodeByArticle.get(article.id);
-    if (!episode) continue;
+    const legacyEpisodes = episodesByArticle.get(article.id);
+    if (!legacyEpisodes?.length) continue;
 
-    const productionId = randomUUID();
-    let streamEpisode = 1;
-    let streamProduction = 1;
+    const canonical = pickCanonicalEpisode(legacyEpisodes);
+    const canonicalEpisodeId = canonical.id;
+    const sortedLegacy = [...legacyEpisodes].sort(
+      (a, b) => a.created_at.getTime() - b.created_at.getTime(),
+    );
 
-    await tryAppend({
-      type: "EpisodeOpened",
-      stream_type: "episode",
-      stream_id: episode.id,
-      stream_version: streamEpisode++,
-      occurred_at: episode.created_at.toISOString(),
-      actor: "migration",
-      correlation_id: productionId,
-      payload: {
-        episode_id: episode.id,
-        article_id: article.id,
-        show_id: DEFAULT_SHOW_ID,
-        guid: episode.id,
-      },
-    });
-
-    await tryAppend({
-      type: "ProductionRequested",
-      stream_type: "production",
-      stream_id: productionId,
-      stream_version: streamProduction++,
-      occurred_at: episode.created_at.toISOString(),
-      actor: "migration",
-      correlation_id: productionId,
-      payload: {
-        production_id: productionId,
-        episode_id: episode.id,
-        article_revision_id: articleRevisionId,
-        base_revision_id: null,
-        scope: "full",
-        trigger: "migration",
-        profile,
-      },
-    });
-
-    const scripts = await sql<
-      Array<{ id: string; content: string; created_at: Date }>
-    >`
-      select id, content, created_at
-      from scripts
-      where episode_id = ${episode.id}::uuid and status = 'ready'
-      order by created_at desc
+    const opened = await sql`
+      select 1 from podcast.domain_events
+      where stream_type = 'episode' and stream_id = ${canonicalEpisodeId}::uuid
+        and type = 'EpisodeOpened'
       limit 1
     `;
-    const script = scripts[0];
-    if (!script) continue;
-
-    const scriptId = script.id;
-    await tryAppend({
-      type: "ScriptWritten",
-      stream_type: "production",
-      stream_id: productionId,
-      stream_version: streamProduction++,
-      occurred_at: script.created_at.toISOString(),
-      actor: "migration",
-      correlation_id: productionId,
-      payload: {
-        script_id: scriptId,
-        job_id: null,
-        title: episode.title,
-        description: episode.description,
-        content: script.content,
-      },
-    });
-
-    const audios = await sql<
-      Array<{ id: string; storage_path: string; mime_type: string; script_id: string | null; created_at: Date }>
-    >`
-      select id, storage_path, mime_type, script_id, created_at
-      from audio_files
-      where episode_id = ${episode.id}::uuid and status = 'ready'
-      order by created_at desc
-      limit 1
-    `;
-    const audio = audios[0];
-    if (!audio) continue;
-
-    const linkedScriptId = audio.script_id ?? scriptId;
-    let durationMs = 0;
-    try {
-      const { data, error } = await storage.from("podcast").download(audio.storage_path);
-      if (!error && data) {
-        const bytes = new Uint8Array(await data.arrayBuffer());
-        durationMs = wavDurationMs(bytes) ?? 0;
-        const blobId = randomUUID();
-        await registerBlob(sql, {
-          id: blobId,
-          storage_path: audio.storage_path,
-          mime_type: audio.mime_type,
-          byte_size: bytes.byteLength,
-        });
-        await tryAppend({
-          type: "AudioRendered",
-          stream_type: "production",
-          stream_id: productionId,
-          stream_version: streamProduction++,
-          occurred_at: audio.created_at.toISOString(),
-          actor: "migration",
-          correlation_id: productionId,
-          payload: {
-            audio_id: audio.id,
-            job_id: null,
-            script_id: linkedScriptId,
-            blob_id: blobId,
-            duration_ms: durationMs,
-            casting: {},
-          },
-        });
-      }
-    } catch {
-      // skip audio event if storage missing
+    if (opened.length === 0) {
+      const openProductionId = randomUUID();
+      await tryAppend({
+        type: "EpisodeOpened",
+        stream_type: "episode",
+        stream_id: canonicalEpisodeId,
+        stream_version: await nextStreamVersion(sql, canonicalEpisodeId),
+        occurred_at: sortedLegacy[0]!.created_at.toISOString(),
+        actor: "migration",
+        correlation_id: openProductionId,
+        payload: {
+          episode_id: canonicalEpisodeId,
+          article_id: article.id,
+          show_id: DEFAULT_SHOW_ID,
+          guid: canonicalEpisodeId,
+        },
+      });
     }
 
-    let artworkId: string | null = null;
-    const imagePath = storagePathFromPublicUrl(episode.image_url);
-    if (imagePath) {
+    let supersededPublicationId: string | null = null;
+
+    for (const legacyEp of sortedLegacy) {
+      const productionId = randomUUID();
+      let streamProduction = 1;
+
+      await tryAppend({
+        type: "ProductionRequested",
+        stream_type: "production",
+        stream_id: productionId,
+        stream_version: streamProduction++,
+        occurred_at: legacyEp.created_at.toISOString(),
+        actor: "migration",
+        correlation_id: productionId,
+        payload: {
+          production_id: productionId,
+          episode_id: canonicalEpisodeId,
+          article_revision_id: articleRevisionId,
+          base_revision_id: null,
+          scope: "full",
+          trigger: "migration",
+          profile,
+        },
+      });
+
+      const scripts = await sql<
+        Array<{ id: string; content: string; created_at: Date }>
+      >`
+        select id, content, created_at
+        from scripts
+        where episode_id = ${legacyEp.id}::uuid and status = 'ready'
+        order by created_at desc
+        limit 1
+      `;
+      const script = scripts[0];
+      if (!script) continue;
+
+      const scriptId = script.id;
+      await tryAppend({
+        type: "ScriptWritten",
+        stream_type: "production",
+        stream_id: productionId,
+        stream_version: streamProduction++,
+        occurred_at: script.created_at.toISOString(),
+        actor: "migration",
+        correlation_id: productionId,
+        payload: {
+          script_id: scriptId,
+          job_id: null,
+          title: legacyEp.title,
+          description: legacyEp.description,
+          content: script.content,
+        },
+      });
+
+      const audios = await sql<
+        Array<{ id: string; storage_path: string; mime_type: string; script_id: string | null; created_at: Date }>
+      >`
+        select id, storage_path, mime_type, script_id, created_at
+        from audio_files
+        where episode_id = ${legacyEp.id}::uuid and status = 'ready'
+        order by created_at desc
+        limit 1
+      `;
+      const audio = audios[0];
+      if (!audio) continue;
+
+      const linkedScriptId = audio.script_id ?? scriptId;
       try {
-        const { data, error } = await storage.from("podcast").download(imagePath);
+        const { data, error } = await storage.from("podcast").download(audio.storage_path);
         if (!error && data) {
           const bytes = new Uint8Array(await data.arrayBuffer());
+          const durationMs = wavDurationMs(bytes) ?? 0;
           const blobId = randomUUID();
-          artworkId = randomUUID();
           await registerBlob(sql, {
             id: blobId,
-            storage_path: imagePath,
-            mime_type: "image/jpeg",
+            storage_path: audio.storage_path,
+            mime_type: audio.mime_type,
             byte_size: bytes.byteLength,
           });
           await tryAppend({
-            type: "ArtworkPainted",
+            type: "AudioRendered",
             stream_type: "production",
             stream_id: productionId,
             stream_version: streamProduction++,
@@ -364,59 +361,100 @@ async function main(): Promise<void> {
             actor: "migration",
             correlation_id: productionId,
             payload: {
-              artwork_id: artworkId,
+              audio_id: audio.id,
               job_id: null,
-              script_id: scriptId,
+              script_id: linkedScriptId,
               blob_id: blobId,
+              duration_ms: durationMs,
+              casting: {},
             },
           });
         }
       } catch {
-        artworkId = null;
+        // skip audio event if storage missing
       }
-    }
 
-    const audioRows = await sql<Array<{ id: string }>>`
-      select id from podcast.audios where production_id = ${productionId}::uuid limit 1
-    `;
-    const audioId = audioRows[0]?.id ?? audio.id;
-    const episodeRevisionId = randomUUID();
+      let artworkId: string | null = null;
+      const imagePath = storagePathFromPublicUrl(legacyEp.image_url);
+      if (imagePath) {
+        try {
+          const { data, error } = await storage.from("podcast").download(imagePath);
+          if (!error && data) {
+            const bytes = new Uint8Array(await data.arrayBuffer());
+            const blobId = randomUUID();
+            artworkId = randomUUID();
+            await registerBlob(sql, {
+              id: blobId,
+              storage_path: imagePath,
+              mime_type: "image/jpeg",
+              byte_size: bytes.byteLength,
+            });
+            await tryAppend({
+              type: "ArtworkPainted",
+              stream_type: "production",
+              stream_id: productionId,
+              stream_version: streamProduction++,
+              occurred_at: audio.created_at.toISOString(),
+              actor: "migration",
+              correlation_id: productionId,
+              payload: {
+                artwork_id: artworkId,
+                job_id: null,
+                script_id: scriptId,
+                blob_id: blobId,
+              },
+            });
+          }
+        } catch {
+          artworkId = null;
+        }
+      }
 
-    await tryAppend({
-      type: "EpisodeAssembled",
-      stream_type: "episode",
-      stream_id: episode.id,
-      stream_version: streamEpisode++,
-      occurred_at: audio.created_at.toISOString(),
-      actor: "migration",
-      correlation_id: productionId,
-      payload: {
-        episode_revision_id: episodeRevisionId,
-        script_id: scriptId,
-        audio_id: audioId,
-        artwork_id: artworkId,
-        title: episode.title,
-        description: episode.description,
-      },
-    });
+      const audioRows = await sql<Array<{ id: string }>>`
+        select id from podcast.audios where production_id = ${productionId}::uuid limit 1
+      `;
+      const audioId = audioRows[0]?.id ?? audio.id;
+      const episodeRevisionId = randomUUID();
 
-    revisionByEpisode.set(episode.id, episodeRevisionId);
-
-    if (episode.status === "published" && episode.published_at) {
       await tryAppend({
-        type: "EpisodePublished",
+        type: "EpisodeAssembled",
         stream_type: "episode",
-        stream_id: episode.id,
-        stream_version: streamEpisode++,
-        occurred_at: episode.published_at.toISOString(),
+        stream_id: canonicalEpisodeId,
+        stream_version: await nextStreamVersion(sql, canonicalEpisodeId),
+        occurred_at: audio.created_at.toISOString(),
         actor: "migration",
         correlation_id: productionId,
         payload: {
-          publication_id: randomUUID(),
           episode_revision_id: episodeRevisionId,
-          superseded_publication_id: null,
+          script_id: scriptId,
+          audio_id: audioId,
+          artwork_id: artworkId,
+          title: legacyEp.title,
+          description: legacyEp.description,
         },
       });
+
+      revisionByEpisode.set(legacyEp.id, episodeRevisionId);
+      revisionByEpisode.set(canonicalEpisodeId, episodeRevisionId);
+
+      if (legacyEp.status === "published" && legacyEp.published_at) {
+        const publicationId = randomUUID();
+        await tryAppend({
+          type: "EpisodePublished",
+          stream_type: "episode",
+          stream_id: canonicalEpisodeId,
+          stream_version: await nextStreamVersion(sql, canonicalEpisodeId),
+          occurred_at: legacyEp.published_at.toISOString(),
+          actor: "migration",
+          correlation_id: productionId,
+          payload: {
+            publication_id: publicationId,
+            episode_revision_id: episodeRevisionId,
+            superseded_publication_id: supersededPublicationId,
+          },
+        });
+        supersededPublicationId = publicationId;
+      }
     }
   }
 
