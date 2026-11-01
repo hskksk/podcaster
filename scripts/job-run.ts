@@ -18,15 +18,22 @@ const args = process.argv.slice(2);
 const jobType = args[0];
 const inputIdx = args.indexOf("--input");
 const inputJson = inputIdx >= 0 ? args[inputIdx + 1] : undefined;
+const freshRun = args.includes("--fresh");
 
 if (!jobType || !inputJson) {
   console.error(
-    'Usage: pnpm job:run <write_script|render_audio|paint_artwork> --input \'<json>\'',
+    'Usage: pnpm job:run <write_script|render_audio|paint_artwork> --input \'<json>\' [--fresh]',
+  );
+  console.error(
+    "  --fresh  append dev_run_id so a previously failed idempotent job is not reused (local dev)",
   );
   process.exit(1);
 }
 
 const input = JSON.parse(inputJson) as Record<string, unknown>;
+if (freshRun) {
+  input.dev_run_id = randomUUID();
+}
 const idempotencyKey = createHash("sha256")
   .update(`${jobType}:${JSON.stringify(input)}`)
   .digest("hex");
@@ -63,7 +70,30 @@ async function main() {
         .eq("job_type", jobType)
         .eq("idempotency_key", idempotencyKey)
         .maybeSingle();
-      console.log(JSON.stringify(existing, null, 2));
+      if (existing) {
+        const { data: attempt } = await db
+          .schema("jobs")
+          .from("job_attempts")
+          .select("error_message, outcome")
+          .eq("job_id", existing.id)
+          .order("attempt_no", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const payload = { ...existing, last_attempt: attempt };
+        console.log(JSON.stringify(payload, null, 2));
+        if (existing.status === "failed" && attempt?.error_message) {
+          console.error(
+            `\nPrevious run failed: ${attempt.error_message}\n` +
+              "Retry with --fresh (new idempotency key) after fixing the cause, or change --input.",
+          );
+        } else if (existing.status === "failed") {
+          console.error(
+            "\nPrevious run failed (no attempt row). Retry with --fresh or change --input.",
+          );
+        }
+      } else {
+        console.log(JSON.stringify(existing, null, 2));
+      }
       return;
     }
     throw insertErr;
@@ -81,7 +111,14 @@ async function main() {
   );
 
   console.log(JSON.stringify({ jobId, jobType, status: "requested" }, null, 2));
-  console.error("Poll: TARGET=local curl -X POST http://127.0.0.1:54331/functions/v1/external-operation-poller");
+  console.error(
+    "Next: POST http://127.0.0.1:54331/functions/v1/job-worker with Authorization: Bearer <SERVICE_ROLE_KEY> (see supabase status).",
+  );
+  if (jobType === "render_audio") {
+    console.error(
+      "After batch starts: TARGET=local pnpm poll:external-ops, then POST job-worker again.",
+    );
+  }
 }
 
 main().catch((err) => {
