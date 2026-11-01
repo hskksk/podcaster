@@ -3,8 +3,9 @@ import postgres from "postgres";
 import {
   fetchSessionPoolerDatabaseUrl,
   isLocalDatabaseUrl,
+  poolerDatabaseUrlFromLinkedProject,
 } from "./remote-postgres-url.ts";
-import { buildRemoteDirectDatabaseUrl, detectProjectRef } from "./supabase-detect.ts";
+import { detectProjectRef } from "./supabase-detect.ts";
 
 const DEFAULT_LOCAL_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
@@ -16,18 +17,25 @@ export function resolveDatabaseUrl(): string {
     const password = process.env.SUPABASE_DB_PASSWORD;
     if (password) {
       const ref = detectProjectRef();
-      const poolerUrl = fetchSessionPoolerDatabaseUrl(ref, password);
+      const fromLink = poolerDatabaseUrlFromLinkedProject(ref, password);
+      const poolerUrl = fromLink ?? fetchSessionPoolerDatabaseUrl(ref, password);
       if (poolerUrl) {
         console.log(
-          `Using session pooler for project ${ref} (SUPABASE_DB_PASSWORD + Management API).`,
+          fromLink
+            ? `Using session pooler for project ${ref} (supabase/.temp/pooler-url from link).`
+            : `Using session pooler for project ${ref} (SUPABASE_DB_PASSWORD + Management API).`,
         );
         return poolerUrl;
       }
-      console.log(
-        `Using direct Postgres for project ${ref} (SUPABASE_DB_PASSWORD + CLI ref, SSL). ` +
-          "Pooler auto-detect failed — set DATABASE_URL from Dashboard Connect (Session pooler) if this errors.",
+      console.error(
+        "Session pooler URL を解決できませんでした。次のいずれかを行ってください:\n" +
+          "  • .env に DATABASE_URL — Dashboard → Connect → Session pooler\n" +
+          "  • リポジトリで supabase link --project-ref <ref>（pooler-url を supabase/.temp/ に保存）\n" +
+          "  • .env に SUPABASE_ACCESS_TOKEN（Dashboard → Account → Tokens）\n" +
+          "\n" +
+          "db.<ref>.supabase.co への直結は IPv6/DNS 環境で ENOTFOUND になりやすいため、自動では使いません。",
       );
-      return buildRemoteDirectDatabaseUrl(ref, password);
+      process.exit(1);
     }
     console.error(
       "DATABASE_URL が未設定です。次のいずれかを .env に設定してください:\n" +
@@ -53,10 +61,13 @@ export function resolveDatabaseUrl(): string {
 
 export function connectPostgres(): postgres.Sql {
   const url = resolveDatabaseUrl();
+  const remote = !isLocalDatabaseUrl(url);
+  const transactionPooler = remote && /:6543(\/|$)/.test(url);
   return postgres(url, {
     max: 4,
     idle_timeout: 20,
     connect_timeout: 10,
-    ...(isLocalDatabaseUrl(url) ? {} : { ssl: "require" as const }),
+    ...(remote ? { ssl: "require" as const } : {}),
+    ...(transactionPooler ? { prepare: false } : {}),
   });
 }
