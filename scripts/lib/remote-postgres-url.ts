@@ -30,7 +30,30 @@ function readLinkedProjectRef(): string | null {
   return readFileSync(path, "utf8").trim() || null;
 }
 
-/** Written by `supabase link` (password placeholder). Works when PAT is only in Keychain. */
+function applyPoolerUrlPassword(template: string, password: string): string | null {
+  const trimmed = template.trim();
+  if (!trimmed) return null;
+  const pass = encodeURIComponent(password);
+
+  if (trimmed.includes("[YOUR-PASSWORD]")) {
+    return trimmed.replaceAll("[YOUR-PASSWORD]", pass);
+  }
+
+  // Already contains user:password@
+  if (/^postgres(?:ql)?:\/\/[^:@/]+:[^@]+@/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Newer CLI: postgresql://postgres.<ref>@pooler.host:5432/postgres (no password segment)
+  const inject = trimmed.match(/^(postgres(?:ql)?:\/\/)([^@/]+)@(.+)$/i);
+  if (inject) {
+    return `${inject[1]}${inject[2]}:${pass}@${inject[3]}`;
+  }
+
+  return null;
+}
+
+/** Written by `supabase link`. Works when PAT is only in Keychain. */
 export function poolerDatabaseUrlFromLinkedProject(
   projectRef: string,
   password: string,
@@ -41,14 +64,8 @@ export function poolerDatabaseUrlFromLinkedProject(
   const poolerPath = resolve(process.cwd(), "supabase/.temp/pooler-url");
   if (!existsSync(poolerPath)) return null;
 
-  const template = readFileSync(poolerPath, "utf8").trim();
-  if (!template) return null;
-
-  const pass = encodeURIComponent(password);
-  if (template.includes("[YOUR-PASSWORD]")) {
-    return template.replaceAll("[YOUR-PASSWORD]", pass);
-  }
-  return null;
+  const template = readFileSync(poolerPath, "utf8");
+  return applyPoolerUrlPassword(template, password);
 }
 
 function fetchPoolerConfigsViaApi(projectRef: string, token: string): PoolerConfig[] | null {
