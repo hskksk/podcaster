@@ -32,6 +32,7 @@ flowchart TB
     GEM["Gemini アダプタ"]
     STA["Storage アダプタ"]
     POL["外部処理ポーラー（cron）"]
+    ESA["イベントストア アダプタ<br/>（追記・射影・購読の配信）"]
   end
   subgraph I["インフラ層"]
     direction LR
@@ -44,7 +45,10 @@ flowchart TB
   JOB -- "JobBackend ポート" --> PGA
   LLM -- "LlmGateway ポート" --> GEM
   BLOB -- "BlobStore ポート" --> STA
+  EV -- "EventStore ポート" --> ESA
+  PM -- "FeedPublisher ポート" --> STA
   POL --> EXT
+  ESA --> PGF
   PGA --> PGF
   GEM --> GAPI
   STA --> SST
@@ -56,7 +60,7 @@ flowchart TB
 |----|------|----------------------|
 | ドメイン | 何を作るか、何が揃えば次へ進むか、何を公開するか | 再試行回数、モデル名、pgflow の run・step |
 | 抽象ジョブ実行 | ジョブの依頼・試行・失敗分類・外部待ち・LLM 呼び出し記録・成果物 | エピソードの状態遷移、pgflow のテーブル |
-| アダプタ | Job を pgflow の run / task に、LlmGateway を Gemini SDK に変換する | 集約の不変条件 |
+| アダプタ | Job を pgflow の run / task に、LlmGateway を Gemini SDK に変換する。イベントの追記と配信、feed.xml の書き出し | 集約の不変条件 |
 | インフラ | キュー、ワーカー、API、オブジェクト保存 | 上の層すべて |
 
 境界をまたぐ参照は 3 本に限る。
@@ -119,12 +123,14 @@ flowchart TB
 |------|--------|------|
 | Article | `Article` + `ArticleRevision` | Git 上の記事（`content_path`）と、その本文の版（`content_sha`） |
 | Show | `Show` | 番組。タイトル・説明・カバー。`podcast_config` の `podcast.*` を移す |
-| Episode | `Episode` + `EpisodeRevision` + `EpisodePublication` | 購読者から見た 1 話。GUID は不変、中身は版で差し替える |
+| Episode | `Episode` + `EpisodeRevision` + `EpisodePublication` | 購読者から見た 1 話。記事 1 本に Episode は 1 件だけで、GUID は不変。中身は版で何度でも差し替える |
 | Production | `Production` | 1 回の制作依頼。範囲（全部・音声だけ・画像だけ）と設定スナップショットを持つ。ジョブの `correlation_id` |
 | Script / Audio / Artwork | 各ルート | 生成物。作成後は変更しない |
 | Feed | `FeedSnapshot` + `FeedItem` | ある時点の RSS の中身 |
 
 Script・Audio・Artwork は不変の生成物なので、それぞれ小さな集約にする。Episode 集約に含めると、音声だけの再生成でも Episode 全体をロックすることになる。
+
+ドメイン層の正本はイベントである（§3.5）。次の ER 図の表は、イベントから作る射影である。
 
 ### 3.2 ER 図
 
@@ -152,7 +158,7 @@ erDiagram
   Episode {
     uuid id PK
     uuid show_id FK
-    uuid article_id FK
+    uuid article_id FK, UK "1 記事 1 話"
     text guid UK
     timestamptz created_at
   }
@@ -161,7 +167,7 @@ erDiagram
     uuid episode_id FK
     uuid article_revision_id FK
     uuid base_revision_id FK "再生成で流用する版"
-    text scope "full | audio | artwork | republish"
+    text scope "full | audio | artwork"
     text trigger "ingest | manual"
     jsonb profile "設定スナップショット"
     timestamptz requested_at
@@ -214,7 +220,6 @@ erDiagram
   FeedSnapshot {
     uuid id PK
     uuid show_id FK
-    uuid produced_by_job_id FK
     uuid blob_id FK
     int item_count
     timestamptz built_at
@@ -253,6 +258,7 @@ erDiagram
 
 不変条件は次のとおりである。
 
+- 1 本の Article に Episode は高々 1 件である。同じ記事から作り直した結果は、すべてその Episode の `EpisodeRevision` になる。
 - `EpisodeRevision.audio_id` の Audio と `artwork_id` の Artwork は、同じ `script_id` から作られている。
 - 1 つの Episode で、公開中（`withdrawn_at is null`）の `EpisodePublication` は高々 1 件である。
 - `Production.scope = audio` のとき、Script は `base_revision_id` の版から流用し、新しく作らない。
@@ -264,8 +270,10 @@ erDiagram
 | 封筒の列 | 意味 |
 |----------|------|
 | `id` | イベント ID |
+| `position` | 全イベントを通した追記順（bigserial）。購読と射影の再生に使う |
 | `type` | 下表のイベント名 |
 | `stream_type` / `stream_id` | 対象集約（例: `production` / Production の ID） |
+| `stream_version` | 集約内の連番。`(stream_id, stream_version)` を一意にして楽観ロックにする |
 | `occurred_at` | 発生時刻 |
 | `actor` | `ingest`、`manual:<user>`、`system` など |
 | `correlation_id` | Production の ID。記事登録だけは null |
@@ -274,16 +282,19 @@ erDiagram
 
 | イベント | payload | 初案との対応 |
 |----------|---------|--------------|
-| `ArticleRegistered` | `article_id`、`article_revision_id`、`ingest_route` | 同名 |
-| `ProductionRequested` | `production_id`、`episode_id`、`scope`、`trigger` | `EpisodeCreateStarted` |
-| `ScriptWritten` | `script_id`、`job_id` | `ScriptCreated` |
-| `AudioRendered` | `audio_id`、`job_id` | `AudioCreated` |
-| `ArtworkPainted` | `artwork_id`、`job_id` | `ArtworkCreated` |
-| `EpisodeAssembled` | `episode_revision_id` | `EpisodeCreated` |
-| `EpisodePublished` | `publication_id`、`episode_revision_id` | 同名 |
+| `ArticleRegistered` | `article_id`、`article_revision_id`、`content_path`、`content_sha`、`title`、`ingest_route` | 同名 |
+| `EpisodeOpened` | `episode_id`、`article_id`、`show_id`、`guid` | 新規。その記事で最初の制作依頼のときだけ出す |
+| `ProductionRequested` | `production_id`、`episode_id`、`article_revision_id`、`base_revision_id`、`scope`、`trigger`、`profile` | `EpisodeCreateStarted` |
+| `ScriptWritten` | `script_id`、`job_id`、`title`、`description`、`content` | `ScriptCreated` |
+| `AudioRendered` | `audio_id`、`job_id`、`script_id`、`blob_id`、`duration_ms`、`casting` | `AudioCreated` |
+| `ArtworkPainted` | `artwork_id`、`job_id`、`script_id`、`blob_id` | `ArtworkCreated` |
+| `EpisodeAssembled` | `episode_revision_id`、`script_id`、`audio_id`、`artwork_id`、`title`、`description` | `EpisodeCreated` |
+| `EpisodePublished` | `publication_id`、`episode_revision_id`、`superseded_publication_id` | 同名 |
 | `EpisodeWithdrawn` | `publication_id`、`reason` | 新規 |
-| `FeedRebuilt` | `feed_snapshot_id`、`item_count` | 同名 |
+| `FeedRebuilt` | `feed_snapshot_id`、`blob_id`、`items`（版 ID・GUID・pubDate の並び） | 同名 |
 | `ProductionFailed` | `production_id`、`failed_job_id`、`reason` | 新規 |
+
+イベントは正本なので、payload には射影を作り直すのに要る事実をすべて入れる。ID だけを入れて中身を別表に置くと、その表が実質の正本になる。例外はバイト列で、音声・画像・feed.xml は Blob に置き、イベントは `blob_id` で参照する。Blob は上書きせず、内容ごとに新しいパスへ書く。
 
 `ScriptCreateStarted`・`AudioCreateStarted`・`ArtworkCreateStarted` はドメインイベントにしない。ジョブ層の `Job`（依頼）と `JobAttempt`（試行）がその役目を担う。
 
@@ -298,11 +309,11 @@ flowchart LR
   AuR --> EA[EpisodeAssembled]
   ArP --> EA
   EA --> EP[EpisodePublished]
-  EP -. "Job: rebuild_feed" .-> FR[FeedRebuilt]
+  EP --> FR[FeedRebuilt]
   PR -. "Job が最終的に失敗" .-> PF[ProductionFailed]
 ```
 
-点線はジョブ層を経由する区間、実線はドメイン内で同期的に決まる区間である。
+点線はジョブ層を経由する区間、実線はドメイン内で同期的に決まる区間である。記事の初回の制作では、`ProductionRequested` の直前に `EpisodeOpened` が入る。
 
 ### 3.4 ProductionPolicy（プロセスマネージャ）
 
@@ -315,11 +326,33 @@ flowchart LR
 | `ProductionRequested` | `scope = artwork` | 流用する Script で `paint_artwork` を依頼 |
 | `ScriptWritten` | — | `render_audio` を依頼。`profile.artwork.enabled` なら `paint_artwork` も依頼 |
 | `AudioRendered` / `ArtworkPainted` | 必要な生成物が揃った。足りない側は `base_revision_id` から流用 | `EpisodeRevision` を組み立て、`EpisodeAssembled` |
-| `EpisodeAssembled` | 公開方針が自動 | 旧版の公開を閉じ、`EpisodePublished` |
-| `EpisodePublished` / `EpisodeWithdrawn` | — | Show 単位で `rebuild_feed` を依頼（重複依頼はまとめる） |
+| `EpisodeAssembled` | 公開方針が自動 | 公開コマンドを実行する（下記） |
 | `JobFailed`（再試行の上限に達した） | — | `ProductionFailed` |
 
+公開と取り下げでは、RSS を同期的に作り直す。公開コマンドは次の順で動く。
+
+1. 公開後の Show の状態（公開中の版の一覧）をイベントから組み立て、feed.xml を生成する。
+2. `FeedPublisher` ポートで、feed.xml を新しいパス（`feeds/<feed_snapshot_id>.xml`）に書き、続けて公開用の `feed.xml` を上書きする。
+3. `EpisodePublished`（旧版があれば `superseded_publication_id` 付き）と `FeedRebuilt` を、1 トランザクションで追記する。
+
+2 で失敗したらイベントは追記せず、コマンドごと失敗させて再実行する。2 が成功して 3 が楽観ロックで失敗した場合は、`feed.xml` だけが先に進む。このときはコマンドを再実行すれば、最新の状態で feed.xml を書き直してからイベントを追記するので、両者は一致する。取り下げ（`EpisodeWithdrawn` + `FeedRebuilt`）も同じ手順で行う。
+
 `episodes.status`（`script_running` など）は、イベントとジョブの状態から作る読み取りモデルにする。書き込み側の状態としては持たない。
+
+### 3.5 イベントを正本にする
+
+ドメイン層の状態は、イベントの再生だけで復元できるようにする。ジョブ層は運用の記録なので、イベントソーシングにせず状態テーブルで持つ。
+
+| 仕組み | 方式 |
+|--------|------|
+| 追記 | コマンドは集約のストリームを読んで不変条件を確かめ、`stream_version` を指定して追記する。一意制約に当たったら読み直して再試行する |
+| 射影 | ER 図の表と `episodes.status` などの読み取りモデルは、追記と同じトランザクションで更新する（インライン射影）。壊れたら `position` 順に全イベントを再生して作り直す |
+| 購読 | ProductionPolicy は外部（ジョブ層・Storage）を呼ぶので、追記と同じトランザクションでは動かさない。購読者ごとに処理済みの `position` を記録し、そこから先のイベントを受け取る |
+| 冪等 | 購読は同じイベントを 2 度受け取りうる。ProductionPolicy が依頼するジョブの冪等キーに `causation_id` を含め、重複依頼を 1 件にまとめる |
+
+射影の表に書くのは追記処理だけである。アプリやスクリプトが射影を直接更新すると、再生で作り直したときに差分が消える。
+
+既存データ（`articles`・`episodes`・`scripts`・`audio_files`）は、移行時に同じ意味のイベントへ変換して追記する。変換したイベントの `actor` は `migration` にする。
 
 ---
 
@@ -329,7 +362,7 @@ flowchart LR
 
 | 概念 | 意味 |
 |------|------|
-| `JobType` | ジョブの種類。実行方式（`llm_sync`・`llm_batch`・`compute`）、入出力スキーマ、再試行方針、タイムアウトを宣言する |
+| `JobType` | ジョブの種類。実行方式（`llm_sync`・`llm_batch`）、入出力スキーマ、再試行方針、タイムアウトを宣言する |
 | `Job` | ドメインからの 1 件の依頼。冪等キーを持ち、成功すれば出力（生成物への参照）を返す |
 | `JobAttempt` | 1 回の実行。失敗は `retryable`・`terminal`・`rate_limited` に分類する |
 | `ExternalOperation` | 外部で長時間走る処理（Gemini Batch）。待っている間はジョブを `waiting_external` にし、試行回数を消費しない |
@@ -337,14 +370,15 @@ flowchart LR
 | `PromptTemplate` | 版付きのプロンプト。台本・TTS 指示・画像プロンプト |
 | `Blob` | 生成されたバイト列（音声・画像・feed.xml・LLM の生レスポンス）。ドメインからも参照する共有カーネル |
 
-ジョブ層の `JobType` は次の 4 種から始める。
+ジョブ層の `JobType` は次の 3 種である。RSS の再構築は公開コマンドの中で同期的に行うので、ジョブにしない（§3.4）。
 
 | JobType | 実行方式 | 入力 | 出力 |
 |---------|----------|------|------|
 | `write_script` | `llm_sync` | `article_revision_id`、profile | 台本・title・description |
 | `render_audio` | `llm_batch` | `script_id`、profile | 音声 Blob、duration、casting |
 | `paint_artwork` | `llm_sync` | `script_id`、profile | 画像 Blob |
-| `rebuild_feed` | `compute` | `show_id` | feed.xml Blob、FeedItem の一覧 |
+
+`render_audio` は台本をチャンクに分け、1 本の Batch（1 件の `ExternalOperation`）にまとめて投げる。チャンクはジョブに分けず、`LlmInvocation` として 1 件ずつ記録する。チャンク単位の再生成はしないので、失敗したらジョブ全体をやり直す。
 
 ジョブ層は「台本」や「エピソード」を知らない。出力は JSON と Blob 参照であり、ドメイン側の翻訳器（Anti-Corruption Layer）が `Script` 行と `ScriptWritten` に変換する。
 
@@ -354,7 +388,7 @@ flowchart LR
 erDiagram
   JobType {
     text name PK
-    text executor_kind "llm_sync | llm_batch | compute"
+    text executor_kind "llm_sync | llm_batch"
     jsonb input_schema
     jsonb output_schema
     jsonb retry_policy
@@ -452,9 +486,24 @@ stateDiagram-v2
 
 `waiting_external` を独立した状態にすると、現行の `craftEpisodeSubmit` → download-monitor → `craftEpisodeDownload` という 2 本のフローへの分割が不要になる。ポーラーは pgflow の外で `ExternalOperation.next_poll_at` を見て、完了したジョブだけを `running` に戻す。
 
-冪等キーは `job_type`・入力の参照 ID・profile のハッシュから作る。pgflow が同じ step を再実行しても、同じキーの Batch が投入済みならそれを再利用する。現行の `pendingAudio` の再利用をジョブ層の一般規則にしたものである。
+冪等キーは `job_type`・入力の参照 ID・profile のハッシュ・依頼元イベントの ID から作る。pgflow が同じ step を再実行しても、同じキーの Batch が投入済みならそれを再利用する。現行の `pendingAudio` の再利用をジョブ層の一般規則にしたものである。
 
-### 4.3 ドメインとの接続
+### 4.3 実行時間の上限
+
+1 回の試行には、次の上限がかかる。
+
+| 上限 | 値 | 出どころ |
+|------|----|----------|
+| Edge Function の実行時間（wall clock） | Free 150 秒、有料 400 秒 | Supabase Edge Runtime |
+| CPU 時間 | 1 リクエストあたり 2 秒（非同期 I/O の待ちは含まない） | Supabase Edge Runtime |
+| メモリ | 256 MB | Supabase Edge Runtime |
+| pgflow の step `timeout` | 現行 60〜180 秒 | pgmq の可視性タイムアウト。超えるとタスクが再配信され、別のワーカーが同じ試行を始める |
+
+音声合成そのものは Gemini Batch の側で走り、その間ジョブは `waiting_external` なので、合成時間は上の上限に入らない。上限に入るのは、Batch の投入と、完了後のチャンク取得・WAV の結合・Storage への書き込みである。現行の実装は、チャンクを `/tmp` の WAV ファイルに順に書き足し、ストリームでアップロードする。そのためメモリは音声の長さに比例して増えず、効くのは取得とアップロードにかかる wall clock である。24 kHz・16 bit・モノラルの WAV は 1 分あたり約 2.9 MB なので、30 分の回で約 86 MB を転送する。
+
+ジョブ層は `JobType.timeout_seconds` を、アダプタが受け入れられる上限（Edge Function の実行時間より短く、pgflow の `timeout` 以下）に収める。超える処理は `ExternalOperation` に切り出す。
+
+### 4.4 ドメインとの接続
 
 ```mermaid
 erDiagram
@@ -462,16 +511,17 @@ erDiagram
   Job ||--o| Script : yields
   Job ||--o| Audio : yields
   Job ||--o| Artwork : yields
-  Job ||--o| FeedSnapshot : yields
   Blob ||--o| Audio : stores
   Blob ||--o| Artwork : stores
   Blob ||--o| FeedSnapshot : stores
 ```
 
-ポートは次の 4 つにする。
+ポートは次のとおりにする。
 
 | ポート | 定義する層 | 実装する層 | 操作 |
 |--------|------------|------------|------|
+| `EventStore` | ドメイン | アダプタ（Postgres） | `read(streamId)`、`append(streamId, expectedVersion, events)`、`subscribe(name, fromPosition)` |
+| `FeedPublisher` | ドメイン | アダプタ（Storage） | `publish(feedSnapshotId, xml)` |
 | `JobRequester` | ドメイン | ジョブ層 | `request(jobType, input, correlationId, causationEventId)` |
 | `JobOutcomeHandler` | ドメイン | ドメイン（翻訳器） | `onSucceeded(job)`、`onFailed(job)` |
 | `JobBackend` | ジョブ層 | アダプタ（pgflow） | `dispatch(job)`、`cancel(job)` |
@@ -495,6 +545,8 @@ pgflow アダプタは `Job` 1 件を pgflow の run 1 件に対応させる。�
 
 一方で、工程の DAG が pgflow のフロー定義から消え、pgflow の画面で制作全体の流れを追えなくなる。追跡はドメインイベントの `correlation_id` で行う。DAG を pgflow に残す案（ジョブ層に `Workflow` を置き、アダプタがフロー定義にコンパイルする）も取れる。ただし、部分的な再生成や合流の条件がフロー定義側に残り、現行の `startFrom` 分岐と同じ問題が戻るので、本案では採らない。
 
+イベントストア アダプタは、Postgres の追記専用テーブル 1 本と、購読者ごとの処理済み位置の表で `EventStore` を実装する。追記とインライン射影は 1 トランザクションで行う。購読者への配信は、追記を合図にワーカーを起こし、ワーカーが処理済み位置から先を読む形にする。合図が落ちても、次の合図か定期実行で取りこぼしを拾える。
+
 Gemini アダプタは `LlmGateway` を実装する。チャンク分割した TTS の Batch 投入、ポーリング、WAV の取得と結合はここに置き、モデル名やエンドポイント（`gemini.api_root`）の解決もここで閉じる。
 
 ---
@@ -515,7 +567,6 @@ Gemini アダプタは `LlmGateway` を実装する。チャンク分割した T
 
 ## 7. 未決事項
 
-- `Article` と `Episode` を 1:0..1 に固定するか。同じ記事から別の切り口の回を作るなら 1:n にする。
-- `rebuild_feed` をジョブにするか、公開と同じトランザクションで同期的に作るか。数秒で終わるなら同期でもよいが、Storage への書き込み失敗を再試行したいならジョブにする。
-- イベント保存を正本（イベントソーシング）にするか、状態テーブルを正本にしてイベントを監査ログとして残すか。本案のエンティティは作成後に変更しないので、どちらでも成り立つ。
-- 長い台本で TTS のチャンクが多いとき、チャンクごとに Job を分ける（map）か、1 Job の中の `LlmInvocation` 群にとどめるか。部分的な再生成が要るなら前者にする。
+- 購読者への配信の合図を何で送るか。候補は、追記トリガーからの `pg_notify`、pgmq へのメッセージ、pg_cron による定期実行である。Edge Function は常駐しないので、`pg_notify` だけでは受け手がいないことがある。
+- 公開コマンドをどこで動かすか。ProductionPolicy の購読ワーカーの中で動かすか、手動公開と共通の Edge Function にするか。
+- 記事の本文を `ArticleRegistered` の payload に入れるか。正本の原則では入れるが、本文の正本は Git（`content_path` と `content_sha`）にもある。
