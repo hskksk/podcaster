@@ -18,7 +18,7 @@ export async function applyProjection(
           ${event.payload.show_id}::uuid,
           ${event.payload.title},
           ${event.payload.description},
-          ${event.payload.cover_blob_id}::uuid,
+          ${event.payload.cover_blob_id ?? null}::uuid,
           ${event.payload.publication_policy},
           ${event.occurred_at}::timestamptz
         )
@@ -82,7 +82,7 @@ export async function applyProjection(
           ${event.payload.production_id}::uuid,
           ${event.payload.episode_id}::uuid,
           ${event.payload.article_revision_id}::uuid,
-          ${event.payload.base_revision_id}::uuid,
+          ${event.payload.base_revision_id ?? null}::uuid,
           ${event.payload.scope},
           ${event.payload.trigger},
           ${JSON.stringify(event.payload.profile)}::jsonb,
@@ -113,7 +113,7 @@ export async function applyProjection(
           ${event.payload.script_id}::uuid,
           ${articleRevisionId}::uuid,
           ${productionId}::uuid,
-          ${event.payload.job_id}::uuid,
+          ${event.payload.job_id ?? null}::uuid,
           ${event.payload.title},
           ${event.payload.description},
           ${event.payload.content},
@@ -134,7 +134,7 @@ export async function applyProjection(
           ${event.payload.audio_id}::uuid,
           ${event.payload.script_id}::uuid,
           ${event.correlation_id}::uuid,
-          ${event.payload.job_id}::uuid,
+          ${event.payload.job_id ?? null}::uuid,
           ${event.payload.blob_id}::uuid,
           ${event.payload.duration_ms},
           ${JSON.stringify(event.payload.casting)}::jsonb,
@@ -153,7 +153,7 @@ export async function applyProjection(
           ${event.payload.artwork_id}::uuid,
           ${event.payload.script_id}::uuid,
           ${event.correlation_id}::uuid,
-          ${event.payload.job_id}::uuid,
+          ${event.payload.job_id ?? null}::uuid,
           ${event.payload.blob_id}::uuid,
           ${event.occurred_at}::timestamptz
         )
@@ -173,7 +173,7 @@ export async function applyProjection(
           ${event.correlation_id}::uuid,
           ${event.payload.script_id}::uuid,
           ${event.payload.audio_id}::uuid,
-          ${event.payload.artwork_id}::uuid,
+          ${event.payload.artwork_id ?? null}::uuid,
           ${event.payload.title},
           ${event.payload.description},
           ${event.occurred_at}::timestamptz
