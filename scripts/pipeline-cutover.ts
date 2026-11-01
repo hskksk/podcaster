@@ -5,8 +5,8 @@
  * Usage:
  *   TARGET=local pnpm pipeline:preflight
  *   TARGET=local pnpm pipeline:status
- *   TARGET=local pnpm pipeline:switch -- events --yes
- *   TARGET=local pnpm pipeline:switch -- legacy --yes
+ *   TARGET=local pnpm pipeline:switch events --yes
+ *   TARGET=local pnpm pipeline:switch legacy --yes
  */
 import dotenv from "dotenv";
 import { execSync } from "node:child_process";
@@ -19,8 +19,15 @@ import {
 
 dotenv.config({ path: ".env" });
 
-const args = process.argv.slice(2);
+const args = process.argv.slice(2).filter((a) => a !== "--");
 const command = args[0];
+
+function parseSwitchArgv(tokens: string[]): { target: PipelineMode | null; yes: boolean } {
+  const yes = tokens.includes("--yes");
+  const target =
+    tokens.find((a): a is PipelineMode => a === "events" || a === "legacy") ?? null;
+  return { target, yes };
+}
 
 async function preflight(): Promise<void> {
   const sql = connectPostgres();
@@ -113,10 +120,9 @@ async function status(): Promise<void> {
 }
 
 async function switchMode(): Promise<void> {
-  const target = args[1] as PipelineMode | undefined;
-  const yes = args.includes("--yes");
-  if (target !== "events" && target !== "legacy") {
-    console.error("Usage: pnpm pipeline:switch -- events|legacy [--yes]");
+  const { target, yes } = parseSwitchArgv(args.slice(1));
+  if (!target) {
+    console.error("Usage: pnpm pipeline:switch events|legacy [--yes]");
     process.exit(1);
   }
 
@@ -173,7 +179,7 @@ async function main(): Promise<void> {
       console.error(`Usage:
   pnpm pipeline:preflight
   pnpm pipeline:status
-  pnpm pipeline:switch -- events|legacy [--yes]`);
+  pnpm pipeline:switch events|legacy [--yes]`);
       process.exit(1);
   }
 }
