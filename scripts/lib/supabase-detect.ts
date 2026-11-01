@@ -71,3 +71,8 @@ export function detectServiceKey(projectRef: string): string {
   );
   process.exit(1);
 }
+
+/** Direct Postgres (port 5432). IPv6 問題がある場合は Dashboard の pooler URI を DATABASE_URL に。 */
+export function buildRemoteDirectDatabaseUrl(projectRef: string, password: string): string {
+  return `postgresql://postgres:${encodeURIComponent(password)}@db.${projectRef}.supabase.co:5432/postgres`;
+}

@@ -66,7 +66,7 @@ CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）�
 
 Production defaults to **`legacy`** until you switch. Runbook:
 
-1. **Remote:** `pnpm events:backfill` → `pnpm events:reconcile`
+1. **Remote:** `TARGET=remote pnpm events:backfill` → `pnpm events:reconcile` — set **`DATABASE_URL`** (Dashboard Connect URI) or **`SUPABASE_DB_PASSWORD`** in `.env` with `supabase login` / linked project (see `.env.example`).
 2. **Preflight:** `pnpm pipeline:preflight` (no `*_running` / `audio_generated` episodes; reconcile OK)
 3. **Deploy:** merge to `main` (CI deploy) or `pnpm deploy` — includes `domain-subscriber`, `publish`, `job-worker`
 4. **Switch:** `pnpm pipeline:switch -- events --yes` (sets `podcast_config.pipeline.mode`)
