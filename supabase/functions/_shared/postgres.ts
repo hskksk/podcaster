@@ -1,5 +1,5 @@
 import postgres from "npm:postgres@3.4.7";
-import type { Sql } from "../eventstore/postgres.ts";
+import type { Sql } from "../_adapters/eventstore/postgres.ts";
 
 let cached: postgres.Sql | null = null;
 

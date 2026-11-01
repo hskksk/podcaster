@@ -5,7 +5,7 @@ import {
   nextStreamVersion,
   readEvents,
   type Sql,
-} from "../eventstore/postgres.ts";
+} from "./postgres.ts";
 
 export const PRODUCTION_POLICY_SUBSCRIBER_ID = "production-policy";
 const LEASE_SECONDS = 45;
