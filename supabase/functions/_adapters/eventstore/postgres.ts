@@ -2,7 +2,7 @@ import type { DomainEvent, EventEnvelope, NewDomainEvent } from "../../_domain/e
 import { applyLegacyCompatProjection } from "../compat/legacy-projection.ts";
 import { applyProjection } from "./projections.ts";
 
-export type Sql = import("postgres").Sql;
+export type Sql = import("npm:postgres@3.4.7").Sql;
 
 export async function nextStreamVersion(sql: Sql, streamId: string): Promise<number> {
   const rows = await sql<Array<{ v: string }>>`
