@@ -117,7 +117,6 @@ async function main(): Promise<void> {
   async function tryAppend(event: NewDomainEvent): Promise<void> {
     try {
       const stored = await appendEvent(sql, event);
-      lastEventId = stored.id ?? null;
       appended++;
     } catch (err) {
       if (err instanceof StreamVersionConflictError) {
