@@ -1,0 +1,137 @@
+---
+title: "Fact-Based ModelingとData Vault — 業務の事実から分析用スキーマを組み立てる"
+publishedAt: 2026-11-01
+podcast: queued
+legacyFilename: 20261101_093448_fact_based_modeling_data_vault.md
+---
+
+# Fact-Based ModelingとData Vault — 業務の事実から分析用スキーマを組み立てる
+
+## TL;DR
+
+- **Fact-Based Modeling（FBM）**は、業務で扱う事実を関係と制約として記述する概念モデリングの考え方であり、Data Vaultの別名ではない。[1][2]
+- ORM・FCO-IM・FIMLなどの事実指向の言語では、具体例を自然言語で表し、ドメイン担当者と意味やルールを確かめてからモデルにする。[1][3]
+- Data VaultのHub・Link・Satelliteは、こうした概念モデルをデータウェアハウス向けに組み立てる一つの形であり、3NFやディメンショナルモデルも別の規則で導ける。[4][5]
+- 生成を自動化できても、何を事業上の概念・関係・イベントとするか、どの粒度やキーを採るかという判断は残る。[6][7]
+
+## 概要
+
+「Fact-Based Modeling」は、Data Vaultの標準用語や特定の製品名ではない。事実指向モデリング（Fact-Oriented Modeling、FOM）を指す広い呼び方として使われ、Object-Role Modeling（ORM）、NIAM、FCO-IMなど、近縁だが同一ではない手法や言語を含む。[1][2][3]
+
+Data Vaultと結び付けて語られる理由は、両者がデータを小さな事実や関係へ分解し、複雑な業務情報を整理する点にある。FBMは業務の意味を表す概念モデルを作り、Data Vaultは分析基盤で履歴や複数ソースの情報を統合するための構造を定める。したがって両者は競合するモデルではなく、前者から後者を導く、あるいはその間を明示的な変換規則でつなぐ関係にある。[4][5]
+
+このレポートでは、FBMの主要な考え方、Data Vaultとの接点、モデル生成の実例と境界を扱う。対象は、ORM・FCO-IM・FIMLの公開資料とData Vaultの実務資料である。特定ツールの導入比較や、個別製品の性能検証は扱わない。
+
+## 事実を先に記述するモデル
+
+### 「顧客が注文した」から始める
+
+顧客管理画面や売上表を眺めると、顧客名・注文番号・商品名のように、列や項目が先に目に入る。ところが、列をどの「エンティティ」の属性にするか、どの関係を別表にするかは、モデルを描く人の判断に左右される。同じ情報でも、顧客の属性としての住所と、顧客が注文を行うという関係では、変更の意味も履歴の残し方も異なる。
+
+FBMでは、まず「顧客C-17が注文O-42を行った」「注文O-42には商品P-9が数量3個含まれる」のように、業務担当者が実例として確認できる事実を文にする。次に、複数の例から「顧客は注文を行う」「注文は商品を数量付きで含む」といった**事実型（fact type）**を取り出す。どの組み合わせが一意か、事実が必須か、値の範囲は何かといった制約も明示する。[1][3]
+
+「注文番号は注文を一意に識別する」「注文は顧客によって行われる」という表現は、抽象的な箱や属性名より、業務担当者が検証しやすい。ORMは事実を自然言語の読みと図の両方で表し、例となるデータを当てはめて、事実型や制約が正しいかを点検する手順を示す。[1][8]
+
+### エンティティと属性を最初から固定しない
+
+「属性なし（attribute-free）」は、最終的なデータベースに属性を持たせないという意味ではない。概念モデルの出発点で、エンティティ／属性の区分を前提にせず、すべてを対象間の関係や一項目の事実として表す考え方を指す。たとえば「顧客がメールアドレスを持つ」も、顧客とメールアドレスの関係として記述する。後段の設計で、この関係を列やテーブルにまとめられる。[1][2]
+
+この分解には、業務上の意味を明示し、ルールを例と文章で確認しやすくする利点がある。一方で、基礎モデルはエンティティ／属性でまとめた図より要素が多くなりやすい。Terry HalpinのORM概説は、属性を使わない図が大きくなる点を認め、要約表示や変換後のER図を使い分ける考え方を説明している。[1][8]
+
+## FOMの系譜と表現の違い
+
+Fact-Oriented Modelingは単一の記法ではなく、事実を中心に据える複数の方法のまとまりである。Factilの概説はその起源を1970年代の欧州に置き、ORM・NIAM・FCO-IMなどを関連する手法として紹介する。Terry Halpinの歴史解説では、1970年代の関係モデル研究からNIAMやORMへ展開した経緯がまとめられている。[2][9]
+
+| 手法・言語 | 特徴 | Data Vaultとの接点 |
+|---|---|---|
+| ORM | 事実型を文章と図で表し、制約を例の集まりとともに検証する概念モデリング手法 | Data Vaultを含む複数の実装モデルへ写像する前段として使える。[1][4] |
+| NIAM | 自然言語を用いた情報分析の系譜。FCO-IMの源流の一つ | FCO-IMなどの背景となる事実指向の方法論。[3][9] |
+| FCO-IM | Fully Communication Oriented Information Modeling。業務で交わされる事実表現を情報モデルに結び付ける | 2015年の書籍は、FCO-IMからData Vaultや他のモデルへの変換を紹介する。[3][10] |
+| FIML / CQL | 事実型、制約、例を近自然言語のテキストで記述する言語群 | ActiveFactsのコンポーザーやFactilの資料に、Data Vaultスキーマ生成例がある。[4][5] |
+
+この分類で注意したいのは、用語の範囲が資料によって揺れることだ。ORMの資料は「fact-oriented modeling」を用い、Factilは自社の説明で「Fact-Based Modeling」を使う。どちらも事実型・自然言語・制約を重視するが、各手法の記法やモデルの構成、生成できる成果物まで同じとは限らない。[1][2][4]
+
+## 概念モデルからData Vaultへ
+
+### 二つのモデルが解く問題
+
+Data Vaultは、データウェアハウスで複数ソースのデータを統合し、履歴を保持しやすくするリレーショナルなモデリング方式である。基本構造は、業務上の識別子を置くHub、業務上の関係を表すLink、HubまたはLinkの属性や履歴を保持するSatelliteから成る。[4][6]
+
+FBMのモデルは、顧客・注文・商品の間でどの事実が成立し、どんな制約があるかを細かく記録する。Data Vaultはその意味を維持したまま、その一部をHub・Link・Satelliteへまとめる。Factilの変換例では、概念モデルをいったん3NFスキーマへ構成し、参照表・Hub・Linkへ分類したあと、HubやLinkに従属する記述情報からSatelliteを作る。日時やレコードソースも追加する。[4]
+
+```mermaid
+flowchart LR
+  A[具体的な業務事実] --> B[事実型と制約]
+  B --> C[業務担当者と検証]
+  C --> D{構成規則を選ぶ}
+  D --> E[Data Vault: Hub / Link / Satellite]
+  D --> F[3NFなどのリレーショナルモデル]
+  D --> G[ディメンショナルモデル]
+  E --> H[分析用マート]
+```
+
+この図はFactil資料が示す構成方向を単純化したもので、すべてのFBM言語が同一の変換手順を持つという意味ではない。事実型と制約を保持した概念モデルから複数の論理・物理形式を作れることが、接続の要点である。[4][5]
+
+### 同じ注文データを分けて表す
+
+注文の例では、顧客・注文・商品を識別するキーがHubの候補になる。「顧客が注文を行う」は両者を結ぶLinkになり、「注文に商品が数量付きで含まれる」は注文行の粒度を表す関係になりうる。変更する商品説明や注文行の数量・価格などは、設計判断に応じてHubまたはLinkに接続するSatelliteへ置かれる。
+
+ただし、「注文行」を独立した業務概念としてHubにするか、注文と商品を結ぶLinkの従属要素として表すかは、例文から一意には決まらない。注文番号だけで注文行を一意にできるか、同じ商品が複数行に現れるか、分析者が注文単位と明細単位のどちらで集計するかを確認する必要がある。Factilの生成規則でも、モデル要素の独立性・識別関係や明示的な注記がテーブル分割に影響する。[4]
+
+## 生成例で分かること、分からないこと
+
+### ツールで変換規則を実行する
+
+Factilは、ORMまたは自社のFIMLで記述した業務モデルをData Vault SQLへ変換する例を公開している。Factilの資料では、エンティティ型への注記でSatelliteとしての保持・独立テーブル化・参照データ扱いを指示する。ActiveFactsの公開コードにも、事実ベースのモデルをリレーショナル形式やData Vaultなどの複合スキーマへ写す構成器がある。[4][5]
+
+FCO-IMの書籍紹介も、FCO-IMモデルからER・UML・ディメンショナルモデル・Data Vaultなどを導く考え方を扱うと記している。したがって「Fact-Based Modelingとともに使われるData Vault」は、概念モデルから分析基盤の物理構造を導くモデル駆動型の設計として理解できる。[3][10]
+
+### 自動化しても業務判断は残る
+
+コード生成が自動でも、入力モデルの意味が自動で決まるわけではない。具体例を集める、用語の解釈をそろえる、関係の粒度を定める、キー候補を選ぶ、履歴や属性をどのSatelliteに置くか決める工程は、データ担当者と業務担当者の共同作業である。[1][4][7]
+
+Microsoft Tech Communityに掲載されたDynamics 365の例では、商談（Opportunity）を分析上の事実データとみなし、商談と明細を別のLinkで表す。一方、引用データ（Quote）は業務オブジェクトと判断してHubとSatelliteに分ける。著者らは、商談や見積をどちらに分類するかは、ソースの意味・利用者の期待・情報マートの要件に依存し、両方のモデルが成立しうると述べる。[7]
+
+これは、FBMからData Vaultへの写像が単純な名詞置換ではないことを示す。FBMは候補となる事実と制約を可視化し、Data Vaultの規則は保存構造を整える。しかし「この情報をイベントとして扱うか」「このキーは企業横断で同じ対象を指すか」「どの粒度で再利用するか」は、ツールだけで決められない。
+
+## 利点と注意点
+
+| 観点 | 得られるもの | 注意点 |
+|---|---|---|
+| 業務との対話 | 例と自然言語の読みで、業務担当者が意味やルールを確かめられる。[1][3] | 用語が部署ごとに違えば、事実表現の合意に時間がかかる。 |
+| 意味の保持 | 属性へまとめる前の関係・役割・制約を記録できる。[1][4] | 要素数が増え、図や一覧を要約しないと全体像をつかみにくい。[8] |
+| モデルの再利用 | 同じ概念モデルからData Vault・3NF・ディメンショナルモデルなどを生成できる。[3][4][5] | 変換規則の適用範囲は言語・ツールごとに異なり、対象モデルで表現しにくい制約もある。[11] |
+| 変更への対応 | 概念と物理表現を分け、業務側の意味を維持したまま複数の出力を作る構想をとれる。[4][5] | Data Vaultの設計判断やロード処理は別途必要で、生成結果がそのまま分析利用に適するとは限らない。[6][7] |
+
+限界を評価するときは、FBMそのものの記述能力、モデルを作る人の技能、変換ツールの制約、Data Vaultの実装規則を分ける必要がある。HalpinのORM概説は、図の大きさを利点の裏返しとして挙げる。FCO-IM関連の専門資料は、概念モデルの情報を出力先で表現できない場合に、変換がそのままでは行えないことを指摘する。[8][11]
+
+また、FactilのData Vault生成資料や製品紹介は、この接続を実演する一次資料であると同時に、ツール提供者による説明でもある。一般にどの組織でも同じ費用削減や品質向上が得られると裏付ける独立した比較試験は、今回確認した資料には見当たらなかった。公開情報から強く言えるのは、概念モデルからData Vaultを組み立てる変換規則や実装例が存在することまでである。[4][5]
+
+## 次に解くべき3つの問い
+
+1. **既存のData Vault案件に、事実型モデルをどこから導入すべきか。** 既存スキーマからの逆生成・新規要件の分析・データカタログの整備では、必要な変換や導入コストが異なるためである。
+2. **業務事実の粒度とData VaultのLink粒度を、どうレビューすれば再現可能か。** 注文・注文行・イベントのように複数の妥当な分解があり、後段の集計結果や履歴の解釈に影響するためである。
+3. **モデル生成は変更対応や品質をどの程度改善するのか。** 公開資料には方法と製品例がある一方、手作業のData Vault設計との独立した効果比較は限定的で、実案件で測るべき指標が残るためである。
+
+## まとめ
+
+Fact-Based Modelingは、業務の具体的な事実を関係・制約として表す概念設計の系譜である。Data Vaultと組み合わせると、業務上の意味を明示したモデルから、Hub・Link・Satelliteを備える分析用スキーマを導く道筋を作れる。生成ツールは変換の反復を助けるが、事実の粒度・キー・業務上の解釈を決める責任までは引き受けない。
+
+## 付録: 出典一覧
+
+1. Terry Halpin, “Object-Role Modeling: an overview,” ORM.net. ORMの定義、事実型、例を使ったモデル構築・制約検証の手順、および図の大きさに関する説明。https://www.orm.net/pdf/ORMwhitePaper.pdf
+2. Factil, “Introduction To the Fact-based Information Modeling Language (FIML).” FBMの説明、1970年代以降の系譜、ORM・CQL・FIMLの関係。ベンダーによる概説。https://www.factil.io/resources/whitepapers/introduction-to-fiml/
+3. FCO-IM, “FCO-IM” および “Books.” FCO-IMが事実指向モデリングの一種であること、NIAMとの系譜、FCO-IM書籍がData Vault等への変換を扱うこと。https://www.fco-im.nl/ 、https://www.fco-im.nl/books
+4. Factil, “Fact Based Modeling and Data Vault.” Data VaultのHub・Link・Satellite、FIMLのモデル要素、3NF構成からData Vaultスキーマを生成する手順と注記例。ベンダーによる変換提案。https://www.factil.io/resources/whitepapers/fact-based-modeling-and-data-vault/
+5. Clifford Heath, “ActiveFacts::Compositions,” GitHub. 事実ベースのモデルからリレーショナル形式・Data Vaultなどの複合スキーマを作るOSSライブラリの説明。https://github.com/cjheath/activefacts-compositions
+6. DataVaultAlliance, “Data Vault 2.0: An Introduction.” Data Vaultの背景、Hubにビジネスキー、Satelliteに属性、Linkに取引・関係を置く基本説明。Data Vault普及団体による資料。https://datavaultalliance.com/engineering/data-vault-2-0-an-introduction/
+7. Michael Olschimke, Markus Lewandowski, Bibhush Nepal, “Modelling Microsoft Dynamics 365 Data Using Data Vault 2.0,” Microsoft Tech Community, 2024-02-15. ビジネスキー候補の確認、ソース分析、商談と明細の粒度、事実データと業務オブジェクトの選択例。https://techcommunity.microsoft.com/blog/analyticsonazure/modelling-microsoft-dynamics-365-data-using-data-vault-2-0/4058196
+8. Terry Halpin, “ORM 2 Graphical Notation,” ORM Technical Report ORM2-01. 属性なしモデルの表現力と図の情報量のトレードオフ。https://www.orm.net/pdf/ORM2_TechReport1.pdf
+9. Terry Halpin, “Object Role Modeling (ORM/NIAM),” Encyclopedia of Database Systems. ORMの定義とFOMの歴史的な発展をまとめた解説。https://www.orm.net/pdf/orm-emm98.pdf
+10. Jan Pieter Zwart, Marco Engelbart, Stijn Hoppenbrouwers, *Fact Oriented Modeling with FCO-IM: Capturing Business Semantics in Data Models with Fully Communication Oriented Information Modeling*, Technics Publications, 2015. FCO-IMの手順と他モデルへの変換を扱う書籍。https://repository.ubn.ru.nl/handle/2066/147271
+11. Stephan Volkmann, “Introduction to Fact-Oriented Modeling,” TEDAMOH, 2024-07-23. FOMおよびFCO-IM・ORMの変換と、出力モデル側の表現制約についての技術解説。https://tedamoh.com/en/blog/data-modeling/53-fom/313-introduction-to-fact-oriented-modeling
+
+### 調査から外した枝
+
+- FCO-IMとData Vaultの変換アルゴリズム詳細は書籍やツールの個別資料に分散している。紹介資料では全変換規則や再現可能な評価データまでは公開されていないため、ここでは一般的な生成原理に限った。
+- Data VaultのRaw Vault・Business Vault・情報マートの各設計は隣接テーマとして重要だが、本稿ではFact-Based Modelingとの接点に必要な範囲だけ触れた。

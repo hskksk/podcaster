@@ -1,0 +1,168 @@
+version: 1
+sourceSha256: "e222de8914e87ba9d4bdae867c9e570f70c85c1c7c8fa4a5a9138cfb16e29a3f"
+nodes:
+  i2:
+    title: "事実指向はData Vaultそのものではない"
+    subtitle: "FBMは業務の事実を関係や制約で表す概念モデリングであり、Data Vaultの別称や単独の製品規格を指す言葉ではない。"
+  i3:
+    title: "事実例を言葉と制約で検証する"
+    subtitle: "ORM・FCO-IM・FIMLなどでは、業務上の具体例を文にし、専門家と意味や制約を確かめてから抽象的なモデルにまとめる。"
+  i4:
+    title: "概念モデルは複数の形へ展開できる"
+    subtitle: "Hub・Link・Satelliteは概念モデルの変換先の一つであり、同じ意味情報から3NFやディメンショナルモデルを組み立てる道もある。"
+  p38:
+    title: "FBMは特定規格ではなく系譜"
+    subtitle: "Fact-Based Modelingは特定の製品名ではなく事実指向の手法を広く指す呼称で、ORM・NIAM・FCO-IMなど異なる言語や方法を含む。"
+  p39:
+    title: "概念の意味と保存構造を分担する"
+    subtitle: "FBMは業務で成立する事実と制約を記述し、Data Vaultは履歴や複数ソースを扱う保存形式を定めるため、両者は変換規則で接続する。"
+  p40:
+    title: "調査範囲をData Vault接続に絞る"
+    subtitle: "ORM・FCO-IM・FIMLの公開資料とData Vault実務資料を対象に、概念と生成例を整理し、製品比較や性能測定は今回の範囲から外す。"
+  s8:
+    title: "列の設計より業務文から出発する"
+    subtitle: "列や属性を先に分類する代わりに、顧客が注文したなどの具体的事実を文にし、反復例から事実型や識別・必須条件を整理する。"
+  s9:
+    title: "属性を使わず関係から記述する"
+    subtitle: "属性なしとは最終DBから列をなくす意味ではない。概念モデルでエンティティと属性を先に固定せず、事実として関係を表す。"
+  p41:
+    title: "欧州の事実指向研究から複数手法へ"
+    subtitle: "1970年代の欧州に起源を持つと紹介されるFOMは、NIAMやORM、FCO-IMなどへ展開した系譜であり、共通の単一記法ではない。"
+  p42:
+    title: "表：主要な言語とData Vault接続"
+    subtitle: "ORMは例と制約の検証、NIAMは情報分析の系譜、FCO-IMはコミュニケーションの記録、FIMLやCQLは近自然言語の記述に力点がある。"
+  p43:
+    title: "同じ系譜でも用語と機能は異なる"
+    subtitle: "ORMの資料はFact-Oriented Modeling、FactilはFact-Based Modelingを用いる。事実型を重視する点は近いが、記法や生成機能は同じではない。"
+  s12:
+    title: "Hub・Link・Satelliteへ組み替える"
+    subtitle: "事実型モデルは業務上の意味と制約を保持し、選んだ構成規則に沿って識別子をHub、関係をLink、記述属性をSatelliteへまとめる。"
+  s13:
+    title: "注文行のキーと粒度が分割を決める"
+    subtitle: "注文と明細の区分は例文だけでは確定しない。同一商品の複数行や一意キー、注文単位・明細単位の分析要件を確認して構造を選ぶ。"
+  s15:
+    title: "FactilとActiveFactsに生成例がある"
+    subtitle: "FactilはFIMLやORMからのSQL生成例を示し、ActiveFactsにはData Vaultを含む複合スキーマ向け構成器が公開されている。"
+  s16:
+    title: "イベント判定やキー選びは人が担う"
+    subtitle: "生成を始める前に、業務用語、事実の粒度、企業横断のビジネスキー、Satelliteの分割といった判断を担当者間でそろえる必要がある。"
+  p44:
+    title: "表：FBMの効果と導入上の注意"
+    subtitle: "自然言語の検証や意味の保持、複数モデルへの再利用は利点だが、合意形成の負担、図の複雑さ、変換規則の適用範囲に注意する。"
+  p45:
+    title: "能力・習熟・変換先の限界を分ける"
+    subtitle: "手法の表現力、モデル作成者の経験、ツールの機能、出力先モデルの制約を区別しないと、どの段階で情報が失われたか判定できない。"
+  p46:
+    title: "公開例は変換可能性を示すにとどまる"
+    subtitle: "ベンダー資料やOSSは生成方式が実在する根拠になるが、全組織で同じ費用削減や品質向上が起きるという独立評価までは示していない。"
+  i19:
+    title: "導入位置は既存モデルで変わる"
+    subtitle: "既存Vaultの逆生成、新規業務要件のモデル化、データカタログ整備のどこを起点にするかで、必要な変換や導入コストが変わる。"
+  i20:
+    title: "業務事実とLinkの粒度をそろえる"
+    subtitle: "注文・注文行・イベントをどの単位で捉えるかは、Linkのキーや履歴、後段の集計を左右するため、再現可能なレビュー方法が問われる。"
+  i21:
+    title: "生成効果を独立評価で測る"
+    subtitle: "モデル生成の変更対応や品質への効果は公開例だけでは確定できず、手作業との比較や実案件で測る指標を決める必要がある。"
+  ch22:
+    title: "設計判断は自動化の外側に残る"
+    subtitle: "事実の粒度・キー・業務上の意味を確かめる作業は人が担う。生成ツールは合意済みの意味を構造へ写す反復を助ける。"
+  i25:
+    title: "FactilはFIMLとCQLの関係を解説"
+    subtitle: "Factilの概説はFact-Based Modelingの特徴とFIMLのモデル要素を説明し、CQLやORMとの関係、生成ツールの背景を整理している。"
+  i26:
+    title: "FCO-IMの公式資料と書籍案内"
+    subtitle: "FCO-IM公式サイトは手法をFOMの一つと位置づけ、書籍一覧はFCO-IMからData Vaultなどへ変換するモデル設計の扱いを示す。"
+  i27:
+    title: "Factilが示すData Vault生成手順"
+    subtitle: "Factilの白書はHub・Link・Satelliteの構成とFIMLの注記、概念モデルを中間スキーマからData Vaultへ変換する手順を記載する。"
+  i28:
+    title: "ActiveFactsの構成器はOSSで公開"
+    subtitle: "GitHub上のActiveFacts::Compositionsは、事実ベースのモデルとリレーショナル・Data Vaultなどの複合スキーマを結ぶ機能を説明する。"
+  i30:
+    title: "Dynamics 365事例で粒度を具体化"
+    subtitle: "Microsoft Tech Communityの実例は、ビジネスキー確認やソース分析に加え、Opportunityと明細を別Linkにする設計判断を示す。"
+  i31:
+    title: "ORM図の表現力と大きさのトレードオフ"
+    subtitle: "ORM 2の技術報告は、属性なし図が豊かな制約を表す一方で図面積を使う課題を扱い、表示の要約や抽象化を検討している。"
+  i32:
+    title: "ORMとNIAMの歴史をたどる解説"
+    subtitle: "Halpinの技術解説は、事実型を基礎に据えるORMの性質と、NIAMを含む事実指向モデリングの歴史的な展開をまとめている。"
+  i33:
+    title: "FCO-IMの方法と変換を扱う専門書"
+    subtitle: "Zwart・Engelbart・Hoppenbrouwersの2015年書籍は、FCO-IMのモデリング手順と、関係・ER・UML・Data Vaultなどへの変換を扱う。"
+  i34:
+    title: "変換制約を論じる技術解説"
+    subtitle: "TEDAMOHの記事は、FCO-IMやORMのモデル変換を概説し、出力先の論理・物理モデルで複雑な制約を表しきれない場合を説明する。"
+  i36:
+    title: "生成アルゴリズムの詳細は別資料に分散"
+    subtitle: "FCO-IMとData Vaultの全変換規則や再現可能な評価データは、今回確認した紹介資料だけでは揃わず、一般的な生成原理に絞った。"
+  i37:
+    title: "Data Vaultの全レイヤ設計は対象外"
+    subtitle: "Raw Vault・Business Vault・情報マートの個別設計には広い論点があるため、ここではFBMからData Vaultへつなぐ理解に必要な範囲に限った。"
+links:
+  - from: ch1
+    to: ch6
+    type: flow
+  - from: ch6
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch10
+    type: flow
+  - from: ch10
+    to: ch11
+    type: flow
+  - from: ch11
+    to: ch14
+    type: flow
+  - from: ch14
+    to: ch17
+    type: flow
+  - from: ch17
+    to: ch18
+    type: flow
+  - from: ch18
+    to: ch22
+    type: flow
+  - from: ch22
+    to: ch23
+    type: flow
+  - from: i2
+    to: p38
+    type: evidence
+    label: "定義の整理"
+  - from: s8
+    to: s9
+    type: seq
+    label: "関係を分解"
+  - from: p41
+    to: p42
+    type: evidence
+    label: "系譜の内訳"
+  - from: s12
+    to: s13
+    type: apply
+    label: "注文例に適用"
+  - from: s15
+    to: s16
+    type: contrast
+    label: "生成と判断"
+  - from: s16
+    to: p45
+    type: cause
+    label: "制約の所在"
+  - from: p46
+    to: i21
+    type: rec
+    label: "次の検証課題"
+chapterFlow:
+  - "用語の範囲を定める"
+  - "具体例から事実型へ"
+  - "近縁手法の違いを整理"
+  - "概念モデルを保存形へ"
+  - "生成規則を実例で見る"
+  - "効果と限界を評価"
+  - "残る問いを絞る"
+  - "設計上の結論を確認"
+  - "根拠をたどる"
