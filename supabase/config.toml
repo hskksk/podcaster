@@ -407,3 +407,13 @@ entrypoint = "./functions/craft-episode-download-worker/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/download-monitor/index.ts"
+
+[functions.job-worker]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/job-worker/index.ts"
+
+[functions.external-operation-poller]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/external-operation-poller/index.ts"

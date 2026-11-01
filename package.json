@@ -17,7 +17,7 @@
         "seed:config:local": "TARGET=local npx tsx scripts/seed-config.ts",
         "seed:config:remote": "npx tsx scripts/seed-config.ts",
         "pgflow:install": "npx pgflow@latest install",
-        "pgflow:compile": "npx pgflow@latest compile craftEpisodeSubmit && npx pgflow@latest compile craftEpisodeDownload",
+        "pgflow:compile": "npx pgflow@latest compile craftEpisodeSubmit && npx pgflow@latest compile craftEpisodeDownload && npx pgflow@latest compile runJob",
         "deploy": "npx tsx scripts/deploy.ts",
         "deploy:local": "TARGET=local npx tsx scripts/deploy.ts",
         "deploy:remote": "npx tsx scripts/deploy.ts",
@@ -45,7 +45,8 @@
         "treemap:validate": "tsx scripts/article-treemap/validate_treemap.ts",
         "events:backfill": "tsx scripts/events-backfill.ts",
         "events:replay": "tsx scripts/events-replay.ts",
-        "events:reconcile": "tsx scripts/events-reconcile.ts"
+        "events:reconcile": "tsx scripts/events-reconcile.ts",
+        "job:run": "tsx scripts/job-run.ts"
     },
     "devDependencies": {
         "@hskksk/markdoc-react": "^0.6.2",
