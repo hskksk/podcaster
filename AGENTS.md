@@ -69,11 +69,11 @@ Production defaults to **`legacy`** until you switch. Runbook:
 1. **Remote:** `TARGET=remote pnpm events:backfill` → `pnpm events:reconcile` — set **`DATABASE_URL`** (Dashboard Connect URI) or **`SUPABASE_DB_PASSWORD`** in `.env` with `supabase login` / linked project (see `.env.example`).
 2. **Preflight:** `pnpm pipeline:preflight` (no `*_running` / `audio_generated` episodes; reconcile OK)
 3. **Deploy:** merge to `main` (CI deploy) or `pnpm deploy` — includes `domain-subscriber`, `publish`, `job-worker`
-4. **Switch:** `pnpm pipeline:switch -- events --yes` (sets `podcast_config.pipeline.mode`)
+4. **Switch:** `pnpm pipeline:switch events --yes` (sets `podcast_config.pipeline.mode`)
 5. **Smoke:** ingest one article → check `feed.xml`, `jobs.job_attempts`, `podcast.event_subscription_failures`
 6. **Monitor:** `pnpm pipeline:status` after each ingest
 
-**Rollback:** `pnpm pipeline:switch -- legacy --yes` (ingest returns to `craftEpisodeSubmit`; run `events:backfill` before switching to events again).
+**Rollback:** `pnpm pipeline:switch legacy --yes` (ingest returns to `craftEpisodeSubmit`; run `events:backfill` before switching to events again).
 
 **Local events dev:** `.env` needs `DATABASE_URL` with `host.docker.internal` (see `.env.example`). `pnpm seed:config` does not overwrite an existing `pipeline.mode`.
 
