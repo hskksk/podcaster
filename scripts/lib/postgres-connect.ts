@@ -1,5 +1,9 @@
 import { execSync } from "node:child_process";
 import postgres from "postgres";
+import {
+  fetchSessionPoolerDatabaseUrl,
+  isLocalDatabaseUrl,
+} from "./remote-postgres-url.ts";
 import { buildRemoteDirectDatabaseUrl, detectProjectRef } from "./supabase-detect.ts";
 
 const DEFAULT_LOCAL_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
@@ -12,7 +16,17 @@ export function resolveDatabaseUrl(): string {
     const password = process.env.SUPABASE_DB_PASSWORD;
     if (password) {
       const ref = detectProjectRef();
-      console.log(`Using direct Postgres for project ${ref} (SUPABASE_DB_PASSWORD + CLI ref).`);
+      const poolerUrl = fetchSessionPoolerDatabaseUrl(ref, password);
+      if (poolerUrl) {
+        console.log(
+          `Using session pooler for project ${ref} (SUPABASE_DB_PASSWORD + Management API).`,
+        );
+        return poolerUrl;
+      }
+      console.log(
+        `Using direct Postgres for project ${ref} (SUPABASE_DB_PASSWORD + CLI ref, SSL). ` +
+          "Pooler auto-detect failed — set DATABASE_URL from Dashboard Connect (Session pooler) if this errors.",
+      );
       return buildRemoteDirectDatabaseUrl(ref, password);
     }
     console.error(
@@ -43,5 +57,6 @@ export function connectPostgres(): postgres.Sql {
     max: 4,
     idle_timeout: 20,
     connect_timeout: 10,
+    ...(isLocalDatabaseUrl(url) ? {} : { ssl: "require" as const }),
   });
 }
