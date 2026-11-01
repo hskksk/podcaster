@@ -22,24 +22,27 @@ async function main(): Promise<void> {
     failed = true;
   }
 
-  const [{ legacy_episodes }] = await sql<[{ legacy_episodes: string }]>`
-    select count(*)::text as legacy_episodes from episodes
+  const [{ legacy_episode_articles }] = await sql<[{ legacy_episode_articles: string }]>`
+    select count(distinct article_id)::text as legacy_episode_articles
+    from episodes
+    where article_id is not null
   `;
   const [{ proj_episodes }] = await sql<[{ proj_episodes: string }]>`
     select count(*)::text as proj_episodes from podcast.episodes
   `;
-  if (legacy_episodes !== proj_episodes) {
-    console.error(`episodes count: legacy=${legacy_episodes} projection=${proj_episodes}`);
+  if (legacy_episode_articles !== proj_episodes) {
+    console.error(
+      `episodes count: legacy distinct articles=${legacy_episode_articles} projection=${proj_episodes}`,
+    );
     failed = true;
   }
 
   const guidMismatches = await sql<
     Array<{ id: string; legacy_guid: string; proj_guid: string }>
   >`
-    select e.id, e.id as legacy_guid, pe.guid as proj_guid
-    from episodes e
-    join podcast.episodes pe on pe.id = e.id
-    where pe.guid <> e.id::text
+    select pe.id, pe.id as legacy_guid, pe.guid as proj_guid
+    from podcast.episodes pe
+    where pe.guid <> pe.id::text
   `;
   if (guidMismatches.length > 0) {
     console.error("GUID mismatches:", guidMismatches);
@@ -64,19 +67,29 @@ async function main(): Promise<void> {
   }
 
   const pubMismatches = await sql<
-    Array<{ id: string; legacy_at: Date | null; proj_at: Date | null }>
+    Array<{ article_id: string; legacy_at: Date | null; proj_at: Date | null }>
   >`
+    with legacy_pub as (
+      select article_id, max(published_at) as published_at
+      from episodes
+      where status = 'published' and article_id is not null
+      group by article_id
+    ),
+    proj_pub as (
+      select pe.article_id, max(ep.published_at) as published_at
+      from podcast.episodes pe
+      join podcast.episode_revisions er on er.episode_id = pe.id
+      join podcast.episode_publications ep on ep.episode_revision_id = er.id
+      where ep.withdrawn_at is null
+      group by pe.article_id
+    )
     select
-      e.id,
-      e.published_at as legacy_at,
-      ep.published_at as proj_at
-    from episodes e
-    join podcast.episode_revisions er on er.episode_id = e.id
-    join podcast.episode_publications ep on ep.episode_revision_id = er.id
-    where e.status = 'published'
-      and (
-        e.published_at is distinct from ep.published_at
-      )
+      coalesce(l.article_id, p.article_id) as article_id,
+      l.published_at as legacy_at,
+      p.published_at as proj_at
+    from legacy_pub l
+    full join proj_pub p on p.article_id = l.article_id
+    where l.published_at is distinct from p.published_at
   `;
   if (pubMismatches.length > 0) {
     console.error("published_at mismatches:", pubMismatches);
