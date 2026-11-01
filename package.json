@@ -42,7 +42,10 @@
         "markdoc:check-config": "pnpm --filter @podcaster/web markdoc:check-config",
         "markdoc:check-juken": "pnpm --filter @podcaster/web markdoc:check-juken",
         "treemap:extract": "tsx scripts/article-treemap/extract_nodes.ts",
-        "treemap:validate": "tsx scripts/article-treemap/validate_treemap.ts"
+        "treemap:validate": "tsx scripts/article-treemap/validate_treemap.ts",
+        "events:backfill": "tsx scripts/events-backfill.ts",
+        "events:replay": "tsx scripts/events-replay.ts",
+        "events:reconcile": "tsx scripts/events-reconcile.ts"
     },
     "devDependencies": {
         "@hskksk/markdoc-react": "^0.6.2",
@@ -68,6 +71,7 @@
         "marked": "^15.0.12",
         "marked-terminal": "^7.3.0",
         "open": "^11.0.0",
+        "postgres": "^3.4.7",
         "react": "^19.2.5",
         "remark-math": "^6.0.0",
         "remark-parse": "^11.0.0",
