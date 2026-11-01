@@ -38,6 +38,103 @@ function storagePathFromPublicUrl(url: string | null | undefined): string | null
   return decodeURIComponent(url.slice(idx + marker.length));
 }
 
+/** Legacy episodes.image_url is usually a bucket path, not a public URL. */
+function resolveEpisodeImageStoragePath(raw: string | null | undefined): string | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+  const fromPublic = storagePathFromPublicUrl(trimmed);
+  if (fromPublic) return fromPublic;
+  if (/^https?:\/\//i.test(trimmed)) return null;
+  return trimmed.replace(/^\/+/, "");
+}
+
+function mimeTypeForStoragePath(path: string): string {
+  const lower = path.toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  return "image/jpeg";
+}
+
+async function artworkStorageCandidates(
+  sql: ReturnType<typeof connectPostgres>,
+  legacyEp: EpisodeRow,
+): Promise<Array<{ path: string; occurredAt: Date }>> {
+  const candidates: Array<{ path: string; occurredAt: Date }> = [];
+  const push = (path: string, occurredAt: Date) => {
+    if (candidates.some((c) => c.path === path)) return;
+    candidates.push({ path, occurredAt });
+  };
+
+  const fromUrl = resolveEpisodeImageStoragePath(legacyEp.image_url);
+  if (fromUrl) push(fromUrl, legacyEp.created_at);
+
+  const logs = await sql<Array<{ processed_at: Date }>>`
+    select processed_at
+    from processing_logs
+    where episode_id = ${legacyEp.id}::uuid
+      and queue_name = 'generateEpisodeImage'
+      and status = 'success'
+    order by processed_at desc
+    limit 1
+  `;
+  const log = logs[0];
+  if (log) {
+    for (const ext of ["jpg", "jpeg", "png", "webp"]) {
+      push(`episodes/${legacyEp.id}/cover.${ext}`, log.processed_at);
+    }
+  }
+
+  return candidates;
+}
+
+async function appendArtworkIfStored(
+  ctx: {
+    sql: ReturnType<typeof connectPostgres>;
+    storage: { from: (bucket: string) => { download: (path: string) => Promise<{ data: Blob | null; error: unknown }> } };
+    tryAppend: (event: NewDomainEvent) => Promise<void>;
+    legacyEp: EpisodeRow;
+    scriptId: string;
+    productionId: string;
+  },
+): Promise<string | null> {
+  const candidates = await artworkStorageCandidates(ctx.sql, ctx.legacyEp);
+  for (const candidate of candidates) {
+    try {
+      const { data, error } = await ctx.storage.from("podcast").download(candidate.path);
+      if (error || !data) continue;
+      const bytes = new Uint8Array(await data.arrayBuffer());
+      const blobId = randomUUID();
+      const artworkId = randomUUID();
+      await registerBlob(ctx.sql, {
+        id: blobId,
+        storage_path: candidate.path,
+        mime_type: mimeTypeForStoragePath(candidate.path),
+        byte_size: bytes.byteLength,
+      });
+      await ctx.tryAppend({
+        type: "ArtworkPainted",
+        stream_type: "production",
+        stream_id: ctx.productionId,
+        stream_version: await nextStreamVersion(ctx.sql, ctx.productionId),
+        occurred_at: candidate.occurredAt.toISOString(),
+        actor: "migration",
+        correlation_id: ctx.productionId,
+        payload: {
+          artwork_id: artworkId,
+          job_id: null,
+          script_id: ctx.scriptId,
+          blob_id: blobId,
+        },
+      });
+      return artworkId;
+    } catch {
+      // try next candidate path
+    }
+  }
+  return null;
+}
+
 type EpisodeRow = {
   id: string;
   article_id: string | null;
@@ -212,31 +309,32 @@ async function main(): Promise<void> {
       where stream_type = 'article' and stream_id = ${article.id}::uuid and stream_version = 1
       limit 1
     `;
-    if (migrated.length > 0) continue;
+    const articleAlreadyRegistered = migrated.length > 0;
 
     const contentSha = article.content_sha ?? sha256(article.content);
     const articleRevisionId = article.id;
-    const occurredAt = article.created_at.toISOString();
 
-    await tryAppend({
-      type: "ArticleRegistered",
-      stream_type: "article",
-      stream_id: article.id,
-      stream_version: 1,
-      occurred_at: occurredAt,
-      actor: "migration",
-      correlation_id: null,
-      payload: {
-        article_id: article.id,
-        article_revision_id: articleRevisionId,
-        content_path: article.content_path,
-        content_sha: contentSha,
-        title: article.title,
-        content: article.content,
-        ingest_route: article.ingest_route,
-        mem_note_id: article.mem_note_id,
-      },
-    });
+    if (!articleAlreadyRegistered) {
+      await tryAppend({
+        type: "ArticleRegistered",
+        stream_type: "article",
+        stream_id: article.id,
+        stream_version: 1,
+        occurred_at: article.created_at.toISOString(),
+        actor: "migration",
+        correlation_id: null,
+        payload: {
+          article_id: article.id,
+          article_revision_id: articleRevisionId,
+          content_path: article.content_path,
+          content_sha: contentSha,
+          title: article.title,
+          content: article.content,
+          ingest_route: article.ingest_route,
+          mem_note_id: article.mem_note_id,
+        },
+      });
+    }
 
     const legacyEpisodes = episodesByArticle.get(article.id);
     if (!legacyEpisodes?.length) continue;
@@ -310,6 +408,40 @@ async function main(): Promise<void> {
       if (!script) continue;
 
       const scriptId = script.id;
+
+      const existingRevision = await sql<
+        Array<{ revision_id: string; production_id: string; artwork_id: string | null }>
+      >`
+        select er.id as revision_id, er.production_id, er.artwork_id
+        from podcast.episode_revisions er
+        where er.episode_id = ${canonicalEpisodeId}::uuid
+          and er.script_id = ${scriptId}::uuid
+        limit 1
+      `;
+      if (existingRevision[0]) {
+        const row = existingRevision[0];
+        revisionByEpisode.set(legacyEp.id, row.revision_id);
+        revisionByEpisode.set(canonicalEpisodeId, row.revision_id);
+        if (!row.artwork_id) {
+          const artworkId = await appendArtworkIfStored({
+            sql,
+            storage,
+            tryAppend,
+            legacyEp,
+            scriptId,
+            productionId: row.production_id,
+          });
+          if (artworkId) {
+            await sql`
+              update podcast.episode_revisions
+              set artwork_id = ${artworkId}::uuid
+              where id = ${row.revision_id}::uuid
+            `;
+          }
+        }
+        continue;
+      }
+
       await tryAppend({
         type: "ScriptWritten",
         stream_type: "production",
@@ -374,41 +506,14 @@ async function main(): Promise<void> {
         // skip audio event if storage missing
       }
 
-      let artworkId: string | null = null;
-      const imagePath = storagePathFromPublicUrl(legacyEp.image_url);
-      if (imagePath) {
-        try {
-          const { data, error } = await storage.from("podcast").download(imagePath);
-          if (!error && data) {
-            const bytes = new Uint8Array(await data.arrayBuffer());
-            const blobId = randomUUID();
-            artworkId = randomUUID();
-            await registerBlob(sql, {
-              id: blobId,
-              storage_path: imagePath,
-              mime_type: "image/jpeg",
-              byte_size: bytes.byteLength,
-            });
-            await tryAppend({
-              type: "ArtworkPainted",
-              stream_type: "production",
-              stream_id: productionId,
-              stream_version: streamProduction++,
-              occurred_at: audio.created_at.toISOString(),
-              actor: "migration",
-              correlation_id: productionId,
-              payload: {
-                artwork_id: artworkId,
-                job_id: null,
-                script_id: scriptId,
-                blob_id: blobId,
-              },
-            });
-          }
-        } catch {
-          artworkId = null;
-        }
-      }
+      let artworkId: string | null = await appendArtworkIfStored({
+        sql,
+        storage,
+        tryAppend,
+        legacyEp,
+        scriptId,
+        productionId,
+      });
 
       const audioRows = await sql<Array<{ id: string }>>`
         select id from podcast.audios where production_id = ${productionId}::uuid limit 1
