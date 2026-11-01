@@ -1,0 +1,6 @@
+export {
+  DEFAULT_GEMINI_API_PATH,
+  DEFAULT_GEMINI_API_ROOT,
+  resolveGeminiApiEndpoint,
+  resolveGeminiApiRoot,
+} from "../../_shared/gemini-endpoint.ts";

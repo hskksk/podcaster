@@ -14,7 +14,8 @@
   "include": [
     "scripts/**/*.ts",
     "supabase/functions/_domain/**/*.ts",
-    "supabase/functions/_adapters/**/*.ts"
+    "supabase/functions/_adapters/**/*.ts",
+    "supabase/functions/_jobs/**/*.ts"
   ],
   "exclude": ["supabase/functions", "node_modules", "dist"]
 }
