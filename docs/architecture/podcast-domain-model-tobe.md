@@ -7,6 +7,8 @@
 3. ジョブ基盤アダプタ層（pgflow・Gemini・Storage への変換）
 4. インフラ層（pgflow / pgmq / Postgres、Gemini API、Supabase Storage、Edge Runtime）
 
+現行実装からの移行手順は [podcast-domain-model-migration.md](./podcast-domain-model-migration.md) にある。
+
 ---
 
 ## 1. レイヤー構成
@@ -141,6 +143,7 @@ erDiagram
     text title
     text description
     uuid cover_blob_id FK
+    text publication_policy "auto | manual"
   }
   Article {
     uuid id PK
@@ -283,6 +286,7 @@ erDiagram
 
 | イベント | payload | 初案との対応 |
 |----------|---------|--------------|
+| `ShowConfigured` | `show_id`、`title`、`description`、`cover_blob_id`、`publication_policy` | 新規。番組情報の作成と変更 |
 | `ArticleRegistered` | `article_id`、`article_revision_id`、`content_path`、`content_sha`、`title`、`content`、`ingest_route` | 同名 |
 | `EpisodeOpened` | `episode_id`、`article_id`、`show_id`、`guid` | 新規。その記事で最初の制作依頼のときだけ出す |
 | `ProductionRequested` | `production_id`、`episode_id`、`article_revision_id`、`base_revision_id`、`scope`、`trigger`、`profile` | `EpisodeCreateStarted` |
