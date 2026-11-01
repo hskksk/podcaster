@@ -1,7 +1,17 @@
 import type { DomainEvent, EventEnvelope, NewDomainEvent } from "../../_domain/events.ts";
+import { applyLegacyCompatProjection } from "../compat/legacy-projection.ts";
 import { applyProjection } from "./projections.ts";
 
 export type Sql = import("postgres").Sql;
+
+export async function nextStreamVersion(sql: Sql, streamId: string): Promise<number> {
+  const rows = await sql<Array<{ v: string }>>`
+    select coalesce(max(stream_version), 0)::text as v
+    from podcast.domain_events
+    where stream_id = ${streamId}::uuid
+  `;
+  return Number(rows[0]?.v ?? 0) + 1;
+}
 
 export interface ReadEventsOptions {
   fromPosition?: number;
@@ -121,6 +131,7 @@ export async function appendEvent(
       };
 
       await applyProjection(tx, stored as DomainEvent);
+      await applyLegacyCompatProjection(tx, stored as DomainEvent);
       return stored;
     });
   } catch (err) {
