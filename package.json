@@ -46,7 +46,8 @@
         "events:backfill": "tsx scripts/events-backfill.ts",
         "events:replay": "tsx scripts/events-replay.ts",
         "events:reconcile": "tsx scripts/events-reconcile.ts",
-        "job:run": "tsx scripts/job-run.ts"
+        "job:run": "tsx scripts/job-run.ts",
+        "poll:external-ops": "tsx scripts/poll-external-ops.ts"
     },
     "devDependencies": {
         "@hskksk/markdoc-react": "^0.6.2",

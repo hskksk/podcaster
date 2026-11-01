@@ -34,6 +34,13 @@ type AudioMockConfig = {
   };
 };
 
+type ImageMockConfig = {
+  delayMs?: number;
+  mimeType?: string;
+  /** Base64-encoded image bytes (default: tiny JPEG). */
+  base64Data?: string;
+};
+
 type GeminiMockConfig = {
   enabled?: boolean;
   server?: {
@@ -45,6 +52,7 @@ type GeminiMockConfig = {
   };
   script?: ScriptMockConfig;
   audio?: AudioMockConfig;
+  image?: ImageMockConfig;
 };
 
 type DevConfig = {
@@ -257,6 +265,26 @@ function extractMetadata(body: Record<string, unknown>): Record<string, string> 
 
 function matchesGenerateContentPath(pathname: string): boolean {
   return /\/models\/[^/]+:generateContent$/.test(pathname);
+}
+
+function matchesInteractionsCreatePath(pathname: string): boolean {
+  return /^\/(v1|v1beta)\/interactions$/.test(pathname);
+}
+
+/** Valid 1×1 JPEG (matches Gemini image response_format). */
+const DEFAULT_MOCK_JPEG_BASE64 =
+  "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8A0f/Z";
+
+function createImageInteractionResponse(imageMock: ImageMockConfig): Record<string, unknown> {
+  const mimeType = imageMock.mimeType ?? "image/jpeg";
+  return {
+    id: `mock-interaction-${randomUUID()}`,
+    status: "completed",
+    output_image: {
+      mime_type: mimeType,
+      data: imageMock.base64Data ?? DEFAULT_MOCK_JPEG_BASE64,
+    },
+  };
 }
 
 function matchesBatchCreatePath(pathname: string): boolean {
@@ -608,6 +636,14 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     const scriptMock = config.geminiMock?.script ?? {};
     await sleep(scriptMock.delayMs ?? 0);
     writeJson(res, 200, createScriptResponse(scriptMock));
+    return;
+  }
+
+  if (method === "POST" && matchesInteractionsCreatePath(pathname)) {
+    if (!isEnabled(config)) return writeDisabledError(res);
+    const imageMock = config.geminiMock?.image ?? {};
+    await sleep(imageMock.delayMs ?? 100);
+    writeJson(res, 200, createImageInteractionResponse(imageMock));
     return;
   }
 

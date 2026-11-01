@@ -37,3 +37,7 @@ durationSeconds = 300
 promptTokenCount = 240
 candidatesTokenCount = 420
 totalTokenCount = 660
+
+[geminiMock.image]
+delayMs = 100
+mimeType = "image/jpeg"

@@ -4,7 +4,7 @@ import {
   getBatchStatus,
   submitBatchTts,
 } from "../../../../packages/gemini-batch-tts/src/index.ts";
-import { resolveGeminiApiRoot } from "../../_adapters/gemini/endpoint.ts";
+import { resolveGeminiApiRoot, normalizeGeminiApiRootForEdge } from "../../_adapters/gemini/endpoint.ts";
 import {
   buildTtsPrompt,
   DEFAULT_TTS_CHUNK_MAX_CHARS,
@@ -50,9 +50,10 @@ export function createGeminiBatchTtsClient(params: {
   apiRoot: string;
   model: string;
 }): GeminiBatchTtsClient {
+  const apiRoot = normalizeGeminiApiRootForEdge(params.apiRoot.replace(/\/+$/, ""));
   return {
-    apiKey: resolveGeminiApiKey(params.apiRoot),
-    apiRoot: params.apiRoot,
+    apiKey: resolveGeminiApiKey(apiRoot),
+    apiRoot,
     apiVersion: DEFAULT_GEMINI_API_VERSION,
     model: params.model,
   };

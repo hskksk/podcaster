@@ -1,5 +1,6 @@
 import { createSupabaseClient } from "../_shared/db.ts";
 import { startRunJobFlow } from "../_adapters/pgflow.ts";
+import { resolveGeminiApiRoot } from "../_adapters/gemini/endpoint.ts";
 import {
   AUDIO_BATCH_FAILURE_STATES,
   AUDIO_BATCH_PENDING_STATES,
@@ -7,10 +8,15 @@ import {
   pollBatch,
 } from "../_jobs/handlers/audio-batch.ts";
 import { loadConfig } from "../_shared/config.ts";
+import type { PodcastConfigMap } from "../_shared/types.ts";
 
 const MAX_OPS = 20;
 
 Deno.serve(async (req) => {
+  if (req.method === "GET") {
+    return Response.json({ ok: true, service: "external-operation-poller" });
+  }
+
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -19,6 +25,7 @@ Deno.serve(async (req) => {
   const startedAt = Date.now();
   const cfg = await loadConfig();
   const ttsModel = String(cfg["tts.model"] || "gemini-3.1-flash-tts-preview");
+  const defaultApiRoot = resolveGeminiApiRoot(cfg as PodcastConfigMap);
 
   const { data: ops, error: listErr } = await db
     .schema("jobs")
@@ -57,7 +64,7 @@ Deno.serve(async (req) => {
 
       const batchMeta = ((job.output as Record<string, unknown> | null)?.batch ??
         {}) as Record<string, unknown>;
-      const apiRoot = String(batchMeta.apiRoot ?? cfg["gemini.api_root"] ?? "");
+      const apiRoot = String(batchMeta.apiRoot ?? cfg["gemini.api_root"] ?? defaultApiRoot);
 
       const { state } = await pollBatch(row.operation_name, apiRoot, ttsModel);
       polled++;
