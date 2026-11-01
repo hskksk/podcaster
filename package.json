@@ -48,7 +48,10 @@
         "events:reconcile": "tsx scripts/events-reconcile.ts",
         "job:run": "tsx scripts/job-run.ts",
         "poll:external-ops": "tsx scripts/poll-external-ops.ts",
-        "test:domain": "deno test -A supabase/functions/_domain/"
+        "test:domain": "deno test -A supabase/functions/_domain/",
+        "pipeline:preflight": "tsx scripts/pipeline-cutover.ts preflight",
+        "pipeline:status": "tsx scripts/pipeline-cutover.ts status",
+        "pipeline:switch": "tsx scripts/pipeline-cutover.ts switch"
     },
     "devDependencies": {
         "@hskksk/markdoc-react": "^0.6.2",

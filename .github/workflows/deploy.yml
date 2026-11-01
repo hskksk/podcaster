@@ -7,6 +7,7 @@ on:
       - "supabase/**"
       - "scripts/deploy.ts"
       - "scripts/seed-config.ts"
+      - "scripts/pipeline-cutover.ts"
       - "scripts/lib/**"
       - "config.toml"
       - "package.json"

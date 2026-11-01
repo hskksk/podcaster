@@ -23,6 +23,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parse as parseToml } from "smol-toml";
+import { connectPostgres } from "./lib/postgres-connect.ts";
+import {
+  appendManualProductionRequested,
+  latestAssembledRevisionId,
+} from "./lib/request-production.ts";
+import { readPipelineMode } from "./lib/pipeline-mode.ts";
 import {
   detectLocalStatus,
   detectProjectRef,
@@ -500,7 +506,118 @@ async function startFlowRecord(
   console.log(`Flow started (${label}): ${JSON.stringify(input)}`);
 }
 
+async function wakeDomainSubscriber(): Promise<void> {
+  const target = process.env.TARGET ?? "remote";
+  let url: string;
+  let key: string;
+  if (target === "local") {
+    const local = detectLocalStatus();
+    url = `${local.apiUrl}/functions/v1/domain-subscriber`;
+    key = local.serviceKey;
+  } else {
+    const ref = detectProjectRef();
+    key = detectServiceKey(ref);
+    url = `https://${ref}.supabase.co/functions/v1/domain-subscriber`;
+  }
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  if (!res.ok) {
+    console.warn(`domain-subscriber wake returned ${res.status}: ${await res.text()}`);
+  }
+}
+
+async function publishLatestRevision(episodeId: string, yes: boolean): Promise<void> {
+  const sql = connectPostgres();
+  const revisionId = await latestAssembledRevisionId(sql, episodeId);
+  await sql.end();
+  if (!revisionId) {
+    console.error("No assembled episode revision to publish.");
+    process.exit(1);
+  }
+  if (!yes) {
+    const ok = await confirm(`POST publish for episode ${episodeId} revision ${revisionId}?`);
+    if (!ok) { console.log("Aborted."); process.exit(0); }
+  }
+  const target = process.env.TARGET ?? "remote";
+  let url: string;
+  let key: string;
+  if (target === "local") {
+    const local = detectLocalStatus();
+    url = `${local.apiUrl}/functions/v1/publish`;
+    key = local.serviceKey;
+  } else {
+    const ref = detectProjectRef();
+    key = detectServiceKey(ref);
+    url = `https://${ref}.supabase.co/functions/v1/publish`;
+  }
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action: "publish",
+      episode_id: episodeId,
+      episode_revision_id: revisionId,
+    }),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    console.error(`publish failed ${res.status}: ${text}`);
+    process.exit(1);
+  }
+  console.log(`Publish OK: ${text}`);
+}
+
+async function requeueEventsProduction(
+  episodeId: string,
+  scope: "full" | "audio" | "artwork",
+  label: string,
+  yes: boolean,
+): Promise<void> {
+  if (!yes) {
+    const ok = await confirm(`Append ProductionRequested scope=${scope} for ${episodeId}?`);
+    if (!ok) { console.log("Aborted."); process.exit(0); }
+  }
+  const sql = connectPostgres();
+  const productionId = await appendManualProductionRequested(sql, { episodeId, scope });
+  await sql.end();
+  console.log(`ProductionRequested ${productionId} (${label})`);
+  await wakeDomainSubscriber();
+}
+
 async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> {
+  const sql = connectPostgres();
+  const mode = await readPipelineMode(sql);
+  await sql.end();
+
+  if (mode === "events") {
+    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    if (error) { console.error("Error:", error.message); process.exit(1); }
+    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
+    console.log(`Episode: ${data.title} (${shortId(data.id)}) [pipeline.mode=events]`);
+
+    if (sub === "script" || sub === "regenerate-script") {
+      await requeueEventsProduction(id, "full", sub, yes);
+      return;
+    }
+    if (sub === "audio" || sub === "regenerate-audio") {
+      await requeueEventsProduction(id, "audio", sub, yes);
+      return;
+    }
+    if (sub === "regenerate-image") {
+      await requeueEventsProduction(id, "artwork", sub, yes);
+      return;
+    }
+    if (sub === "rss") {
+      await publishLatestRevision(id, yes);
+      return;
+    }
+  }
+
   if (sub === "script") {
     const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
