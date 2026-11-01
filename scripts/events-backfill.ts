@@ -20,7 +20,7 @@ import {
   buildProductionProfile,
   loadPodcastConfigMap,
 } from "./lib/production-profile.ts";
-import { detectLocalStatus } from "./lib/supabase-detect.ts";
+import { detectLocalStatus, detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
 import { wavDurationMs } from "./lib/wav-duration.ts";
 
 dotenv.config({ path: ".env" });
@@ -78,8 +78,10 @@ async function main(): Promise<void> {
     storageUrl = local.apiUrl;
     serviceKey = local.serviceKey;
   } else {
-    storageUrl = process.env.SUPABASE_URL ?? "";
-    serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+    const projectRef = detectProjectRef();
+    storageUrl = process.env.SUPABASE_URL ?? `https://${projectRef}.supabase.co`;
+    serviceKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ?? detectServiceKey(projectRef);
   }
   const storage = createClient(storageUrl, serviceKey, {
     auth: { persistSession: false },
