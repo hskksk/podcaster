@@ -62,6 +62,23 @@ CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）�
 - **Gemini mock from Edge Functions**: In `config.toml`, set `[gemini] api_root = "http://host.docker.internal:8099"` (not `127.0.0.1`) before `TARGET=local pnpm seed:config`. Edge runs in Docker and cannot reach the host loopback.
 - **`external-operation-poller` curl returns `name resolution failed`**: Kong could not reach the function worker — restart `pnpm functions:serve:mock` after pulling new functions. Verify with `curl -s http://127.0.0.1:54331/functions/v1/external-operation-poller` (GET → `{"ok":true,...}`). To poll batches locally, use `pnpm poll:external-ops` (SQL → Kong inside Docker) instead of curling from the host.
 
+### Phase 4 — production cutover (`pipeline.mode`)
+
+Production defaults to **`legacy`** until you switch. Runbook:
+
+1. **Remote:** `pnpm events:backfill` → `pnpm events:reconcile`
+2. **Preflight:** `pnpm pipeline:preflight` (no `*_running` / `audio_generated` episodes; reconcile OK)
+3. **Deploy:** merge to `main` (CI deploy) or `pnpm deploy` — includes `domain-subscriber`, `publish`, `job-worker`
+4. **Switch:** `pnpm pipeline:switch -- events --yes` (sets `podcast_config.pipeline.mode`)
+5. **Smoke:** ingest one article → check `feed.xml`, `jobs.job_attempts`, `podcast.event_subscription_failures`
+6. **Monitor:** `pnpm pipeline:status` after each ingest
+
+**Rollback:** `pnpm pipeline:switch -- legacy --yes` (ingest returns to `craftEpisodeSubmit`; run `events:backfill` before switching to events again).
+
+**Local events dev:** `.env` needs `DATABASE_URL` with `host.docker.internal` (see `.env.example`). `pnpm seed:config` does not overwrite an existing `pipeline.mode`.
+
+**CLI requeue:** When `pipeline.mode=events`, `pnpm cli requeue …` appends `ProductionRequested` or calls `publish` instead of starting legacy pgflow flows.
+
 ### Commands quick reference
 
 See `CLAUDE.md` for the full list. Key commands:
