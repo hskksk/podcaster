@@ -37,6 +37,9 @@ export async function handleProductionPolicyEvent(
   const production = await loadProduction(sql, productionId);
   if (!production) return;
 
+  // Backfill replay: historical rows are already projected; do not enqueue jobs again.
+  if (production.trigger === "migration") return;
+
   const ctx = await buildPolicyContext(sql, production, event);
   const commands = commandsForEvent(event, ctx);
 
