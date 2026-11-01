@@ -1,0 +1,230 @@
+version: 1
+sourceSha256: c552b1576ea3d547642a3ddc3ce12c85196cb3f6bbf0d990c842a5e9d95ec0ef
+nodes:
+  i2:
+    title: DDDとData Vaultは分析と業務を分担
+    subtitle: DDDは意味と境界を定め、Data Vaultは異なるソースのキー・関係・履歴を分析用に統合する。両者は相互補完の関係にある。
+  i3:
+    title: 業務モデルは設計判断の材料
+    subtitle: DDDのドメインモデルとコンテキストは、Data VaultのビジネスキーやHub・Link・Satelliteを決める際に業務上の意味を確認する手掛かりになる。
+  i4:
+    title: HubやLinkをDDDの概念と同一視しない
+    subtitle: HubはEntityやAggregateではなく、LinkはContext Mapでもない。両者の間に機械的な一対一変換はなく、それぞれが担う意味と責務を分ける必要がある。
+  i5:
+    title: 監査性の代わりに運用負荷が増える
+    subtitle: Data Vaultは変更への対応と履歴を重視するため、クエリや運用が複雑になる。利用者に直接見せず、Business Vaultや情報マートを用意する。
+  p44:
+    title: 同じ顧客でも部門で意味が変わる
+    subtitle: 営業の見込み客・請求先・サポートの問い合わせ者は、同じ顧客と呼ばれても属性やルールが異なる。分析統合ではその意味を確かめる必要がある。
+  p45:
+    title: DDDは意味、Data Vaultは履歴を担う
+    subtitle: DDDは業務用語とモデルの適用範囲を定める。Data Vaultは複数ソースのビジネスキー・関係・属性履歴を分析用に記録し、両者は異なる課題を受け持つ。
+  p46:
+    title: 役割を分けて分析へつなぐ
+    subtitle: DDDは何を同じ意味で扱うかを明らかにし、Data Vaultはソース由来の事実と履歴を分析向けに残す。この異なる役割を意識すると、両者の接点が見える。
+  p47:
+    title: 調査は接点と混同しやすい境界に絞る
+    subtitle: 指定記事を起点に2020〜2026年の一次資料・実務者記事・批判記事を照合した。Data Vaultのロード実装やハッシュキー選定は今回の対象外とする。
+  p48:
+    title: 業務理解から利用者向けデータまでをつなぐ
+    subtitle: DDDで意味と所有境界を探り、Data Vaultで分析用の事実と履歴を統合し、情報マートで利用者の問いに合う形へ整える。DDDモデルの機械的な写しではない。
+  p49:
+    title: 図：DDDから分析データ提供への流れ
+    subtitle: 業務知識からコンテキスト、Raw Vault、Business Vault、情報マートへ進む典型的な責務分担を示す。コンテキストと各層は一対一対応ではない。
+  p50:
+    title: Data Vaultの各層は利用目的で分かれる
+    subtitle: Raw Vaultはソース由来の記録、Business Vaultは必要な業務ルール、情報マートは利用者向けの形を担う。DDD採用や特定の物理モデルは必須ではない。
+  p51:
+    title: DDDは業務知識をモデルと言葉にする
+    subtitle: 業務専門家と開発者がモデルを探り、共通語彙を明示した境界内でソフトウェアを設計する。ユビキタス言語はチームの活動とソフトウェアを結ぶ。
+  p52:
+    title: Bounded Contextはモデルの適用範囲
+    subtitle: 営業と請求が同じ顧客を異なる意味で扱うように、一つの企業用語を全社共通モデルへ無理に統合しない。Context Mapはモデル間の依存や関係を記録する。
+  p53:
+    title: 業務境界はDBスキーマと同じではない
+    subtitle: Bounded Contextはモデルや業務能力から定める。データベースのスキーマや組織図と必ず一致せず、知識の蓄積に合わせて反復的に見直す。
+  p54:
+    title: Data Vaultは分析向け統合モデル
+    subtitle: Hubはビジネスキー、LinkはHub間の関係、Satelliteは属性と履歴を記録する。構造を分けることで多様なソースを統合し、出所を追跡する。
+  p55:
+    title: 表：Hub・Link・Satelliteの役割
+    subtitle: Hubは顧客番号や注文番号、Linkは顧客と注文の関係、Satelliteは住所や注文状態の履歴を持つ。三構造がData Vaultの基本的な役割分担を示す。
+  p56:
+    title: Rawからルール適用と利用へ進む
+    subtitle: Raw Vaultでソースの記録を残し、必要な業務ルールをBusiness Vaultに置き、情報マートで消費向けに整える。全RawデータをBusiness Vaultへ複製する必要はない。
+  p57:
+    title: 柔軟性にはクエリの複雑さが伴う
+    subtitle: ソース追加による再設計を抑えやすい一方、Hub・Link・Satelliteの直接参照はJOINが増える。情報マートなど利用者向けの層が別途必要になる。
+  s11:
+    title: 顧客キー統合には業務合意が要る
+    subtitle: DDDで各コンテキストの顧客の意味と責任者を確認し、分析上で統合するか分けるかを決める。キーを同じHubへ入れるだけでは、同一顧客だと証明できない。
+  s12:
+    title: Context Mapとデータ系譜は別の地図
+    subtitle: Context Mapはモデル・チーム間の依存や契約を表し、データ系譜は値のソースと変換を追う。二つを結べば分析定義の根拠を説明しやすくなる。
+  p58:
+    title: 共通点はあるが目的は異なる
+    subtitle: 両者は業務との対話・変化への対応・関心事の分離を重視するが、DDDは業務ソフトウェアの振る舞いと境界、Data Vaultは分析履歴の統合を主に扱う。
+  p59:
+    title: 表：DDDパターンとVault構造の違い
+    subtitle: EntityとHubは識別に関わるが目的が異なり、AggregateとLinkは別の整合性を担う。Context Mapは依存と契約、Satelliteは属性履歴を表す。
+  p60:
+    title: 履歴テーブルは業務イベントを意味しない
+    subtitle: Aggregateは業務上の不変条件を守る単位だが、Linkはそれを保証しない。Data Vaultの構造はDDDの一貫性境界を実装するものではない。
+  p61:
+    title: Satelliteの履歴はイベントの意味を持たない
+    subtitle: Satelliteに変更履歴が残っても、注文確定などの業務上の意図や状態遷移まで自動的に記録されるわけではない。Event Sourcingとは記録の目的が異なる。
+  p62:
+    title: Data Meshは分析データをドメイン所有にする
+    subtitle: Data MeshはDDDのBounded Contextを手掛かりに分析データと計算の責任をドメインへ寄せる。共通ルールと相互運用性を保つガバナンスも必要とする。
+  p63:
+    title: Data MeshはData Vaultの物理仕様ではない
+    subtitle: Data Vaultはドメインデータを統合・履歴化する一つの選択肢であり、Data Meshの要件ではない。プロダクトごとに別のストレージやモデルも選べる。
+  p64:
+    title: DDDでデータプロダクトの関係を設計する
+    subtitle: Data Product CanvasからBounded ContextやContext Mapを作り、依存・所有・チーム間契約を議論する。DDDがテーブル設計を自動決定するわけではない。
+  i21:
+    title: 複数コンテキストのキー統合を決める
+    subtitle: どのビジネスキーをRaw Vaultに記録し、どの統合をBusiness Vaultで行うか。Hubがコンテキストごとの意味の違いを消す危険を検証できる問いである。
+  i22:
+    title: 業務イベントと二つの時刻を分ける
+    subtitle: 有効時刻と取り込み時刻、業務イベントをどう保持するか。Satelliteの履歴だけでEvent Sourcingと同じ意味や任意時点再現が得られるとは限らない。
+  i23:
+    title: 共有Vaultの所有と変更責任を決める
+    subtitle: ドメインチームが共有HubやBusiness Vaultを使うときの所有・変更・品質責任を問う。再利用の利益と中央集約による調整コストを比較する。
+  p65:
+    title: DDDの理解を分析構造へつなぐ
+    subtitle: 用語・コンテキスト・依存関係を設計判断に活用し、Raw Vault・Business Vault・情報マートで責務を分けると、業務の意味と分析の証跡を結び付けやすい。
+  p66:
+    title: テーブル対応ではなく意味の橋渡し
+    subtitle: HubをEntity、LinkをContext Map、Satelliteをイベント履歴と同一視できない。両者の接点は業務の意味を確認し、判断を分析モデルと利用者向け定義に反映する作業である。
+  i26:
+    title: 出典1：CubaのDDDとData Vault論
+    subtitle: Context Map・業務用語・ビジネスキーをData Vault設計に結び付ける実務者の提案。原サイトは取得できず、検索インデックスとMedium上の抜粋を使ったため標準定義ではない。
+  i27:
+    title: 出典2：EvansのDDD参照資料
+    subtitle: Eric EvansによるDDDの用語・パターンの著者提供資料。Bounded Contextとユビキタス言語の定義を確認する基準となる。
+  i28:
+    title: 出典3：FowlerのBounded Context解説
+    subtitle: 大規模な統一モデルの限界、複数モデルの共存、Bounded ContextとContext Mapを説明するDDDの概説記事。
+  i29:
+    title: 出典4：MicrosoftのDDDドメイン分析
+    subtitle: 業務分析・Bounded Context・モデル境界を扱うMicrosoft Learnのガイド。業務能力に沿って境界とチーム配置を反復評価する説明を参照した。
+  i30:
+    title: 出典5：DatabricksのVault概要
+    subtitle: Hub・Link・Satelliteの役割と、Data Vaultを統合層に置きディメンショナルモデルへ接続する構成を説明するベンダー記事。
+  i31:
+    title: 出典6：Azure上のVault参照構成
+    subtitle: Raw Vault・Business Vault・情報マートの分担を説明する。ScalefreeのData Vault実務者が執筆し、Microsoft Tech Communityに掲載された。
+  i32:
+    title: 出典7：AsaharaのDDD・Vault接続論
+    subtitle: Domain ModelをDDDとData Vaultの接点とする長文の実務者記事。OLTPとOLAPの違いに加え、企業全体のモデル化に必要な条件も述べる。
+  i33:
+    title: 出典8：DehghaniのData Mesh原則
+    subtitle: DDDの境界を分析データのドメイン所有へ適用するData Meshの原文。データプロダクトと連合ガバナンスをData Vaultとは別概念として確認できる。
+  i37:
+    title: 出典12：DDDモデルと永続化の区別
+    subtitle: DDDのドメインモデルをデータベース設計や永続化方式と区別するMicrosoft Learnの資料。HubとEntityを混同しない説明の補助根拠。
+  i38:
+    title: 出典13：Snowflakeのドメイン別Vault例
+    subtitle: ドメイン別スキーマ・Raw Vault・Business Vault・消費層を構成する実装ガイド。製品ベンダーの具体例として用い、一般標準とは扱わない。
+  more67:
+    title: 出典14と調査から外した隣接領域
+    subtitle: Codecentricの事例はデータプロダクトの境界をDDDで設計する手順を示す。データメッシュ製品比較とVault・オントロジーの詳細対応は別調査の対象として外した。
+links:
+  - from: ch1
+    to: ch6
+    type: flow
+  - from: ch6
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch8
+    type: flow
+  - from: ch8
+    to: ch9
+    type: flow
+  - from: ch9
+    to: ch10
+    type: flow
+  - from: ch10
+    to: ch13
+    type: flow
+  - from: ch13
+    to: ch14
+    type: flow
+  - from: ch14
+    to: ch15
+    type: flow
+  - from: ch15
+    to: ch20
+    type: flow
+  - from: ch20
+    to: ch24
+    type: flow
+  - from: ch24
+    to: ch25
+    type: flow
+  - from: p44
+    to: p52
+    type: cause
+    label: 同じ語でもモデルが異なる
+  - from: p52
+    to: p53
+    type: contrast
+  - from: p53
+    to: p54
+    type: evidence
+  - from: p54
+    to: p55
+    type: seq
+  - from: p55
+    to: p56
+    type: contrast
+  - from: p51
+    to: p52
+    type: seq
+  - from: p48
+    to: p49
+    type: evidence
+  - from: s11
+    to: s12
+    type: seq
+  - from: p58
+    to: p59
+    type: evidence
+  - from: p59
+    to: p60
+    type: contrast
+  - from: p62
+    to: p63
+    type: contrast
+  - from: p63
+    to: p64
+    type: ref
+  - from: i21
+    to: i22
+    type: seq
+  - from: i22
+    to: i23
+    type: seq
+  - from: p65
+    to: p66
+    type: end
+  - from: p45
+    to: p54
+    type: contrast
+    label: 扱う目的が異なる
+  - from: p60
+    to: s11
+    type: ref
+chapterFlow:
+  - "→ 問いと範囲"
+  - "→ DDDとVaultの役割図"
+  - "→ 業務モデルの意味と境界"
+  - "→ 分析用の統合と履歴"
+  - "→ 設計判断へつなぐ例"
+  - "→ 一対一対応の限界"
+  - "→ Data Meshとの違い"
+  - "→ 適用範囲とコスト"
+  - "→ 次に検証する問い"
+  - "→ 結論と追跡可能な出典"
