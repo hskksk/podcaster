@@ -153,6 +153,7 @@ erDiagram
     uuid article_id FK
     text content_sha
     text title
+    text content
     timestamptz registered_at
   }
   Episode {
@@ -282,7 +283,7 @@ erDiagram
 
 | イベント | payload | 初案との対応 |
 |----------|---------|--------------|
-| `ArticleRegistered` | `article_id`、`article_revision_id`、`content_path`、`content_sha`、`title`、`ingest_route` | 同名 |
+| `ArticleRegistered` | `article_id`、`article_revision_id`、`content_path`、`content_sha`、`title`、`content`、`ingest_route` | 同名 |
 | `EpisodeOpened` | `episode_id`、`article_id`、`show_id`、`guid` | 新規。その記事で最初の制作依頼のときだけ出す |
 | `ProductionRequested` | `production_id`、`episode_id`、`article_revision_id`、`base_revision_id`、`scope`、`trigger`、`profile` | `EpisodeCreateStarted` |
 | `ScriptWritten` | `script_id`、`job_id`、`title`、`description`、`content` | `ScriptCreated` |
@@ -294,7 +295,7 @@ erDiagram
 | `FeedRebuilt` | `feed_snapshot_id`、`blob_id`、`items`（版 ID・GUID・pubDate の並び） | 同名 |
 | `ProductionFailed` | `production_id`、`failed_job_id`、`reason` | 新規 |
 
-イベントは正本なので、payload には射影を作り直すのに要る事実をすべて入れる。ID だけを入れて中身を別表に置くと、その表が実質の正本になる。例外はバイト列で、音声・画像・feed.xml は Blob に置き、イベントは `blob_id` で参照する。Blob は上書きせず、内容ごとに新しいパスへ書く。
+イベントは正本なので、payload には射影を作り直すのに要る事実をすべて入れる。ID だけを入れて中身を別表に置くと、その表が実質の正本になる。記事の本文も `ArticleRegistered.content` に入れる。Git の `content_path` と `content_sha` は出どころの記録であり、制作時にどの本文を読んだかはイベントだけで決まる。Git の履歴が書き換わっても、制作の入力は再現できる。例外はバイト列で、音声・画像・feed.xml は Blob に置き、イベントは `blob_id` で参照する。Blob は上書きせず、内容ごとに新しいパスへ書く。
 
 `ScriptCreateStarted`・`AudioCreateStarted`・`ArtworkCreateStarted` はドメインイベントにしない。ジョブ層の `Job`（依頼）と `JobAttempt`（試行）がその役目を担う。
 
@@ -337,6 +338,17 @@ flowchart LR
 
 2 で失敗したらイベントは追記せず、コマンドごと失敗させて再実行する。2 が成功して 3 が楽観ロックで失敗した場合は、`feed.xml` だけが先に進む。このときはコマンドを再実行すれば、最新の状態で feed.xml を書き直してからイベントを追記するので、両者は一致する。取り下げ（`EpisodeWithdrawn` + `FeedRebuilt`）も同じ手順で行う。
 
+公開と取り下げは、アプリケーション層のユースケース（`PublishEpisode`・`WithdrawEpisode`）として 1 か所に実装し、入口を 2 つ用意する。
+
+| 入口 | 呼び方 | 用途 |
+|------|--------|------|
+| 購読ワーカー | ProductionPolicy が `EpisodeAssembled` を受けて、同じプロセス内でユースケースを直接呼ぶ | 自動公開 |
+| `publish` Edge Function | CLI・TUI・管理画面から HTTP で呼ぶ。中身はユースケースを呼ぶだけ | 手動公開・取り下げ・特定の版への差し戻し |
+
+自動公開のためにワーカーから Edge Function を HTTP で呼ぶ形は採らない。呼び出しが 1 段増え、失敗の理由が HTTP とユースケースのどちらにあるか切り分けにくくなる。ワーカーが同じプロセスで呼べば、失敗したイベントの処理位置を進めずに済むので、再実行は購読の仕組みにそのまま乗る。
+
+自動と手動が同時に走っても、どちらも Show のストリームに `stream_version` を指定して追記するので、片方が楽観ロックで失敗して再実行される。feed.xml を書き直してから追記する順序（上の 1〜3）なので、再実行後は feed.xml とイベントが一致する。
+
 `episodes.status`（`script_running` など）は、イベントとジョブの状態から作る読み取りモデルにする。書き込み側の状態としては持たない。
 
 ### 3.5 イベントを正本にする
@@ -347,7 +359,7 @@ flowchart LR
 |--------|------|
 | 追記 | コマンドは集約のストリームを読んで不変条件を確かめ、`stream_version` を指定して追記する。一意制約に当たったら読み直して再試行する |
 | 射影 | ER 図の表と `episodes.status` などの読み取りモデルは、追記と同じトランザクションで更新する（インライン射影）。壊れたら `position` 順に全イベントを再生して作り直す |
-| 購読 | ProductionPolicy は外部（ジョブ層・Storage）を呼ぶので、追記と同じトランザクションでは動かさない。購読者ごとに処理済みの `position` を記録し、そこから先のイベントを受け取る |
+| 購読 | ProductionPolicy は外部（ジョブ層・Storage）を呼ぶので、追記と同じトランザクションでは動かさない。購読者ごとに処理済みの `position` を記録し、そこから先のイベントを受け取る。配信の仕組みは §5 |
 | 冪等 | 購読は同じイベントを 2 度受け取りうる。ProductionPolicy が依頼するジョブの冪等キーに `causation_id` を含め、重複依頼を 1 件にまとめる |
 
 射影の表に書くのは追記処理だけである。アプリやスクリプトが射影を直接更新すると、再生で作り直したときに差分が消える。
@@ -545,7 +557,34 @@ pgflow アダプタは `Job` 1 件を pgflow の run 1 件に対応させる。�
 
 一方で、工程の DAG が pgflow のフロー定義から消え、pgflow の画面で制作全体の流れを追えなくなる。追跡はドメインイベントの `correlation_id` で行う。DAG を pgflow に残す案（ジョブ層に `Workflow` を置き、アダプタがフロー定義にコンパイルする）も取れる。ただし、部分的な再生成や合流の条件がフロー定義側に残り、現行の `startFrom` 分岐と同じ問題が戻るので、本案では採らない。
 
-イベントストア アダプタは、Postgres の追記専用テーブル 1 本と、購読者ごとの処理済み位置の表で `EventStore` を実装する。追記とインライン射影は 1 トランザクションで行う。購読者への配信は、追記を合図にワーカーを起こし、ワーカーが処理済み位置から先を読む形にする。合図が落ちても、次の合図か定期実行で取りこぼしを拾える。
+イベントストア アダプタは、Postgres の追記専用テーブル 1 本と、購読者ごとの処理済み位置の表で `EventStore` を実装する。追記とインライン射影は 1 トランザクションで行う。
+
+購読者への配信は pgmq を合図に使い、pg_cron を取りこぼしの保険にする。
+
+```mermaid
+flowchart LR
+  APP["コマンド"] -- "追記" --> EVT[("domain_events")]
+  EVT -- "AFTER INSERT トリガー<br/>（同じトランザクション）" --> Q[["pgmq: domain_events_wake"]]
+  CRON["pg_cron（毎分）"] -- "未処理があれば合図を積む" --> Q
+  ENS["pgflow.ensure_workers"] -- "停止していたら起動" --> W
+  Q -- "合図を受け取る" --> W["購読ワーカー<br/>（Edge Function）"]
+  W -- "処理済み位置から先を読む" --> EVT
+  W -- "処理済み位置を進める" --> CP[("event_subscriptions")]
+```
+
+| 要素 | 役割 |
+|------|------|
+| AFTER INSERT トリガー | 追記と同じトランザクションで、合図（中身は `position` だけ）を pgmq に積む。追記がロールバックされれば合図も消える |
+| pgmq `domain_events_wake` | 合図の置き場。ワーカーが止まっていても合図は残り、起動後に受け取れる |
+| 購読ワーカー | `@pgflow/edge-worker` のキューワーカーとして動く Edge Function。合図を受けたら `event_subscriptions` の処理済み位置から先を `position` 順に読み、ProductionPolicy に渡す。1 件処理するごとに処理済み位置を進める |
+| `pgflow.ensure_workers` | 既存の死活監視。購読ワーカーを `pgflow.worker_functions` に登録し、止まっていたら起動させる |
+| pg_cron（毎分） | 処理済み位置が最新の `position` より遅れていれば合図を積む。合図の取りこぼしや、処理中に落ちたワーカーの続きを拾う |
+
+合図は「読みに来い」という意味しか持たず、イベントの中身は毎回 `domain_events` から読む。このため合図が重複しても欠けても、処理結果は変わらない。同じ購読者のワーカーが 2 つ同時に動くと順序が崩れるので、`event_subscriptions` の行にリース（`lease_owner`・`leased_until`）を持たせる。ワーカーは `leased_until < now()` の行だけを更新して取り、取れなければ何もせず終わる。ProductionPolicy は Storage やジョブ層を呼ぶため、行ロックを握ったままトランザクションを開いておく形は採らない。リースの期限は Edge Function の実行時間の上限より短くし、ワーカーは期限内に処理を区切って位置を進める。
+
+同じイベントの処理が上限回数を超えて失敗したら、そのイベントを `event_subscription_failures` に記録して購読を止める。後続のイベントは順序に依存するので、飛ばして先へ進めない。原因を直したら、処理済み位置はそのままで購読を再開する。
+
+`pg_notify` だけで配信する案は採らない。Edge Function は常駐しないので、通知の時点で LISTEN している受け手がいないことがあり、届かなかった通知は残らない。pg_cron だけで配信する案は、確実だが最大 1 分遅れる。pgmq の合図を主にし、pg_cron を保険にすると、通常は追記の直後に動き、障害時も 1 分以内に回復する。
 
 Gemini アダプタは `LlmGateway` を実装する。チャンク分割した TTS の Batch 投入、ポーリング、WAV の取得と結合はここに置き、モデル名やエンドポイント（`gemini.api_root`）の解決もここで閉じる。
 
@@ -562,11 +601,3 @@ Gemini アダプタは `LlmGateway` を実装する。チャンク分割した T
 | EpisodeWithdrawn | 公開の取り下げ | 誤った回を RSS から消せる。FeedItem の再計算のきっかけになる |
 | コスト集計 | `LlmInvocation` のトークン数を Production 単位で集計する読み取りモデル | 再生成のコストが見える |
 | 読み取りモデル | エピソード一覧・制作状況を、イベントとジョブ状態から射影する | TUI / CLI は射影だけを読む |
-
----
-
-## 7. 未決事項
-
-- 購読者への配信の合図を何で送るか。候補は、追記トリガーからの `pg_notify`、pgmq へのメッセージ、pg_cron による定期実行である。Edge Function は常駐しないので、`pg_notify` だけでは受け手がいないことがある。
-- 公開コマンドをどこで動かすか。ProductionPolicy の購読ワーカーの中で動かすか、手動公開と共通の Edge Function にするか。
-- 記事の本文を `ArticleRegistered` の payload に入れるか。正本の原則では入れるが、本文の正本は Git（`content_path` と `content_sha`）にもある。
