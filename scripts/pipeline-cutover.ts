@@ -93,6 +93,7 @@ async function status(): Promise<void> {
     select event_position::text, error_message
     from podcast.event_subscription_failures
     where subscriber_id = 'production-policy'
+      and event_position > ${Number(checkpoint)}
     order by failed_at desc
     limit 5
   `;
@@ -109,7 +110,7 @@ async function status(): Promise<void> {
     console.log("Recent subscription failures:");
     for (const f of failures) console.log(`  position ${f.event_position}: ${f.error_message}`);
   } else {
-    console.log("No subscription failures recorded.");
+    console.log("No unprocessed subscription failures (checkpoint caught up).");
   }
   if (recentJobs.length > 0) {
     console.log("jobs.jobs counts:");
