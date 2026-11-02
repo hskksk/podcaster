@@ -69,7 +69,9 @@ $$;
   run(`supabase secrets set PGFLOW_AUTH_SECRET=${JSON.stringify(serviceKey)}`);
 
   // 3. Apply migrations (20260424000001 drops old broken cron jobs)
-  run("supabase db push");
+  // --include-all: apply migrations whose version is older than the remote tip
+  // (e.g. 20261102100001 after 20261102180001 was already pushed on main).
+  run("supabase db push --include-all");
 
   // 4. Upsert pgflow worker-management secrets in Supabase Vault
   runSql(
