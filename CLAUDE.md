@@ -122,6 +122,7 @@ A skill that calls another, and a skill that other skills call, follow `skill-or
 - **Create a new migration for every schema change**, named with the implementation date + sequence + description:
   - Naming convention: `YYYYMMDD{seq}_snake_case_description.sql`
   - Examples: `20260423000001_initial.sql`, `20260507000001_episode_status_lifecycle.sql`
+- **Timestamp ordering:** The new filename must sort after every migration already on `main` (and typically after the remote tip). Out-of-order versions break `supabase db push` on deploy.
 - If `db reset`/`db push` would be affected by the change, make a new migration rather than altering history.
 
 ### RLS pattern
