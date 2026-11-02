@@ -51,6 +51,7 @@
         "test:domain": "deno test -A supabase/functions/_domain/",
         "pipeline:preflight": "tsx scripts/pipeline-cutover.ts preflight",
         "pipeline:status": "tsx scripts/pipeline-cutover.ts status",
+        "pipeline:kick-subscriber": "tsx scripts/pipeline-cutover.ts kick-subscriber",
         "pipeline:switch": "tsx scripts/pipeline-cutover.ts switch"
     },
     "devDependencies": {

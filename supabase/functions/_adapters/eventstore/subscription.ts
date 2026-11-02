@@ -103,9 +103,10 @@ export async function processSubscriptionBatch(
   db: SupabaseClient,
   sql: Sql,
   handleEvent: ProcessEventFn,
+  options?: { skipLease?: boolean },
 ): Promise<{ processed: number }> {
   const owner = crypto.randomUUID();
-  if (!await tryAcquireLease(sql, owner)) {
+  if (!options?.skipLease && !await tryAcquireLease(sql, owner)) {
     return { processed: 0 };
   }
 
@@ -128,7 +129,9 @@ export async function processSubscriptionBatch(
       }
     }
   } finally {
-    await releaseLease(sql, owner);
+    if (!options?.skipLease) {
+      await releaseLease(sql, owner);
+    }
   }
 
   return { processed };
