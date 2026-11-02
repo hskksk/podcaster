@@ -164,6 +164,22 @@ async function switchMode(): Promise<void> {
   }
 }
 
+async function kickSubscriber(): Promise<void> {
+  const sql = connectPostgres();
+  await sql`
+    update podcast.event_subscriptions
+    set lease_owner = null,
+        leased_until = null,
+        updated_at = now()
+    where subscriber_id = 'production-policy'
+  `;
+  await sql.end();
+  console.log(
+    "Cleared production-policy subscriber lease. Then POST /functions/v1/domain-subscriber " +
+      "(or wait for cron). If jobs are still missing: pnpm cli requeue script <episode_id> --yes",
+  );
+}
+
 async function main(): Promise<void> {
   switch (command) {
     case "preflight":
@@ -175,11 +191,15 @@ async function main(): Promise<void> {
     case "switch":
       await switchMode();
       break;
+    case "kick-subscriber":
+      await kickSubscriber();
+      break;
     default:
       console.error(`Usage:
   pnpm pipeline:preflight
   pnpm pipeline:status
-  pnpm pipeline:switch events|legacy [--yes]`);
+  pnpm pipeline:switch events|legacy [--yes]
+  pnpm pipeline:kick-subscriber`);
       process.exit(1);
   }
 }

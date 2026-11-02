@@ -4,6 +4,7 @@ import {
   nextStreamVersion,
   type Sql,
 } from "../_adapters/eventstore/postgres.ts";
+import { getCheckpoint } from "../_adapters/eventstore/subscription.ts";
 import {
   DEFAULT_SHOW_ID,
   type NewDomainEvent,
@@ -138,6 +139,8 @@ export async function ingestViaEvents(
   const productionId = crypto.randomUUID();
   const productionVersion = await nextStreamVersion(sql, productionId);
 
+  const positionBefore = await getCheckpoint(sql);
+
   await appendEvent(sql, {
     type: "ProductionRequested",
     stream_type: "production",
@@ -160,7 +163,20 @@ export async function ingestViaEvents(
 
   const { processSubscriptionBatch } = await import("../_adapters/eventstore/subscription.ts");
   const { handleProductionPolicyEvent } = await import("./production-policy-handler.ts");
-  await processSubscriptionBatch(db, sql, handleProductionPolicyEvent);
+  const { processed } = await processSubscriptionBatch(db, sql, handleProductionPolicyEvent, {
+    skipLease: true,
+  });
+  if (processed === 0) {
+    const [{ maxpos }] = await sql<Array<{ maxpos: string }>>`
+      select coalesce(max(position), 0)::text as maxpos from podcast.domain_events
+    `;
+    if (Number(maxpos) > positionBefore) {
+      console.warn(
+        `ingest: policy subscriber processed 0 events (checkpoint=${positionBefore}, max=${maxpos}). ` +
+          "Cron domain-subscriber should catch up; or POST /functions/v1/domain-subscriber",
+      );
+    }
+  }
 
   return { article_id: articleId, episode_id: episodeId, production_id: productionId };
 }
