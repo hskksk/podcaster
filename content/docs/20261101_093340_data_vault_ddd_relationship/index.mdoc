@@ -1,0 +1,159 @@
+---
+title: "Data VaultとDDDの接点 — 業務モデルを分析データへつなぐ"
+publishedAt: 2026-11-01
+podcast: queued
+legacyFilename: 20261101_093340_data_vault_ddd_relationship.md
+---
+
+## TL;DR
+
+- DDDは業務ソフトウェアの意味と境界を定め、Data Vaultは複数ソースの分析データを履歴付きで統合するため、両者は補完関係にある。
+- DDDのドメインモデルや境界づけられたコンテキストは、Data Vaultのビジネスキー・Hub/Link/Satelliteを設計するための判断材料になる。
+- HubはDDDのEntityやAggregateではなく、LinkもContext Mapではないため、両者に一対一の変換規則はない。
+- Data Vaultは変化への対応と監査性を優先してクエリの複雑さ・運用負荷が増えるため、利用者向けにはBusiness Vaultや情報マートを設計する。
+
+## 概要
+
+顧客データを扱うと、営業では「見込み客を含む相手」、請求では「請求先」、サポートでは「問い合わせをした人」を同じ「顧客」と呼ぶことがある。分析では各システムの履歴をつなげて「顧客数」や「売上」を集計したいが、名前が同じだからといって意味まで同じとは限らない。
+
+この問題に対し、DDD（Domain-Driven Design、ドメイン駆動設計）は、業務知識をモデルと言葉にし、どの範囲でそのモデルが有効かを定める。Data Vaultは、異なるシステムに散らばるビジネスキー・それらの関係・属性の履歴を、分析用の統合層に記録する。[2][3][5][6]
+
+したがって、DDDが「何を同じ意味として扱うか、どこで分けるか」を考える助けになり、Data Vaultが「ソースから届いた事実と履歴をどう残し、分析に渡すか」を担う。
+
+本稿は、指定記事を起点に2020〜2026年のDDD・Data Vault・データアーキテクチャに関する記事、公式資料、実務者の議論を調べ、両者の接点と混同しやすい境界を整理する。Data Vaultの詳細なロード実装やハッシュキーの選定は対象外とする。
+
+## 全体像
+
+関係を一言でまとめると、**DDDは業務モデルの意味と所有境界を探り、Data Vaultは分析用に事実と履歴を統合し、情報マートは利用者の問いに合わせて見せる**。DDDで得た理解をData Vaultの設計に活用できるが、DDDのモデルを表構造へ機械的に写すわけではない。
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart LR
+  D["業務知識・用語"] --> C["DDD: 境界づけられたコンテキスト\n各チームのモデル・契約"]
+  C -->|"意味と所有者を確認して設計判断へ"| R["Raw Data Vault\nソースのキー・関係・履歴"]
+  R --> B["Business Vault\n合意した統合・計算ルール"]
+  B --> M["情報マート・データプロダクト\n利用目的に合う形で提供"]
+  C -.->|"用語・境界・依存関係を共有"| B
+```
+{% /diagram %}
+
+図は典型的な役割分担を示す。Data Vaultのすべての実装がDDDを採用するわけではなく、DDDから導かれるコンテキストとData Vaultの層も一対一に対応しない。Raw Vaultはソース由来の記録を保持し、Business Vaultは必要な業務ルールを適用する。情報マートはスター・スキーマなど利用者に扱いやすい構造を選べる。[6]
+
+## 1. DDDは業務の意味と境界を扱う
+
+DDDは、複雑なソフトウェアの設計を業務知識に基づける考え方である。ドメインの専門家と開発者がモデルを探り、モデルに基づく共通の語彙を使い、明示した境界の内側でソフトウェアを設計する。Eric Evansの定義では、ユビキタス言語は境界づけられたコンテキスト内のモデルを軸に、チームの活動とソフトウェアを結び付ける言葉である。[2]
+
+境界づけられたコンテキスト（Bounded Context）は、特定のモデルや用語が適用される範囲を定める。たとえば営業と請求は、同じ「顧客」を別の属性やルールで表すことがある。すべてを単一の企業共通モデルにまとめると、意味の違いが隠れ、変更時に複数チームの調整が必要になる。DDDでは、各コンテキストのモデルを保ちつつ、Context Mapに関係や依存を明示する。[3][4]
+
+ここでいう「境界」は、データベースのスキーマ境界や組織図と必ず一致するわけではない。Microsoft Learnのドメイン分析ガイドも、境界を業務能力やモデルの凝集性から反復的に見直すものとして説明している。[4]
+
+## 2. Data Vaultは分析用の統合・履歴層を扱う
+
+Data Vaultは、複数の上流システムから届くデータを分析用に統合し、出所と履歴を追えるようにするデータウェアハウスのモデル／方法論である。基本構造は次の三種類である。[5][6]
+
+| 構造 | 主に記録するもの | 例 |
+| --- | --- | --- |
+| Hub | ビジネスキーを持つ業務上の対象 | 顧客番号、注文番号 |
+| Link | Hub間の関係や業務上の取引 | 顧客が注文した、注文に商品が含まれる |
+| Satellite | HubまたはLinkの属性、ソース、時間に沿った変化 | 顧客住所の履歴、注文状態の履歴 |
+
+Raw Data Vaultはソースの記録を保ち、後から再解釈できる状態を目指す。Business Vaultでは、必要に応じてクレンジング・名寄せ・計算などの業務ルールを加える。利用者向けには情報マートを設け、分析のしやすさや性能を整える。[6]
+
+この分離により、データソースを追加しても分析用の最終テーブルすべてを作り直さずに済む場合がある。一方、Hub・Link・Satelliteを直接たどるクエリは複雑になりやすく、Data Vaultだけで使いやすい分析環境が完成するわけではない。[5][9][10]
+
+## 3. DDDの業務理解をData Vaultの設計判断に使う
+
+指定記事のPatrick Cubaは、Data Vault構築をソフトウェア開発として捉え、DDDの考え方を設計へ取り込む。記事では、境界づけられたコンテキストやContext Mapを、データの所有者・ソース・利用者の関係整理に用い、業務用語やビジネスキーの定義をInformation Map／用語集とつなぐ。[1]
+
+この提案は、Data VaultのHub・Link・SatelliteをDDDのパターンにそのまま対応させる主張として読むより、**DDDで業務上の意味と境界を明らかにし、その知識を分析モデルの設計に使う**提案として理解するのが安全である。
+
+Eugene AsaharaもDDDを業務ソフトウェア（OLTP）、Data Vaultを分析基盤（OLAP）の側に置き、間をつなぐものとしてDomain Modelを論じている。ただし、企業全体を一つの完全なDomain Modelにする構想には、大きな事前作業や文化的な前提が伴うと記事は認めている。[7]
+
+### 顧客の統合でどんな判断が要るか
+
+営業システムでは見込み客ID、請求システムでは契約先コード、サポートでは問い合わせアカウントIDを使うとする。DDDの検討では、各コンテキストの「顧客」が何を指し、どのチームが定義を持ち、他のコンテキストとどう連携するかを確かめる。
+
+そこから、分析で共通の顧客を数えるのか、顧客・請求先・問い合わせ利用者を分けて扱うのかを決める。
+
+Data Vaultではソース別のビジネスキーをHubに記録し、それぞれの属性履歴をSatelliteに残せる。複数のソースキーが同じ分析上の顧客を指すと判断した場合は、その対応付けをBusiness Vaultや情報マートで表す。Hubは分析層でビジネスキーを保持する構造であり、DDDのCustomer Entityそのものではない。どのキーを統合するかという判断には、業務専門家との合意とルールの記録が要る。[1][6][11]
+
+### Context Mapとデータ系譜は別の問いに答える
+
+Context Mapは、境界づけられたコンテキスト間のモデル上の関係、依存、契約やチーム関係を表す。データ系譜は、ある値がどのソースや変換を経て作られたかを追跡する。両者を関連付ければ、「この分析用顧客定義は、どの業務コンテキストのルールとどのデータソースを使うか」を説明しやすくなる。しかし、Context Map自体はテーブル間の外部キー図ではなく、Data VaultのLinkもコンテキスト間の契約を表すものではない。[3][6][13]
+
+## 4. DDDとData Vaultの対応を一対一にしない
+
+両者が共通して重視するのは、意味を業務側と確認すること、変化に備えること、関心事を分けることである。しかし、最適化する対象が異なる。DDDは特定の業務ソフトウェアにおける振る舞い・一貫性・責任境界を扱う。Data Vaultは複数システムの履歴を分析で再利用できるように統合する。[2][5][7]
+
+| DDDの概念 | Data Vaultの構造 | 似て見える点 | 同一視できない理由 |
+| --- | --- | --- | --- |
+| Entity | Hub | 識別子や業務上の対象に関わる | Entityはコンテキスト内の同一性と振る舞いを表す。Hubは分析上のビジネスキーを記録する |
+| Aggregate | HubとLinkの組み合わせに見える場合がある | 関連する対象をまとめて考える | Aggregateはトランザクション境界と不変条件を担う。Hub/Linkはそれを保証しない |
+| Context Map | Link | 関係を線で表す | Context Mapはモデル・チーム間の依存や契約、Linkはデータ上の関係を記録する |
+| Entityの状態変化 | Satellite | 時間と属性の変化を扱う | Satelliteは履歴記録であり、業務イベントや状態遷移の意味を自動的には持たない |
+
+とくにAggregateは、関連データを一つのトランザクションで守る整合性境界である。Data VaultのLinkに複数Hubのキーを載せても、DDDの不変条件をデータベースで守ることにはならない。[4][12]
+
+またSatelliteに変更履歴を追加しても、業務上の「注文確定」「契約解除」といった意図やイベントが記録されるとは限らない。Data Vaultの履歴とEvent Sourcingは、ともに時間変化を扱うが記録の目的が異なる。[6][12]
+
+## 5. データメッシュは接点を広げるが、Data Vaultとは別の設計判断である
+
+Data Meshは、分析データの責任を業務ドメインへ分散し、データをプロダクトとして提供する考え方である。原提案では、DDDのBounded Contextをドメイン分割の手掛かりとし、分析データと計算の所有をドメインに近づける一方、共通の相互運用性・ガバナンスも求めている。[8]
+
+これは、DDDの知識を分析データの所有やデータプロダクト境界へ広げる議論であり、Data Vaultの物理モデルを決める規則ではない。ドメインごとのデータプロダクトにData Vaultを採用することも、別のストレージやモデルを選ぶこともできる。Data Vaultは統合・履歴を担う一つの選択肢であり、Data Meshの4原則を実現する条件ではない。[8][13]
+
+Codecentricの事例は、Data Product CanvasをDDDの境界づけられたコンテキストやContext Mapへ展開し、データプロダクトの依存関係と担当を明らかにする手順を示す。ここでもDDDはデータ構造を自動決定するのではなく、プロダクトの境界・関係・チーム間契約を議論するために使われる。[14]
+
+## 6. 適用範囲と代償を分けて考える
+
+Data Vaultは、変化する複数のソース・履歴再現・監査性が重要な環境で価値を発揮する。[6][11][13]
+
+一方、テーブル数やJOINの増加、学習・自動化・情報マートのコストも無視できない。[9][10] ソースが少なく安定しており、素早くBIを提供したいだけなら、スター・スキーマを直接使うほうが単純な場合がある。
+
+採用可否はDDDを使うかだけでは決まらない。次の条件を別々に確認する必要がある。
+
+- **業務側**: 顧客・商品・注文などの語が各コンテキストでどう違い、誰が意味を決めるか。
+- **統合側**: ソース数・変更頻度・履歴・監査の要求が、Data Vaultの追加構造を正当化するか。
+- **提供側**: 利用者にRaw Vaultを直接見せず、Business Vault・マート・データプロダクトで必要な粒度と用語を提供するか。
+- **運用側**: 命名・キー統合・自動化・テスト・所有責任を維持する人員と仕組みがあるか。
+
+Data Vaultは変更コストを下げやすいが、変更を無料にはしない。Ben Morrisが挙げる複雑さや説明コストは、監査性や柔軟性を得るために払う設計・運用上の代償として考えるとよい。[9]
+
+## 次に解くべき3つの問い
+
+1. **DDDの複数コンテキストにまたがるビジネスキーを、Raw VaultとBusiness Vaultのどちらで、誰の合意に基づいて統合するか。** Hubの設計が業務上の意味の違いを消してしまうリスクを検証できる。
+2. **業務イベント・有効時刻・取り込み時刻を分析履歴にどう表し、Event SourcingやCDCとどう使い分けるか。** Satelliteに履歴があるだけでは、業務上の意図や任意時点の状態再現が満たされるとは限らない。
+3. **Data MeshのドメインチームがData Vaultの共有HubやBusiness Vaultを使うとき、所有・変更・品質保証の責任をどう配分するか。** 統合再利用の利益と、中央集約による調整コストを同時に評価できる。
+
+設計を具体化するなら、第1問から確かめる。共通キーと統合ルールの所有者が決まらないと、Hub・Business Vault・情報マート間の責任分担も定められない。
+
+## まとめ
+
+DDDは業務の意味と境界を探る設計手法であり、Data Vaultは分析用のデータ統合と履歴化を担うモデル／方法論である。DDDで得た用語・コンテキスト・依存関係をData Vault設計に活用し、Raw Vault・Business Vault・情報マートで責務を分けると、業務側の意味と分析側の証跡をつなぎやすい。
+
+ただし、HubをEntity、LinkをContext Map、Satelliteをイベント履歴と置き換えることはできない。**両者の接点はテーブル同士の対応ではなく、業務の意味を確認し、その判断を追跡可能な分析モデルと利用者向け定義へ反映する設計作業にある。**
+
+## 付録: 出典一覧
+
+本文の`[n]`は以下に対応する。
+
+- [1] Patrick Cuba, [1. Data Vault and Domain Driven Design](https://blog.devgenius.io/1-data-vault-and-domain-driven-design-d1f8c5a4ed2)（2022-09-05）。Data Vaultのドメイン・コンテキスト・ビジネスアーキテクチャをつなぐ実務者の提案。Dev Geniusのページは取得時に403となったため、検索インデックスと同一記事のMediumミラーの抜粋で確認した。著者自身も実装性能の検証を勧める立場であり、DDDの標準定義ではない。
+- [2] Eric Evans, [Domain-Driven Design Reference](https://www.domainlanguage.com/ddd/reference/)（2015年版）。DDDの定義・パターンをまとめた著者提供の参照資料。
+- [3] Martin Fowler, [Bounded Context](https://martinfowler.com/bliki/BoundedContext.html)（2014-01-15）。Bounded Context、複数モデル、Context Mapの説明。
+- [4] Microsoft Learn, [Use Domain Analysis to Model Microservices](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis)（2026-02-23更新）。ドメイン分析、境界づけられたコンテキスト、チームとモデルの責任境界を説明する公式ガイド。
+- [5] Databricks, [What is a Data Vault?](https://www.databricks.com/blog/what-is-data-vault)（2022-04-21）。Hub・Link・Satelliteと、Data VaultをSilver層に置いて下流の情報マートへつなぐ説明。ベンダーによる概要資料。
+- [6] Michael Olschimke, Marc Winkelmann, [Data Vault 2.0 on Azure](https://techcommunity.microsoft.com/blog/analyticsonazure/data-vault-2-0-on-azure/3860665)（2023-06-30）。Raw Vault・Business Vault・情報マートを分ける参照アーキテクチャ。Microsoft Tech Community掲載のScalefree実務者による記事。
+- [7] Eugene Asahara, [Data Vault Methodology paired with Domain Driven Design](https://eugeneasahara.com/2021/01/02/data-vault-methodology-and-domain-driven-design)（2021-01-02、2025-10-01更新）。Domain ModelをDDDとData Vaultの接点とする長文の個人記事。企業全体のモデル化に必要な文化・事前作業の条件も挙げる。
+- [8] Zhamak Dehghani, [Data Mesh Principles and Logical Architecture](https://martinfowler.com/articles/data-mesh-principles.html)（2020-12-03）。分析データのドメイン所有、データプロダクト、連合ガバナンスを提案するData Meshの原文。
+- [9] Ben Morris, [Data Vault 2.0: the good, the bad and the downright confusing](https://www.ben-morris.com/data-vault-2-modelling-the-good-the-bad-and-the-downright-confusing)（2020-12-12）。柔軟性・監査性と、テーブル数・クエリ・説明コストのトレードオフを論じる批判的記事。
+- [10] TDWI, [Data Vault Modeling: An Alternative to Dimensional Modeling](https://tdwi.org/blogs/data-101/2026/05/data-vault-modeling.aspx)（2026年）。Data Vaultを統合・履歴層、ディメンショナルモデルを消費層と位置づけ、導入コストや適用範囲を比較する。
+- [11] Dan Poppy, [Ep 54: Data Vault and Enterprise Data Modeling](https://roundup.getdbt.com/p/ep-54-data-vault-and-enterprise-data)（2023-11-17）。データアーキテクトとData Vault実務者の会話。実導入の動機、業務用語・ビジネスキーの合意、Data Vaultからファクト／ディメンションへの投影を紹介する。
+- [12] Microsoft Learn, [Designing a DDD-oriented microservice](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice)（2021-01-13）。DDDのドメインモデルと永続化・データベース設計の違いを説明するガイド。
+- [13] Paul Hooper, [Defensible Analytics using Data Vault and Snowflake](https://www.snowflake.com/en/developers/guides/defensible-analytics-using-data-vault-and-snowflake)（2026-05-07更新）。Snowflake上でドメイン別スキーマ・Raw Vault・Business Vault・利用者向けモデルを配置する実装ガイド。製品ベンダーの参照例として扱う。
+- [14] Daniel Engelhardt, Florian Rademacher, [When Business Meets Technology: From Data Product to Data Architecture with Domain-Driven Design](https://www.codecentric.de/en/knowledge-hub/blog/when-business-meets-technology-from-data-product-to-data-architecture-with-domain-driven-design)（2024-08-06）。Data Product CanvasをDDDのコンテキスト・Context Map・ドメインモデルへ展開する手順と小売の事例。
+
+### 調査で外した枝
+
+- Data Mesh全体の製品選定、プラットフォーム比較、組織改革の実装は、Data VaultとDDDの関係を説明する範囲を超えるため、[8]の分析データ所有の原則だけを使った。
+- Data Vaultとオントロジー／セマンティックレイヤの同一性は、指定記事の続編やSnowflakeガイドでも論点になる。しかしDDDとの対応関係を検証するには別の調査が要るため、本稿では「用語とデータ構造の記録」に限って触れた。
+- 2026年以降の新しいData Vault標準・製品固有の実装方法は、参照アーキテクチャで共通する層と役割を確認する目的から外した。
