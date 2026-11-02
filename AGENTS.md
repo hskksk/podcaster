@@ -70,10 +70,9 @@ Production defaults to **`legacy`** until you switch. Runbook:
 2. **Preflight:** `pnpm pipeline:preflight` (no `*_running` / `audio_generated` episodes; reconcile OK)
 3. **Deploy:** merge to `main` (CI deploy) or `pnpm deploy` — includes `domain-subscriber`, `publish`, `job-worker`
 4. **Switch:** `pnpm pipeline:switch events --yes` (sets `podcast_config.pipeline.mode`)
-5. **Remote API schemas:** Dashboard → Project Settings → API → **Exposed schemas** — include `jobs` and `podcast` (same as local `supabase/config.toml` `[api].schemas`). Without this, Edge `requestJob` fails with `PGRST106: Invalid schema: jobs`.
-6. **DB push after merge:** `pnpm db:push` applies `grant usage … to authenticator` for those schemas.
-7. **Smoke:** ingest one article → check `feed.xml`, `jobs.jobs` / `jobs.job_attempts`, `podcast.event_subscription_failures`
-8. **Monitor:** `pnpm pipeline:status` after each ingest
+5. **Remote API schemas (manual):** Dashboard → Project Settings → API → **Exposed schemas** — add `jobs` and `podcast` (same as local `supabase/config.toml` `[api].schemas`). Without this, Edge `requestJob` fails with `PGRST106: Invalid schema: jobs`. This setting is not applied by repo deploy.
+6. **Smoke:** merge to `main` triggers CI `pnpm deploy` (`supabase db push` for new migrations + Edge functions). No need to run `pnpm db:push` locally unless you are deploying outside CI.
+7. **Monitor:** `pnpm pipeline:status` after each ingest
 
 After deploy, re-trigger policy for stuck productions: `TARGET=remote pnpm cli requeue script <episode_id> --yes`, or rewind `production-policy` checkpoint and POST `domain-subscriber`.
 
