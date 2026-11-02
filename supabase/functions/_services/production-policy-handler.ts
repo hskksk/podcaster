@@ -14,6 +14,7 @@ import {
 import { assembleEpisodeRevision } from "./assemble-episode.ts";
 import { publishEpisodeRevision } from "./publish-episode.ts";
 import type { NewDomainEvent } from "../_domain/events.ts";
+import { parseDomainEventPayload } from "../_domain/event-payload.ts";
 
 const POLICY_EVENT_TYPES = new Set<DomainEvent["type"]>([
   "ProductionRequested",
@@ -84,7 +85,8 @@ export async function handleProductionPolicyEvent(
 
 function resolveProductionId(event: DomainEvent): string | null {
   if (event.type === "ProductionRequested") {
-    return event.payload.production_id;
+    const payload = parseDomainEventPayload<ProductionRequestedPayload>(event.payload);
+    return payload.production_id ?? event.stream_id ?? null;
   }
   if (event.correlation_id) return event.correlation_id;
   return null;
@@ -147,7 +149,7 @@ async function buildPolicyContext(
       {
         type: row.type,
         correlation_id: row.correlation_id,
-        payload: row.payload,
+        payload: parseDomainEventPayload(row.payload),
       } as DomainEvent,
     );
   }

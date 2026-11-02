@@ -1,4 +1,5 @@
 import type { DomainEvent, EventEnvelope, NewDomainEvent } from "../../_domain/events.ts";
+import { parseDomainEventPayload } from "../../_domain/event-payload.ts";
 import { applyLegacyCompatProjection } from "../compat/legacy-projection.ts";
 import { applyProjection } from "./projections.ts";
 
@@ -70,7 +71,7 @@ export async function readEvents(
     actor: row.actor,
     correlation_id: row.correlation_id,
     causation_id: row.causation_id,
-    payload: row.payload as EventEnvelope["payload"],
+    payload: parseDomainEventPayload<EventEnvelope["payload"]>(row.payload),
   })) as EventEnvelope[];
 }
 
