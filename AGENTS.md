@@ -57,6 +57,7 @@ CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）�
 - **TUI requires TTY**: `pnpm tui` (Ink-based) needs a real terminal with raw mode support. Use `pnpm tui -- --mock` for mock data. It will fail with "Raw mode is not supported" in non-interactive shells.
 - **`TARGET=local`**: Set this env var for CLI/TUI commands to connect to the local Supabase stack instead of remote.
 - **Never edit existing migrations**: Schema changes require a new `supabase/migrations/` file named `YYYYMMDD{seq}_snake_case_description.sql` (never modify committed migrations). See CLAUDE.md → Database Migrations.
+- **Migration timestamps**: New files must sort **after** the latest migration already on `main` (check `ls supabase/migrations | tail`). Do not add a version earlier than one already merged or applied on remote — `supabase db push` will fail without `--include-all`.
 - **Seed config after fresh start**: Run `TARGET=local pnpm seed:config` after `supabase start` or `supabase db reset` to initialize `podcast_config` and upload `cover.png`.
 - **PostgREST `jobs` / `podcast` schemas**: Local API exposes them via `supabase/config.toml` `[api].schemas`. After changing that file, run `supabase stop && supabase start`. Remote projects must add the same schemas under Dashboard → API → Exposed schemas.
 - **Gemini mock from Edge Functions**: In `config.toml`, set `[gemini] api_root = "http://host.docker.internal:8099"` (not `127.0.0.1`) before `TARGET=local pnpm seed:config`. Edge runs in Docker and cannot reach the host loopback.
