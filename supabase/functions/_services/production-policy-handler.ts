@@ -154,6 +154,34 @@ async function buildPolicyContext(
     );
   }
 
+  if (production.base_revision_id && production.scope !== "full") {
+    const [base] = await sql<Array<{
+      script_id: string;
+      audio_id: string;
+      artwork_id: string | null;
+    }>>`
+      select script_id, audio_id, artwork_id
+      from podcast.episode_revisions
+      where id = ${production.base_revision_id}::uuid
+      limit 1
+    `;
+    if (base) {
+      if (production.scope === "artwork") {
+        progress = {
+          ...progress,
+          scriptId: base.script_id,
+          audioId: base.audio_id,
+        };
+      } else if (production.scope === "audio") {
+        progress = {
+          ...progress,
+          scriptId: base.script_id,
+          artworkId: base.artwork_id,
+        };
+      }
+    }
+  }
+
   const [articleRow] = await sql<Array<{ content: string }>>`
     select content from podcast.article_revisions
     where id = ${production.article_revision_id}::uuid

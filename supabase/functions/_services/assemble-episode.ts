@@ -16,19 +16,54 @@ export async function assembleEpisodeRevision(
     title: string;
     description: string;
   }>>`
+    with prod as (
+      select episode_id, base_revision_id
+      from podcast.productions
+      where id = ${productionId}::uuid
+    ),
+    current_script as (
+      select s.id, s.title, s.description
+      from podcast.scripts s
+      where s.production_id = ${productionId}::uuid
+      order by s.created_at desc
+      limit 1
+    ),
+    current_audio as (
+      select a.id
+      from podcast.audios a
+      where a.production_id = ${productionId}::uuid
+      order by a.created_at desc
+      limit 1
+    ),
+    current_artwork as (
+      select aw.id
+      from podcast.artworks aw
+      where aw.production_id = ${productionId}::uuid
+      order by aw.created_at desc
+      limit 1
+    ),
+    base_assets as (
+      select
+        er.script_id,
+        er.audio_id,
+        er.artwork_id,
+        er.title,
+        er.description
+      from prod p
+      join podcast.episode_revisions er on er.id = p.base_revision_id
+    )
     select
       p.episode_id,
-      s.id as script_id,
-      a.id as audio_id,
-      aw.id as artwork_id,
-      s.title,
-      s.description
-    from podcast.productions p
-    join podcast.scripts s on s.production_id = p.id
-    join podcast.audios a on a.production_id = p.id
-    left join podcast.artworks aw on aw.production_id = p.id
-    where p.id = ${productionId}::uuid
-    order by s.created_at desc, a.created_at desc, aw.created_at desc
+      coalesce(cs.id, b.script_id) as script_id,
+      coalesce(ca.id, b.audio_id) as audio_id,
+      coalesce(cw.id, b.artwork_id) as artwork_id,
+      coalesce(cs.title, b.title) as title,
+      coalesce(cs.description, b.description) as description
+    from prod p
+    left join current_script cs on true
+    left join current_audio ca on true
+    left join current_artwork cw on true
+    left join base_assets b on true
     limit 1
   `;
 

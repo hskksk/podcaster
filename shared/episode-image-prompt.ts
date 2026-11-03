@@ -25,16 +25,29 @@ export function buildEpisodeImagePrompt(opts: {
   template?: string;
 }): string {
   const template = opts.template?.trim() || DEFAULT_EPISODE_IMAGE_PROMPT;
-  const body = template
-    .replaceAll("{{title}}", opts.title.trim())
-    .replaceAll("{{description}}", opts.description.trim())
-    .replaceAll("{{excerpt}}", opts.articleExcerpt.trim().slice(0, 1200))
-    .trim();
+  const body = sanitizePromptText(
+    template
+      .replaceAll("{{title}}", opts.title.trim())
+      .replaceAll("{{description}}", opts.description.trim())
+      .replaceAll("{{excerpt}}", opts.articleExcerpt.trim().slice(0, 1200))
+      .trim(),
+  );
 
   if (body.includes("not album art, CD cover, podcast cover template")) {
     return body;
   }
   return `${body}\n\n${EPISODE_IMAGE_STYLE_SUFFIX}`;
+}
+
+/**
+ * Markdoc/Liquid tags (`{% callout %}`) and template placeholders make the
+ * image model answer with text instead of an image, so drop them.
+ */
+function sanitizePromptText(text: string): string {
+  return text
+    .replace(/\{%[\s\S]*?%\}/g, " ")
+    .replace(/\{\{[\s\S]*?\}\}/g, " ")
+    .replace(/[ \t]{2,}/g, " ");
 }
 
 export function excerptFromArticle(content: string, maxChars = 1200): string {

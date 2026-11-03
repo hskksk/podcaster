@@ -12,6 +12,7 @@
 //   pnpm cli requeue regenerate-script <episode_id> [--yes]
 //   pnpm cli requeue regenerate-audio  <episode_id> [--yes]
 //   pnpm cli requeue regenerate-image  <episode_id> [--yes]
+//   pnpm cli backfill images [--limit N] [--dry-run] [--yes]
 //   pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
 //   pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]
 
@@ -81,6 +82,7 @@ function usage(): never {
   pnpm cli requeue regenerate-script <episode_id> [--yes]
   pnpm cli requeue regenerate-audio  <episode_id> [--yes]
   pnpm cli requeue regenerate-image  <episode_id> [--yes]
+  pnpm cli backfill images [--limit N] [--dry-run] [--yes]
   pnpm cli generate-script --content "<article>" [--with-thoughts] [--verbose]
   pnpm cli generate-script --file <path> [--with-thoughts] [--verbose]`);
   process.exit(1);
@@ -548,6 +550,104 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
 }
 
 // ---------------------------------------------------------------------------
+// Backfill
+// ---------------------------------------------------------------------------
+
+type BackfillAssetRow = {
+  episode_id: string;
+  audio_url: string | null;
+  image_url: string | null;
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function backfillImages(opts: {
+  limit: number;
+  dryRun: boolean;
+  yes: boolean;
+}): Promise<void> {
+  const { data: assets, error: assetErr } = await podcastReaders(db)
+    .from("published_episode_assets")
+    .select("episode_id, audio_url, image_url")
+    .not("audio_url", "is", null)
+    .is("image_url", null)
+    .order("episode_id", { ascending: true })
+    .limit(1000);
+
+  if (assetErr) { console.error("Error:", assetErr.message); process.exit(1); }
+
+  const assetRows = (assets ?? []) as BackfillAssetRow[];
+  if (assetRows.length === 0) {
+    console.log("No published episode is missing artwork.");
+    return;
+  }
+
+  const episodeIds = assetRows.map((row) => row.episode_id);
+  const { data: overviews, error: overviewErr } = await podcastReaders(db)
+    .from("episode_overview")
+    .select("id, title, created_at")
+    .in("id", episodeIds);
+
+  if (overviewErr) { console.error("Error:", overviewErr.message); process.exit(1); }
+
+  const metaById = new Map(
+    (overviews ?? []).map((row) => [row.id as string, row as { id: string; title: string | null; created_at: string }]),
+  );
+
+  const targets = assetRows
+    .map((row) => ({
+      id: row.episode_id,
+      title: metaById.get(row.episode_id)?.title ?? "",
+      created_at: metaById.get(row.episode_id)?.created_at ?? "",
+    }))
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+  const selected = opts.limit > 0 ? targets.slice(0, opts.limit) : targets;
+
+  console.log(`${targets.length} published episode(s) have audio but no artwork.`);
+  printLong(selected.map((row) => ({
+    "Episode ID": row.id,
+    "Title": row.title ?? "",
+    "Created At": fmtDate(row.created_at),
+  })));
+
+  if (opts.dryRun) {
+    console.log("Dry run: nothing queued.");
+    return;
+  }
+  if (!opts.yes) {
+    const ok = await confirm(
+      `Request artwork production (scope=artwork) for ${selected.length} episode(s)?`,
+    );
+    if (!ok) { console.log("Aborted."); process.exit(0); }
+  }
+
+  let queued = 0;
+  let failed = 0;
+  for (const row of selected) {
+    try {
+      const productionId = await appendProductionRequeue(row.id, "artwork");
+      queued++;
+      console.log(`  queued  ${shortId(row.id)}  ${truncate(row.title ?? "", 40)}  (${shortId(productionId)})`);
+      await sleep(500);
+    } catch (err) {
+      failed++;
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`  failed  ${shortId(row.id)}  ${message}`);
+    }
+  }
+
+  console.log(`Queued ${queued} artwork production(s), ${failed} failed.`);
+  if (queued > 0) {
+    console.log("With publication_policy=auto, publish runs after assemble.");
+    console.log("Otherwise republish each episode:");
+    console.log(`  pnpm cli requeue rss <episode_id> --yes`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Dispatch
 // ---------------------------------------------------------------------------
 
@@ -582,6 +682,17 @@ if (cmd === "list") {
     process.exit(1);
   }
   await requeueCmd(sub, param, flagBool("--yes"));
+} else if (cmd === "backfill") {
+  if (sub === "images") {
+    await backfillImages({
+      limit: flag("--limit", 0),
+      dryRun: flagBool("--dry-run"),
+      yes: flagBool("--yes"),
+    });
+  } else {
+    console.error("Usage: pnpm cli backfill images [--limit N] [--dry-run] [--yes]");
+    process.exit(1);
+  }
 } else {
   usage();
 }

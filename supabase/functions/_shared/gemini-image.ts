@@ -6,6 +6,12 @@ const MOCK_API_KEY = "mock-api-key";
 const DEFAULT_GEMINI_API_ROOT = "https://generativelanguage.googleapis.com";
 /** Gemini interactions image response_format only accepts image/jpeg. */
 const GEMINI_IMAGE_RESPONSE_MIME = "image/jpeg";
+/**
+ * The image model sometimes answers with text only ("no image payload").
+ * Retry here so paint_artwork does not burn a jobs.job_attempt on transient
+ * text-only responses.
+ */
+const IMAGE_ATTEMPTS = 3;
 
 function resolveApiKey(apiRoot: string): string {
   const envApiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
@@ -34,31 +40,86 @@ function decodeBase64Image(data: string): Uint8Array {
   return out;
 }
 
+function toImageOutput(candidate: unknown): ImageOutput | null {
+  if (!candidate || typeof candidate !== "object") return null;
+  const rec = candidate as Record<string, unknown>;
+  const data = rec.data;
+  if (typeof data !== "string" || data.length === 0) return null;
+  const mime = typeof rec.mime_type === "string" && rec.mime_type
+    ? rec.mime_type
+    : GEMINI_IMAGE_RESPONSE_MIME;
+  return { bytes: decodeBase64Image(data), mimeType: mime };
+}
+
+function contentBlocks(container: unknown): unknown[] {
+  if (!container || typeof container !== "object") return [];
+  const content = (container as Record<string, unknown>).content;
+  return Array.isArray(content) ? content : [];
+}
+
+/**
+ * Reads an image from any Interactions API shape the SDK has shipped:
+ * the `output_image` convenience field, the legacy `outputs` array, and the
+ * `steps[].content[]` array used since the May 2026 schema change.
+ */
 function extractImageFromInteraction(interaction: Record<string, unknown>): ImageOutput | null {
-  const outputImage = interaction.output_image;
-  if (outputImage && typeof outputImage === "object") {
-    const rec = outputImage as Record<string, unknown>;
-    const data = rec.data;
-    const mime = typeof rec.mime_type === "string" ? rec.mime_type : GEMINI_IMAGE_RESPONSE_MIME;
-    if (typeof data === "string" && data.length > 0) {
-      return { bytes: decodeBase64Image(data), mimeType: mime };
+  const direct = toImageOutput(interaction.output_image);
+  if (direct) return direct;
+
+  const outputs = interaction.outputs;
+  if (Array.isArray(outputs)) {
+    for (const item of outputs) {
+      if ((item as Record<string, unknown> | null)?.type !== "image") continue;
+      const image = toImageOutput(item);
+      if (image) return image;
     }
   }
 
-  const outputs = interaction.outputs;
-  if (!Array.isArray(outputs)) return null;
-  for (const item of outputs) {
-    if (!item || typeof item !== "object") continue;
-    const out = item as Record<string, unknown>;
-    if (out.type !== "image") continue;
-    const data = out.data;
-    const mime = typeof out.mime_type === "string" ? out.mime_type : GEMINI_IMAGE_RESPONSE_MIME;
-    if (typeof data === "string" && data.length > 0) {
-      return { bytes: decodeBase64Image(data), mimeType: mime };
+  const steps = interaction.steps;
+  if (Array.isArray(steps)) {
+    for (const step of steps) {
+      for (const block of contentBlocks(step)) {
+        if ((block as Record<string, unknown> | null)?.type !== "image") continue;
+        const image = toImageOutput(block);
+        if (image) return image;
+      }
     }
   }
+
   return null;
 }
+
+/** Model text from the interaction, used to explain a missing image. */
+function extractTextFromInteraction(interaction: Record<string, unknown>): string {
+  const parts: string[] = [];
+  const push = (value: unknown) => {
+    if (typeof value === "string" && value.trim()) parts.push(value.trim());
+  };
+
+  push(interaction.output_text);
+
+  const outputs = interaction.outputs;
+  if (Array.isArray(outputs)) {
+    for (const item of outputs) {
+      if ((item as Record<string, unknown> | null)?.type !== "text") continue;
+      push((item as Record<string, unknown>).text);
+    }
+  }
+
+  const steps = interaction.steps;
+  if (Array.isArray(steps)) {
+    for (const step of steps) {
+      for (const block of contentBlocks(step)) {
+        const rec = block as Record<string, unknown> | null;
+        if (rec?.type !== "text") continue;
+        push(rec.text);
+      }
+    }
+  }
+
+  return parts.join(" ");
+}
+
 
 export type EpisodeImageGenerationConfig = {
   model: string;
@@ -100,27 +161,45 @@ export async function generateEpisodeImageWithGemini(
   const imageCfg = readEpisodeImageConfig(cfg);
   const ai = createClient(cfg as Record<string, string>);
 
-  const interaction = await ai.interactions.create({
-    model: imageCfg.model,
-    input: prompt,
-    response_format: {
-      type: "image",
-      mime_type: imageCfg.mimeType,
-      aspect_ratio: imageCfg.aspectRatio,
-      image_size: imageCfg.imageSize,
-    },
-  });
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= IMAGE_ATTEMPTS; attempt++) {
+    try {
+      const interaction = await ai.interactions.create({
+        model: imageCfg.model,
+        input: prompt,
+        response_format: {
+          type: "image",
+          mime_type: imageCfg.mimeType,
+          aspect_ratio: imageCfg.aspectRatio,
+          image_size: imageCfg.imageSize,
+        },
+      });
 
-  const record = interaction as unknown as Record<string, unknown>;
-  if (record.status === "failed") {
-    throw new Error(`Image interaction failed: ${JSON.stringify(record)}`);
+      const record = interaction as unknown as Record<string, unknown>;
+      if (record.status === "failed") {
+        throw new Error(`Image interaction failed: ${JSON.stringify(record)}`);
+      }
+
+      const image = extractImageFromInteraction(record);
+      if (!image) {
+        const text = extractTextFromInteraction(record).slice(0, 300);
+        throw new Error(
+          `Image interaction returned no image payload${text ? ` (model text: ${text})` : ""}`,
+        );
+      }
+      return image;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < IMAGE_ATTEMPTS) {
+        console.error(
+          `[episode-image] attempt ${attempt}/${IMAGE_ATTEMPTS} failed: ${lastError.message}`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+      }
+    }
   }
 
-  const image = extractImageFromInteraction(record);
-  if (!image) {
-    throw new Error("Image interaction returned no image payload");
-  }
-  return image;
+  throw lastError ?? new Error("Image generation failed");
 }
 
 export function storageExtensionForMime(mimeType: string): string {
