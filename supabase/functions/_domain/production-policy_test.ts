@@ -98,6 +98,22 @@ Deno.test("canAssemble requires audio and optional artwork", () => {
   assertEquals(canAssemble(progress), true);
 });
 
+Deno.test("artwork scope can assemble after paint when base revision supplies script and audio", () => {
+  const artworkProduction: ProductionRequestedPayload = {
+    ...production,
+    scope: "artwork",
+    base_revision_id: "66666666-6666-4666-8666-666666666666",
+  };
+  let progress = emptyProductionProgress(artworkProduction, true);
+  progress = {
+    ...progress,
+    scriptId: "base-script",
+    audioId: "base-audio",
+    artworkId: "new-art",
+  };
+  assertEquals(canAssemble(progress), true);
+});
+
 Deno.test("one article one episode invariant in replay", () => {
   const episodeIds = new Set<string>();
   episodeIds.add(production.episode_id);
