@@ -114,14 +114,17 @@ GCP では、Supabase に近いリージョン（例: `asia-northeast1`）に Jo
 | `audio.transcode.enabled` | `true` | マスタースイッチ |
 | `audio.transcode.bitrate_kbps` | `128` | ffmpeg `-b:a` |
 | `audio.transcode.container` | `m4a` | 出力 MIME `audio/mp4` |
-| `gcp.project_id` | `...` | Run API |
+| `gcp.project_id` | `...` | Run API（`podcast_config` に置く。Secret には載せない） |
 | `gcp.region` | `asia-northeast1` | Job リージョン |
 | `gcp.run.job_name` | `audio-transcode` | Job 名 |
+| `audio.transcode.staging_wav_retention_days` | `7` | m4a 成功後、staging WAV を Storage に残す日数（GC 用） |
+
+GCP 認証用の `GCP_SERVICE_ACCOUNT_JSON` だけ Supabase Secret に置く。プロジェクト ID・リージョン・Job 名は `loadConfig()` から読む。
 
 transcode が有効なときの `render_audio` の流れ:
 
-1. 既存どおり Gemini Batch → WAV を `storeBlob`（staging として `job.output.wav_blob_id` / `storage_path` を job output に残す）。
-2. `submitCloudRunTranscode()` で Run Job API を呼ぶ。`INPUT_URL` は WAV の署名 GET、`OUTPUT_UPLOAD_URL` は同一 job 配下または `jobs/.../audio.m4a` への署名 PUT。
+1. 既存どおり Gemini Batch → WAV を `storeBlob`（staging: `jobs/{jobId}/{attemptId}/audio.wav`。`job.output` に `wav_blob_id` / `storage_path` を残す）。
+2. `submitCloudRunTranscode()` で Run Job API を呼ぶ。`INPUT_URL` は staging WAV の署名 GET。`OUTPUT_UPLOAD_URL` は公開パス `audio/{episodeId}.m4a` への署名 PUT（`episodeId` は production / job の correlation から解決）。
 3. `jobs.external_operations` に 2 件目を insert する（Batch 行は `completed_at` 済み）。
 
 | 列 | 値 |
@@ -130,13 +133,13 @@ transcode が有効なときの `render_audio` の流れ:
 | `state` | `EXECUTION_RUNNING` 等 |
 | `next_poll_at` | 現在時刻 + 30 s |
 
-4. `job.output.transcode` に `{ execution, wav_blob_id, output_storage_path }` を保存する。
+4. `job.output.transcode` に `{ execution, wav_blob_id, output_storage_path: "audio/{episodeId}.m4a" }` を保存する。
 5. handler は `waiting_external` を返す。この時点では `AudioRendered` を出さない。
 
 Edge から Run Job API を呼ぶとき:
 
 - Secret: `GCP_SERVICE_ACCOUNT_JSON` → OAuth2 → `run.googleapis.com`
-- コンテナ env: `INPUT_URL`, `OUTPUT_UPLOAD_URL`, `BITRATE_KBPS`, `JOB_ID`, `ATTEMPT_ID`
+- コンテナ env: `INPUT_URL`, `OUTPUT_UPLOAD_URL`, `OUTPUT_OBJECT_PATH`（`audio/{episodeId}.m4a`）, `BITRATE_KBPS`, `JOB_ID`, `ATTEMPT_ID`
 
 ### 3. Poller：`external-operation-poller` の拡張
 
@@ -155,8 +158,8 @@ Execution が成功したとき:
 2. `jobs.status` を `running` に戻し、`startRunJobFlow(job_id)` を呼ぶ（Batch 成功時と同型）。
 3. `render_audio` が再入場し、`job.output.transcode` がある場合は finalize する。
    - Storage 上の m4a から `byte_size` と `duration_ms` を確定する（HEAD または Job ログ）。
-   - `registerBlob` するか、既存 path の `podcast.blobs` 行を update する（`mime_type: audio/mp4`）。
-   - 初版は WAV Blob 行は残し、m4a を正の `blob_id` として job output に載せる。
+   - `podcast.blobs` に `storage_path = audio/{episodeId}.m4a`、`mime_type = audio/mp4`、確定した `byte_size` / `duration_ms` を登録する（正の `blob_id` は m4a 側）。
+   - staging WAV（`jobs/.../audio.wav`）は削除しない。Phase 2 の GC が `staging_wav_retention_days`（既定 7 日）経過後に消す。
 4. `render_audio` を `outcome: succeeded` とする。`blob_id` / `storage_path` / `mime_type` / `byte_size` / `duration_ms` は m4a 側の値とする。
 5. `job-worker` が `AudioRendered` を出し、`ProductionPolicy` が `auto_publish` する（従来どおり）。
 
@@ -185,7 +188,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 |------|------|
 | Job に Supabase service role を載せない | 署名 URL のみ |
 | 署名 URL の TTL | Job timeout より長く（15〜60 分） |
-| upload 先 | env で固定（`jobs/{jobId}/{attemptId}/audio.m4a` 等） |
+| upload 先 | env で固定（公開 `audio/{episodeId}.m4a`。WAV staging は `jobs/.../audio.wav` のみ） |
 | GCP SA JSON | Supabase Secret のみ |
 
 ## 冪等性と失敗
@@ -214,7 +217,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 ### Phase 2 — 品質・運用
 
 1. `render_audio` の `readFile` をやめ、ストリーム upload と `byte_size` 確定を行う（transcode なし path も含む）。
-2. staging WAV Blob の GC 方針（m4a 成功後 N 日）を決める。
+2. staging WAV の GC: transcode 成功時刻から `audio.transcode.staging_wav_retention_days`（既定 **7 日**）経過した `jobs/.../audio.wav` を Storage と `podcast.blobs` から削除する（pg_cron + Edge または SQL バッチ。実装詳細は Phase 2 PR）。
 3. Workload Identity Federation で SA JSON を撤去する。
 
 ### Phase 3 — 最適化
@@ -234,8 +237,12 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 - [podcast-domain-model-migration.md](./podcast-domain-model-migration.md) — events 移行（完了前提）
 - [CLAUDE.md](../../CLAUDE.md) — `pnpm pipeline:status`、`external-operation-poller`
 
-## 未決事項
+## 決定事項
 
-1. m4a の Storage パスを `jobs/.../audio.m4a` のままにするか、公開用 `audio/{episodeId}.m4a` に寄せるか（RSS URL の方針）。
-2. GCP プロジェクト ID・リージョンを `podcast_config` に置くか、Secret のみにするか。
-3. staging WAV を同 job 配下に残す期間（Phase 2 の GC とセット）。
+| 項目 | 決定 |
+|------|------|
+| 配信用 m4a の Storage パス | 公開バケット `podcast` 配下 **`audio/{episodeId}.m4a`**（RSS の enclosure URL と一致） |
+| staging WAV | transcode 前後とも **`jobs/{jobId}/{attemptId}/audio.wav`**。m4a 確定後も即削除せず保持 |
+| staging WAV の保持 | **7 日**（`audio.transcode.staging_wav_retention_days`）。Phase 2 で GC |
+| GCP プロジェクト・リージョン・Job 名 | **`podcast_config`**（上表の `gcp.*` キー） |
+| GCP 認証 | **`GCP_SERVICE_ACCOUNT_JSON`** のみ Secret |
