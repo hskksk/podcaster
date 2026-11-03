@@ -18,8 +18,6 @@ import {
   publishEpisodeViaEdge,
   resolveLatestRevisionId,
 } from "../../lib/domain-requeue.js";
-import { connectPostgres } from "../../lib/postgres-connect.js";
-import { readPipelineMode } from "../../lib/pipeline-mode.js";
 import * as Mock from "./mock.js";
 import { Article, Episode, AudioFile, ProcessingLog, PodcastConfig, Script } from "./types.js";
 
@@ -146,7 +144,7 @@ export class DataClient {
   async requeue(
     type: "script" | "audio" | "rss" | "image",
     id: string,
-    options?: RequeueOptions,
+    _options?: RequeueOptions,
   ): Promise<ClientActionResult> {
     if (this.isMock) {
       console.log(`Mock: Requeued ${type} for ${id}`);
@@ -154,52 +152,27 @@ export class DataClient {
     }
     if (!this.db) return { success: false, error: "DB not initialized" };
 
-    const sql = connectPostgres();
-    const mode = await readPipelineMode(sql);
-    await sql.end();
-
-    if (mode === "events") {
-      try {
-        if (type === "rss") {
-          const revisionId = await resolveLatestRevisionId(id);
-          if (!revisionId) {
-            return { success: false, error: "No assembled episode revision to publish." };
-          }
-          const result = await publishEpisodeViaEdge(id, revisionId);
-          if (!result.ok) {
-            return { success: false, error: result.body || `HTTP ${result.status}` };
-          }
-          return { success: true };
+    try {
+      if (type === "rss") {
+        const revisionId = await resolveLatestRevisionId(id);
+        if (!revisionId) {
+          return { success: false, error: "No assembled episode revision to publish." };
         }
-        const scope = type === "image" ? "artwork" : type === "audio" ? "audio" : "full";
-        await appendProductionRequeue(id, scope);
+        const result = await publishEpisodeViaEdge(id, revisionId);
+        if (!result.ok) {
+          return { success: false, error: result.body || `HTTP ${result.status}` };
+        }
         return { success: true };
-      } catch (err) {
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : String(err),
-        };
       }
+      const scope = type === "image" ? "artwork" : type === "audio" ? "audio" : "full";
+      await appendProductionRequeue(id, scope);
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
     }
-
-    const msg: Record<string, unknown> = {
-      episodeId: id,
-      trigger: "manual",
-    };
-    if (type === "image") {
-      msg.startFrom = "image";
-      msg.regenerate = true;
-    } else {
-      msg.startFrom = type;
-      if (options?.regenerate) msg.regenerate = true;
-    }
-    const flowSlug = type === "rss" ? "craftEpisodeDownload" : "craftEpisodeSubmit";
-
-    const { error } = await this.db
-      .schema("pgflow")
-      .rpc("start_flow", { flow_slug: flowSlug, input: msg });
-    if (error) return { success: false, error: error.message };
-    return { success: true };
   }
 
   /** mem.ai note ingest was removed in Phase 6. Use a Git mdoc file. */

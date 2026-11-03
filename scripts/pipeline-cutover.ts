@@ -36,14 +36,14 @@ async function preflight(): Promise<void> {
   console.log(`pipeline.mode = ${mode}`);
 
   const blocking = await sql<Array<{ id: string; status: string }>>`
-    select id, status from episodes
+    select id, status from legacy_episodes
     where status like '%running'
        or status in ('audio_generated', 'audio_downloading')
     order by created_at desc
     limit 20
   `;
   if (blocking.length > 0) {
-    console.error("\nBlocking episodes (wait or fix before cutover):");
+    console.error("\nBlocking legacy episodes (stale rows on legacy_episodes):");
     for (const row of blocking) {
       console.error(`  ${row.id}  ${row.status}`);
     }
@@ -146,6 +146,12 @@ async function switchMode(): Promise<void> {
     console.log("  4. Hosted Edge has DB access (Supabase sets SUPABASE_DB_URL automatically)");
   }
 
+  if (target === "legacy") {
+    console.error("pipeline.mode=legacy was removed in Phase 6. Production uses the events pipeline only.");
+    await sql.end();
+    process.exit(1);
+  }
+
   if (!yes) {
     console.error("\nRefusing to change mode without --yes");
     await sql.end();
@@ -155,14 +161,7 @@ async function switchMode(): Promise<void> {
   await writePipelineMode(target, sql);
   await sql.end();
   console.log(`Updated pipeline.mode → ${target}`);
-
-  if (target === "legacy") {
-    console.warn(
-      "Rollback: ingest uses craftEpisodeSubmit again. Episode work during legacy is NOT in the event log; backfill before re-enabling events.",
-    );
-  } else {
-    console.log("Smoke test: ingest one article, confirm feed.xml and jobs.job_attempts.");
-  }
+  console.log("Smoke test: ingest one article, confirm feed.xml and jobs.job_attempts.");
 }
 
 async function kickSubscriber(): Promise<void> {

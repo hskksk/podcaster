@@ -393,21 +393,6 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/pgflow/index.ts"
 
-[functions.craft-episode-worker]
-enabled = true
-verify_jwt = false
-entrypoint = "./functions/craft-episode-worker/index.ts"
-
-[functions.craft-episode-download-worker]
-enabled = true
-verify_jwt = false
-entrypoint = "./functions/craft-episode-download-worker/index.ts"
-
-[functions.download-monitor]
-enabled = true
-verify_jwt = false
-entrypoint = "./functions/download-monitor/index.ts"
-
 [functions.job-worker]
 enabled = true
 verify_jwt = false

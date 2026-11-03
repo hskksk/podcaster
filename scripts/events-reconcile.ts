@@ -12,7 +12,7 @@ async function main(): Promise<void> {
   let failed = false;
 
   const [{ legacy_articles }] = await sql<[{ legacy_articles: string }]>`
-    select count(*)::text as legacy_articles from articles
+    select count(*)::text as legacy_articles from legacy_articles
   `;
   const [{ proj_articles }] = await sql<[{ proj_articles: string }]>`
     select count(*)::text as proj_articles from podcast.articles
@@ -24,7 +24,7 @@ async function main(): Promise<void> {
 
   const [{ legacy_episode_articles }] = await sql<[{ legacy_episode_articles: string }]>`
     select count(distinct article_id)::text as legacy_episode_articles
-    from episodes
+    from legacy_episodes
     where article_id is not null
   `;
   const [{ proj_episodes }] = await sql<[{ proj_episodes: string }]>`
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
       af.episode_id,
       af.storage_path as legacy_path,
       b.storage_path as proj_path
-    from audio_files af
+    from legacy_audio_files af
     join podcast.audios a on a.id = af.id
     join podcast.blobs b on b.id = a.blob_id
     where af.status = 'ready' and b.storage_path <> af.storage_path
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   >`
     with legacy_pub as (
       select article_id, max(published_at) as published_at
-      from episodes
+      from legacy_episodes
       where status = 'published' and article_id is not null
       group by article_id
     ),

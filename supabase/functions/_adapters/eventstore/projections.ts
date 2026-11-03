@@ -33,14 +33,24 @@ export async function applyProjection(
 
     case "ArticleRegistered":
       await sql`
-        insert into podcast.articles (id, content_path, mem_note_id, created_at)
+        insert into podcast.articles (
+          id, content_path, mem_note_id, created_at, source, ingest_route, ingest_meta
+        )
         values (
           ${event.payload.article_id}::uuid,
           ${event.payload.content_path},
           ${event.payload.mem_note_id ?? null},
-          ${event.occurred_at}::timestamptz
+          ${event.occurred_at}::timestamptz,
+          ${event.payload.source ?? "webhook"},
+          ${event.payload.ingest_route ?? null},
+          ${event.payload.ingest_meta ? JSON.stringify(event.payload.ingest_meta) : null}::jsonb
         )
-        on conflict (id) do nothing
+        on conflict (id) do update set
+          content_path = coalesce(excluded.content_path, podcast.articles.content_path),
+          mem_note_id = coalesce(excluded.mem_note_id, podcast.articles.mem_note_id),
+          source = excluded.source,
+          ingest_route = coalesce(excluded.ingest_route, podcast.articles.ingest_route),
+          ingest_meta = coalesce(excluded.ingest_meta, podcast.articles.ingest_meta)
       `;
       await sql`
         insert into podcast.article_revisions (

@@ -28,6 +28,7 @@ if (target === "local") {
 }
 
 const publicUrl = process.env.PODCAST_PUBLIC_URL ?? supabaseUrl;
+void publicUrl; // cover is uploaded to Storage; show metadata lives in podcast.shows
 const supabase = createClient(supabaseUrl, serviceKey);
 
 // Load config.toml
@@ -99,7 +100,6 @@ if (existsSync(coverPath)) {
   console.warn(`public/${coverImage} not found, skipping cover upload.`);
 }
 
-const coverUrl = `${publicUrl}/storage/v1/object/public/podcast/${coverImage}`;
 const geminiApiRoot = config.gemini?.api_root
   ?? process.env.GEMINI_API_ROOT
   ?? "https://generativelanguage.googleapis.com";
@@ -108,9 +108,6 @@ const geminiApiPath = config.gemini?.api_path
   ?? "/v1beta";
 
 const defaults: Record<string, unknown> = {
-  "podcast.title": config.podcast.title,
-  "podcast.description": config.podcast.description,
-  "podcast.cover_url": coverUrl,
   "tts.model": config.tts.model,
   "tts.chunk_max_chars": config.tts.chunk_max_chars ?? 200,
   "tts.instructions": config.tts.instructions,
@@ -134,7 +131,6 @@ const defaults: Record<string, unknown> = {
   "generator.model": config.generator.model,
   "gemini.api_root": geminiApiRoot,
   "gemini.api_path": geminiApiPath,
-  "download.monitor_interval_seconds": config.download?.monitor_interval_seconds ?? 60,
   "image.enabled": config.image?.enabled ?? true,
   "image.model": config.image?.model ?? "gemini-3.1-flash-image",
   "image.aspect_ratio": config.image?.aspect_ratio ?? "16:9",

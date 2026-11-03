@@ -1,6 +1,5 @@
 import type { DomainEvent, EventEnvelope, NewDomainEvent } from "../../_domain/events.ts";
 import { parseDomainEventPayload } from "../../_domain/event-payload.ts";
-import { applyLegacyCompatProjection } from "../compat/legacy-projection.ts";
 import { applyProjection } from "./projections.ts";
 
 import type postgres from "postgres";
@@ -134,7 +133,6 @@ export async function appendEvent(
       };
 
       await applyProjection(tx, stored as DomainEvent);
-      await applyLegacyCompatProjection(tx, stored as DomainEvent);
       return stored;
     });
   } catch (err) {
