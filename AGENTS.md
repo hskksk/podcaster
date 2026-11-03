@@ -65,7 +65,7 @@ CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）�
 
 ### Production pipeline (post Phase 6)
 
-Production runs **`pipeline.mode=events` only**. Ingest appends domain events; `domain-subscriber` enqueues jobs; `job-worker` runs `runJob`. CLI/TUI/web read **`podcast.*_overview`** and **`jobs.attempt_log`**. Legacy tables are renamed to **`legacy_*`** (historical data only). Dashboard **Exposed schemas** must include **`jobs`** and **`podcast`**.
+Production runs **`pipeline.mode=events` only**. Ingest appends domain events; `domain-subscriber` enqueues jobs; `job-worker` runs `runJob`. CLI/TUI/web read **`podcast.*_overview`** and **`jobs.attempt_log`**. Legacy pipeline tables are **dropped** after migration soak (use DB backups for history). Dashboard **Exposed schemas** must include **`jobs`** and **`podcast`**.
 
 **Cutover runbook (already on events):** `TARGET=remote pnpm events:reconcile`, `pnpm pipeline:status`, smoke ingest, monitor `event_subscription_failures`. `pipeline:switch legacy` is removed.
 

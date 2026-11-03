@@ -13,13 +13,14 @@ import {
 } from "../../lib/supabase-detect.js";
 import { parseFrontmatter, parseTitleFromContent, textify } from "../../lib/mdoc.js";
 import { jobReaders, podcastReaders } from "../../lib/reader-views.js";
+import { loadShowChannelMeta } from "../../lib/show-metadata.js";
 import {
   appendProductionRequeue,
   publishEpisodeViaEdge,
   resolveLatestRevisionId,
 } from "../../lib/domain-requeue.js";
 import * as Mock from "./mock.js";
-import { Article, Episode, AudioFile, ProcessingLog, PodcastConfig, Script } from "./types.js";
+import { Article, Episode, AudioFile, ProcessingLog, PodcastConfig, Script, ShowChannelMeta, EventSubscriptionFailure } from "./types.js";
 
 dotenv.config({ path: ".env" });
 
@@ -82,12 +83,19 @@ export class DataClient {
         config: Mock.CONFIG,
         inbox: Mock.INBOX,
         draft: Mock.DRAFT,
+        show: Mock.SHOW,
+        subscriptionFailures: Mock.SUBSCRIPTION_FAILURES,
+        storagePublicBase: Mock.STORAGE_PUBLIC_BASE,
       };
     }
 
     if (!this.db) throw new Error("DB not initialized");
+    if (!this.apiUrl) throw new Error("API URL not configured");
 
-    const [articles, episodes, audioFiles, logs, config, inboxFiles, articleFiles] = await Promise.all([
+    const storagePublicBase = `${this.apiUrl.replace(/\/$/, "")}/storage/v1/object/public/podcast`;
+
+    const [articles, episodes, audioFiles, logs, config, inboxFiles, articleFiles, failuresRes, show] =
+      await Promise.all([
       podcastReaders(this.db).from("article_overview").select("*").order("created_at", { ascending: false }),
       podcastReaders(this.db).from("episode_overview").select("*").order("created_at", { ascending: false }),
       podcastReaders(this.db).from("audio_overview").select("*").order("created_at", { ascending: false }),
@@ -95,6 +103,12 @@ export class DataClient {
       this.db.from("podcast_config").select("*"),
       this.scanCollection("content/web-clips"),
       this.scanCollection("content/docs"),
+      podcastReaders(this.db)
+        .from("event_subscription_failures")
+        .select("subscriber_id, event_position, error_message, failed_at")
+        .order("failed_at", { ascending: false })
+        .limit(10),
+      loadShowChannelMeta(),
     ]);
 
     return {
@@ -105,6 +119,9 @@ export class DataClient {
       config: config.data as PodcastConfig[] || [],
       inbox: inboxFiles,
       draft: articleFiles,
+      show: show as ShowChannelMeta,
+      subscriptionFailures: (failuresRes.data as EventSubscriptionFailure[]) || [],
+      storagePublicBase,
     };
   }
 

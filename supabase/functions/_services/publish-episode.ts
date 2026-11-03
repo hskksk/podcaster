@@ -4,7 +4,7 @@ import { registerBlob } from "../_adapters/eventstore/projections.ts";
 import type { Sql } from "../_adapters/eventstore/postgres.ts";
 import { appendDomainEvents } from "../_adapters/eventstore/subscription.ts";
 import { DEFAULT_SHOW_ID } from "../_domain/events.ts";
-import { loadConfig } from "../_shared/config.ts";
+import { loadShowChannelMeta, type RssChannelMeta } from "../_shared/show-metadata.ts";
 
 type FeedRow = FeedEpisodeItem & { episodeRevisionId: string };
 
@@ -29,8 +29,8 @@ export async function publishEpisodeRevision(
     return;
   }
 
-  const cfg = await loadConfig();
   const storageUrl = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/podcast`;
+  const channel = await loadShowChannelMeta(sql, storageUrl);
   const occurredAt = new Date().toISOString();
 
   const pendingRow = await loadFeedRowForRevision(sql, opts.episodeRevisionId, occurredAt);
@@ -42,7 +42,7 @@ export async function publishEpisodeRevision(
     (a, b) => new Date(b.pubDateIso).getTime() - new Date(a.pubDateIso).getTime(),
   );
 
-  await uploadFeed(db, sql, feedItems, cfg as Record<string, string>, storageUrl, {
+  await uploadFeed(db, sql, feedItems, channel, storageUrl, {
     actor: opts.actor,
     causationEventId: opts.causationEventId,
     occurredAt,
@@ -65,8 +65,8 @@ async function withdrawPublication(
   `;
   if (!ep) throw new Error(`withdraw: publication not found ${opts.publicationId}`);
 
-  const cfg = await loadConfig();
   const storageUrl = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/podcast`;
+  const channel = await loadShowChannelMeta(sql, storageUrl);
   const occurredAt = new Date().toISOString();
 
   await appendDomainEvents(sql, [{
@@ -87,7 +87,7 @@ async function withdrawPublication(
   const feedItems = await loadPublishedFeedItems(sql);
   const feedSnapshotId = crypto.randomUUID();
   const blobId = crypto.randomUUID();
-  await writeFeedFiles(db, sql, feedItems, cfg as Record<string, string>, storageUrl, feedSnapshotId, blobId);
+  await writeFeedFiles(db, sql, feedItems, channel, storageUrl, feedSnapshotId, blobId);
 
   await appendDomainEvents(sql, [{
     type: "FeedRebuilt",
@@ -114,7 +114,7 @@ async function uploadFeed(
   db: SupabaseClient,
   sql: Sql,
   feedItems: FeedRow[],
-  cfg: Record<string, string>,
+  channel: RssChannelMeta,
   storageUrl: string,
   meta: {
     actor: string;
@@ -126,7 +126,7 @@ async function uploadFeed(
 ): Promise<void> {
   const feedSnapshotId = crypto.randomUUID();
   const blobId = crypto.randomUUID();
-  await writeFeedFiles(db, sql, feedItems, cfg, storageUrl, feedSnapshotId, blobId);
+  await writeFeedFiles(db, sql, feedItems, channel, storageUrl, feedSnapshotId, blobId);
 
   const [prevPub] = await sql<Array<{ id: string }>>`
     select pub.id
@@ -181,12 +181,12 @@ async function writeFeedFiles(
   db: SupabaseClient,
   sql: Sql,
   feedItems: FeedRow[],
-  cfg: Record<string, string>,
+  channel: RssChannelMeta,
   storageUrl: string,
   feedSnapshotId: string,
   blobId: string,
 ): Promise<void> {
-  const xml = buildRssFeedXml(feedItems, cfg, storageUrl);
+  const xml = buildRssFeedXml(feedItems, channel, storageUrl);
   const xmlBytes = new TextEncoder().encode(xml);
   const versionedPath = `feeds/${feedSnapshotId}.xml`;
 

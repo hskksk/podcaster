@@ -6,51 +6,44 @@
 - 音声: Gemini TTS のマルチスピーカー合成（WAV 形式）
 - 配信: Supabase Storage の公開バケット（グローバル CDN）
 
-**スタック**: TypeScript / Deno · Supabase Edge Functions · Supabase Storage · Supabase Postgres + pgflow · Gemini API
+**スタック**: TypeScript / Deno · Supabase Edge Functions · Supabase Storage · Supabase Postgres · Gemini API
 
 ---
 
 ## アーキテクチャ
 
 ```
-外部トリガー（curl / Capture / queued CI）
+外部トリガー（curl / Capture / queued CI / TUI）
          │
          │ POST /functions/v1/ingest  {title, content, content_path?}
          ▼
 ┌─────────────────────┐
-│      ingest         │  articles / episodes を作成（Git 本文）
+│      ingest         │  domain_events に ArticleRegistered / EpisodeCreated 等を append
 └────────┬────────────┘
-         │ pgflow.start_flow("craftEpisodeSubmit")
+         │
          ▼
 ┌─────────────────────┐
-│  generate_script    │  Gemini Flash でホスト/コホスト台本を JSON 生成
-└────────┬────────────┘
-         ▼
-┌─────────────────────┐
-│ generate_audio_start│  Gemini Batch API で音声生成ジョブを開始
+│ domain-subscriber   │  production-policy がイベントを読み jobs を enqueue
 └────────┬────────────┘
          ▼
 ┌─────────────────────┐
-│ download-monitor    │  pending batch を検知し craftEpisodeDownload を起動
+│    job-worker       │  generateScript → generateAudio → generateEpisodeImage …
 └────────┬────────────┘
          ▼
 ┌─────────────────────┐
-│generate_audio_download│ バッチ状態をポーリングし、完了後に PCM→WAV 変換 → Storage 保存
-└────────┬────────────┘
-         ▼
-┌─────────────────────┐
-│    update_rss       │  DB から全エピソードを取得 → RSS 2.0 + iTunes 形式で feed.xml 生成
+│ publish (Edge)      │  EpisodePublished → feed.xml を Storage に upload
 └─────────────────────┘
          │
          ▼
 Supabase Storage (公開バケット `podcast`)
   ├── feed.xml          ← RSS フィード（CDN 配信）
-  ├── audio/<id>.wav    ← 音声ファイル（CDN 配信）
-  └── cover.png         ← カバー画像
+  ├── episodes/…        ← エピソードカバー
+  └── …/audio           ← 音声（WAV）
 ```
 
-本番環境では pgflow migration が作成する `pgflow_ensure_workers` cron が  
-`craft-episode-worker` の死活監視と再起動を行います。
+読み取りは **`podcast.*_overview`** ビューと **`jobs.attempt_log`**（実行ログ）。番組メタデータは **`podcast.shows`**。
+
+本番では cron / Edge が **`domain-subscriber`** と **`job-worker`** を定期的に起動します。TUI の Pipeline 画面は **`event_subscription_failures`** を表示します。
 
 ---
 

@@ -179,3 +179,19 @@ export const INBOX = [
 export const DRAFT = [
   { name: '20260423_勝海舟.md', size: 11663, mtime: minus(60 * 72) },
 ];
+
+export const SHOW = {
+  title: 'Podcaster Daily',
+  description: 'AIが生成するテック・教養ポッドキャスト',
+  coverStoragePath: 'cover.png',
+};
+
+export const STORAGE_PUBLIC_BASE =
+  'https://example.supabase.co/storage/v1/object/public/podcast';
+
+export const SUBSCRIPTION_FAILURES: Array<{
+  subscriber_id: string;
+  event_position: number;
+  error_message: string;
+  failed_at: string;
+}> = [];

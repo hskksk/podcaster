@@ -5,7 +5,7 @@ export function podcastReaders(db: SupabaseClient) {
   return db.schema("podcast");
 }
 
-/** Phase 5 job execution log (legacy processing_logs + job_attempts). */
+/** Job execution log (`jobs.attempt_log` view over job_attempts). */
 export function jobReaders(db: SupabaseClient) {
   return db.schema("jobs");
 }

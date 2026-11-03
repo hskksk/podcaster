@@ -10,6 +10,14 @@ export function podcastStoragePublicBase(config: PodcastConfig[]): string | null
   return trimmed.slice(0, lastSlash);
 }
 
+export function resolvePodcastStoragePublicBase(
+  storagePublicBase: string | null | undefined,
+  config: PodcastConfig[],
+): string | null {
+  if (storagePublicBase?.trim()) return storagePublicBase.replace(/\/$/, '');
+  return podcastStoragePublicBase(config);
+}
+
 export function isEpisodeImageEnabled(config: PodcastConfig[]): boolean {
   const raw = config.find(c => c.key === 'image.enabled')?.value;
   if (raw === false || raw === 'false') return false;
@@ -18,12 +26,13 @@ export function isEpisodeImageEnabled(config: PodcastConfig[]): boolean {
 
 export function episodeImagePublicUrl(
   imageUrl: string | null | undefined,
-  config: PodcastConfig[]
+  config: PodcastConfig[],
+  storagePublicBase?: string | null,
 ): string | null {
   const path = imageUrl?.trim();
   if (!path) return null;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  const base = podcastStoragePublicBase(config);
+  const base = resolvePodcastStoragePublicBase(storagePublicBase, config);
   if (!base) return null;
   return `${base}/${path.replace(/^\//, '')}`;
 }

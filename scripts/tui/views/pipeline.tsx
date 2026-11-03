@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput, useStdout } from 'ink';
-import { Episode } from '../data/types.js';
+import { Episode, EventSubscriptionFailure } from '../data/types.js';
 import { matchesTextFilter } from '../utils/text-filter.js';
 
 interface Props {
   data: {
     episodes: Episode[];
+    subscriptionFailures?: EventSubscriptionFailure[];
   };
   focus: string;
   onSelectEpisode: (episodeId: string) => void;
@@ -64,7 +65,7 @@ export const PipelineView: React.FC<Props> = ({
   onRequeueAudioRequest,
   onRegenerateImageRequest
 }) => {
-  const { episodes } = data;
+  const { episodes, subscriptionFailures = [] } = data;
   const { stdout } = useStdout();
   const [offsets, setOffsets] = useState<number[]>(() => PIPELINE_STAGES.map(() => 0));
   const [selectedIndices, setSelectedIndices] = useState<number[]>(() => PIPELINE_STAGES.map(() => -1));
@@ -162,6 +163,22 @@ export const PipelineView: React.FC<Props> = ({
 
   return (
     <Box flexDirection="column" height="100%" width="100%" flexGrow={1} minWidth={0}>
+      {subscriptionFailures.length > 0 && (
+        <Box paddingX={1} flexShrink={0} borderStyle="single" borderColor="red">
+          <Text color="red" bold>
+            event_subscription_failures ({subscriptionFailures.length})
+          </Text>
+          {subscriptionFailures.slice(0, 3).map(f => (
+            <Text key={`${f.subscriber_id}-${f.event_position}`} wrap="truncate-end">
+              <Text color="yellow">{f.subscriber_id}</Text>
+              <Text color="gray"> pos </Text>
+              <Text>{f.event_position}</Text>
+              <Text color="gray"> — </Text>
+              <Text>{f.error_message}</Text>
+            </Text>
+          ))}
+        </Box>
+      )}
       {(fq || keyboardEnabled) && (
         <Box paddingX={1} flexShrink={0}>
           {fq ? (
