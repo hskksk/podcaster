@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { Episode, PodcastConfig } from '../data/types.js';
+import { Episode, PodcastConfig, ShowChannelMeta } from '../data/types.js';
 import { matchesTextFilter } from '../utils/text-filter.js';
 import { episodeImagePublicUrl } from '../utils/episode-image.js';
 
 interface Props {
   episodes: Episode[];
   config: PodcastConfig[];
+  show: ShowChannelMeta;
+  storagePublicBase: string | null;
   filterQuery: string;
   isFocused: boolean;
   keyboardEnabled: boolean;
@@ -30,13 +32,15 @@ function normalizeXmlText(s: string): string {
 export const RssView: React.FC<Props> = ({
   episodes,
   config,
+  show,
+  storagePublicBase,
   filterQuery,
   isFocused,
   keyboardEnabled,
   rows
 }) => {
   const [offset, setOffset] = useState(0);
-  const title = config.find(c => c.key === 'podcast.title')?.value || 'Podcast';
+  const title = show.title?.trim() || config.find(c => c.key === 'podcast.title')?.value || 'Podcast';
 
   const filteredPublished = useMemo(() => {
     const published = episodes.filter(e => e.status === 'published');
@@ -103,7 +107,7 @@ export const RssView: React.FC<Props> = ({
       color: titleColor
     });
     previewXmlLines.push({ key: `item-title-close-${episode.id}`, text: '      </title>', color: titleColor });
-    const episodeImageUrl = episodeImagePublicUrl(episode.image_url, config);
+    const episodeImageUrl = episodeImagePublicUrl(episode.image_url, config, storagePublicBase);
     if (episodeImageUrl) {
       previewXmlLines.push({
         key: `item-itunes-image-${episode.id}`,

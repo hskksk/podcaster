@@ -11,6 +11,7 @@
 import dotenv from "dotenv";
 import { execSync } from "node:child_process";
 import { connectPostgres } from "./lib/postgres-connect.ts";
+import { legacyPipelineTablesExist } from "./lib/legacy-tables.ts";
 import {
   readPipelineMode,
   writePipelineMode,
@@ -35,22 +36,26 @@ async function preflight(): Promise<void> {
   const mode = await readPipelineMode(sql);
   console.log(`pipeline.mode = ${mode}`);
 
-  const blocking = await sql<Array<{ id: string; status: string }>>`
-    select id, status from legacy_episodes
-    where status like '%running'
-       or status in ('audio_generated', 'audio_downloading')
-    order by created_at desc
-    limit 20
-  `;
-  if (blocking.length > 0) {
-    console.error("\nBlocking legacy episodes (stale rows on legacy_episodes):");
-    for (const row of blocking) {
-      console.error(`  ${row.id}  ${row.status}`);
+  if (await legacyPipelineTablesExist(sql)) {
+    const blocking = await sql<Array<{ id: string; status: string }>>`
+      select id, status from legacy_episodes
+      where status like '%running'
+         or status in ('audio_generated', 'audio_downloading')
+      order by created_at desc
+      limit 20
+    `;
+    if (blocking.length > 0) {
+      console.error("\nBlocking legacy episodes (stale rows on legacy_episodes):");
+      for (const row of blocking) {
+        console.error(`  ${row.id}  ${row.status}`);
+      }
+      await sql.end();
+      process.exit(1);
     }
-    await sql.end();
-    process.exit(1);
+    console.log("No legacy pipeline runs blocking cutover.");
+  } else {
+    console.log("Legacy tables dropped; skipping legacy_episodes preflight.");
   }
-  console.log("No legacy pipeline runs blocking cutover.");
 
   const runningJobs = await sql<Array<{ id: string; job_type: string; status: string }>>`
     select id, job_type, status from jobs.jobs

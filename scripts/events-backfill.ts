@@ -17,6 +17,7 @@ import {
 } from "../supabase/functions/_domain/events.ts";
 import { registerBlob } from "../supabase/functions/_adapters/eventstore/projections.ts";
 import { connectPostgres } from "./lib/postgres-connect.ts";
+import { legacyPipelineTablesExist } from "./lib/legacy-tables.ts";
 import {
   buildProductionProfile,
   loadPodcastConfigMap,
@@ -194,6 +195,13 @@ async function validateLegacy(sql: ReturnType<typeof connectPostgres>): Promise<
 
 async function main(): Promise<void> {
   const sql = connectPostgres();
+  if (!(await legacyPipelineTablesExist(sql))) {
+    console.log(
+      "legacy_* tables are gone. events:backfill only applies before the drop migration; nothing to do.",
+    );
+    await sql.end();
+    return;
+  }
   const target = process.env.TARGET ?? "local";
   let storageUrl: string;
   let serviceKey: string;

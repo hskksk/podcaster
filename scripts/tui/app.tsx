@@ -485,6 +485,7 @@ export const App: React.FC<Props> = ({ isMock }) => {
                 articles={data.articles}
                 audioFiles={data.audioFiles}
                 config={data.config}
+                storagePublicBase={data.storagePublicBase}
                 focus={focus as any}
                 client={client}
                 rows={dimensions.rows}
@@ -552,6 +553,8 @@ export const App: React.FC<Props> = ({ isMock }) => {
               <RssView
                 episodes={data.episodes}
                 config={data.config}
+                show={data.show}
+                storagePublicBase={data.storagePublicBase}
                 filterQuery={globalFilter}
                 isFocused={focus !== 'sidebar'}
                 keyboardEnabled={keyboardEnabled}

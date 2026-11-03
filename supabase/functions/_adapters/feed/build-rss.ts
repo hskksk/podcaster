@@ -10,6 +10,12 @@ export type FeedEpisodeItem = {
   articleTitle: string;
 };
 
+export type RssChannelMeta = {
+  title: string;
+  description: string;
+  coverUrl: string;
+};
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -24,12 +30,12 @@ function toRfc2822(iso: string): string {
 
 export function buildRssFeedXml(
   episodes: FeedEpisodeItem[],
-  cfg: Record<string, string>,
+  channel: RssChannelMeta,
   storageUrl: string,
 ): string {
-  const title = escapeXml(cfg["podcast.title"] || "My AI Podcast");
-  const description = escapeXml(cfg["podcast.description"] || "");
-  const coverUrl = escapeXml(cfg["podcast.cover_url"] || `${storageUrl}/cover.png`);
+  const title = escapeXml(channel.title || "Podcast");
+  const description = escapeXml(channel.description || "");
+  const coverUrl = escapeXml(channel.coverUrl || `${storageUrl}/cover.png`);
   const feedUrl = `${storageUrl}/feed.xml`;
 
   const items = episodes

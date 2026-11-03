@@ -16,6 +16,7 @@ interface Props {
   articles: Article[];
   audioFiles: AudioFile[];
   config: PodcastConfig[];
+  storagePublicBase?: string | null;
   focus: 'sidebar' | 'list' | 'detail';
   client: DataClient;
   rows: number;
@@ -33,6 +34,7 @@ export const EpisodesView: React.FC<Props> = ({
   articles,
   audioFiles,
   config,
+  storagePublicBase,
   focus,
   client,
   rows,
@@ -264,7 +266,7 @@ export const EpisodesView: React.FC<Props> = ({
   const audioTotalTokens = extractTotalTokens(selectedAudio?.llm_usage);
   const imageEnabled = isEpisodeImageEnabled(config);
   const artworkPublicUrl = selectedEpisode
-    ? episodeImagePublicUrl(selectedEpisode.image_url, config)
+    ? episodeImagePublicUrl(selectedEpisode.image_url, config, storagePublicBase)
     : null;
   const pipelineNodes = selectedEpisode
     ? buildPipelineNodes(selectedEpisode.status, selectedEpisode.image_url, imageEnabled)

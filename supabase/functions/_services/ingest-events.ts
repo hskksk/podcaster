@@ -33,7 +33,7 @@ function buildProductionProfile(cfg: Record<string, string>) {
   };
 }
 
-async function ensureShowConfigured(sql: Sql, cfg: Record<string, string>): Promise<void> {
+async function ensureShowConfigured(sql: Sql): Promise<void> {
   const rows = await sql`select 1 from podcast.shows where id = ${DEFAULT_SHOW_ID}::uuid limit 1`;
   if (rows.length > 0) return;
 
@@ -47,8 +47,8 @@ async function ensureShowConfigured(sql: Sql, cfg: Record<string, string>): Prom
     correlation_id: null,
     payload: {
       show_id: DEFAULT_SHOW_ID,
-      title: String(cfg["podcast.title"] ?? "Podcast"),
-      description: String(cfg["podcast.description"] ?? ""),
+      title: "Podcast",
+      description: "",
       cover_blob_id: null,
       publication_policy: "auto",
     },
@@ -70,7 +70,7 @@ export async function ingestViaEvents(
 ): Promise<{ article_id: string; episode_id: string; production_id: string }> {
   const sql = getPostgresSql();
   const cfg = await loadConfig();
-  await ensureShowConfigured(sql, cfg as Record<string, string>);
+  await ensureShowConfigured(sql);
 
   const contentSha = body.content_sha?.trim() || await sha256Hex(body.content);
   const contentPath = body.content_path?.trim() || null;

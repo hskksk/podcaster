@@ -62,6 +62,19 @@ export interface PodcastConfig {
   value: any;
 }
 
+export interface ShowChannelMeta {
+  title: string;
+  description: string;
+  coverStoragePath: string | null;
+}
+
+export interface EventSubscriptionFailure {
+  subscriber_id: string;
+  event_position: number;
+  error_message: string;
+  failed_at: string;
+}
+
 export interface InboxFile {
   name: string;
   size: number;

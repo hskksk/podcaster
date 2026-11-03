@@ -1,14 +1,15 @@
 #!/usr/bin/env tsx
 /**
  * Compare legacy public tables with podcast.* projections after backfill.
+ * After legacy tables are dropped, runs projection-only sanity checks.
  */
 import dotenv from "dotenv";
 import { connectPostgres } from "./lib/postgres-connect.ts";
+import { legacyPipelineTablesExist } from "./lib/legacy-tables.ts";
 
 dotenv.config({ path: ".env" });
 
-async function main(): Promise<void> {
-  const sql = connectPostgres();
+async function reconcileLegacy(sql: ReturnType<typeof connectPostgres>): Promise<boolean> {
   let failed = false;
 
   const [{ legacy_articles }] = await sql<[{ legacy_articles: string }]>`
@@ -96,13 +97,68 @@ async function main(): Promise<void> {
     failed = true;
   }
 
-  if (failed) {
-    await sql.end();
-    process.exit(1);
+  return !failed;
+}
+
+async function reconcileProjectionsOnly(sql: ReturnType<typeof connectPostgres>): Promise<boolean> {
+  let failed = false;
+
+  const guidMismatches = await sql<Array<{ id: string }>>`
+    select pe.id
+    from podcast.episodes pe
+    where pe.guid <> pe.id::text
+  `;
+  if (guidMismatches.length > 0) {
+    console.error("GUID mismatches:", guidMismatches);
+    failed = true;
   }
 
-  console.log("Reconciliation OK: counts, GUIDs, audio paths, and published_at match.");
+  const orphanProductions = await sql<Array<{ id: string }>>`
+    select p.id
+    from podcast.productions p
+    left join podcast.episodes e on e.id = p.episode_id
+    where e.id is null
+    limit 5
+  `;
+  if (orphanProductions.length > 0) {
+    console.error("productions without episode:", orphanProductions);
+    failed = true;
+  }
+
+  const [{ events }] = await sql<[{ events: string }]>`
+    select count(*)::text as events from podcast.domain_events
+  `;
+  const [{ articles }] = await sql<[{ articles: string }]>`
+    select count(*)::text as articles from podcast.articles
+  `;
+  const [{ episodes }] = await sql<[{ episodes: string }]>`
+    select count(*)::text as episodes from podcast.episodes
+  `;
+  console.log(
+    `Projection snapshot: domain_events=${events} articles=${articles} episodes=${episodes}`,
+  );
+
+  return !failed;
+}
+
+async function main(): Promise<void> {
+  const sql = connectPostgres();
+  let ok: boolean;
+  if (await legacyPipelineTablesExist(sql)) {
+    ok = await reconcileLegacy(sql);
+    if (ok) {
+      console.log("Reconciliation OK: counts, GUIDs, audio paths, and published_at match.");
+    }
+  } else {
+    console.log("Legacy tables absent; running projection-only checks.");
+    ok = await reconcileProjectionsOnly(sql);
+    if (ok) {
+      console.log("Projection checks OK.");
+    }
+  }
+
   await sql.end();
+  if (!ok) process.exit(1);
 }
 
 main().catch((err) => {
