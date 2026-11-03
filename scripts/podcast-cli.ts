@@ -24,10 +24,6 @@ import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parse as parseToml } from "smol-toml";
 import { connectPostgres } from "./lib/postgres-connect.ts";
-import {
-  appendManualProductionRequested,
-  latestAssembledRevisionId,
-} from "./lib/request-production.ts";
 import { readPipelineMode } from "./lib/pipeline-mode.ts";
 import {
   detectLocalStatus,
@@ -35,6 +31,12 @@ import {
   detectServiceKey,
 } from "./lib/supabase-detect.ts";
 import { printTable, printLong, shortId, truncate, fmtDate } from "./lib/table.ts";
+import { jobReaders, podcastReaders } from "./lib/reader-views.ts";
+import {
+  appendProductionRequeue,
+  publishEpisodeViaEdge,
+  resolveLatestRevisionId,
+} from "./lib/domain-requeue.ts";
 import {
   DEFAULT_SYSTEM_INSTRUCTION,
   DEFAULT_USER_PROMPT_TEMPLATE,
@@ -226,8 +228,8 @@ const db = createClient(supabaseUrl, serviceKey);
 type OutputFormat = "long" | "short" | "wide" | "json";
 
 async function listEpisodes(limit: number, fmt: OutputFormat): Promise<void> {
-  const { data, error } = await db
-    .from("episodes")
+  const { data, error } = await podcastReaders(db)
+    .from("episode_overview")
     .select("id, article_id, mem_note_id, title, status, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -258,8 +260,8 @@ async function listEpisodes(limit: number, fmt: OutputFormat): Promise<void> {
 }
 
 async function listArticles(limit: number, fmt: OutputFormat): Promise<void> {
-  const { data, error } = await db
-    .from("articles")
+  const { data, error } = await podcastReaders(db)
+    .from("article_overview")
     .select("id, mem_note_id, title, source, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -289,8 +291,8 @@ async function listArticles(limit: number, fmt: OutputFormat): Promise<void> {
 }
 
 async function listAudio(limit: number, fmt: OutputFormat): Promise<void> {
-  const { data, error } = await db
-    .from("audio_files")
+  const { data, error } = await podcastReaders(db)
+    .from("audio_overview")
     .select("id, episode_id, storage_path, mime_type, status, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -321,8 +323,8 @@ async function listAudio(limit: number, fmt: OutputFormat): Promise<void> {
 }
 
 async function downloadAudio(id: string): Promise<void> {
-  const { data: row, error: lookupErr } = await db
-    .from("audio_files")
+  const { data: row, error: lookupErr } = await podcastReaders(db)
+    .from("audio_overview")
     .select("id, episode_id, storage_path, mime_type")
     .or(`id.eq.${id},episode_id.eq.${id}`)
     .maybeSingle();
@@ -355,8 +357,8 @@ async function downloadAudio(id: string): Promise<void> {
 
 async function pipelineStatus(articleId: string): Promise<void> {
   // Article
-  const { data: article, error: artErr } = await db
-    .from("articles")
+  const { data: article, error: artErr } = await podcastReaders(db)
+    .from("article_overview")
     .select("id, title, source, created_at")
     .eq("id", articleId)
     .maybeSingle();
@@ -372,8 +374,8 @@ async function pipelineStatus(articleId: string): Promise<void> {
   );
 
   // Episode
-  const { data: episodes, error: epErr } = await db
-    .from("episodes")
+  const { data: episodes, error: epErr } = await podcastReaders(db)
+    .from("episode_overview")
     .select("id, title, status, created_at")
     .eq("article_id", articleId)
     .order("created_at", { ascending: false });
@@ -395,8 +397,8 @@ async function pipelineStatus(articleId: string): Promise<void> {
   const episodeIds = episodes.map((e) => e.id);
 
   // Scripts
-  const { data: scripts, error: scErr } = await db
-    .from("scripts")
+  const { data: scripts, error: scErr } = await podcastReaders(db)
+    .from("script_overview")
     .select("id, episode_id, status, error, created_at")
     .in("episode_id", episodeIds)
     .order("created_at", { ascending: false });
@@ -418,8 +420,8 @@ async function pipelineStatus(articleId: string): Promise<void> {
   }
 
   // Audio files
-  const { data: audioFiles, error: afErr } = await db
-    .from("audio_files")
+  const { data: audioFiles, error: afErr } = await podcastReaders(db)
+    .from("audio_overview")
     .select("id, episode_id, storage_path, mime_type, status, error, created_at")
     .in("episode_id", episodeIds)
     .order("created_at", { ascending: false });
@@ -454,8 +456,8 @@ async function listLogs(opts: {
   status?: string;
   episodeId?: string;
 }): Promise<void> {
-  let query = db
-    .from("processing_logs")
+  let query = jobReaders(db)
+    .from("attempt_log")
     .select("processed_at, queue_name, status, episode_id, duration_ms, error_message")
     .order("processed_at", { ascending: false })
     .limit(opts.limit);
@@ -506,32 +508,8 @@ async function startFlowRecord(
   console.log(`Flow started (${label}): ${JSON.stringify(input)}`);
 }
 
-async function wakeDomainSubscriber(): Promise<void> {
-  const target = process.env.TARGET ?? "remote";
-  let url: string;
-  let key: string;
-  if (target === "local") {
-    const local = detectLocalStatus();
-    url = `${local.apiUrl}/functions/v1/domain-subscriber`;
-    key = local.serviceKey;
-  } else {
-    const ref = detectProjectRef();
-    key = detectServiceKey(ref);
-    url = `https://${ref}.supabase.co/functions/v1/domain-subscriber`;
-  }
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}` },
-  });
-  if (!res.ok) {
-    console.warn(`domain-subscriber wake returned ${res.status}: ${await res.text()}`);
-  }
-}
-
 async function publishLatestRevision(episodeId: string, yes: boolean): Promise<void> {
-  const sql = connectPostgres();
-  const revisionId = await latestAssembledRevisionId(sql, episodeId);
-  await sql.end();
+  const revisionId = await resolveLatestRevisionId(episodeId);
   if (!revisionId) {
     console.error("No assembled episode revision to publish.");
     process.exit(1);
@@ -540,36 +518,12 @@ async function publishLatestRevision(episodeId: string, yes: boolean): Promise<v
     const ok = await confirm(`POST publish for episode ${episodeId} revision ${revisionId}?`);
     if (!ok) { console.log("Aborted."); process.exit(0); }
   }
-  const target = process.env.TARGET ?? "remote";
-  let url: string;
-  let key: string;
-  if (target === "local") {
-    const local = detectLocalStatus();
-    url = `${local.apiUrl}/functions/v1/publish`;
-    key = local.serviceKey;
-  } else {
-    const ref = detectProjectRef();
-    key = detectServiceKey(ref);
-    url = `https://${ref}.supabase.co/functions/v1/publish`;
-  }
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      action: "publish",
-      episode_id: episodeId,
-      episode_revision_id: revisionId,
-    }),
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    console.error(`publish failed ${res.status}: ${text}`);
+  const result = await publishEpisodeViaEdge(episodeId, revisionId);
+  if (!result.ok) {
+    console.error(`publish failed ${result.status}: ${result.body}`);
     process.exit(1);
   }
-  console.log(`Publish OK: ${text}`);
+  console.log(`Publish OK: ${result.body}`);
 }
 
 async function requeueEventsProduction(
@@ -582,11 +536,8 @@ async function requeueEventsProduction(
     const ok = await confirm(`Append ProductionRequested scope=${scope} for ${episodeId}?`);
     if (!ok) { console.log("Aborted."); process.exit(0); }
   }
-  const sql = connectPostgres();
-  const productionId = await appendManualProductionRequested(sql, { episodeId, scope });
-  await sql.end();
+  const productionId = await appendProductionRequeue(episodeId, scope);
   console.log(`ProductionRequested ${productionId} (${label})`);
-  await wakeDomainSubscriber();
 }
 
 async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> {
@@ -595,7 +546,7 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
   await sql.end();
 
   if (mode === "events") {
-    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)}) [pipeline.mode=events]`);
@@ -619,26 +570,26 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
   }
 
   if (sub === "script") {
-    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
     await startFlowRecord("craftEpisodeSubmit", { episodeId: id, startFrom: "script", trigger: "manual" }, "script", yes);
   } else if (sub === "audio") {
-    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
     await startFlowRecord("craftEpisodeSubmit", { episodeId: id, startFrom: "audio", trigger: "manual" }, "audio", yes);
   } else if (sub === "rss") {
-    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
     await startFlowRecord("craftEpisodeDownload", { episodeId: id, startFrom: "rss", trigger: "manual" }, "rss", yes);
   } else if (sub === "regenerate-script") {
-    const { data, error } = await db
-      .from("episodes")
+    const { data, error } = await podcastReaders(db)
+      .from("episode_overview")
       .select("id, title")
       .eq("id", id)
       .maybeSingle();
@@ -652,7 +603,7 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
       yes,
     );
   } else if (sub === "regenerate-audio") {
-    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);
@@ -663,7 +614,7 @@ async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> 
       yes,
     );
   } else if (sub === "regenerate-image") {
-    const { data, error } = await db.from("episodes").select("id, title").eq("id", id).maybeSingle();
+    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
     if (error) { console.error("Error:", error.message); process.exit(1); }
     if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
     console.log(`Episode: ${data.title} (${shortId(data.id)})`);

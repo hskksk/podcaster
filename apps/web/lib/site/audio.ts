@@ -27,17 +27,10 @@ function registerAudioKey(map: Map<string, string>, key: string, audio: string) 
   if (docDir?.[1]) map.set(docDir[1], audio);
 }
 
-type ArticleJoin = {
+type AssetRow = {
   ingest_meta?: { inbox_file?: string; legacyFilename?: string } | null;
   content_path?: string | null;
-} | null;
-
-function articleJoin(row: { articles: ArticleJoin | ArticleJoin[] | null }): ArticleJoin {
-  const a = row.articles;
-  if (!a) return null;
-  if (Array.isArray(a)) return a[0] ?? null;
-  return a;
-}
+};
 
 function decodeXml(s: string): string {
   // Decode &amp; last to avoid double-unescaping (CodeQL js/double-escaping).
@@ -98,12 +91,15 @@ async function fetchArticleAudioMapFromSupabase(): Promise<Map<string, string>> 
   const ref = projectRef();
   if (!url || !key || !ref) return map;
 
-  const endpoint = `${url}/rest/v1/episodes?select=audio_url,articles(ingest_meta,content_path)&audio_url=not.is.null`;
+  const endpoint =
+    `${url}/rest/v1/published_episode_assets?select=audio_url,content_path,ingest_meta` +
+    `&audio_url=not.is.null`;
   try {
     const res = await fetch(endpoint, {
       headers: {
         apikey: key,
         Authorization: `Bearer ${key}`,
+        "Accept-Profile": "podcast",
       },
       cache: "force-cache",
     });
@@ -113,7 +109,8 @@ async function fetchArticleAudioMapFromSupabase(): Promise<Map<string, string>> 
     }
     const rows = (await res.json()) as Array<{
       audio_url: string | null;
-      articles: ArticleJoin | ArticleJoin[] | null;
+      content_path: string | null;
+      ingest_meta: AssetRow["ingest_meta"];
     }>;
     const storageBase = `https://${ref}.supabase.co/storage/v1/object/public/podcast`;
     for (const row of rows) {
@@ -121,9 +118,8 @@ async function fetchArticleAudioMapFromSupabase(): Promise<Map<string, string>> 
       const audio = row.audio_url.startsWith("http")
         ? row.audio_url
         : `${storageBase}/${row.audio_url.replace(/^\//, "")}`;
-      const article = articleJoin(row);
-      const meta = article?.ingest_meta ?? {};
-      const keys = [meta.inbox_file, meta.legacyFilename, article?.content_path].filter(
+      const meta = row.ingest_meta ?? {};
+      const keys = [meta.inbox_file, meta.legacyFilename, row.content_path].filter(
         (k): k is string => Boolean(k),
       );
       for (const k of keys) registerAudioKey(map, k, audio);

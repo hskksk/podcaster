@@ -12,6 +12,14 @@ import {
   detectServiceKey,
 } from "../../lib/supabase-detect.js";
 import { parseFrontmatter, parseTitleFromContent, textify } from "../../lib/mdoc.js";
+import { jobReaders, podcastReaders } from "../../lib/reader-views.js";
+import {
+  appendProductionRequeue,
+  publishEpisodeViaEdge,
+  resolveLatestRevisionId,
+} from "../../lib/domain-requeue.js";
+import { connectPostgres } from "../../lib/postgres-connect.js";
+import { readPipelineMode } from "../../lib/pipeline-mode.js";
 import * as Mock from "./mock.js";
 import { Article, Episode, AudioFile, ProcessingLog, PodcastConfig, Script } from "./types.js";
 
@@ -82,10 +90,10 @@ export class DataClient {
     if (!this.db) throw new Error("DB not initialized");
 
     const [articles, episodes, audioFiles, logs, config, inboxFiles, articleFiles] = await Promise.all([
-      this.db.from("articles").select("*").order("created_at", { ascending: false }),
-      this.db.from("episodes").select("*").order("created_at", { ascending: false }),
-      this.db.from("audio_files").select("*").order("created_at", { ascending: false }),
-      this.db.from("processing_logs").select("*").order("processed_at", { ascending: false }).limit(50),
+      podcastReaders(this.db).from("article_overview").select("*").order("created_at", { ascending: false }),
+      podcastReaders(this.db).from("episode_overview").select("*").order("created_at", { ascending: false }),
+      podcastReaders(this.db).from("audio_overview").select("*").order("created_at", { ascending: false }),
+      jobReaders(this.db).from("attempt_log").select("*").order("processed_at", { ascending: false }).limit(50),
       this.db.from("podcast_config").select("*"),
       this.scanCollection("content/web-clips"),
       this.scanCollection("content/docs"),
@@ -124,8 +132,8 @@ export class DataClient {
       return Mock.SCRIPTS.find(s => s.episode_id === episodeId) as any || null;
     }
     if (!this.db) return null;
-    const { data } = await this.db
-      .from("scripts")
+    const { data } = await podcastReaders(this.db)
+      .from("script_overview")
       .select("*")
       .eq("episode_id", episodeId)
       .eq("status", "ready")
@@ -145,6 +153,34 @@ export class DataClient {
       return { success: true };
     }
     if (!this.db) return { success: false, error: "DB not initialized" };
+
+    const sql = connectPostgres();
+    const mode = await readPipelineMode(sql);
+    await sql.end();
+
+    if (mode === "events") {
+      try {
+        if (type === "rss") {
+          const revisionId = await resolveLatestRevisionId(id);
+          if (!revisionId) {
+            return { success: false, error: "No assembled episode revision to publish." };
+          }
+          const result = await publishEpisodeViaEdge(id, revisionId);
+          if (!result.ok) {
+            return { success: false, error: result.body || `HTTP ${result.status}` };
+          }
+          return { success: true };
+        }
+        const scope = type === "image" ? "artwork" : type === "audio" ? "audio" : "full";
+        await appendProductionRequeue(id, scope);
+        return { success: true };
+      } catch (err) {
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    }
 
     const msg: Record<string, unknown> = {
       episodeId: id,
@@ -216,7 +252,7 @@ export class DataClient {
       }),
     });
     if (res.status === 409) {
-      return { success: false, error: "Already ingested (content_path). Use requeue to regenerate." };
+      return { success: false, error: "Duplicate content_path (legacy ingest). Use requeue to regenerate." };
     }
     if (!res.ok) {
       const text = await res.text().catch(() => res.statusText);
@@ -233,8 +269,8 @@ export class DataClient {
     }
     if (!this.db) return { success: false, error: 'DB not initialized' };
 
-    const { data: episode, error: epErr } = await this.db
-      .from('episodes')
+    const { data: episode, error: epErr } = await podcastReaders(this.db)
+      .from("episode_overview")
       .select('image_url')
       .eq('id', episodeId)
       .maybeSingle();
@@ -361,8 +397,8 @@ export class DataClient {
     idOrEpisodeId: string
   ): Promise<{ id: string; storage_path: string } | null> {
     if (!this.db) return null;
-    const { data, error } = await this.db
-      .from("audio_files")
+    const { data, error } = await podcastReaders(this.db)
+      .from("audio_overview")
       .select("id, storage_path")
       .or(`id.eq.${idOrEpisodeId},episode_id.eq.${idOrEpisodeId}`)
       .maybeSingle();
