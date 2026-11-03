@@ -1,8 +1,22 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { loadConfig } from "../../_shared/config.ts";
 import { storeBlob } from "../../_adapters/storage.ts";
 import { recordLlmInvocation } from "../job-db.ts";
 import { resolveProfile } from "../runner.ts";
 import type { JobHandler, RenderAudioInput } from "../types.ts";
+import {
+  isCloudRunExecutionName,
+  isGeminiBatchOperationName,
+  isTranscodeEnabled,
+} from "../../_shared/transcode/config.ts";
+import {
+  CLOUD_RUN_PENDING_STATES,
+  submitCloudRunTranscode,
+} from "../../_shared/transcode/cloud-run.ts";
+import {
+  finalizeTranscodedAudioBlob,
+  loadEpisodeIdForJob,
+} from "../../_shared/transcode/finalize.ts";
 import {
   AUDIO_BATCH_FAILURE_STATES,
   AUDIO_BATCH_PENDING_STATES,
@@ -50,6 +64,78 @@ async function loadLatestExternalOp(
   } | null;
 }
 
+async function beginTranscodeAfterWav(
+  ctx: Parameters<JobHandler>[0],
+  wav: { blobId: string; storagePath: string },
+  batchMeta: Record<string, unknown>,
+  casting: unknown,
+  chunkCount: number,
+  externalId: string,
+  ttsModel: string,
+  fetchedChunkCount: number,
+): Promise<{ outcome: "succeeded"; waitingExternal: true }> {
+  const cfg = await loadConfig();
+  const episodeId = await loadEpisodeIdForJob(ctx.db, ctx.job);
+  const existingTranscode = ((ctx.job.output ?? {}) as Record<string, unknown>).transcode as
+    | Record<string, unknown>
+    | undefined;
+  const existingExecution = String(existingTranscode?.execution ?? "").trim();
+
+  let executionName = existingExecution;
+  let outputStoragePath = String(existingTranscode?.output_storage_path ?? "").trim();
+
+  if (!executionName) {
+    const submitted = await submitCloudRunTranscode({
+      db: ctx.db,
+      cfg,
+      jobId: ctx.job.id,
+      attemptId: ctx.attemptId,
+      episodeId,
+      wavStoragePath: wav.storagePath,
+    });
+    executionName = submitted.executionName;
+    outputStoragePath = submitted.outputStoragePath;
+
+    const { error: insertErr } = await ctx.db.schema("jobs").from("external_operations").insert({
+      attempt_id: ctx.attemptId,
+      operation_name: executionName,
+      state: "EXECUTION_RUNNING",
+      next_poll_at: new Date(Date.now() + 30_000).toISOString(),
+    });
+    if (insertErr) throw new Error(`external_operations transcode insert: ${insertErr.message}`);
+  }
+
+  await ctx.db.schema("jobs").from("jobs").update({
+    output: {
+      batch: batchMeta,
+      script_id: (ctx.job.input as RenderAudioInput).script_id,
+      wav_blob_id: wav.blobId,
+      wav_storage_path: wav.storagePath,
+      casting,
+      chunk_count: chunkCount,
+      transcode: {
+        execution: executionName,
+        wav_blob_id: wav.blobId,
+        wav_storage_path: wav.storagePath,
+        output_storage_path: outputStoragePath,
+        ready_to_finalize: false,
+      },
+    },
+  }).eq("id", ctx.job.id);
+
+  for (let i = 0; i < fetchedChunkCount; i++) {
+    await recordLlmInvocation(ctx.db, {
+      attempt_id: ctx.attemptId,
+      external_operation_id: externalId,
+      item_index: i,
+      model: ttsModel,
+      finish_reason: "stop",
+    });
+  }
+
+  return { outcome: "succeeded", waitingExternal: true };
+}
+
 export const handleRenderAudio: JobHandler = async (ctx) => {
   const input = ctx.job.input as RenderAudioInput;
   const scriptId = String(input.script_id ?? "").trim();
@@ -59,12 +145,39 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
   }
 
   const profile = await resolveProfile(input.profile as Record<string, unknown> | undefined);
+  const cfg = await loadConfig();
   const ttsModel = String(profile["tts.model"] || "gemini-3.1-flash-tts-preview");
   const meta = (ctx.job.output ?? {}) as Record<string, unknown>;
   const batchMeta = (meta.batch ?? {}) as Record<string, unknown>;
+  const transcodeMeta = (meta.transcode ?? {}) as Record<string, unknown>;
   const apiRoot = String(batchMeta.apiRoot ?? profile["gemini.api_root"] ?? "");
 
+  if (transcodeMeta.finalized === true || meta.mime_type === "audio/mp4") {
+    return {
+      outcome: "succeeded",
+      output: meta as Record<string, unknown>,
+    };
+  }
+
+  if (transcodeMeta.ready_to_finalize === true) {
+    const output = await finalizeTranscodedAudioBlob({
+      db: ctx.db,
+      job: ctx.job,
+      attemptId: ctx.attemptId,
+      cfg,
+      transcode: transcodeMeta,
+    });
+    return { outcome: "succeeded", output };
+  }
+
   let external = await loadLatestExternalOp(ctx.db, ctx.job.id);
+
+  if (external && isCloudRunExecutionName(external.operation_name)) {
+    if (CLOUD_RUN_PENDING_STATES.has(external.state)) {
+      return { outcome: "succeeded", waitingExternal: true };
+    }
+    return { outcome: "succeeded", waitingExternal: true };
+  }
 
   if (!external && ctx.job.status !== "waiting_external") {
     const submitted = await submitAudioBatch({
@@ -97,6 +210,10 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
 
   external = external ?? await loadLatestExternalOp(ctx.db, ctx.job.id);
   if (!external) throw new Error("render_audio: missing external operation");
+
+  if (!isGeminiBatchOperationName(external.operation_name)) {
+    throw new Error(`render_audio: unsupported external operation ${external.operation_name}`);
+  }
 
   const batchName = external.operation_name;
   const resolvedApiRoot = String(batchMeta.apiRoot ?? apiRoot);
@@ -149,6 +266,26 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
     fileName: "audio.wav",
   });
 
+  await ctx.db.schema("jobs").from("external_operations").update({
+    completed_at: new Date().toISOString(),
+    state,
+  }).eq("id", external.id);
+
+  const casting = batchMeta.casting ?? {};
+
+  if (isTranscodeEnabled(cfg)) {
+    return beginTranscodeAfterWav(
+      ctx,
+      { blobId: stored.blobId, storagePath: stored.storagePath },
+      batchMeta,
+      casting,
+      fetched.chunkCount,
+      external.id,
+      ttsModel,
+      fetched.chunkCount,
+    );
+  }
+
   for (let i = 0; i < fetched.chunkCount; i++) {
     await recordLlmInvocation(ctx.db, {
       attempt_id: ctx.attemptId,
@@ -159,12 +296,6 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
     });
   }
 
-  await ctx.db.schema("jobs").from("external_operations").update({
-    completed_at: new Date().toISOString(),
-    state,
-  }).eq("id", external.id);
-
-  const casting = batchMeta.casting ?? {};
   return {
     outcome: "succeeded",
     output: {
@@ -172,6 +303,7 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
       blob_id: stored.blobId,
       storage_path: stored.storagePath,
       mime_type: stored.mimeType,
+      byte_size: stored.byteSize,
       duration_ms: null,
       casting,
       chunk_count: fetched.chunkCount,

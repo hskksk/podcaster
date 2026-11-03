@@ -9,8 +9,34 @@ import {
 } from "../_jobs/handlers/audio-batch.ts";
 import { loadConfig } from "../_shared/config.ts";
 import type { PodcastConfigMap } from "../_shared/types.ts";
+import { isCloudRunExecutionName } from "../_shared/transcode/config.ts";
+import {
+  CLOUD_RUN_FAILURE_STATES,
+  CLOUD_RUN_PENDING_STATES,
+  CLOUD_RUN_SUCCESS_STATES,
+  pollCloudRunExecution,
+} from "../_shared/transcode/cloud-run.ts";
 
 const MAX_OPS = 20;
+
+async function resumeJobAfterExternalSuccess(
+  db: ReturnType<typeof createSupabaseClient>,
+  jobId: string,
+  outputPatch?: Record<string, unknown>,
+): Promise<void> {
+  if (outputPatch) {
+    const { data: job } = await db.schema("jobs").from("jobs").select("output").eq("id", jobId)
+      .maybeSingle();
+    const merged = { ...((job?.output ?? {}) as Record<string, unknown>), ...outputPatch };
+    await db.schema("jobs").from("jobs").update({ status: "running", output: merged }).eq(
+      "id",
+      jobId,
+    );
+  } else {
+    await db.schema("jobs").from("jobs").update({ status: "running" }).eq("id", jobId);
+  }
+  await startRunJobFlow(db, jobId);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "GET") {
@@ -62,6 +88,43 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (jobErr || !job) continue;
 
+      if (isCloudRunExecutionName(row.operation_name)) {
+        const { state } = await pollCloudRunExecution(row.operation_name);
+        polled++;
+        await db.schema("jobs").from("external_operations").update({
+          state,
+          poll_count: (row.poll_count ?? 0) + 1,
+          next_poll_at: new Date(Date.now() + 30_000).toISOString(),
+        }).eq("id", row.id);
+
+        if (CLOUD_RUN_PENDING_STATES.has(state)) continue;
+
+        if (CLOUD_RUN_FAILURE_STATES.has(state)) {
+          await db.schema("jobs").from("external_operations").update({
+            completed_at: new Date().toISOString(),
+          }).eq("id", row.id);
+          await db.schema("jobs").from("jobs").update({
+            status: "failed",
+            finished_at: new Date().toISOString(),
+          }).eq("id", job.id);
+          continue;
+        }
+
+        if (CLOUD_RUN_SUCCESS_STATES.has(state) && job.status === "waiting_external") {
+          await db.schema("jobs").from("external_operations").update({
+            completed_at: new Date().toISOString(),
+            state,
+          }).eq("id", row.id);
+          const jobOutput = (job.output ?? {}) as Record<string, unknown>;
+          const transcode = (jobOutput.transcode ?? {}) as Record<string, unknown>;
+          await resumeJobAfterExternalSuccess(db, job.id, {
+            transcode: { ...transcode, ready_to_finalize: true },
+          });
+          resumed++;
+        }
+        continue;
+      }
+
       const batchMeta = ((job.output as Record<string, unknown> | null)?.batch ??
         {}) as Record<string, unknown>;
       const apiRoot = String(batchMeta.apiRoot ?? cfg["gemini.api_root"] ?? defaultApiRoot);
@@ -88,8 +151,7 @@ Deno.serve(async (req) => {
       }
 
       if (AUDIO_BATCH_SUCCESS_STATES.has(state) && job.status === "waiting_external") {
-        await db.schema("jobs").from("jobs").update({ status: "running" }).eq("id", job.id);
-        await startRunJobFlow(db, job.id);
+        await resumeJobAfterExternalSuccess(db, job.id);
         resumed++;
       }
     } catch (err) {

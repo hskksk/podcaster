@@ -136,6 +136,13 @@ const defaults: Record<string, unknown> = {
   "image.aspect_ratio": config.image?.aspect_ratio ?? "16:9",
   "image.image_size": config.image?.image_size ?? "1K",
   "image.mime_type": config.image?.mime_type ?? "image/jpeg",
+  "audio.delivery.format": "m4a",
+  "audio.transcode.enabled": false,
+  "audio.transcode.bitrate_kbps": 128,
+  "audio.transcode.container": "m4a",
+  "gcp.project_id": process.env.GCP_PROJECT_ID ?? "",
+  "gcp.region": process.env.GCP_REGION ?? "asia-northeast1",
+  "gcp.run.job_name": process.env.GCP_RUN_JOB_NAME ?? "audio-transcode",
 };
 
 if (config.generator.system_instruction) {
