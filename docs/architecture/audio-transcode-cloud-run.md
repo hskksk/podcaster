@@ -117,7 +117,6 @@ GCP では、Supabase に近いリージョン（例: `asia-northeast1`）に Jo
 | `gcp.project_id` | `...` | Run API（`podcast_config` に置く。Secret には載せない） |
 | `gcp.region` | `asia-northeast1` | Job リージョン |
 | `gcp.run.job_name` | `audio-transcode` | Job 名 |
-| `audio.transcode.staging_wav_retention_days` | `7` | m4a 成功後、staging WAV を Storage に残す日数（GC 用） |
 
 GCP 認証用の `GCP_SERVICE_ACCOUNT_JSON` だけ Supabase Secret に置く。プロジェクト ID・リージョン・Job 名は `loadConfig()` から読む。
 
@@ -159,7 +158,7 @@ Execution が成功したとき:
 3. `render_audio` が再入場し、`job.output.transcode` がある場合は finalize する。
    - Storage 上の m4a から `byte_size` と `duration_ms` を確定する（HEAD または Job ログ）。
    - `podcast.blobs` に `storage_path = audio/{episodeId}.m4a`、`mime_type = audio/mp4`、確定した `byte_size` / `duration_ms` を登録する（正の `blob_id` は m4a 側）。
-   - staging WAV（`jobs/.../audio.wav`）は削除しない。Phase 2 の GC が `staging_wav_retention_days`（既定 7 日）経過後に消す。
+   - m4a 登録が成功したら、staging WAV（`jobs/.../audio.wav`）を Storage と `podcast.blobs` から直ちに削除する（`job.output` の `wav_blob_id` は参照用に残してよい）。
 4. `render_audio` を `outcome: succeeded` とする。`blob_id` / `storage_path` / `mime_type` / `byte_size` / `duration_ms` は m4a 側の値とする。
 5. `job-worker` が `AudioRendered` を出し、`ProductionPolicy` が `auto_publish` する（従来どおり）。
 
@@ -194,7 +193,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 ## 冪等性と失敗
 
 - 同一 job で Execution が RUNNING のときは再 submit しない（`job.output.transcode.execution` を参照）。
-- 成功後、`mime_type` が既に `audio/mp4` なら finalize は no-op とする。
+- 成功後、`mime_type` が既に `audio/mp4` なら finalize は no-op とする（staging WAV は初回 finalize で既に削除済み）。
 - 失敗時は job を `failed` とし、WAV staging Blob を正本として transcode をやり直せる。
 - upload が途中で切れた場合、m4a は upsert する。失敗時は WAV だけが残る。
 
@@ -208,7 +207,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 
 ### Phase 1 — events 統合
 
-1. `_shared/transcode/` に `submitCloudRunTranscode`、`pollCloudRunExecution`、`finalizeTranscodedAudioBlob` を置く。
+1. `_shared/transcode/` に `submitCloudRunTranscode`、`pollCloudRunExecution`、`finalizeTranscodedAudioBlob` を置く（finalize で m4a 確定後に staging WAV を削除）。
 2. `render_audio` で WAV 保存のあと transcode を submit し、`waiting_external` にする。
 3. `external-operation-poller` に `projects/` 分岐を足す。
 4. `podcast_config` の seed と、必要なら migration（キー追加のみ）。
@@ -217,8 +216,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 ### Phase 2 — 品質・運用
 
 1. `render_audio` の `readFile` をやめ、ストリーム upload と `byte_size` 確定を行う（transcode なし path も含む）。
-2. staging WAV の GC: transcode 成功時刻から `audio.transcode.staging_wav_retention_days`（既定 **7 日**）経過した `jobs/.../audio.wav` を Storage と `podcast.blobs` から削除する（pg_cron + Edge または SQL バッチ。実装詳細は Phase 2 PR）。
-3. Workload Identity Federation で SA JSON を撤去する。
+2. Workload Identity Federation で SA JSON を撤去する。
 
 ### Phase 3 — 最適化
 
@@ -242,7 +240,6 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 | 項目 | 決定 |
 |------|------|
 | 配信用 m4a の Storage パス | 公開バケット `podcast` 配下 **`audio/{episodeId}.m4a`**（RSS の enclosure URL と一致） |
-| staging WAV | transcode 前後とも **`jobs/{jobId}/{attemptId}/audio.wav`**。m4a 確定後も即削除せず保持 |
-| staging WAV の保持 | **7 日**（`audio.transcode.staging_wav_retention_days`）。Phase 2 で GC |
+| staging WAV | transcode 前は **`jobs/{jobId}/{attemptId}/audio.wav`**。**m4a finalize 成功直後**に Storage と blob 行を削除 |
 | GCP プロジェクト・リージョン・Job 名 | **`podcast_config`**（上表の `gcp.*` キー） |
 | GCP 認証 | **`GCP_SERVICE_ACCOUNT_JSON`** のみ Secret |
