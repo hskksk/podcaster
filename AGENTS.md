@@ -48,12 +48,7 @@ CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）�
 - **最終メッセージの 1 行目が PR タイトルとして使われる**（インフラが PR 作成時に採用する）。1 行目を必ず `type(scope): subject` にし、報告本文は 2 行目以降に書く。日本語の報告文を 1 行目に置くと `semantic-pull-request` が失敗する
 - コミット本文は任意。subject は命令形・小文字始まりが無難
 
-**main の取り込み（マージコミット禁止）:** `lint-pr` は **ブランチ上の全コミット**を検証する。`git merge origin/main -m "merge main (...)"` のような説明用メッセージは Conventional Commits ではないので **commitlint が必ず落ちる**。エージェントは次のどちらかで main を取り込む（マージコミットを PR に載せない）。
-
-1. **rebase（推奨）:** `git fetch origin main && git rebase origin/main` — コンフリクト解消後、必要なら `git rebase --continue`。各コミットの 1 行目が規約どおりか確認する。
-2. **1 コミットにまとめる:** 作業ツリーを残したまま `git fetch origin main && git reset --soft origin/main` → 変更を 1 つの `type(scope): subject` で commit → push（force-with-lease 可）。
-
-どうしても merge コミットが履歴に残る場合のみ、メッセージの 1 行目自体を規約形式にする（例: `chore: merge main into cursor/foo-bf24`）。`merge main` だけの subject は使わない。
+**main の取り込み:** `git fetch origin main && git merge origin/main` で問題ない。commitlint（`commitlint.config.mjs` の `defaultIgnores` と `Merge pull request #…` 除外）は **Git 既定のマージコミット subject**（`Merge branch 'main' into …` / `Merge remote-tracking branch 'origin/main' into …` など）をスキップする。**`-m` で `merge main (説明)` のような独自 1 行目を付けない** — それは通常コミット扱いになり commitlint が落ちる。マージメッセージはエディタで書き換えず、そのまま commit する。
 
 ### Key gotchas
 
