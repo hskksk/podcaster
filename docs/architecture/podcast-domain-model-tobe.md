@@ -517,7 +517,7 @@ stateDiagram-v2
 
 音声合成そのものは Gemini Batch の側で走り、その間ジョブは `waiting_external` なので、合成時間は上の上限に入らない。上限に入るのは、Batch の投入と、完了後のチャンク取得・WAV の結合・Storage への書き込みである。現行の実装は、チャンクを `/tmp` の WAV ファイルに順に書き足し、ストリームでアップロードする。そのためメモリは音声の長さに比例して増えず、効くのは取得とアップロードにかかる wall clock である。24 kHz・16 bit・モノラルの WAV は 1 分あたり約 2.9 MB なので、30 分の回で約 86 MB を転送する。
 
-ジョブ層は `JobType.timeout_seconds` を、アダプタが受け入れられる上限（Edge Function の実行時間より短く、pgflow の `timeout` 以下）に収める。超える処理は `ExternalOperation` に切り出す。
+ジョブ層は `JobType.timeout_seconds` を、アダプタが受け入れられる上限（Edge Function の実行時間より短く、pgflow の `timeout` 以下）に収める。超える処理は `ExternalOperation` に切り出す。WAV から配信用 AAC（m4a）への変換は Edge ではなく Cloud Run Jobs に委譲する。投入・ポーリング・Storage 更新の設計は [audio-transcode-cloud-run.md](./audio-transcode-cloud-run.md) を参照。
 
 ### 4.4 ドメインとの接続
 
