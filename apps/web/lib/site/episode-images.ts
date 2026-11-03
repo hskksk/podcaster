@@ -51,17 +51,10 @@ function registerImageKey(map: Map<string, string>, key: string, image: string) 
   if (docDir?.[1]) map.set(docDir[1], image);
 }
 
-type ArticleJoin = {
+type AssetRow = {
   ingest_meta?: { inbox_file?: string; legacyFilename?: string } | null;
   content_path?: string | null;
-} | null;
-
-function articleJoin(row: { articles: ArticleJoin | ArticleJoin[] | null }): ArticleJoin {
-  const a = row.articles;
-  if (!a) return null;
-  if (Array.isArray(a)) return a[0] ?? null;
-  return a;
-}
+};
 
 /** Public RSS itunes:image — no service role required (Vercel Preview build fallback). */
 async function fetchArticleImageMapFromRss(rssUrl: string): Promise<Map<string, string>> {
@@ -102,7 +95,7 @@ async function fetchArticleImageMapFromSupabase(): Promise<Map<string, string>> 
   if (!url || !key || !ref) return map;
 
   const endpoint =
-    `${url}/rest/v1/episodes?select=image_url,articles(ingest_meta,content_path)` +
+    `${url}/rest/v1/published_episode_assets?select=image_url,content_path,ingest_meta` +
     `&image_url=not.is.null`;
   try {
     const res = await fetch(endpoint, {
@@ -110,6 +103,7 @@ async function fetchArticleImageMapFromSupabase(): Promise<Map<string, string>> 
       headers: {
         apikey: key,
         Authorization: `Bearer ${key}`,
+        "Accept-Profile": "podcast",
       },
     });
     if (!res.ok) {
@@ -118,7 +112,8 @@ async function fetchArticleImageMapFromSupabase(): Promise<Map<string, string>> 
     }
     const rows = (await res.json()) as Array<{
       image_url: string | null;
-      articles: ArticleJoin | ArticleJoin[] | null;
+      content_path: string | null;
+      ingest_meta: AssetRow["ingest_meta"];
     }>;
     const storageBase = `https://${ref}.supabase.co/storage/v1/object/public/podcast`;
     for (const row of rows) {
@@ -126,9 +121,8 @@ async function fetchArticleImageMapFromSupabase(): Promise<Map<string, string>> 
       const image = row.image_url.startsWith("http")
         ? row.image_url
         : `${storageBase}/${row.image_url.replace(/^\//, "")}`;
-      const article = articleJoin(row);
-      const meta = article?.ingest_meta ?? {};
-      const keys = [meta.inbox_file, meta.legacyFilename, article?.content_path].filter(
+      const meta = row.ingest_meta ?? {};
+      const keys = [meta.inbox_file, meta.legacyFilename, row.content_path].filter(
         (k): k is string => Boolean(k),
       );
       for (const k of keys) registerImageKey(map, k, image);

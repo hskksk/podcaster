@@ -84,6 +84,10 @@ After deploy, re-trigger policy for stuck productions: `TARGET=remote pnpm cli r
 
 **CLI requeue:** When `pipeline.mode=events`, `pnpm cli requeue …` appends `ProductionRequested` or calls `publish` instead of starting legacy pgflow flows.
 
+### Phase 5 — reader migration (legacy table reads)
+
+After `pipeline.mode=events` is stable, merge Phase 5 migrations so CLI/TUI/web read **`podcast.*_overview`**, **`jobs.attempt_log`**, and **`podcast.published_episode_assets`** instead of `public.episodes` / `processing_logs`. Legacy tables remain for compat projection writers until Phase 6. Dashboard **Exposed schemas** must include `podcast` and `jobs` (see above).
+
 ### Commands quick reference
 
 See `CLAUDE.md` for the full list. Key commands:
