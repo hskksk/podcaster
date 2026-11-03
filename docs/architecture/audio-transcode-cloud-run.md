@@ -201,8 +201,8 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 
 ### Phase 0 — GCP
 
-1. `services/audio-transcode`、Artifact Registry、Cloud Run Job を用意する。
-2. 実行 SA に `run.jobs.run` と `run.executions.get` を付与する（poller 用 SA は Edge Secret に紐づく SA と同一でもよい）。
+1. `services/audio-transcode` をビルドし、**[infra/gcp/audio-transcode/](../../infra/gcp/audio-transcode/README.md)** の Terraform で Artifact Registry・Cloud Run Job・invoker SA を用意する。
+2. invoker SA の JSON キーを Supabase Secret `GCP_SERVICE_ACCOUNT_JSON` に設定する。
 3. 署名 URL で Job を 1 回 execute し、m4a が upload されることを手動確認する。
 
 ### Phase 1 — events 統合

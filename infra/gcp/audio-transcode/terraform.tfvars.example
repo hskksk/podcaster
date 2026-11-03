@@ -1,0 +1,6 @@
+project_id = "your-gcp-project-id"
+region     = "asia-northeast1"
+job_name   = "audio-transcode"
+
+# Build and push first (see infra/gcp/audio-transcode/README.md), then set:
+image = "asia-northeast1-docker.pkg.dev/your-gcp-project-id/podcaster/audio-transcode:latest"
