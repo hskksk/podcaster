@@ -51,6 +51,8 @@ export interface ArticleRegisteredPayload {
   content: string;
   ingest_route: string | null;
   mem_note_id?: string | null;
+  source?: string;
+  ingest_meta?: Record<string, unknown> | null;
 }
 
 export interface EpisodeOpenedPayload {

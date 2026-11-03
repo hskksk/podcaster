@@ -36,8 +36,6 @@ if (isLocal) {
     `
 do $$
 begin
-  perform pgflow.track_worker_function('craft-episode-worker');
-  perform pgflow.track_worker_function('craft-episode-download-worker');
   perform pgflow.track_worker_function('job-worker');
   perform pgflow.track_worker_function('domain-subscriber');
 end;
@@ -116,7 +114,7 @@ $$;
 
   // Deploy Edge Functions
   run(
-    "supabase functions deploy ingest craft-episode-worker craft-episode-download-worker download-monitor job-worker external-operation-poller domain-subscriber publish pgflow --no-verify-jwt",
+    "supabase functions deploy ingest job-worker external-operation-poller domain-subscriber publish pgflow --no-verify-jwt",
   );
 
   // Register worker function for pgflow worker management
@@ -125,8 +123,6 @@ $$;
     `
 do $$
 begin
-  perform pgflow.track_worker_function('craft-episode-worker');
-  perform pgflow.track_worker_function('craft-episode-download-worker');
   perform pgflow.track_worker_function('job-worker');
   perform pgflow.track_worker_function('domain-subscriber');
 end;

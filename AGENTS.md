@@ -4,7 +4,7 @@
 
 ### Overview
 
-Podcaster is an AI podcast generator built on Supabase. Article text flows through a pgflow pipeline: `ingest -> craftEpisode(generateScript -> generateAudio -> updateRss)`. Execution is handled by `craft-episode-worker`, and flow definitions are served by `functions/pgflow` ControlPlane. See `CLAUDE.md` and `README.md` for full architecture and command reference. Knowledge files live under `content/`. PKM stack: Capture, Git ingest, Next.js public site, MCP, mem cleanup (`docs/architecture/pkm-next.md`).
+Podcaster is an AI podcast generator on Supabase. Article text flows through the **events + jobs** pipeline: `ingest` appends domain events → `domain-subscriber` (ProductionPolicy) enqueues `jobs.*` → `job-worker` (`runJob`) → publish / RSS. See `CLAUDE.md` and `docs/architecture/podcast-domain-model-migration.md`. Knowledge files live under `content/`.
 
 ### Documentation maintenance
 
@@ -63,30 +63,13 @@ CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）�
 - **Gemini mock from Edge Functions**: In `config.toml`, set `[gemini] api_root = "http://host.docker.internal:8099"` (not `127.0.0.1`) before `TARGET=local pnpm seed:config`. Edge runs in Docker and cannot reach the host loopback.
 - **`external-operation-poller` curl returns `name resolution failed`**: Kong could not reach the function worker — restart `pnpm functions:serve:mock` after pulling new functions. Verify with `curl -s http://127.0.0.1:54331/functions/v1/external-operation-poller` (GET → `{"ok":true,...}`). To poll batches locally, use `pnpm poll:external-ops` (SQL → Kong inside Docker) instead of curling from the host.
 
-### Phase 4 — production cutover (`pipeline.mode`)
+### Production pipeline (post Phase 6)
 
-Production defaults to **`legacy`** until you switch. Runbook:
+Production runs **`pipeline.mode=events` only**. Ingest appends domain events; `domain-subscriber` enqueues jobs; `job-worker` runs `runJob`. CLI/TUI/web read **`podcast.*_overview`** and **`jobs.attempt_log`**. Legacy tables are renamed to **`legacy_*`** (historical data only). Dashboard **Exposed schemas** must include **`jobs`** and **`podcast`**.
 
-1. **Remote:** `TARGET=remote pnpm events:backfill` → `pnpm events:reconcile` — set **`DATABASE_URL`** (Dashboard Connect URI) or **`SUPABASE_DB_PASSWORD`** in `.env` with `supabase login` / linked project (see `.env.example`).
-2. **Preflight:** `pnpm pipeline:preflight` (no `*_running` / `audio_generated` episodes; reconcile OK)
-3. **Deploy:** merge to `main` (CI deploy) or `pnpm deploy` — includes `domain-subscriber`, `publish`, `job-worker`
-4. **Switch:** `pnpm pipeline:switch events --yes` (sets `podcast_config.pipeline.mode`)
-5. **Remote API schemas:** Dashboard → Project Settings → API → **Exposed schemas** — include `jobs` and `podcast` (same as local `supabase/config.toml` `[api].schemas`). Without this, Edge `requestJob` fails with `PGRST106: Invalid schema: jobs`.
-6. **DB push after merge:** `pnpm db:push` applies `grant usage … to authenticator` for those schemas.
-7. **Smoke:** ingest one article → check `feed.xml`, `jobs.jobs` / `jobs.job_attempts`, `podcast.event_subscription_failures`
-8. **Monitor:** `pnpm pipeline:status` after each ingest
+**Cutover runbook (already on events):** `TARGET=remote pnpm events:reconcile`, `pnpm pipeline:status`, smoke ingest, monitor `event_subscription_failures`. `pipeline:switch legacy` is removed.
 
-After deploy, re-trigger policy for stuck productions: `TARGET=remote pnpm cli requeue script <episode_id> --yes`, or rewind `production-policy` checkpoint and POST `domain-subscriber`.
-
-**Rollback:** `pnpm pipeline:switch legacy --yes` (ingest returns to `craftEpisodeSubmit`; run `events:backfill` before switching to events again).
-
-**Local events dev:** `.env` needs `DATABASE_URL` with `host.docker.internal` (see `.env.example`). `pnpm seed:config` does not overwrite an existing `pipeline.mode`.
-
-**CLI requeue:** When `pipeline.mode=events`, `pnpm cli requeue …` appends `ProductionRequested` or calls `publish` instead of starting legacy pgflow flows.
-
-### Phase 5 — reader migration (legacy table reads)
-
-After `pipeline.mode=events` is stable, merge Phase 5 migrations so CLI/TUI/web read **`podcast.*_overview`**, **`jobs.attempt_log`**, and **`podcast.published_episode_assets`** instead of `public.episodes` / `processing_logs`. Legacy tables remain for compat projection writers until Phase 6. Dashboard **Exposed schemas** must include `podcast` and `jobs` (see above).
+**Requeue:** `pnpm cli requeue …` appends `ProductionRequested` or calls `publish`.
 
 ### Commands quick reference
 

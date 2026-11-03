@@ -23,8 +23,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parse as parseToml } from "smol-toml";
-import { connectPostgres } from "./lib/postgres-connect.ts";
-import { readPipelineMode } from "./lib/pipeline-mode.ts";
 import {
   detectLocalStatus,
   detectProjectRef,
@@ -490,24 +488,6 @@ async function confirm(message: string): Promise<boolean> {
   });
 }
 
-async function startFlowRecord(
-  flowSlug: "craftEpisodeSubmit" | "craftEpisodeDownload",
-  input: Record<string, unknown>,
-  label: string,
-  yes: boolean,
-): Promise<void> {
-  if (!yes) {
-    const ok = await confirm(`Start flow ${JSON.stringify(input)} → ${label}?`);
-    if (!ok) { console.log("Aborted."); process.exit(0); }
-  }
-  const { error } = await db.schema("pgflow").rpc("start_flow", {
-    flow_slug: flowSlug,
-    input,
-  });
-  if (error) { console.error("Error:", error.message); process.exit(1); }
-  console.log(`Flow started (${label}): ${JSON.stringify(input)}`);
-}
-
 async function publishLatestRevision(episodeId: string, yes: boolean): Promise<void> {
   const revisionId = await resolveLatestRevisionId(episodeId);
   if (!revisionId) {
@@ -541,93 +521,30 @@ async function requeueEventsProduction(
 }
 
 async function requeueCmd(sub: string, id: string, yes: boolean): Promise<void> {
-  const sql = connectPostgres();
-  const mode = await readPipelineMode(sql);
-  await sql.end();
+  const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
+  if (error) { console.error("Error:", error.message); process.exit(1); }
+  if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
+  console.log(`Episode: ${data.title} (${shortId(data.id)})`);
 
-  if (mode === "events") {
-    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
-    if (error) { console.error("Error:", error.message); process.exit(1); }
-    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
-    console.log(`Episode: ${data.title} (${shortId(data.id)}) [pipeline.mode=events]`);
-
-    if (sub === "script" || sub === "regenerate-script") {
-      await requeueEventsProduction(id, "full", sub, yes);
-      return;
-    }
-    if (sub === "audio" || sub === "regenerate-audio") {
-      await requeueEventsProduction(id, "audio", sub, yes);
-      return;
-    }
-    if (sub === "regenerate-image") {
-      await requeueEventsProduction(id, "artwork", sub, yes);
-      return;
-    }
-    if (sub === "rss") {
-      await publishLatestRevision(id, yes);
-      return;
-    }
+  if (sub === "script" || sub === "regenerate-script") {
+    await requeueEventsProduction(id, "full", sub, yes);
+    return;
+  }
+  if (sub === "audio" || sub === "regenerate-audio") {
+    await requeueEventsProduction(id, "audio", sub, yes);
+    return;
+  }
+  if (sub === "regenerate-image") {
+    await requeueEventsProduction(id, "artwork", sub, yes);
+    return;
+  }
+  if (sub === "rss") {
+    await publishLatestRevision(id, yes);
+    return;
   }
 
-  if (sub === "script") {
-    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
-    if (error) { console.error("Error:", error.message); process.exit(1); }
-    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
-    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await startFlowRecord("craftEpisodeSubmit", { episodeId: id, startFrom: "script", trigger: "manual" }, "script", yes);
-  } else if (sub === "audio") {
-    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
-    if (error) { console.error("Error:", error.message); process.exit(1); }
-    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
-    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await startFlowRecord("craftEpisodeSubmit", { episodeId: id, startFrom: "audio", trigger: "manual" }, "audio", yes);
-  } else if (sub === "rss") {
-    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
-    if (error) { console.error("Error:", error.message); process.exit(1); }
-    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
-    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await startFlowRecord("craftEpisodeDownload", { episodeId: id, startFrom: "rss", trigger: "manual" }, "rss", yes);
-  } else if (sub === "regenerate-script") {
-    const { data, error } = await podcastReaders(db)
-      .from("episode_overview")
-      .select("id, title")
-      .eq("id", id)
-      .maybeSingle();
-    if (error) { console.error("Error:", error.message); process.exit(1); }
-    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
-    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await startFlowRecord(
-      "craftEpisodeSubmit",
-      { episodeId: id, startFrom: "script", regenerate: true, trigger: "manual" },
-      "regenerate-script",
-      yes,
-    );
-  } else if (sub === "regenerate-audio") {
-    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
-    if (error) { console.error("Error:", error.message); process.exit(1); }
-    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
-    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await startFlowRecord(
-      "craftEpisodeSubmit",
-      { episodeId: id, startFrom: "audio", regenerate: true, trigger: "manual" },
-      "regenerate-audio",
-      yes,
-    );
-  } else if (sub === "regenerate-image") {
-    const { data, error } = await podcastReaders(db).from("episode_overview").select("id, title").eq("id", id).maybeSingle();
-    if (error) { console.error("Error:", error.message); process.exit(1); }
-    if (!data) { console.error(`Episode not found: ${id}`); process.exit(1); }
-    console.log(`Episode: ${data.title} (${shortId(data.id)})`);
-    await startFlowRecord(
-      "craftEpisodeSubmit",
-      { episodeId: id, startFrom: "image", regenerate: true, trigger: "manual" },
-      "regenerate-image",
-      yes,
-    );
-  } else {
-    console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio|regenerate-image <id> [--yes]");
-    process.exit(1);
-  }
+  console.error("Usage: pnpm cli requeue script|audio|rss|regenerate-script|regenerate-audio|regenerate-image <id> [--yes]");
+  process.exit(1);
 }
 
 // ---------------------------------------------------------------------------

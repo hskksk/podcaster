@@ -44,53 +44,57 @@ pnpm deploy
 ### Manually trigger Edge Functions locally
 
 ```bash
-KEY=$(supabase status --json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
-curl -s http://localhost:54331/functions/v1/craft-episode-worker -H "Authorization: Bearer $KEY"
+KEY=$(supabase status -o json | python3 -c "import sys,json; print(json.load(sys.stdin)['SERVICE_ROLE_KEY'])")
+curl -s http://localhost:54331/functions/v1/domain-subscriber -H "Authorization: Bearer $KEY"
+curl -s http://localhost:54331/functions/v1/job-worker -H "Authorization: Bearer $KEY"
 ```
 
 ## Architecture
 
-Git + Markdoc (`content/`) is the designed knowledge store. Wiki lives in `content/docs/**/index.mdoc`, clips in `content/web-clips/**/index.mdoc`. Keystatic edits those files. The public site is Next.js (`apps/web`): `/` is the hskksk portal, `/podcast` is the wiki and podcast (old `/` and `/articles/[slug]` redirect here), and `/juken` publishes `chugaku-juken/`. GitHub Pages only publishes redirects to that origin. The podcast factory (ingest → pgflow → TTS → RSS) is unchanged.
+Git + Markdoc (`content/`) is the designed knowledge store. Wiki lives in `content/docs/**/index.mdoc`, clips in `content/web-clips/**/index.mdoc`. Keystatic edits those files. The public site is Next.js (`apps/web`): `/` is the hskksk portal, `/podcast` is the wiki and podcast, and `/juken` publishes `chugaku-juken/`.
 
-Article text enters via the `ingest` Edge Function and starts a **pgflow** DAG run:
+Production podcast pipeline (events + jobs):
 
 ```
-ingest -> pgflow.start_flow("craftEpisodeSubmit")
-       -> generate_script
-       -> generate_audio_start
-       -> (download-monitor starts craftEpisodeDownload)
-       -> generate_audio_download
-       -> update_rss
+ingest -> domain events (ArticleRegistered, EpisodeOpened, ProductionRequested)
+       -> domain-subscriber (ProductionPolicy)
+       -> jobs.jobs (write_script | render_audio | paint_artwork)
+       -> job-worker (pgflow runJob)
+       -> domain events (ScriptWritten, AudioRendered, …)
+       -> assemble / publish -> feed.xml
 ```
 
-In production, `pgflow_ensure_workers` (created by pgflow migrations) keeps `craft-episode-worker` alive and restarts it when needed.
+`pgflow_ensure_workers` keeps `job-worker` and `domain-subscriber` alive.
 
 ### Edge worker pattern
 
-The primary execution path is a pgflow worker edge function:
+Job execution uses a pgflow worker edge function:
 
 ```ts
 import { EdgeWorker } from "@pgflow/edge-worker";
-import { CraftEpisodeSubmit } from "../../flows/craft-episode-submit.ts";
+import { RunJob } from "../../flows/run-job.ts";
 
-EdgeWorker.start(CraftEpisodeSubmit);
+EdgeWorker.start(RunJob);
 ```
+
+Event-driven policy uses `domain-subscriber` → `handleProductionPolicyEvent` in `_services/production-policy-handler.ts`.
 
 Shared utilities live in `supabase/functions/_shared/`:
 - `db.ts` — creates a `service_role` Supabase client from env vars
-- `config.ts` — loads `podcast_config` table as a typed map
-- `types.ts` — shared interfaces (`Article`, `Episode`, `Script`, `AudioFile`, etc.)
-- `logger.ts` — `writeLog()` inserts to `processing_logs`
-- `pipeline-stages.ts` — shared stage implementations used by pgflow tasks
+- `config.ts` — loads `podcast_config` table as a typed map (generator/tts/image keys)
+- `types.ts` — legacy TypeScript shapes still used in a few places
+
+CLI/TUI/web read **`podcast.*_overview`** views and **`jobs.attempt_log`** (see Phase 5 migration). Old tables are renamed to `legacy_*` and are not written anymore.
 
 ### Runtime configuration
 
-Podcast metadata and AI model settings are stored in the `podcast_config` table (key/value), not env vars. Workers call `loadConfig()` at runtime to read them. Change settings via Supabase Studio → Table Editor → `podcast_config`.
+Show metadata lives in `podcast.shows` (from `ShowConfigured`). AI model settings remain in `podcast_config` and `jobs.prompt_templates`. Workers call `loadConfig()` at runtime.
 
 ### Gemini integration
 
-- **Script generation**: `generateScript` stage calls `gemini.models.generateContent` with `responseMimeType: "application/json"` and a `responseSchema` to force structured output. The script format is `Host: <line>\nCoHost: <line>` repeated.
-- **TTS (audio generation)**: `generateAudioStart` submits a Gemini Batch job with a multi-speaker TTS model, and `generateAudioDownload` polls batch state then fetches WAV output before uploading to Storage.
+- **Script generation**: `write_script` job handler uses Gemini structured JSON output (`Host:` / `CoHost:` lines).
+- **TTS**: `render_audio` submits a Gemini Batch job; `external-operation-poller` completes waiting jobs.
+- **Artwork**: `paint_artwork` job handler when enabled in profile.
 
 ### TARGET env var
 

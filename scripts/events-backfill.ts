@@ -71,7 +71,7 @@ async function artworkStorageCandidates(
 
   const logs = await sql<Array<{ processed_at: Date }>>`
     select processed_at
-    from processing_logs
+    from legacy_processing_logs
     where episode_id = ${legacyEp.id}::uuid
       and queue_name = 'generateEpisodeImage'
       and status = 'success'
@@ -163,7 +163,7 @@ function pickCanonicalEpisode(eps: EpisodeRow[]): EpisodeRow {
 async function validateLegacy(sql: ReturnType<typeof connectPostgres>): Promise<void> {
   const multiEpisode = await sql<Array<{ article_id: string; n: string }>>`
     select article_id, count(*)::text as n
-    from episodes
+    from legacy_episodes
     where article_id is not null
     group by article_id
     having count(*) > 1
@@ -179,7 +179,7 @@ async function validateLegacy(sql: ReturnType<typeof connectPostgres>): Promise<
     select count(*)::text as n
     from (
       select title, content_sha
-      from articles
+      from legacy_articles
       where content_path is null
       group by title, content_sha
       having count(*) > 1
@@ -283,13 +283,13 @@ async function main(): Promise<void> {
 
   const articles = await sql<ArticleRow[]>`
     select id, title, content, content_path, content_sha, ingest_route, mem_note_id, created_at
-    from articles
+    from legacy_articles
     order by created_at asc
   `;
 
   const episodes = await sql<EpisodeRow[]>`
     select id, article_id, title, description, status, image_url, audio_url, published_at, created_at
-    from episodes
+    from legacy_episodes
     order by created_at asc
   `;
 
@@ -399,7 +399,7 @@ async function main(): Promise<void> {
         Array<{ id: string; content: string; created_at: Date }>
       >`
         select id, content, created_at
-        from scripts
+        from legacy_scripts
         where episode_id = ${legacyEp.id}::uuid and status = 'ready'
         order by created_at desc
         limit 1
@@ -463,7 +463,7 @@ async function main(): Promise<void> {
         Array<{ id: string; storage_path: string; mime_type: string; script_id: string | null; created_at: Date }>
       >`
         select id, storage_path, mime_type, script_id, created_at
-        from audio_files
+        from legacy_audio_files
         where episode_id = ${legacyEp.id}::uuid and status = 'ready'
         order by created_at desc
         limit 1

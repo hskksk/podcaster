@@ -107,6 +107,8 @@ export async function ingestViaEvents(
       content: body.content,
       ingest_route: body.ingest_route ?? null,
       mem_note_id: body.mem_note_id ?? null,
+      source: "webhook",
+      ingest_meta: body.ingest_meta ?? null,
     },
   });
 
