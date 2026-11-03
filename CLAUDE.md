@@ -84,7 +84,7 @@ Shared utilities live in `supabase/functions/_shared/`:
 - `config.ts` — loads `podcast_config` table as a typed map (generator/tts/image keys)
 - `types.ts` — legacy TypeScript shapes still used in a few places
 
-CLI/TUI/web read **`podcast.*_overview`** views and **`jobs.attempt_log`**. Legacy `public.*` pipeline tables were removed post–Phase 6; show metadata lives in **`podcast.shows`**.
+CLI/TUI/web read **`podcast.*_overview`** views and **`jobs.attempt_log`**. Legacy `public.*` pipeline tables are removed in a follow-up migration; show metadata lives in **`podcast.shows`**.
 
 ### Runtime configuration
 
