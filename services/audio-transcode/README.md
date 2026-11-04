@@ -14,7 +14,7 @@ ffmpeg で WAV → AAC (m4a) に変換し、Supabase Storage の署名 URL 経�
 
 ## ビルドとデプロイ
 
-**IaC（推奨）:** [infra/gcp/audio-transcode/README.md](../../infra/gcp/audio-transcode/README.md) — Terraform + `cloudbuild.yaml`
+**IaC（推奨）:** [infra/gcp/audio-transcode/README.md](../../infra/gcp/audio-transcode/README.md) — Terraform Cloud + `cloudbuild.yaml`
 
 手動の例:
 
