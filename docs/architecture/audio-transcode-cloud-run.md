@@ -201,9 +201,9 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 
 ### Phase 0 — GCP
 
-1. `services/audio-transcode` をビルドし、**[infra/gcp/audio-transcode/](../../infra/gcp/audio-transcode/README.md)** の Terraform（**state は [Terraform Cloud](../../infra/gcp/audio-transcode/TFC.md)**）で Artifact Registry・Cloud Run Job・invoker SA を用意する。
+1. [`terraform.tfvars`](../../infra/gcp/audio-transcode/terraform.tfvars) を実プロジェクト向けに更新し、**[infra/gcp/audio-transcode/README.md](../../infra/gcp/audio-transcode/README.md)** の手順で Terraform apply（**state は [Terraform Cloud](../../infra/gcp/audio-transcode/TFC.md)**）→ `services/audio-transcode` を Cloud Build → Job 込み apply。
 2. invoker SA の JSON キーを Supabase Secret `GCP_SERVICE_ACCOUNT_JSON` に設定する。
-3. 署名 URL で Job を 1 回 execute し、m4a が upload されることを手動確認する。
+3. `terraform output` の `gcp.*` を `podcast_config` に揃える。署名 URL で Job を 1 回 execute し、m4a upload を手動確認する。
 
 ### Phase 1 — events 統合
 
@@ -243,4 +243,5 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 | staging WAV | transcode 前は **`jobs/{jobId}/{attemptId}/audio.wav`**。**m4a finalize 成功直後**に Storage と blob 行を削除 |
 | GCP プロジェクト・リージョン・Job 名 | **`podcast_config`**（上表の `gcp.*` キー） |
 | GCP 認証 | **`GCP_SERVICE_ACCOUNT_JSON`** のみ Secret |
+| Terraform 変数（tfvars） | Git — **`infra/gcp/audio-transcode/terraform.tfvars`** |
 | Terraform state | **Terraform Cloud** workspace `podcaster-audio-transcode`（[TFC.md](../../infra/gcp/audio-transcode/TFC.md)） |

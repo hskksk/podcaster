@@ -1,109 +1,77 @@
-# audio-transcode Terraform — Terraform Cloud
+# audio-transcode Terraform — Terraform Cloud（state のみ）
 
-Terraform state と実行履歴は **HashiCorp Terraform Cloud（HCP Terraform）** で管理する。GCS バックエンドの bootstrap は不要。
+**tfstate** は Terraform Cloud workspace **`podcaster-audio-transcode`** が正本。**tfvars** は Git の [`terraform.tfvars`](./terraform.tfvars) が正本（TFC Workspace 変数には載せない）。
 
-関連: [audio-transcode-cloud-run.md](../../../docs/architecture/audio-transcode-cloud-run.md) Phase 0、[README.md](./README.md) 手順。
+関連: [README.md](./README.md) デプロイ手順、[audio-transcode-cloud-run.md](../../../docs/architecture/audio-transcode-cloud-run.md)。
+
+## 役割分担
+
+```text
+Git (podcaster repo)
+  infra/gcp/audio-transcode/terraform.tfvars  ← 変数の正本（PR で変更）
+  infra/gcp/audio-transcode/*.tf              ← リソース定義
+
+Terraform Cloud (app.terraform.io)
+  organization: hskksk
+  workspace:    podcaster-audio-transcode
+        └── state + run 履歴（tfstate を Git / ローカルに置かない）
+
+Supabase
+  podcast_config (gcp.*)  ← terraform output と手動同期
+  Secret GCP_SERVICE_ACCOUNT_JSON  ← invoker SA 鍵（Git / state に入れない）
+```
 
 ## なぜ Terraform Cloud か
 
-| 項目 | Terraform Cloud | 自前 GCS state |
-|------|-----------------|----------------|
-| state バケットの作成 | 不要 | 初回 bootstrap が必要 |
-| ロック | 標準 | GCS backend で対応可 |
-| 実行履歴・plan 保存 | Run UI | 自前で整備 |
-| 変数・secret | Workspace 変数 UI | 別管理 |
-
-このスタック（1 Cloud Run Job + AR + SA）は Workspace を 1 つ切る想定で足りる。
-
-## 構成
-
-```text
-app.terraform.io
-  organization: hskksk  （違う場合は versions.tf の organization を変更）
-  workspace:    podcaster-audio-transcode
-        │
-        ├── state（Terraform Cloud が保持。Git / ローカルに tfstate を置かない）
-        ├── Workspace variables（project_id, image, …）
-        ├── Sensitive: GOOGLE_CREDENTIALS（Remote 実行時のみ）
-        └── Runs（plan / apply の履歴）
-
-GCP
-  ├── Terraform 用 SA（apply 権限）── Remote 実行時に TFC へ
-  ├── invoker SA（Edge 用・Terraform が作成）── 鍵は Supabase Secret へ
-  └── runner SA（Job 実行用・Terraform が作成）
-```
-
-**2 種類の GCP 認証を混同しないこと。**
-
-| 用途 | 権限の目安 | 置き場 |
-|------|------------|--------|
-| **Terraform apply** | AR / Cloud Run / IAM / SA 作成（例: `roles/editor` またはカスタム） | TFC の `GOOGLE_CREDENTIALS`（Remote）またはローカル ADC（Local 実行） |
-| **Supabase Edge** | `run.jobs.run` 等（本モジュールの invoker カスタムロール） | Secret `GCP_SERVICE_ACCOUNT_JSON`（Terraform output の invoker SA のキー） |
+GCS バックエンド用バケットの bootstrap が不要で、ロックと run 履歴が標準で付く。このスタックは workspace 1 つで足りる。
 
 ## Workspace の作り方
 
-1. [app.terraform.io](https://app.terraform.io) で Organization を用意（名称が `hskksk` でない場合は `versions.tf` の `organization` を合わせる）。
-2. **New workspace** → **CLI-driven workflow**（まずは CLI で十分。後から VCS 連携に変更可）。
-3. Name: **`podcaster-audio-transcode`**（`versions.tf` の `workspaces.name` と一致させる）。
-4. **Execution mode**（どちらか）:
-   - **Local（おすすめ・最初）**: state だけ TFC。plan/apply は手元 CLI + `gcloud auth application-default login`。GCP 鍵を TFC に載せなくてよい。
-   - **Remote**: plan/apply を TFC 上で実行。Workspace に **Environment variable** `GOOGLE_CREDENTIALS`（Sensitive）= Terraform 用 SA の JSON 全文。
+1. [app.terraform.io](https://app.terraform.io) で Organization を用意（名称が `hskksk` でない場合は [`versions.tf`](./versions.tf) の `organization` を合わせる）。
+2. **New workspace** → **CLI-driven workflow**。
+3. Name: **`podcaster-audio-transcode`**（`versions.tf` の `workspaces.name` と一致）。
+4. **Execution mode = Local**（推奨）
+   - **State**: Terraform Cloud
+   - **Plan / apply**: 手元 CLI。GCP は `gcloud auth application-default login`
+   - Workspace に **`GOOGLE_CREDENTIALS` は不要**
 
-### Workspace 変数（Terraform variables）
-
-UI の **Workspace variables** に登録（`category = terraform`）。名前は変数名と同じ。
-
-| Variable | Sensitive | 例 |
-|----------|-----------|-----|
-| `project_id` | no | `your-gcp-project` |
-| `region` | no | `asia-northeast1` |
-| `job_name` | no | `audio-transcode` |
-| `image` | no | `asia-northeast1-docker.pkg.dev/.../audio-transcode:latest` |
-
-`region` / `job_name` など default 付き変数は未設定でも可。`project_id` と `image` は apply 前に必須。
-
-ローカルだけ試すときは gitignore 済み `terraform.tfvars` や `TF_VAR_project_id` でもよい（state は TFC に上がる）。
+Remote execution に切り替える場合だけ、Terraform 用 SA JSON を TFC の Environment variable `GOOGLE_CREDENTIALS`（Sensitive）に置く。
 
 ### CLI ログイン
 
 ```bash
-terraform login   # ブラウザで TF API トークン → ~/.terraform.d/credentials.tfc.json
+terraform login
 cd infra/gcp/audio-transcode
 terraform init
-terraform plan
+terraform plan    # terraform.tfvars を自動読込、state は TFC
 ```
 
-## 初回 apply の流れ（Local 実行 + TFC state）
+## GCP 認証（2 種類）
 
-1. Workspace 作成（上記）。
-2. `terraform login` → `terraform init`。
-3. 変数を TFC Workspace または `terraform.tfvars` に設定。
-4. [README.md](./README.md) の `-target` bootstrap → イメージ build → フル `apply`。
-5. `terraform output` → Supabase `podcast_config` / Secret（README §2–3）。
+| 用途 | 権限 | 置き場 |
+|------|------|--------|
+| **Terraform apply** | AR / Run / IAM / SA 作成 | Local 実行時: 手元 ADC。Remote 実行時: TFC `GOOGLE_CREDENTIALS` |
+| **Supabase Edge** | invoker カスタムロール（Run Job API） | Secret **`GCP_SERVICE_ACCOUNT_JSON`**（Terraform が作る invoker SA の鍵） |
 
 ## CI（GitHub Actions）
 
-Workflow [`.github/workflows/terraform-audio-transcode.yml`](../../../.github/workflows/terraform-audio-transcode.yml):
+[`.github/workflows/terraform-audio-transcode.yml`](../../../.github/workflows/terraform-audio-transcode.yml):
 
-- `infra/gcp/audio-transcode/**` 変更時に `fmt` / `init` / `validate`。
-- Repository secret **`TF_API_TOKEN`**（Terraform Cloud → User settings → Tokens）がある場合のみ `init` まで実行。
+- `infra/gcp/audio-transcode/**` 変更時に `fmt` / `init` / `validate`
+- Repository secret **`TF_API_TOKEN`** がある場合のみ実行（TFC へ init するため）
 
-`plan` / `apply` は PR CI では回さない（GCP 認証と Workspace 変数が必要なため）。本番反映は CLI または TFC VCS 連携（将来）。
+`plan` / `apply` は PR CI では行わない（GCP ADC が必要）。validate はコミット済み `terraform.tfvars` の構文チェックに使える。
 
-## 将来: VCS-driven（任意）
+## 将来: Version control workflow（任意）
 
-Workspace を **Version control workflow** に切り替え、Working directory `infra/gcp/audio-transcode`、`main` merge 時に apply など。導入時は Remote 実行 + `GOOGLE_CREDENTIALS` と apply 承認（Manual apply）を推奨。
-
-## State に含めないもの
-
-- Supabase `GCP_SERVICE_ACCOUNT_JSON`（invoker 鍵）— Terraform state には SA **email** のみ。鍵は apply 後に手動または別スクリプトで Supabase へ。
-- `podcast_config` — ランタイム設定。output を見て Dashboard / seed で同期（Terraform Provider で Supabase を触る予定はなし）。
+TFC を **Version control workflow** に切り替え、Working directory `infra/gcp/audio-transcode`、変数は引き続き **Git の tfvars**（VCS から checkout される）。apply は Manual apply + Remote 実行を推奨。
 
 ## 決定
 
 | 項目 | 方針 |
 |------|------|
-| State | Terraform Cloud workspace `podcaster-audio-transcode` |
-| Organization | 既定 `hskksk`（要変更時は `versions.tf` のみ編集） |
-| tfvars | Workspace 変数を正本。ローカル `terraform.tfvars` は gitignore のまま任意 |
-| ローカル tfstate | 使わない（`.gitignore` 維持） |
+| **tfvars** | Git — [`terraform.tfvars`](./terraform.tfvars) |
+| **tfstate** | Terraform Cloud workspace `podcaster-audio-transcode` |
+| Organization | 既定 `hskksk`（`versions.tf`） |
+| ローカル `terraform.tfstate` | 使わない（`.gitignore`） |
+| TFC Workspace 変数 | 使わない（Git と二重管理しない） |

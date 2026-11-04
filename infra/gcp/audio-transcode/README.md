@@ -2,32 +2,56 @@
 
 Terraform で Artifact Registry・Cloud Run Job・Supabase 用 invoker SA を定義する。
 
-**State:** [Terraform Cloud](./TFC.md)（workspace `podcaster-audio-transcode`）。ローカル `terraform.tfstate` は使わない。
+| 正本 | 置き場 |
+|------|--------|
+| **変数（tfvars）** | Git — このディレクトリの [`terraform.tfvars`](./terraform.tfvars) |
+| **state（tfstate）** | [Terraform Cloud](./TFC.md) workspace `podcaster-audio-transcode`（ローカルに state を置かない） |
 
-設計: [docs/architecture/audio-transcode-cloud-run.md](../../../docs/architecture/audio-transcode-cloud-run.md)
+設計: [audio-transcode-cloud-run.md](../../../docs/architecture/audio-transcode-cloud-run.md)
 
 ## 前提
 
-- [Terraform](https://www.terraform.io/downloads) >= 1.5、**Google Cloud SDK (`gcloud`)** — リポジトリルートで `mise install`（`.mise.toml`）
-- Terraform Cloud: Organization `hskksk`（違う場合は `versions.tf` の `organization` を変更）、Workspace **`podcaster-audio-transcode`** を作成 — 手順は [TFC.md](./TFC.md)
-- `terraform login`（API トークン）
-- **Execution mode = Local** 推奨（state は TFC、apply は手元 `gcloud auth application-default login`）
-- 対象 GCP プロジェクトで Billing 有効
+- リポジトリルートで `mise install`（`terraform` / `gcloud` — [`.mise.toml`](../../../.mise.toml)）
+- Terraform Cloud: CLI-driven workspace **`podcaster-audio-transcode`**（手順 [TFC.md](./TFC.md)）。Organization 既定 `hskksk`（違えば `versions.tf` を変更）
+- `terraform login`
+- **Execution mode = Local**（state だけ TFC。plan/apply は手元 + `gcloud auth application-default login`）
+- GCP プロジェクトで Billing 有効
 
-## 0. 変数
+## 1. 初回セットアップ
 
-Workspace 変数（TFC UI）または gitignore 済み `terraform.tfvars`（[terraform.tfvars.example](./terraform.tfvars.example)）。`project_id` と `image` は apply 前に必須。
+### 1.1 Terraform Cloud
 
-## 1. イメージをビルドして push
+[TFC.md § Workspace](./TFC.md#workspace-の作り方) どおり workspace を 1 つ作成する。
 
-初回は Artifact Registry だけ先に作る（Job はイメージ必須のため）。
+### 1.2 変数（Git）
+
+[`terraform.tfvars`](./terraform.tfvars) を編集する（PR でレビュー可能）。
+
+| 変数 | 必須タイミング | 内容 |
+|------|----------------|------|
+| `project_id` | 最初の apply 前 | GCP プロジェクト ID（`podcast_config.gcp.project_id` と揃える） |
+| `region` / `job_name` | 任意 | 既定のままでよいことが多い |
+| `image` | Job 作成 apply 前 | Artifact Registry 上のイメージ URI |
+
+`terraform plan` / `apply` は **`terraform.tfvars` を自動読込**する。TFC Workspace 変数には載せない（Git が正本）。
+
+### 1.3 Terraform 初期化
 
 ```bash
 cd infra/gcp/audio-transcode
 terraform login
 terraform init
+```
 
-# project_id を Workspace 変数または terraform.tfvars に設定してから:
+## 2. GCP インフラ（2 段階 apply）
+
+### 2.1 Artifact Registry と SA のみ（Job はまだ）
+
+`image` が未ビルドでも通るよう、Job 以外だけ作る。
+
+```bash
+cd infra/gcp/audio-transcode
+
 terraform apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.podcaster \
@@ -38,11 +62,15 @@ terraform apply \
   -target=google_project_iam_member.invoker_custom
 ```
 
+### 2.2 コンテナイメージ
+
+`terraform.tfvars` の `project_id` / `region` に合わせて build する。
+
 ```bash
 cd ../../../services/audio-transcode
 
-export PROJECT_ID=your-gcp-project-id
-export REGION=asia-northeast1
+PROJECT_ID="$(grep -E '^project_id' ../../infra/gcp/audio-transcode/terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
+REGION="$(grep -E '^region' ../../infra/gcp/audio-transcode/terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
 
 gcloud builds submit \
   --project "$PROJECT_ID" \
@@ -51,42 +79,56 @@ gcloud builds submit \
   .
 ```
 
-Workspace 変数 `image` を設定して Job を作成:
+[`terraform.tfvars`](../../infra/gcp/audio-transcode/terraform.tfvars) の `image` を実 URI に更新して commit する。
+
+### 2.3 Cloud Run Job 込みのフル apply
 
 ```bash
 cd ../../infra/gcp/audio-transcode
 terraform apply
 ```
 
-`apply` 後:
+state は Terraform Cloud に記録される。ローカルに `terraform.tfstate` はできない（`.gitignore`）。
 
-## 2. 出力の使い方
+## 3. Supabase 連携
 
-| 出力 | 用途 |
-|------|------|
-| `invoker_service_account_email` | この SA の JSON キーを `GCP_SERVICE_ACCOUNT_JSON` に |
-| `podcast_config_gcp_keys` | `podcast_config` の `gcp.*` |
-| `cloud_run_job_name` | デバッグ・Run API のフルリソース名 |
+Terraform **output** を Supabase に反映する（tfvars / state とは別経路）。
 
-Invoker キー（例）:
+| 出力 | 反映先 |
+|------|--------|
+| `invoker_service_account_email` | この SA の JSON キー → Secret **`GCP_SERVICE_ACCOUNT_JSON`** |
+| `podcast_config_gcp_keys` | テーブル **`podcast_config`** の `gcp.project_id` / `gcp.region` / `gcp.run.job_name` |
+| （運用） | `audio.transcode.enabled` = `true`、`audio.delivery.format` = `m4a` |
+
+Invoker 鍵の例:
 
 ```bash
 gcloud iam service-accounts keys create invoker.json \
   --iam-account "$(terraform output -raw invoker_service_account_email)"
-# Supabase: supabase secrets set GCP_SERVICE_ACCOUNT_JSON="$(cat invoker.json)"
+supabase secrets set --env-file /dev/null  # リモート deploy 時は .env 経由
+# 例: supabase secrets set GCP_SERVICE_ACCOUNT_JSON="$(jq -c . invoker.json)"
 ```
 
-## 3. Supabase 側
+アプリデプロイ:
 
-1. Secret `GCP_SERVICE_ACCOUNT_JSON`
-2. `podcast_config`: `gcp.project_id`, `gcp.region`, `gcp.run.job_name`, `audio.transcode.enabled=true`
-3. `pnpm deploy`（Edge Functions）
+```bash
+pnpm deploy   # または CI の main deploy
+```
 
-## イメージ更新
+## 4. イメージ更新（再デプロイ）
 
-Job 定義の `lifecycle.ignore_changes` により、Terraform はコンテナ image タグの差分を無視する。新ビルドは **同じ URI に push**（`:latest` または固定タグ）すれば次回 Execution から反映される。
+1. `gcloud builds submit`（§2.2 と同じ。`image` URI が `:latest` 固定なら tfvars 変更は不要）
+2. Cloud Run Job は `lifecycle.ignore_changes` で image 差分を Terraform が無視する — **push するだけ**で次回 Execution から新イメージ
+3. Edge / `podcast_config` の変更があるときだけ `pnpm deploy`
+
+## 5. 変更の流れ（日常）
+
+1. `terraform.tfvars` または `.tf` を PR で変更
+2. `terraform plan`（手元。state ロックは TFC）
+3. `main` merge 後 `terraform apply`、または apply 担当が PR 確認後に実行
+4. output が変わったら Supabase Secret / `podcast_config` を更新
 
 ## 参考
 
-- [TFC.md](./TFC.md) — Workspace・変数・Remote 実行・CI
-- GitHub secret `TF_API_TOKEN` — PR 上の `terraform validate` 用（任意）
+- [TFC.md](./TFC.md) — state・Workspace・認証の整理
+- GitHub secret **`TF_API_TOKEN`** — PR 上の `terraform validate`（任意）
