@@ -1,6 +1,11 @@
 variable "project_id" {
   type        = string
   description = "GCP project ID (same value as podcast_config gcp.project_id)."
+
+  validation {
+    condition     = var.project_id != "" && var.project_id != "your-gcp-project-id"
+    error_message = "Set project_id in terraform.tfvars to your real GCP project ID (not the placeholder)."
+  }
 }
 
 variable "region" {
@@ -23,7 +28,9 @@ variable "artifact_registry_repository_id" {
 
 variable "image" {
   type        = string
-  description = "Container image URI (build with services/audio-transcode/cloudbuild.yaml or docker push)."
+  description = "Optional override. Default: {region}-docker.pkg.dev/{project_id}/{artifact_registry_repository_id}/audio-transcode:latest"
+  default     = null
+  nullable    = true
 }
 
 variable "task_timeout" {

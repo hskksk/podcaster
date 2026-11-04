@@ -1,5 +1,8 @@
 locals {
-  image = var.image
+  image = coalesce(
+    var.image,
+    "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_registry_repository_id}/audio-transcode:latest",
+  )
 }
 
 resource "google_project_service" "required" {

@@ -29,9 +29,9 @@ Terraform で Artifact Registry・Cloud Run Job・Supabase 用 invoker SA を定
 
 | 変数 | 必須タイミング | 内容 |
 |------|----------------|------|
-| `project_id` | 最初の apply 前 | GCP プロジェクト ID（`podcast_config.gcp.project_id` と揃える） |
+| `project_id` | 最初の apply 前 | GCP プロジェクト ID（`podcast_config.gcp.project_id` と揃える。**プレースホルダのままにしない**） |
 | `region` / `job_name` | 任意 | 既定のままでよいことが多い |
-| `image` | Job 作成 apply 前 | Artifact Registry 上のイメージ URI |
+| `image` | 任意 | 省略時は `{region}-docker.pkg.dev/{project_id}/podcaster/audio-transcode:latest` を自動使用 |
 
 `terraform plan` / `apply` は **`terraform.tfvars` を自動読込**する。TFC Workspace 変数には載せない（Git が正本）。
 
@@ -112,9 +112,11 @@ gcloud builds submit \
   .
 ```
 
-[`terraform.tfvars`](../../infra/gcp/audio-transcode/terraform.tfvars) の `image` を実 URI に更新して commit する。
+§2.3 の `terraform apply` 前に `project_id` が実値であること（`image` 行は不要。URI は `project_id` から組み立てる）。
 
 ### 2.3 Cloud Run Job 込みのフル apply
+
+Cloud Build 済みで [`terraform.tfvars`](./terraform.tfvars) の **`project_id` が実プロジェクト ID** なら、そのまま apply する（`image` に `your-gcp-project-id` が残っていると Artifact Registry 403 になる）。
 
 ```bash
 cd ../../infra/gcp/audio-transcode
