@@ -131,5 +131,20 @@ aspect_ratio = "16:9"
 image_size = "1K"
 mime_type = "image/jpeg"
 
+# Cloud Run audio transcode (see infra/gcp/audio-transcode/README.md §3)
+[audio]
+delivery_format = "m4a"
+
+[audio.transcode]
+enabled = false
+bitrate_kbps = 128
+container = "m4a"
+
+[gcp]
+# Same project as infra/gcp/audio-transcode/terraform.tfvars (override: GCP_PROJECT_ID in .env)
+project_id = ""
+region = "asia-northeast1"
+run_job_name = "audio-transcode"
+
 [tui.markdown]
 math_label = "ᵐ"

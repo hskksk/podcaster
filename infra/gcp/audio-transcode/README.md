@@ -169,41 +169,51 @@ gcloud iam service-accounts keys create /tmp/podcaster-invoker.json \
 
 鍵ファイルは git に含めず、設定後削除してよい。
 
-### 3.2 テーブル `public.podcast_config`
+### 3.2 ランタイム設定 — `config.toml` → `podcast_config`
 
-Edge の `loadConfig()` が読む。**Studio → Table Editor → `podcast_config`**（列 `key` / `value`）。
+TTS や `image.*` と同じ経路。**ルート [`config.toml`](../../../config.toml)** に書き、`seed-config.ts` が **`public.podcast_config`** に upsert する。Studio で 1 行ずつ触る必要はない（上書き確認用なら可）。
 
-| `key` | `value` | メモ |
-|-------|---------|------|
-| `gcp.project_id` | JSON 文字列 | `terraform output -json podcast_config_gcp_keys` と一致 |
-| `gcp.region` | JSON 文字列 | 同上 |
-| `gcp.run.job_name` | JSON 文字列 | 同上 |
-| `audio.delivery.format` | `"m4a"` | seed 既定で可 |
-| `audio.transcode.enabled` | **`true`（boolean）** | これが `false` だと WAV のまま |
+Terraform apply 後、次を **`terraform.tfvars` / output と揃える**:
 
-SQL（`supabase link` 済み。ID は tfvars から）:
+```toml
+[gcp]
+project_id = "..."   # terraform.tfvars の project_id（空のまま seed しない）
+region = "asia-northeast1"
+run_job_name = "audio-transcode"
 
-```bash
-cd infra/gcp/audio-transcode
-PROJECT_ID="$(grep -E '^project_id' terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
-REGION="$(grep -E '^region' terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
-JOB_NAME="$(grep -E '^job_name' terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
+[audio]
+delivery_format = "m4a"
 
-supabase db query --linked "$(cat <<SQL
-insert into public.podcast_config (key, value) values
-  ('gcp.project_id', to_jsonb('${PROJECT_ID}'::text)),
-  ('gcp.region', to_jsonb('${REGION}'::text)),
-  ('gcp.run.job_name', to_jsonb('${JOB_NAME}'::text)),
-  ('audio.delivery.format', to_jsonb('m4a'::text)),
-  ('audio.transcode.enabled', 'true'::jsonb)
-on conflict (key) do update set value = excluded.value;
-SQL
-)"
+[audio.transcode]
+enabled = true       # GCP 準備完了後に true
+bitrate_kbps = 128
+container = "m4a"
 ```
 
-**`pnpm deploy` と seed:** 末尾の `seed-config.ts` は毎回 upsert し、`audio.transcode.enabled` を **`false`**、`gcp.project_id` を `.env` の `GCP_PROJECT_ID`（未設定なら `""`）に戻す。
+反映:
 
-**推奨順序（本番）:** (1) `.env` に `GCP_SERVICE_ACCOUNT_JSON` と `GCP_PROJECT_ID`（tfvars と同じ ID） (2) `pnpm deploy` (3) deploy **後**に Studio または上記 SQL で **`audio.transcode.enabled` = true** を再確認。
+```bash
+# リモート DB のみ更新
+pnpm seed:config
+
+# または deploy 末尾でも同じ seed が走る
+pnpm deploy
+```
+
+ローカル Supabase: `TARGET=local pnpm seed:config`
+
+**上書き:** `.env` の `GCP_PROJECT_ID` / `GCP_REGION` / `GCP_RUN_JOB_NAME` が `[gcp]` より優先（CI 向け）。`GCP_SERVICE_ACCOUNT_JSON` は **podcast_config には入れない**（§3.1 の Edge Secret のみ）。
+
+| `podcast_config` key | `config.toml` |
+|----------------------|---------------|
+| `gcp.project_id` | `[gcp] project_id` |
+| `gcp.region` | `[gcp] region` |
+| `gcp.run.job_name` | `[gcp] run_job_name` |
+| `audio.delivery.format` | `[audio] delivery_format` |
+| `audio.transcode.enabled` | `[audio.transcode] enabled` |
+| `audio.transcode.bitrate_kbps` | `[audio.transcode] bitrate_kbps` |
+
+Studio /  ad hoc SQL はデバッグ用。日常は `config.toml` を正本にする。
 
 ### 3.3 Edge Functions のデプロイ
 
@@ -230,12 +240,12 @@ TARGET=remote pnpm pipeline:status
 
 ### 3.5 どこに何を置くか
 
-| 設定 | 置き場 | Git |
-|------|--------|-----|
-| project / region / job 名 | `podcast_config` の `gcp.*` | tfvars の `project_id` のみ |
-| transcode ON | `podcast_config` `audio.transcode.enabled` | いいえ |
-| invoker 鍵 | Secret `GCP_SERVICE_ACCOUNT_JSON` | **載せない** |
+| 設定 | 正本 | Git |
+|------|------|-----|
+| `gcp.*` / `audio.transcode.*`（DB 行） | ルート **`config.toml`** → `pnpm seed:config` | `config.toml` に書く（project id は各自） |
+| invoker 鍵 | Edge Secret **`GCP_SERVICE_ACCOUNT_JSON`** | **載せない**（`.env`） |
 | tfstate | Terraform Cloud | いいえ |
+| GCP リソース | Terraform + tfvars | tfvars の `project_id` のみ |
 
 ## 4. イメージ更新（再デプロイ）
 

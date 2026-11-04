@@ -81,6 +81,19 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
     mime_type?: string;
     prompt_template?: string;
   };
+  audio?: {
+    delivery_format?: string;
+    transcode?: {
+      enabled?: boolean;
+      bitrate_kbps?: number;
+      container?: string;
+    };
+  };
+  gcp?: {
+    project_id?: string;
+    region?: string;
+    run_job_name?: string;
+  };
 };
 
 // Upload cover image to Storage
@@ -136,13 +149,13 @@ const defaults: Record<string, unknown> = {
   "image.aspect_ratio": config.image?.aspect_ratio ?? "16:9",
   "image.image_size": config.image?.image_size ?? "1K",
   "image.mime_type": config.image?.mime_type ?? "image/jpeg",
-  "audio.delivery.format": "m4a",
-  "audio.transcode.enabled": false,
-  "audio.transcode.bitrate_kbps": 128,
-  "audio.transcode.container": "m4a",
-  "gcp.project_id": process.env.GCP_PROJECT_ID ?? "",
-  "gcp.region": process.env.GCP_REGION ?? "asia-northeast1",
-  "gcp.run.job_name": process.env.GCP_RUN_JOB_NAME ?? "audio-transcode",
+  "audio.delivery.format": config.audio?.delivery_format ?? "m4a",
+  "audio.transcode.enabled": config.audio?.transcode?.enabled ?? false,
+  "audio.transcode.bitrate_kbps": config.audio?.transcode?.bitrate_kbps ?? 128,
+  "audio.transcode.container": config.audio?.transcode?.container ?? "m4a",
+  "gcp.project_id": process.env.GCP_PROJECT_ID ?? config.gcp?.project_id ?? "",
+  "gcp.region": process.env.GCP_REGION ?? config.gcp?.region ?? "asia-northeast1",
+  "gcp.run.job_name": process.env.GCP_RUN_JOB_NAME ?? config.gcp?.run_job_name ?? "audio-transcode",
 };
 
 if (config.generator.system_instruction) {
