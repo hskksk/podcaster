@@ -2,5 +2,8 @@ project_id = "your-gcp-project-id"
 region     = "asia-northeast1"
 job_name   = "audio-transcode"
 
-# Build and push first (see infra/gcp/audio-transcode/README.md), then set:
+# Build and push first (see README.md), then set:
 image = "asia-northeast1-docker.pkg.dev/your-gcp-project-id/podcaster/audio-transcode:latest"
+
+# Prefer Terraform Cloud workspace variables (see TFC.md) as the source of truth.
+# Copy this file to terraform.tfvars only for local overrides (gitignored).

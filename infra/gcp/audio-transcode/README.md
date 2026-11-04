@@ -2,13 +2,21 @@
 
 Terraform で Artifact Registry・Cloud Run Job・Supabase 用 invoker SA を定義する。
 
+**State:** [Terraform Cloud](./TFC.md)（workspace `podcaster-audio-transcode`）。ローカル `terraform.tfstate` は使わない。
+
 設計: [docs/architecture/audio-transcode-cloud-run.md](../../../docs/architecture/audio-transcode-cloud-run.md)
 
 ## 前提
 
-- [Terraform](https://www.terraform.io/downloads) >= 1.5（リポジトリルートで `mise install` → `.mise.toml` の `terraform`）
-- `gcloud auth application-default login` または `GOOGLE_APPLICATION_CREDENTIALS`
+- [Terraform](https://www.terraform.io/downloads) >= 1.5（リポジトリルートで `mise install`）
+- Terraform Cloud: Organization `hskksk`（違う場合は `versions.tf` の `organization` を変更）、Workspace **`podcaster-audio-transcode`** を作成 — 手順は [TFC.md](./TFC.md)
+- `terraform login`（API トークン）
+- **Execution mode = Local** 推奨（state は TFC、apply は手元 `gcloud auth application-default login`）
 - 対象 GCP プロジェクトで Billing 有効
+
+## 0. 変数
+
+Workspace 変数（TFC UI）または gitignore 済み `terraform.tfvars`（[terraform.tfvars.example](./terraform.tfvars.example)）。`project_id` と `image` は apply 前に必須。
 
 ## 1. イメージをビルドして push
 
@@ -16,10 +24,10 @@ Terraform で Artifact Registry・Cloud Run Job・Supabase 用 invoker SA を定
 
 ```bash
 cd infra/gcp/audio-transcode
-cp terraform.tfvars.example terraform.tfvars
-# project_id のみ編集。image は後で。
-
+terraform login
 terraform init
+
+# project_id を Workspace 変数または terraform.tfvars に設定してから:
 terraform apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.podcaster \
@@ -43,7 +51,7 @@ gcloud builds submit \
   .
 ```
 
-`terraform.tfvars` に `image` を設定して Job を作成:
+Workspace 変数 `image` を設定して Job を作成:
 
 ```bash
 cd ../../infra/gcp/audio-transcode
@@ -78,6 +86,7 @@ gcloud iam service-accounts keys create invoker.json \
 
 Job 定義の `lifecycle.ignore_changes` により、Terraform はコンテナ image タグの差分を無視する。新ビルドは **同じ URI に push**（`:latest` または固定タグ）すれば次回 Execution から反映される。
 
-## State
+## 参考
 
-リモート state は未設定。チーム運用では GCS backend を `versions.tf` に追加すること。
+- [TFC.md](./TFC.md) — Workspace・変数・Remote 実行・CI
+- GitHub secret `TF_API_TOKEN` — PR 上の `terraform validate` 用（任意）
