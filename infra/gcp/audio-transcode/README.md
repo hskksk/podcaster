@@ -66,6 +66,39 @@ terraform apply \
 
 `terraform.tfvars` の `project_id` / `region` に合わせて build する。
 
+#### Cloud Build の IAM（初回のみ）
+
+`gcloud builds submit` は **ログイン中の Google アカウント**（例: `hskksk@gmail.com`）に権限が必要。ソースを `gs://<project>_cloudbuild/` に上げる段階で `PERMISSION_DENIED` になる場合は、**プロジェクトの Owner** に次を実行してもらう（または Console → IAM）。
+
+```bash
+PROJECT_ID="$(grep -E '^project_id' ../../infra/gcp/audio-transcode/terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
+YOUR_EMAIL="$(gcloud config get-value account)"
+
+gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com \
+  --project="$PROJECT_ID"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="user:${YOUR_EMAIL}" \
+  --role="roles/cloudbuild.builds.editor"
+
+# ビルド完了後に Artifact Registry へ push するのは Cloud Build の SA
+PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
+```
+
+確認:
+
+```bash
+gcloud config set project "$PROJECT_ID"
+gcloud auth application-default print-access-token >/dev/null && echo "ADC ok"
+```
+
+Terraform の `-target` apply で `cloudbuild.googleapis.com` も有効化される。API だけ有効で IAM が無いと同じエラーになる。
+
+#### build
+
 ```bash
 cd ../../../services/audio-transcode
 
