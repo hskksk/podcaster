@@ -14,12 +14,14 @@ ffmpeg で WAV → AAC (m4a) に変換し、Supabase Storage の署名 URL 経�
 
 ## ビルドとデプロイ
 
-**IaC（推奨）:** [infra/gcp/audio-transcode/README.md](../../infra/gcp/audio-transcode/README.md) — Terraform Cloud + `cloudbuild.yaml`
+手順の正本: [infra/gcp/audio-transcode/README.md](../../infra/gcp/audio-transcode/README.md)
 
-手動の例:
+- 変数: Git の [`terraform.tfvars`](../../infra/gcp/audio-transcode/terraform.tfvars)
+- state: Terraform Cloud（[TFC.md](../../infra/gcp/audio-transcode/TFC.md)）
+- イメージ build: 同 README §2.2（`cloudbuild.yaml`）
 
 ```bash
-# Artifact Registry 例
+# README §2.2 参照（project_id / region は terraform.tfvars から読む）
 gcloud builds submit --config cloudbuild.yaml \
   --substitutions=_REGION=asia-northeast1,_REPOSITORY=podcaster,_IMAGE=audio-transcode,_TAG=latest .
 ```
