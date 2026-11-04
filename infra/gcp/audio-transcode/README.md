@@ -8,7 +8,7 @@ Terraform で Artifact Registry・Cloud Run Job・Supabase 用 invoker SA を定
 
 ## 前提
 
-- [Terraform](https://www.terraform.io/downloads) >= 1.5（リポジトリルートで `mise install`）
+- [Terraform](https://www.terraform.io/downloads) >= 1.5、**Google Cloud SDK (`gcloud`)** — リポジトリルートで `mise install`（`.mise.toml`）
 - Terraform Cloud: Organization `hskksk`（違う場合は `versions.tf` の `organization` を変更）、Workspace **`podcaster-audio-transcode`** を作成 — 手順は [TFC.md](./TFC.md)
 - `terraform login`（API トークン）
 - **Execution mode = Local** 推奨（state は TFC、apply は手元 `gcloud auth application-default login`）
