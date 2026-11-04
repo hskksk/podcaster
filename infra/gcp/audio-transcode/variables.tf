@@ -3,8 +3,8 @@ variable "project_id" {
   description = "GCP project ID (same value as Edge secret GCP_PROJECT_ID)."
 
   validation {
-    condition     = var.project_id != "" && var.project_id != "your-gcp-project-id"
-    error_message = "Set project_id in terraform.tfvars to your real GCP project ID (not the placeholder)."
+    condition     = var.project_id != ""
+    error_message = "Set Terraform variable project_id in TFC workspace podcaster-audio-transcode (mark Sensitive). See infra/gcp/audio-transcode/TFC.md."
   }
 }
 

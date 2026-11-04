@@ -38,7 +38,6 @@ scripts/*.txt
 *.tfstate
 *.tfstate.*
 *.tfvars
-!infra/gcp/audio-transcode/terraform.tfvars
 
 # Serena (local AI assistant config, auto-regenerated)
 .serena/

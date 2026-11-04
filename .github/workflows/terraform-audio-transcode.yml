@@ -40,4 +40,4 @@ jobs:
       - name: note
         run: |
           echo "Skipping terraform init/validate: repository secret TF_API_TOKEN is not set."
-          echo "See infra/gcp/audio-transcode/TFC.md"
+          echo "See infra/gcp/audio-transcode/TFC.md (TFC workspace variables for project_id)"
