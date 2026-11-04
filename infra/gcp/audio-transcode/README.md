@@ -127,28 +127,115 @@ state は Terraform Cloud に記録される。ローカルに `terraform.tfstat
 
 ## 3. Supabase 連携
 
-Terraform **output** を Supabase に反映する（tfvars / state とは別経路）。
+Terraform は **GCP リソース**だけ作る。Edge が Cloud Run を呼ぶ設定は **Supabase**（Secret + `podcast_config`）に載せる。
 
-| 出力 | 反映先 |
-|------|--------|
-| `invoker_service_account_email` | この SA の JSON キー → Secret **`GCP_SERVICE_ACCOUNT_JSON`** |
-| `podcast_config_gcp_keys` | テーブル **`podcast_config`** の `gcp.project_id` / `gcp.region` / `gcp.run.job_name` |
-| （運用） | `audio.transcode.enabled` = `true`、`audio.delivery.format` = `m4a` |
-
-Invoker 鍵の例:
+### 3.0 Terraform output を控える
 
 ```bash
-gcloud iam service-accounts keys create invoker.json \
-  --iam-account "$(terraform output -raw invoker_service_account_email)"
-supabase secrets set --env-file /dev/null  # リモート deploy 時は .env 経由
-# 例: supabase secrets set GCP_SERVICE_ACCOUNT_JSON="$(jq -c . invoker.json)"
+cd infra/gcp/audio-transcode
+terraform output
+terraform output -raw invoker_service_account_email
+terraform output -json podcast_config_gcp_keys
 ```
 
-アプリデプロイ:
+### 3.1 Edge Function Secret — `GCP_SERVICE_ACCOUNT_JSON`
+
+| 項目 | 内容 |
+|------|------|
+| **何** | **invoker** SA（`terraform output -raw invoker_service_account_email`）の JSON 鍵全文 |
+| **誰が読む** | `job-worker` 内 `render_audio` → `_shared/transcode/gcp-token.ts` |
+| **置き場** | Supabase Dashboard → **Project Settings** → **Edge Functions** → **Secrets** |
+
+鍵を作る:
 
 ```bash
-pnpm deploy   # または CI の main deploy
+cd infra/gcp/audio-transcode
+INVOKER="$(terraform output -raw invoker_service_account_email)"
+PROJECT_ID="$(grep -E '^project_id' terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
+gcloud iam service-accounts keys create /tmp/podcaster-invoker.json \
+  --iam-account="$INVOKER" \
+  --project="$PROJECT_ID"
 ```
+
+**リモート（本番）への載せ方（いずれか）**
+
+| 方法 | 手順 |
+|------|------|
+| **A. deploy 経由** | ルート `.env` に `GCP_SERVICE_ACCOUNT_JSON=` + `jq -c . /tmp/podcaster-invoker.json` の 1 行。`pnpm deploy`（`supabase secrets set --env-file .env`） |
+| **B. CLI のみ** | `supabase secrets set GCP_SERVICE_ACCOUNT_JSON="$(jq -c . /tmp/podcaster-invoker.json)"` |
+| **C. Dashboard** | Secrets に Name `GCP_SERVICE_ACCOUNT_JSON`、Value に JSON 全文 |
+
+**ローカル**（`pnpm functions:serve`）: ルート `.env` に同じキー。Studio の Edge Secrets はローカル Docker には自動で入らない。
+
+鍵ファイルは git に含めず、設定後削除してよい。
+
+### 3.2 テーブル `public.podcast_config`
+
+Edge の `loadConfig()` が読む。**Studio → Table Editor → `podcast_config`**（列 `key` / `value`）。
+
+| `key` | `value` | メモ |
+|-------|---------|------|
+| `gcp.project_id` | JSON 文字列 | `terraform output -json podcast_config_gcp_keys` と一致 |
+| `gcp.region` | JSON 文字列 | 同上 |
+| `gcp.run.job_name` | JSON 文字列 | 同上 |
+| `audio.delivery.format` | `"m4a"` | seed 既定で可 |
+| `audio.transcode.enabled` | **`true`（boolean）** | これが `false` だと WAV のまま |
+
+SQL（`supabase link` 済み。ID は tfvars から）:
+
+```bash
+cd infra/gcp/audio-transcode
+PROJECT_ID="$(grep -E '^project_id' terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
+REGION="$(grep -E '^region' terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
+JOB_NAME="$(grep -E '^job_name' terraform.tfvars | sed -n 's/.*=\s*"\(.*\)".*/\1/p')"
+
+supabase db query --linked "$(cat <<SQL
+insert into public.podcast_config (key, value) values
+  ('gcp.project_id', to_jsonb('${PROJECT_ID}'::text)),
+  ('gcp.region', to_jsonb('${REGION}'::text)),
+  ('gcp.run.job_name', to_jsonb('${JOB_NAME}'::text)),
+  ('audio.delivery.format', to_jsonb('m4a'::text)),
+  ('audio.transcode.enabled', 'true'::jsonb)
+on conflict (key) do update set value = excluded.value;
+SQL
+)"
+```
+
+**`pnpm deploy` と seed:** 末尾の `seed-config.ts` は毎回 upsert し、`audio.transcode.enabled` を **`false`**、`gcp.project_id` を `.env` の `GCP_PROJECT_ID`（未設定なら `""`）に戻す。
+
+**推奨順序（本番）:** (1) `.env` に `GCP_SERVICE_ACCOUNT_JSON` と `GCP_PROJECT_ID`（tfvars と同じ ID） (2) `pnpm deploy` (3) deploy **後**に Studio または上記 SQL で **`audio.transcode.enabled` = true** を再確認。
+
+### 3.3 Edge Functions のデプロイ
+
+transcode コードは **`job-worker`** と **`external-operation-poller`**。
+
+```bash
+pnpm deploy
+# または:
+supabase functions deploy job-worker external-operation-poller --no-verify-jwt
+```
+
+main マージ後の CI deploy でもよい（当該 functions が含まれること）。
+
+### 3.4 スモーク
+
+1. Secret と `podcast_config`（§3.1–3.2）が揃っている  
+2. 記事を 1 本 ingest（events パイプライン）  
+3. `jobs.external_operations` に `projects/.../executions/...`、Storage に `audio/{episodeId}.m4a`、RSS enclosure の length ≠ 0  
+
+```bash
+TARGET=remote pnpm cli status <article_id>
+TARGET=remote pnpm pipeline:status
+```
+
+### 3.5 どこに何を置くか
+
+| 設定 | 置き場 | Git |
+|------|--------|-----|
+| project / region / job 名 | `podcast_config` の `gcp.*` | tfvars の `project_id` のみ |
+| transcode ON | `podcast_config` `audio.transcode.enabled` | いいえ |
+| invoker 鍵 | Secret `GCP_SERVICE_ACCOUNT_JSON` | **載せない** |
+| tfstate | Terraform Cloud | いいえ |
 
 ## 4. イメージ更新（再デプロイ）
 
