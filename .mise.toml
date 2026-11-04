@@ -2,3 +2,4 @@
 node = "24"
 pnpm = "9.14.4"
 supabase = "2.119.0"
+terraform = "1.17.1"

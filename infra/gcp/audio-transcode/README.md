@@ -6,7 +6,7 @@ Terraform で Artifact Registry・Cloud Run Job・Supabase 用 invoker SA を定
 
 ## 前提
 
-- [Terraform](https://www.terraform.io/downloads) >= 1.5
+- [Terraform](https://www.terraform.io/downloads) >= 1.5（リポジトリルートで `mise install` → `.mise.toml` の `terraform`）
 - `gcloud auth application-default login` または `GOOGLE_APPLICATION_CREDENTIALS`
 - 対象 GCP プロジェクトで Billing 有効
 
