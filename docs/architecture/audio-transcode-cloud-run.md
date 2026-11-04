@@ -114,11 +114,8 @@ GCP では、Supabase に近いリージョン（例: `asia-northeast1`）に Jo
 | `audio.transcode.enabled` | `true` | マスタースイッチ |
 | `audio.transcode.bitrate_kbps` | `128` | ffmpeg `-b:a` |
 | `audio.transcode.container` | `m4a` | 出力 MIME `audio/mp4` |
-| `gcp.project_id` | `...` | Run API（`podcast_config` に置く。Secret には載せない） |
-| `gcp.region` | `asia-northeast1` | Job リージョン |
-| `gcp.run.job_name` | `audio-transcode` | Job 名 |
 
-GCP 認証用の `GCP_SERVICE_ACCOUNT_JSON` だけ Supabase Secret に置く。プロジェクト ID・リージョン・Job 名は `loadConfig()` から読む。
+GCP の **プロジェクト・リージョン・Job 名**は **`podcast_config` には載せない**。Edge Secret / `.env` の `GCP_PROJECT_ID` / `GCP_REGION` / `GCP_RUN_JOB_NAME`（+ 認証 `GCP_SERVICE_ACCOUNT_JSON`）から読む。トランスコードの ON/OFF と bitrate は上表の `podcast_config` のまま。
 
 transcode が有効なときの `render_audio` の流れ:
 
@@ -137,7 +134,7 @@ transcode が有効なときの `render_audio` の流れ:
 
 Edge から Run Job API を呼ぶとき:
 
-- Secret: `GCP_SERVICE_ACCOUNT_JSON` → OAuth2 → `run.googleapis.com`
+- Secrets / env: `GCP_SERVICE_ACCOUNT_JSON` → OAuth2 → `run.googleapis.com`；向き先は `GCP_PROJECT_ID` / `GCP_REGION` / `GCP_RUN_JOB_NAME`
 - コンテナ env: `INPUT_URL`, `OUTPUT_UPLOAD_URL`, `OUTPUT_OBJECT_PATH`（`audio/{episodeId}.m4a`）, `BITRATE_KBPS`, `JOB_ID`, `ATTEMPT_ID`
 
 ### 3. Poller：`external-operation-poller` の拡張
@@ -189,6 +186,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 | 署名 URL の TTL | Job timeout より長く（15〜60 分） |
 | upload 先 | env で固定（公開 `audio/{episodeId}.m4a`。WAV staging は `jobs/.../audio.wav` のみ） |
 | GCP SA JSON | Supabase Secret のみ |
+| GCP project / region / Job 名 | Edge Secret / `.env`（`podcast_config`・公開 Git に載せない） |
 
 ## 冪等性と失敗
 
@@ -202,15 +200,15 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 ### Phase 0 — GCP
 
 1. [`terraform.tfvars`](../../infra/gcp/audio-transcode/terraform.tfvars) を実プロジェクト向けに更新し、**[infra/gcp/audio-transcode/README.md](../../infra/gcp/audio-transcode/README.md)** の手順で Terraform apply（**state は [Terraform Cloud](../../infra/gcp/audio-transcode/TFC.md)**）→ `services/audio-transcode` を Cloud Build → Job 込み apply。
-2. invoker SA の JSON キーを Supabase Secret `GCP_SERVICE_ACCOUNT_JSON` に設定する。
-3. `terraform output` の `gcp.*` を `podcast_config` に揃える。署名 URL で Job を 1 回 execute し、m4a upload を手動確認する。
+2. invoker SA の JSON キーと `terraform output -json gcp_edge_env` の値を Supabase Edge Secrets / `.env` に設定する。
+3. 署名 URL で Job を 1 回 execute し、m4a upload を手動確認する。
 
 ### Phase 1 — events 統合
 
 1. `_shared/transcode/` に `submitCloudRunTranscode`、`pollCloudRunExecution`、`finalizeTranscodedAudioBlob` を置く（finalize で m4a 確定後に staging WAV を削除）。
 2. `render_audio` で WAV 保存のあと transcode を submit し、`waiting_external` にする。
 3. `external-operation-poller` に `projects/` 分岐を足す。
-4. `podcast_config` の seed と、必要なら migration（キー追加のみ）。
+4. `config.toml` → `seed:config` で `audio.transcode.*` を反映。migration で旧 `gcp.*` podcast_config 行を削除。
 5. ローカルで `pipeline.mode=events` とモック Gemini を使い、ingest から m4a Blob・`feed.xml` の length まで通す。
 
 ### Phase 2 — 品質・運用
@@ -241,7 +239,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 |------|------|
 | 配信用 m4a の Storage パス | 公開バケット `podcast` 配下 **`audio/{episodeId}.m4a`**（RSS の enclosure URL と一致） |
 | staging WAV | transcode 前は **`jobs/{jobId}/{attemptId}/audio.wav`**。**m4a finalize 成功直後**に Storage と blob 行を削除 |
-| GCP プロジェクト・リージョン・Job 名 | **`podcast_config`**（上表の `gcp.*` キー） |
-| GCP 認証 | **`GCP_SERVICE_ACCOUNT_JSON`** のみ Secret |
+| GCP プロジェクト・リージョン・Job 名 | **Edge Secrets / `.env`**（`GCP_PROJECT_ID` 等。`podcast_config` には置かない） |
+| GCP 認証 | **`GCP_SERVICE_ACCOUNT_JSON`**（Edge Secret） |
 | Terraform 変数（tfvars） | Git — **`infra/gcp/audio-transcode/terraform.tfvars`** |
 | Terraform state | **Terraform Cloud** workspace `podcaster-audio-transcode`（[TFC.md](../../infra/gcp/audio-transcode/TFC.md)） |

@@ -26,11 +26,11 @@ output "runner_service_account_email" {
   value = google_service_account.runner.email
 }
 
-output "podcast_config_gcp_keys" {
-  description = "Values to set in podcast_config after apply."
+output "gcp_edge_env" {
+  description = "Set in Supabase Edge secrets / root .env (not podcast_config)."
   value = {
-    "gcp.project_id"   = var.project_id
-    "gcp.region"       = var.region
-    "gcp.run.job_name" = var.job_name
+    GCP_PROJECT_ID   = var.project_id
+    GCP_REGION       = var.region
+    GCP_RUN_JOB_NAME = var.job_name
   }
 }

@@ -22,26 +22,45 @@ export function transcodeBitrateKbps(cfg: PodcastConfigMap): number {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 128;
 }
 
-export function gcpRunConfig(cfg: PodcastConfigMap): {
+function projectIdFromServiceAccountJson(): string {
+  const raw = Deno.env.get("GCP_SERVICE_ACCOUNT_JSON")?.trim();
+  if (!raw) return "";
+  try {
+    const parsed = JSON.parse(raw) as { project_id?: string };
+    return String(parsed.project_id ?? "").trim();
+  } catch {
+    return "";
+  }
+}
+
+/** GCP Run Job placement — Edge env / Secrets only (not podcast_config). */
+export function gcpRunConfig(): {
   projectId: string;
   region: string;
   jobName: string;
 } {
-  const projectId = String(cfg["gcp.project_id"] ?? "").trim();
-  const region = String(cfg["gcp.region"] ?? "asia-northeast1").trim();
-  const jobName = String(cfg["gcp.run.job_name"] ?? "audio-transcode").trim();
+  const projectId = (
+    Deno.env.get("GCP_PROJECT_ID")?.trim()
+    || projectIdFromServiceAccountJson()
+  );
+  const region = Deno.env.get("GCP_REGION")?.trim() || "asia-northeast1";
+  const jobName = Deno.env.get("GCP_RUN_JOB_NAME")?.trim() || "audio-transcode";
   return { projectId, region, jobName };
 }
 
-export function assertGcpRunConfig(cfg: PodcastConfigMap): {
+export function assertGcpRunConfig(): {
   projectId: string;
   region: string;
   jobName: string;
 } {
-  const gcp = gcpRunConfig(cfg);
-  if (!gcp.projectId) throw new Error("gcp.project_id is required for audio transcode");
-  if (!gcp.region) throw new Error("gcp.region is required for audio transcode");
-  if (!gcp.jobName) throw new Error("gcp.run.job_name is required for audio transcode");
+  const gcp = gcpRunConfig();
+  if (!gcp.projectId) {
+    throw new Error(
+      "GCP_PROJECT_ID (or project_id in GCP_SERVICE_ACCOUNT_JSON) is required for audio transcode",
+    );
+  }
+  if (!gcp.region) throw new Error("GCP_REGION is required for audio transcode");
+  if (!gcp.jobName) throw new Error("GCP_RUN_JOB_NAME is required for audio transcode");
   return gcp;
 }
 

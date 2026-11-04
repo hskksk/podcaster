@@ -89,11 +89,6 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
       container?: string;
     };
   };
-  gcp?: {
-    project_id?: string;
-    region?: string;
-    run_job_name?: string;
-  };
 };
 
 // Upload cover image to Storage
@@ -153,9 +148,6 @@ const defaults: Record<string, unknown> = {
   "audio.transcode.enabled": config.audio?.transcode?.enabled ?? false,
   "audio.transcode.bitrate_kbps": config.audio?.transcode?.bitrate_kbps ?? 128,
   "audio.transcode.container": config.audio?.transcode?.container ?? "m4a",
-  "gcp.project_id": process.env.GCP_PROJECT_ID ?? config.gcp?.project_id ?? "",
-  "gcp.region": process.env.GCP_REGION ?? config.gcp?.region ?? "asia-northeast1",
-  "gcp.run.job_name": process.env.GCP_RUN_JOB_NAME ?? config.gcp?.run_job_name ?? "audio-transcode",
 };
 
 if (config.generator.system_instruction) {

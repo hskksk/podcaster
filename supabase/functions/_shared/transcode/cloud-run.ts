@@ -26,7 +26,7 @@ export async function submitCloudRunTranscode(
   params: SubmitTranscodeParams,
 ): Promise<SubmitTranscodeResult> {
   const { db, cfg, jobId, attemptId, episodeId, wavStoragePath } = params;
-  const gcp = assertGcpRunConfig(cfg);
+  const gcp = assertGcpRunConfig();
   const outputStoragePath = `audio/${episodeId}.m4a`;
   const inputUrl = await createSignedDownloadUrl(db, wavStoragePath);
   const outputUrl = await createSignedUploadUrl(db, outputStoragePath, "audio/mp4");

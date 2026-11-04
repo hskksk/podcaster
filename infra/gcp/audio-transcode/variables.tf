@@ -1,6 +1,6 @@
 variable "project_id" {
   type        = string
-  description = "GCP project ID (same value as podcast_config gcp.project_id)."
+  description = "GCP project ID (same value as Edge secret GCP_PROJECT_ID)."
 
   validation {
     condition     = var.project_id != "" && var.project_id != "your-gcp-project-id"
@@ -16,7 +16,7 @@ variable "region" {
 
 variable "job_name" {
   type        = string
-  description = "Cloud Run Job name (podcast_config gcp.run.job_name)."
+  description = "Cloud Run Job name (Edge secret GCP_RUN_JOB_NAME)."
   default     = "audio-transcode"
 }
 

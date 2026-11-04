@@ -17,8 +17,8 @@ Terraform Cloud (app.terraform.io)
         └── state + run 履歴（tfstate を Git / ローカルに置かない）
 
 Supabase
-  podcast_config (gcp.*)  ← terraform output と手動同期
-  Secret GCP_SERVICE_ACCOUNT_JSON  ← invoker SA 鍵（Git / state に入れない）
+  Edge Secrets GCP_*           ← terraform output gcp_edge_env + invoker SA 鍵（Git に入れない）
+  podcast_config audio.transcode.*  ← config.toml → seed（機能フラグ・品質のみ）
 ```
 
 ## なぜ Terraform Cloud か
