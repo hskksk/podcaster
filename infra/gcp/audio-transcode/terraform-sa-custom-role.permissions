@@ -1,0 +1,49 @@
+# Optional: custom project role with tighter permissions than predefined roles in
+# grant-terraform-sa-roles.sh. Still requires a separate binding:
+#   roles/iam.serviceAccountUser on podcaster-audio-run@PROJECT.iam.gserviceaccount.com
+# for the Terraform SA (GRANT_RUNNER_ACT_AS=1).
+#
+# Create (Owner / Role Admin):
+#   gcloud iam roles create podcasterAudioTranscodeTerraform \
+#     --project=PROJECT_ID \
+#     --title="Terraform audio-transcode stack" \
+#     --permissions="$(paste -sd, terraform-sa-custom-role.permissions)"
+#
+# Bind to Terraform SA:
+#   gcloud projects add-iam-policy-binding PROJECT_ID \
+#     --member="serviceAccount:TF_SA_EMAIL" \
+#     --role="projects/PROJECT_ID/roles/podcasterAudioTranscodeTerraform"
+
+serviceusage.services.enable
+serviceusage.services.get
+serviceusage.services.list
+
+artifactregistry.repositories.create
+artifactregistry.repositories.delete
+artifactregistry.repositories.get
+artifactregistry.repositories.getIamPolicy
+artifactregistry.repositories.list
+artifactregistry.repositories.setIamPolicy
+artifactregistry.repositories.update
+
+iam.serviceAccounts.create
+iam.serviceAccounts.delete
+iam.serviceAccounts.get
+iam.serviceAccounts.list
+iam.serviceAccounts.update
+
+iam.roles.create
+iam.roles.delete
+iam.roles.get
+iam.roles.list
+iam.roles.update
+
+run.jobs.create
+run.jobs.delete
+run.jobs.get
+run.jobs.getIamPolicy
+run.jobs.list
+run.jobs.setIamPolicy
+run.jobs.update
+
+resourcemanager.projects.get

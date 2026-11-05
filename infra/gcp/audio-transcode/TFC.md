@@ -24,7 +24,7 @@ Terraform Cloud (app.terraform.io)
   GCP_*  … Cloud Build / gcloud / Supabase Edge（TFC の project_id と同値に揃える）
 
 Supabase Edge Secrets
-  GCP_*  … deploy 時に .env から反映
+  GCP_*  … Dashboard → Edge Functions → Secrets
   podcast_config audio.transcode.*  ← config.toml → seed
 ```
 
@@ -44,18 +44,19 @@ GCS バックエンド用バケットの bootstrap が不要で、ロックと r
    - [`versions.tf`](./versions.tf) の `required_version = "~> 1.17.1"` と CI ([workflow](../../../.github/workflows/terraform-audio-transcode.yml)) に揃える。
 6. **Variable set** を作成し、Terraform 用 SA の JSON と `project_id` を入れる（次節）。
 
-SA に必要なロール（[`main.tf`](./main.tf) のリソースに対応）:
+SA に必要なロール（[`main.tf`](./main.tf) のリソースに対応）。一括付与: [`grant-terraform-sa-roles.sh`](./grant-terraform-sa-roles.sh)（より狭いカスタムロール一覧は [`terraform-sa-custom-role.permissions`](./terraform-sa-custom-role.permissions)）。
 
 | ロール | 用途 |
 |--------|------|
 | Service Usage Admin (`roles/serviceusage.serviceUsageAdmin`) | `google_project_service` |
-| Artifact Registry Admin (`roles/artifactregistry.admin`) | リポジトリと IAM |
-| Cloud Run Admin (`roles/run.admin`) | `google_cloud_run_v2_job` |
-| Service Account Admin (`roles/iam.serviceAccountAdmin`) | SA 2 つ |
-| Project IAM Admin (`roles/resourcemanager.projectIamAdmin`) | カスタムロールの binding |
-| Custom Role Admin (`roles/iam.roleAdmin`) | `google_project_iam_custom_role` |
-| Service Account User (`roles/iam.serviceAccountUser`) | runner SA に対する actAs（Cloud Run Job 作成時に必要。Terraform 用 SA にこのロールが無く `iam.serviceaccounts.actAs` で失敗する場合は runner SA に付与する） |
+| Artifact Registry Admin (`roles/artifactregistry.admin`) | リポジトリと repository IAM |
+| Cloud Run Admin (`roles/run.admin`) | `google_cloud_run_v2_job` と Job IAM |
+| Service Account Admin (`roles/iam.serviceAccountAdmin`) | invoker / runner SA 作成 |
+| Role Admin (`roles/iam.roleAdmin`) | `google_project_iam_custom_role` |
 | Viewer (`roles/viewer`) | プロジェクト属性の読み取り |
+| **（Job apply 前に runner SA へ）** Service Account User (`roles/iam.serviceAccountUser`) | Terraform SA → **runner SA** の `iam.serviceAccounts.actAs`（[`README §2.1`](./README.md#21-artifact-registry-と-sa-のみjob-はまだ) のあと `GRANT_RUNNER_ACT_AS=1`） |
+
+**不要（現行 `main.tf`）:** Project IAM Admin — invoker へのカスタムロールは **Job リソース IAM**（`google_cloud_run_v2_job_iam_member`）のみ。プロジェクト IAM binding は作らない。
 
 Execution mode の変更だけでは backend 設定は変わらないため、`terraform init` の再実行は不要。
 
