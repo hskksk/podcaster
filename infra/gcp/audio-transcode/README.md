@@ -160,7 +160,9 @@ terraform output -json gcp_edge_env
 | 項目 | 内容 |
 |------|------|
 | **誰が読む** | `job-worker` 内 `render_audio` → `_shared/transcode/` |
-| **置き場（本番）** | Supabase Dashboard → **Project Settings** → **Edge Functions** → **Secrets**、または手元 `.env` から `pnpm secrets:edge`（許可リスト: `GEMINI_API_KEY` / `GCP_SERVICE_ACCOUNT_JSON` / `GCP_PROJECT_ID` / `GCP_REGION` / `GCP_RUN_JOB_NAME` のみ送る） |
+| **置き場（本番）** | Supabase Dashboard → **Project Settings** → **Edge Functions** → **Secrets**（CLI の `supabase secrets set` でも可） |
+
+本番 Edge には **`GEMINI_API_KEY`** も同じ画面で設定する（TTS / 台本生成用）。`pnpm deploy` と GitHub Actions の deploy ワークフローは **Secrets を更新しない**。
 
 鍵を作る:
 
@@ -173,15 +175,9 @@ gcloud iam service-accounts keys create /tmp/podcaster-invoker.json \
   --project="$GCP_PROJECT_ID"
 ```
 
-**リモート（本番）への載せ方（いずれか）**
+**リモート（本番）**: Dashboard（または `supabase secrets set KEY=value`）で上記 4 キーを登録。**deploy / CI 経由では載せない。**
 
-| 方法 | 手順 |
-|------|------|
-| **A. 推奨** | ルート `.env` に `GCP_*` 4 キー。`pnpm secrets:edge`（`supabase secrets set --env-file .env`）。**`pnpm deploy` は secrets を載せない** |
-| **B. CLI のみ** | `supabase secrets set GCP_PROJECT_ID=…` 等（Dashboard でも可） |
-| **C. deploy 経由** | **使わない**（CI が `.env` を書かない方針） |
-
-**ローカル**（`pnpm functions:serve`）: ルート `.env` に同じ 4 キー。Studio の Edge Secrets はローカル Docker には自動で入らない。
+**ローカル**（`pnpm functions:serve`）: ルート `.env` に `GEMINI_API_KEY` と同じ 4 キー。Studio の Edge Secrets はローカル Docker には自動で入らない。
 
 鍵ファイルは git に含めず、設定後削除してよい。`GCP_PROJECT_ID` も **`.env` / Secrets のみ**（`config.toml` や `podcast_config` には載せない）。
 
