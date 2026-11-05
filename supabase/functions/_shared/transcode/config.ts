@@ -1,7 +1,7 @@
 import type { PodcastConfigMap } from "../types.ts";
 
 export function isCloudRunExecutionName(operationName: string): boolean {
-  return operationName.startsWith("projects/");
+  return operationName.startsWith("projects/") && operationName.includes("/executions/");
 }
 
 export function isGeminiBatchOperationName(operationName: string): boolean {

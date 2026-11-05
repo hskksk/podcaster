@@ -1,6 +1,24 @@
 import type { JobRow } from "../_jobs/types.ts";
-import { audioTranscodedEvent } from "../_jobs/transcode-domain-events.ts";
-import type { DomainEvent, NewDomainEvent } from "./events.ts";
+import type { AudioTranscodedPayload, DomainEvent, NewDomainEvent } from "./events.ts";
+
+function audioTranscodedEvent(
+  job: JobRow,
+  payload: AudioTranscodedPayload,
+): NewDomainEvent | null {
+  const productionId = job.correlation_id;
+  if (!productionId) return null;
+  return {
+    type: "AudioTranscoded",
+    stream_type: "production",
+    stream_id: productionId,
+    stream_version: 0,
+    occurred_at: new Date().toISOString(),
+    actor: "job-worker",
+    correlation_id: productionId,
+    causation_id: job.requested_by_event_id ?? null,
+    payload,
+  };
+}
 
 export function domainEventsForSucceededJob(job: JobRow): NewDomainEvent[] {
   const productionId = job.correlation_id;

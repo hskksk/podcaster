@@ -33,7 +33,7 @@ TFC の `project_id` / `region` / `job_name` と **同じ値**を [`.env.example
 GCP_PROJECT_ID=...
 GCP_REGION=asia-northeast1
 GCP_RUN_JOB_NAME=audio-transcode
-# GCP_SERVICE_ACCOUNT_JSON=  … apply 後 §3.1
+# GCP_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'  … apply 後 §3.1（1 行・シングルクォートで囲む）
 ```
 
 Cloud Build や IAM 用シェルでは:
@@ -152,7 +152,7 @@ terraform output -json gcp_edge_env
 
 | Secret / env 名 | 内容 |
 |-----------------|------|
-| **`GCP_SERVICE_ACCOUNT_JSON`** | invoker SA（`terraform output -raw invoker_service_account_email`）の JSON 鍵全文 |
+| **`GCP_SERVICE_ACCOUNT_JSON`** | invoker SA（`terraform output -raw invoker_service_account_email`）の JSON 鍵全文（`.env` では `jq -c` の 1 行をシングルクォートで囲む） |
 | **`GCP_PROJECT_ID`** | TFC workspace `project_id` と同値（省略時は SA JSON の `project_id` フィールド） |
 | **`GCP_REGION`** | TFC `region` または default `asia-northeast1` |
 | **`GCP_RUN_JOB_NAME`** | TFC `job_name` または default `audio-transcode` |
@@ -160,7 +160,7 @@ terraform output -json gcp_edge_env
 | 項目 | 内容 |
 |------|------|
 | **誰が読む** | `job-worker` 内 `render_audio` → `_shared/transcode/` |
-| **置き場（本番）** | Supabase Dashboard → **Project Settings** → **Edge Functions** → **Secrets** |
+| **置き場（本番）** | Supabase Dashboard → **Project Settings** → **Edge Functions** → **Secrets**、または手元 `.env` から `pnpm secrets:edge`（許可リスト: `GEMINI_API_KEY` / `GCP_SERVICE_ACCOUNT_JSON` / `GCP_PROJECT_ID` / `GCP_REGION` / `GCP_RUN_JOB_NAME` のみ送る） |
 
 鍵を作る:
 
@@ -236,7 +236,7 @@ main マージ後の CI deploy でもよい（当該 functions が含まれる�
 
 1. Edge Secrets（§3.1）と `podcast_config` の transcode 有効化（§3.2）が揃っている  
 2. 記事を 1 本 ingest（events パイプライン）  
-3. `jobs.external_operations` に `projects/.../executions/...`、Storage に `audio/{episodeId}.m4a`、RSS enclosure の length ≠ 0  
+3. `jobs.external_operations` に `projects/.../executions/...`、Storage に `audio/{episodeId}/{jobId}.m4a`、RSS enclosure の length ≠ 0  
 
 ```bash
 TARGET=remote pnpm cli status <article_id>

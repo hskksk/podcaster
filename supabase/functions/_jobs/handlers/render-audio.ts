@@ -6,12 +6,13 @@ import { resolveProfile } from "../runner.ts";
 import type { JobHandler, RenderAudioInput } from "../types.ts";
 import { appendAudioTranscodeSubmitted } from "../transcode-domain-events.ts";
 import {
+  assertGcpRunConfig,
   isCloudRunExecutionName,
   isGeminiBatchOperationName,
   isTranscodeEnabled,
 } from "../../_shared/transcode/config.ts";
 import {
-  CLOUD_RUN_PENDING_STATES,
+  isRetryableCloudRunSubmitError,
   submitCloudRunTranscode,
 } from "../../_shared/transcode/cloud-run.ts";
 import {
@@ -71,10 +72,13 @@ async function beginTranscodeAfterWav(
   batchMeta: Record<string, unknown>,
   casting: unknown,
   chunkCount: number,
-  externalId: string,
+  externalId: string | null,
   ttsModel: string,
   fetchedChunkCount: number,
-): Promise<{ outcome: "succeeded"; waitingExternal: true }> {
+): Promise<
+  | { outcome: "succeeded"; waitingExternal: true }
+  | { outcome: "retryable"; errorMessage: string }
+> {
   const cfg = await loadConfig();
   const scriptId = String((ctx.job.input as RenderAudioInput).script_id ?? "").trim();
   const episodeId = await loadEpisodeIdForJob(ctx.db, ctx.job);
@@ -87,14 +91,25 @@ async function beginTranscodeAfterWav(
   const newlySubmitted = !executionName;
 
   if (!executionName) {
-    const submitted = await submitCloudRunTranscode({
-      db: ctx.db,
-      cfg,
-      jobId: ctx.job.id,
-      attemptId: ctx.attemptId,
-      episodeId,
-      wavStoragePath: wav.storagePath,
-    });
+    let submitted: Awaited<ReturnType<typeof submitCloudRunTranscode>>;
+    try {
+      submitted = await submitCloudRunTranscode({
+        db: ctx.db,
+        cfg,
+        jobId: ctx.job.id,
+        attemptId: ctx.attemptId,
+        episodeId,
+        wavStoragePath: wav.storagePath,
+      });
+    } catch (err) {
+      if (isRetryableCloudRunSubmitError(err)) {
+        return {
+          outcome: "retryable",
+          errorMessage: err instanceof Error ? err.message : String(err),
+        };
+      }
+      throw err;
+    }
     executionName = submitted.executionName;
     outputStoragePath = submitted.outputStoragePath;
 
@@ -130,24 +145,33 @@ async function beginTranscodeAfterWav(
   if (updateErr) throw new Error(`persist transcode phase: ${updateErr.message}`);
 
   if (newlySubmitted) {
-    await appendAudioTranscodeSubmitted(ctx.db, ctx.job, {
-      job_id: ctx.job.id,
-      script_id: scriptId,
-      wav_blob_id: wav.blobId,
-      wav_storage_path: wav.storagePath,
-      output_storage_path: outputStoragePath,
-      execution_name: executionName,
-    });
+    try {
+      await appendAudioTranscodeSubmitted(ctx.db, ctx.job, {
+        job_id: ctx.job.id,
+        script_id: scriptId,
+        wav_blob_id: wav.blobId,
+        wav_storage_path: wav.storagePath,
+        output_storage_path: outputStoragePath,
+        execution_name: executionName,
+      });
+    } catch (err) {
+      console.warn("[render_audio] AudioTranscodeSubmitted append failed", ctx.job.id, err);
+    }
   }
 
-  for (let i = 0; i < fetchedChunkCount; i++) {
-    await recordLlmInvocation(ctx.db, {
-      attempt_id: ctx.attemptId,
-      external_operation_id: externalId,
-      item_index: i,
-      model: ttsModel,
-      finish_reason: "stop",
-    });
+  if (externalId && prior.llm_invocations_recorded !== true) {
+    for (let i = 0; i < fetchedChunkCount; i++) {
+      await recordLlmInvocation(ctx.db, {
+        attempt_id: ctx.attemptId,
+        external_operation_id: externalId,
+        item_index: i,
+        model: ttsModel,
+        finish_reason: "stop",
+      });
+    }
+    await ctx.db.schema("jobs").from("jobs").update({
+      output: { ...nextOutput, llm_invocations_recorded: true },
+    }).eq("id", ctx.job.id);
   }
 
   return { outcome: "succeeded", waitingExternal: true };
@@ -200,13 +224,18 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
     !String(transcodeMeta.execution ?? "").trim()
   ) {
     const batchExternalId = String(meta.batch_external_id ?? "").trim();
+    if (batchExternalId) {
+      await ctx.db.schema("jobs").from("external_operations").update({
+        completed_at: new Date().toISOString(),
+      }).eq("id", batchExternalId).is("completed_at", null);
+    }
     return beginTranscodeAfterWav(
       ctx,
       { blobId: wavBlobId, storagePath: wavStoragePath },
       batchMeta,
       meta.casting ?? batchMeta.casting ?? {},
       Number(meta.chunk_count ?? batchMeta.requestCount ?? 0),
-      batchExternalId || ctx.attemptId,
+      batchExternalId || null,
       ttsModel,
       Number(meta.chunk_count ?? batchMeta.requestCount ?? 0),
     );
@@ -215,10 +244,36 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
   let external = await loadLatestExternalOp(ctx.db, ctx.job.id);
 
   if (external && isCloudRunExecutionName(external.operation_name)) {
-    if (CLOUD_RUN_PENDING_STATES.has(external.state)) {
-      return { outcome: "succeeded", waitingExternal: true };
-    }
     return { outcome: "succeeded", waitingExternal: true };
+  }
+
+  if (
+    !external &&
+    ctx.job.status !== "waiting_external" &&
+    wavStoragePath &&
+    wavBlobId &&
+    !isTranscodeEnabled(cfg)
+  ) {
+    const { data: blob, error: blobErr } = await ctx.db
+      .schema("podcast")
+      .from("blobs")
+      .select("byte_size, mime_type")
+      .eq("id", wavBlobId)
+      .maybeSingle();
+    if (blobErr) throw new Error(`render_audio wav blob lookup: ${blobErr.message}`);
+    return {
+      outcome: "succeeded",
+      output: {
+        script_id: scriptId,
+        blob_id: wavBlobId,
+        storage_path: wavStoragePath,
+        mime_type: "audio/wav",
+        byte_size: Number(blob?.byte_size ?? meta.byte_size ?? 0),
+        duration_ms: null,
+        casting: meta.casting ?? batchMeta.casting ?? {},
+        chunk_count: Number(meta.chunk_count ?? batchMeta.requestCount ?? 0),
+      },
+    };
   }
 
   if (!external && ctx.job.status !== "waiting_external") {
@@ -229,10 +284,17 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
         batchMeta,
         meta.casting ?? batchMeta.casting ?? {},
         Number(meta.chunk_count ?? 0),
-        String(meta.batch_external_id ?? ctx.attemptId),
+        String(meta.batch_external_id ?? "").trim() || null,
         ttsModel,
         Number(meta.chunk_count ?? 0),
       );
+    }
+
+    if (isTranscodeEnabled(cfg)) {
+      assertGcpRunConfig();
+      if (!Deno.env.get("GCP_SERVICE_ACCOUNT_JSON")?.trim()) {
+        throw new Error("GCP_SERVICE_ACCOUNT_JSON is required when audio transcode is enabled");
+      }
     }
 
     const submitted = await submitAudioBatch({

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { PodcastConfigMap } from "../types.ts";
-import { assertGcpRunConfig, transcodeBitrateKbps } from "./config.ts";
+import { assertGcpRunConfig, isCloudRunExecutionName, transcodeBitrateKbps } from "./config.ts";
 import { gcpFetch } from "./gcp-token.ts";
 import {
   createSignedDownloadUrl,
@@ -27,7 +27,7 @@ export async function submitCloudRunTranscode(
 ): Promise<SubmitTranscodeResult> {
   const { db, cfg, jobId, attemptId, episodeId, wavStoragePath } = params;
   const gcp = assertGcpRunConfig();
-  const outputStoragePath = `audio/${episodeId}.m4a`;
+  const outputStoragePath = `audio/${episodeId}/${jobId}.m4a`;
   const inputUrl = await createSignedDownloadUrl(db, wavStoragePath);
   const outputUrl = await createSignedUploadUrl(db, outputStoragePath, "audio/mp4");
   const bitrate = transcodeBitrateKbps(cfg);
@@ -55,10 +55,17 @@ export async function submitCloudRunTranscode(
   if (!res.ok) {
     throw new Error(`Cloud Run Job run failed: ${res.status} ${await res.text()}`);
   }
-  const body = await res.json() as { name?: string };
-  const executionName = String(body.name ?? "").trim();
-  if (!executionName.startsWith("projects/")) {
-    throw new Error(`Cloud Run Job run returned unexpected name: ${executionName || "(empty)"}`);
+  // jobs:run returns a longrunning Operation; the Execution is in metadata.name.
+  const body = await res.json() as {
+    name?: string;
+    metadata?: { name?: string };
+    response?: { name?: string };
+  };
+  const executionName = String(body.metadata?.name ?? body.response?.name ?? "").trim();
+  if (!isCloudRunExecutionName(executionName)) {
+    throw new Error(
+      `Cloud Run Job run returned no execution name (operation=${body.name ?? "(none)"}, execution=${executionName || "(empty)"})`,
+    );
   }
 
   return { executionName, outputStoragePath, wavStoragePath };
@@ -85,10 +92,13 @@ export const CLOUD_RUN_FAILURE_STATES = new Set([
 function mapExecutionState(execution: Record<string, unknown>): string {
   const conditions = execution.conditions as Array<{ type?: string; state?: string }> | undefined;
   const completed = conditions?.find((c) => c.type === "Completed");
-  if (completed?.state === "CONDITION_SUCCEEDED") return "EXECUTION_SUCCEEDED";
   if (completed?.state === "CONDITION_FAILED") return "EXECUTION_FAILED";
   if (execution.cancelledCount && Number(execution.cancelledCount) > 0) {
     return "EXECUTION_CANCELLED";
+  }
+  if (completed?.state === "CONDITION_SUCCEEDED") return "EXECUTION_SUCCEEDED";
+  if (execution.failedCount && Number(execution.failedCount) > 0) {
+    return "EXECUTION_FAILED";
   }
   if (execution.completionTime) return "EXECUTION_SUCCEEDED";
   return "EXECUTION_RUNNING";
@@ -104,4 +114,12 @@ export async function pollCloudRunExecution(
   const execution = await res.json() as Record<string, unknown>;
   const state = mapExecutionState(execution);
   return { state, execution };
+}
+
+/** 429 / 5xx / network failures from the Cloud Run Admin API or Storage signing are safe to retry. */
+export function isRetryableCloudRunSubmitError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/Cloud Run Job run failed: (429|5\d\d)\b/.test(msg)) return true;
+  return /\b(502|503|504)\b|fetch failed|network|timed? ?out|ECONN|ETIMEDOUT|ENOTFOUND|UNAVAILABLE/i
+    .test(msg);
 }

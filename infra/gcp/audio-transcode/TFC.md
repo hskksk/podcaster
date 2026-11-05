@@ -54,6 +54,7 @@ SA に必要なロール（[`main.tf`](./main.tf) のリソースに対応）:
 | Service Account Admin (`roles/iam.serviceAccountAdmin`) | SA 2 つ |
 | Project IAM Admin (`roles/resourcemanager.projectIamAdmin`) | カスタムロールの binding |
 | Custom Role Admin (`roles/iam.roleAdmin`) | `google_project_iam_custom_role` |
+| Service Account User (`roles/iam.serviceAccountUser`) | runner SA に対する actAs（Cloud Run Job 作成時に必要。Terraform 用 SA にこのロールが無く `iam.serviceaccounts.actAs` で失敗する場合は runner SA に付与する） |
 | Viewer (`roles/viewer`) | プロジェクト属性の読み取り |
 
 Execution mode の変更だけでは backend 設定は変わらないため、`terraform init` の再実行は不要。

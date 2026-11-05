@@ -8,7 +8,7 @@ Alpine + ffmpeg。WAV をダウンロード → m4a → 署名 PUT。
 |------|------|
 | `INPUT_URL` | staging WAV 署名 GET |
 | `OUTPUT_UPLOAD_URL` | 公開 m4a 署名 PUT |
-| `OUTPUT_OBJECT_PATH` | 例 `audio/{episodeId}.m4a` |
+| `OUTPUT_OBJECT_PATH` | 例 `audio/{episodeId}/{jobId}.m4a` |
 | `BITRATE_KBPS` | ffmpeg `-b:a` |
 | `JOB_ID` / `ATTEMPT_ID` | ログ用 |
 

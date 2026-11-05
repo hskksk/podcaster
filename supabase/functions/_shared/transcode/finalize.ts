@@ -35,6 +35,12 @@ export async function finalizeTranscodedAudioBlob(
   params: FinalizeTranscodeParams,
 ): Promise<Record<string, unknown>> {
   const { db, job, attemptId, cfg, transcode } = params;
+  const priorOutput = (job.output ?? {}) as Record<string, unknown>;
+  const deliveryBlobId = String(transcode.delivery_blob_id ?? "").trim();
+  if (deliveryBlobId && String(priorOutput.blob_id ?? "") === deliveryBlobId) {
+    return priorOutput;
+  }
+
   const input = job.input as Record<string, unknown>;
   const scriptId = String(input.script_id ?? "").trim();
   const outputStoragePath = String(

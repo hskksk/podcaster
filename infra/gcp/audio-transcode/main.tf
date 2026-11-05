@@ -92,7 +92,6 @@ resource "google_cloud_run_v2_job" "audio_transcode" {
   depends_on = [
     google_project_service.required,
     google_artifact_registry_repository_iam_member.runner_pull,
-    google_cloud_run_v2_job_iam_member.invoker,
   ]
 
   lifecycle {

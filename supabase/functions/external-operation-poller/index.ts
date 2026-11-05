@@ -7,6 +7,7 @@ import {
   AUDIO_BATCH_SUCCESS_STATES,
   pollBatch,
 } from "../_jobs/handlers/audio-batch.ts";
+import { onJobFinished } from "../_services/job-outcomes.ts";
 import { loadConfig } from "../_shared/config.ts";
 import type { PodcastConfigMap } from "../_shared/types.ts";
 import { isCloudRunExecutionName } from "../_shared/transcode/config.ts";
@@ -18,6 +19,7 @@ import {
 } from "../_shared/transcode/cloud-run.ts";
 
 const MAX_OPS = 20;
+const TERMINAL_JOB_STATUSES = new Set(["succeeded", "failed", "cancelled"]);
 
 async function resumeJobAfterExternalSuccess(
   db: ReturnType<typeof createSupabaseClient>,
@@ -103,24 +105,34 @@ Deno.serve(async (req) => {
           await db.schema("jobs").from("external_operations").update({
             completed_at: new Date().toISOString(),
           }).eq("id", row.id);
-          await db.schema("jobs").from("jobs").update({
-            status: "failed",
-            finished_at: new Date().toISOString(),
-          }).eq("id", job.id);
+          if (!TERMINAL_JOB_STATUSES.has(job.status as string)) {
+            await db.schema("jobs").from("jobs").update({
+              status: "failed",
+              finished_at: new Date().toISOString(),
+            }).eq("id", job.id);
+            await onJobFinished(db, job.id);
+          }
           continue;
         }
 
-        if (CLOUD_RUN_SUCCESS_STATES.has(state) && job.status === "waiting_external") {
-          await db.schema("jobs").from("external_operations").update({
-            completed_at: new Date().toISOString(),
-            state,
-          }).eq("id", row.id);
-          const jobOutput = (job.output ?? {}) as Record<string, unknown>;
-          const transcode = (jobOutput.transcode ?? {}) as Record<string, unknown>;
-          await resumeJobAfterExternalSuccess(db, job.id, {
-            transcode: { ...transcode, ready_to_finalize: true },
-          });
-          resumed++;
+        if (CLOUD_RUN_SUCCESS_STATES.has(state)) {
+          if (job.status === "waiting_external") {
+            await db.schema("jobs").from("external_operations").update({
+              completed_at: new Date().toISOString(),
+              state,
+            }).eq("id", row.id);
+            const jobOutput = (job.output ?? {}) as Record<string, unknown>;
+            const transcode = (jobOutput.transcode ?? {}) as Record<string, unknown>;
+            await resumeJobAfterExternalSuccess(db, job.id, {
+              transcode: { ...transcode, ready_to_finalize: true },
+            });
+            resumed++;
+          } else if (TERMINAL_JOB_STATUSES.has(job.status as string)) {
+            await db.schema("jobs").from("external_operations").update({
+              completed_at: new Date().toISOString(),
+              state,
+            }).eq("id", row.id);
+          }
         }
         continue;
       }

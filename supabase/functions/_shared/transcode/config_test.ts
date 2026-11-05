@@ -12,6 +12,14 @@ Deno.test("isCloudRunExecutionName", () => {
     true,
   );
   assertEquals(isCloudRunExecutionName("batches/abc"), false);
+  assertEquals(
+    isCloudRunExecutionName("projects/p/locations/r/operations/op-123"),
+    false,
+  );
+  assertEquals(
+    isCloudRunExecutionName("projects/p/locations/r/jobs/j"),
+    false,
+  );
 });
 
 Deno.test("isTranscodeEnabled respects delivery format and flag", () => {

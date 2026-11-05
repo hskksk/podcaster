@@ -45,7 +45,7 @@ export async function storeBlob(
   return { blobId, storagePath, mimeType: opts.mimeType, byteSize };
 }
 
-/** Register a delivery blob at an explicit storage path (e.g. audio/{episodeId}.m4a). */
+/** Register a delivery blob at an explicit storage path (e.g. audio/{episodeId}/{jobId}.m4a). */
 export async function registerDeliveryBlob(
   db: SupabaseClient,
   opts: {
