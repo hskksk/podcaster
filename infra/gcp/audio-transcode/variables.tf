@@ -4,7 +4,7 @@ variable "project_id" {
 
   validation {
     condition     = var.project_id != ""
-    error_message = "Set Terraform variable project_id in TFC workspace podcaster-audio-transcode (mark Sensitive). See infra/gcp/audio-transcode/TFC.md."
+    error_message = "Set project_id in the TFC variable set applied to workspace podcaster-audio-transcode. See infra/gcp/audio-transcode/TFC.md."
   }
 }
 
@@ -46,13 +46,13 @@ variable "max_retries" {
 }
 
 variable "cpu" {
-  type        = string
-  default     = "2"
+  type    = string
+  default = "2"
 }
 
 variable "memory" {
-  type        = string
-  default     = "2Gi"
+  type    = string
+  default = "2Gi"
 }
 
 variable "invoker_service_account_id" {

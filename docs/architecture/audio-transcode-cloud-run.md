@@ -199,7 +199,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 
 ### Phase 0 — GCP
 
-1. TFC workspace に **`project_id`**（Sensitive）を登録し、**[README §1–2](../../infra/gcp/audio-transcode/README.md)** の手順で Terraform apply（**state は [Terraform Cloud](../../infra/gcp/audio-transcode/TFC.md)**）→ `services/audio-transcode` を Cloud Build → Job 込み apply。
+1. TFC の variable set に **`project_id`** を登録し、**[README §1–2](../../infra/gcp/audio-transcode/README.md)** の手順で Terraform apply（**state は [Terraform Cloud](../../infra/gcp/audio-transcode/TFC.md)**）→ `services/audio-transcode` を Cloud Build → Job 込み apply。
 2. invoker SA の JSON キーと `terraform output -json gcp_edge_env` の値を Supabase Edge Secrets / `.env` に設定する。
 3. 署名 URL で Job を 1 回 execute し、m4a upload を手動確認する。
 
@@ -241,5 +241,5 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 | staging WAV | transcode 前は **`jobs/{jobId}/{attemptId}/audio.wav`**。**m4a finalize 成功直後**に Storage と blob 行を削除 |
 | GCP プロジェクト・リージョン・Job 名 | **Edge Secrets / `.env`**（`GCP_PROJECT_ID` 等。`podcast_config` には置かない） |
 | GCP 認証 | **`GCP_SERVICE_ACCOUNT_JSON`**（Edge Secret） |
-| Terraform 変数（`project_id` 等） | **TFC workspace** `podcaster-audio-transcode`（Sensitive） |
+| Terraform 変数（`project_id` 等） | TFC の variable set `podcaster-audio-transcode` |
 | Terraform state | **Terraform Cloud** workspace `podcaster-audio-transcode`（[TFC.md](../../infra/gcp/audio-transcode/TFC.md)） |

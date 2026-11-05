@@ -4,7 +4,7 @@ Terraform で Artifact Registry・Cloud Run Job・Supabase 用 invoker SA を定
 
 | 正本 | 置き場 |
 |------|--------|
-| **Terraform 変数** | [Terraform Cloud](./TFC.md) workspace `podcaster-audio-transcode`（`project_id` は Sensitive） |
+| **Terraform 変数** | [Terraform Cloud](./TFC.md) の variable set `podcaster-audio-transcode` |
 | **state（tfstate）** | 同上（ローカルに state を置かない） |
 | **Edge / Cloud Build** | ルート **`.env`** の `GCP_*`（TFC の `project_id` と同値） |
 
@@ -15,14 +15,14 @@ Terraform で Artifact Registry・Cloud Run Job・Supabase 用 invoker SA を定
 - リポジトリルートで `mise install`（`terraform` / `gcloud` — [`.mise.toml`](../../../.mise.toml)）
 - Terraform Cloud: CLI-driven workspace **`podcaster-audio-transcode`**（手順 [TFC.md](./TFC.md)）。Organization 既定 `hskksk`（違えば `versions.tf` を変更）
 - `terraform login`
-- **Execution mode = Local**（state だけ TFC。plan/apply は手元 + `gcloud auth application-default login`）
+- **Execution mode = Remote**（state も plan/apply も TFC。手元の GCP ADC は不要）
 - GCP プロジェクトで Billing 有効
 
 ## 1. 初回セットアップ
 
 ### 1.1 Terraform Cloud
 
-[TFC.md § Workspace](./TFC.md#workspace-の作り方) どおり workspace を 1 つ作成し、**[Workspace 変数](./TFC.md#workspace-変数必須セットアップ)** に `project_id`（Sensitive）を登録する。
+[TFC.md § Workspace](./TFC.md#workspace-の作り方) どおり workspace を 1 つ作成し、**[Variable set](./TFC.md#variable-set必須セットアップ)** に `project_id` と SA JSON を登録する。
 
 ### 1.2 ルート `.env`（Edge + gcloud）
 
@@ -42,7 +42,7 @@ Cloud Build や IAM 用シェルでは:
 source scripts/gcp-env.sh   # GCP_PROJECT_ID / GCP_REGION を export
 ```
 
-`terraform plan` / `apply` は **TFC workspace 変数**を読む（`.env` は Terraform には渡さない）。
+`terraform plan` / `apply` は TFC 上の Remote run なので **TFC の variable set** を読む（`.env` は Terraform には渡さない）。
 
 ### 1.3 Terraform 初期化
 
@@ -102,7 +102,7 @@ gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
 
 ```bash
 gcloud config set project "$GCP_PROJECT_ID"
-gcloud auth application-default print-access-token >/dev/null && echo "ADC ok"
+gcloud auth print-access-token >/dev/null && echo "gcloud ok"
 ```
 
 Terraform の `-target` apply で `cloudbuild.googleapis.com` も有効化される。API だけ有効で IAM が無いと同じエラーになる。
@@ -246,7 +246,7 @@ TARGET=remote pnpm pipeline:status
 
 | 設定 | 正本 | Git |
 |------|------|-----|
-| Terraform `project_id` 等 | **TFC workspace 変数** | 載せない |
+| Terraform `project_id` 等 | **TFC variable set** | 載せない |
 | `audio.transcode.*` / `audio.delivery.format` | **`config.toml`** → `seed:config` | `config.toml` のみ |
 | `GCP_*`（Edge + gcloud） | ルート **`.env`** → deploy / `gcp-env.sh` | 載せない |
 | tfstate | Terraform Cloud | いいえ |
@@ -261,11 +261,11 @@ TARGET=remote pnpm pipeline:status
 ## 5. 変更の流れ（日常）
 
 1. `.tf` を PR で変更（変数は TFC UI / 必要なら `.env` の `GCP_*` も同期）
-2. `terraform plan`（手元。state ロックは TFC）
+2. `terraform plan`（TFC 上の Remote run。state ロックも TFC）
 3. `main` merge 後 `terraform apply`、または apply 担当が PR 確認後に実行
 4. TFC 変数や output が変わったら `.env` / Supabase Edge Secrets（§3.1）を更新
 
 ## 参考
 
-- [TFC.md](./TFC.md) — state・Workspace 変数・認証
+- [TFC.md](./TFC.md) — state・variable set・認証・Remote run の挙動
 - GitHub secret **`TF_API_TOKEN`** — PR 上の `terraform validate`（任意）

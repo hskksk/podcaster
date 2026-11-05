@@ -1,5 +1,7 @@
 terraform {
-  required_version = ">= 1.5.0"
+  # Pinned to the HCP Terraform workspace setting and
+  # .github/workflows/terraform-audio-transcode.yml. See TFC.md.
+  required_version = "~> 1.17.1"
 
   cloud {
     organization = "hskksk"
