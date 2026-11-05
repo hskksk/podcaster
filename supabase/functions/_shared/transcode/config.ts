@@ -9,12 +9,13 @@ export function isGeminiBatchOperationName(operationName: string): boolean {
 }
 
 export function isTranscodeEnabled(cfg: PodcastConfigMap): boolean {
-  const delivery = String(cfg["audio.delivery.format"] ?? "m4a").toLowerCase();
-  if (delivery === "wav") return false;
   const flag = cfg["audio.transcode.enabled"];
   if (flag === false || flag === "false") return false;
-  if (flag === true || flag === "true") return true;
-  return false;
+  if (flag !== true && flag !== "true") return false;
+  // When enabled, delivery_format=wav skips Cloud Run (debug WAV delivery).
+  const delivery = String(cfg["audio.delivery.format"] ?? "m4a").toLowerCase();
+  if (delivery === "wav") return false;
+  return true;
 }
 
 export function transcodeBitrateKbps(cfg: PodcastConfigMap): number {

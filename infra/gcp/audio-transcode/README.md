@@ -67,9 +67,10 @@ terraform apply \
   -target=google_service_account.runner \
   -target=google_service_account.invoker \
   -target=google_artifact_registry_repository_iam_member.runner_pull \
-  -target=google_project_iam_custom_role.transcode_invoker \
-  -target=google_project_iam_member.invoker_custom
+  -target=google_project_iam_custom_role.transcode_invoker
 ```
+
+Job 本体と invoker の **Job IAM**（`google_cloud_run_v2_job_iam_member.invoker`）は §2.3 のフル apply で作成する。
 
 ### 2.2 コンテナイメージ
 
@@ -176,9 +177,9 @@ gcloud iam service-accounts keys create /tmp/podcaster-invoker.json \
 
 | 方法 | 手順 |
 |------|------|
-| **A. deploy 経由** | ルート `.env` に `GCP_*` 4 キー（`GCP_SERVICE_ACCOUNT_JSON` は `jq -c . /tmp/podcaster-invoker.json` の 1 行）。`pnpm deploy`（`supabase secrets set --env-file .env`） |
-| **B. CLI のみ** | `supabase secrets set GCP_PROJECT_ID=… GCP_REGION=… GCP_RUN_JOB_NAME=…` と `GCP_SERVICE_ACCOUNT_JSON="$(jq -c . …)"` |
-| **C. Dashboard** | Secrets に上記 Name / Value |
+| **A. 推奨** | ルート `.env` に `GCP_*` 4 キー。`pnpm secrets:edge`（`supabase secrets set --env-file .env`）。**`pnpm deploy` は secrets を載せない** |
+| **B. CLI のみ** | `supabase secrets set GCP_PROJECT_ID=…` 等（Dashboard でも可） |
+| **C. deploy 経由** | **使わない**（CI が `.env` を書かない方針） |
 
 **ローカル**（`pnpm functions:serve`）: ルート `.env` に同じ 4 キー。Studio の Edge Secrets はローカル Docker には自動で入らない。
 

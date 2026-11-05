@@ -1,4 +1,5 @@
 import type { JobRow } from "../_jobs/types.ts";
+import { audioTranscodedEvent } from "../_jobs/transcode-domain-events.ts";
 import type { DomainEvent, NewDomainEvent } from "./events.ts";
 
 export function domainEventsForSucceededJob(job: JobRow): NewDomainEvent[] {
@@ -34,7 +35,21 @@ export function domainEventsForSucceededJob(job: JobRow): NewDomainEvent[] {
     case "render_audio": {
       const out = job.output ?? {};
       if (out.skipped) return [];
-      return [{
+      const events: NewDomainEvent[] = [];
+      const transcode = out.transcode as Record<string, unknown> | undefined;
+      if (transcode && transcode.finalized === true) {
+        const transcoded = audioTranscodedEvent(job, {
+          job_id: job.id,
+          script_id: String(out.script_id ?? job.input?.script_id ?? ""),
+          blob_id: String(out.blob_id ?? ""),
+          storage_path: String(out.storage_path ?? transcode.output_storage_path ?? ""),
+          execution_name: String(transcode.execution ?? ""),
+          duration_ms: Number(out.duration_ms ?? 0),
+          byte_size: Number(out.byte_size ?? 0),
+        });
+        if (transcoded) events.push(transcoded);
+      }
+      events.push({
         type: "AudioRendered",
         stream_type: "production",
         stream_id: productionId,
@@ -51,7 +66,8 @@ export function domainEventsForSucceededJob(job: JobRow): NewDomainEvent[] {
           duration_ms: Number(out.duration_ms ?? 0),
           casting: (out.casting ?? {}) as Record<string, unknown>,
         },
-      }];
+      });
+      return events;
     }
     case "paint_artwork": {
       const out = job.output ?? {};

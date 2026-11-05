@@ -137,6 +137,7 @@ mime_type = "image/jpeg"
 delivery_format = "m4a"
 
 [audio.transcode]
+# Keep false until Edge GCP secrets are set (pnpm secrets:edge). When false, delivery stays WAV regardless of delivery_format.
 enabled = false
 bitrate_kbps = 128
 container = "m4a"

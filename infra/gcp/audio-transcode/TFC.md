@@ -102,7 +102,7 @@ terraform plan    # "Running plan in HCP Terraform..." が出れば Remote 実�
 |------|------|--------|
 | **Terraform plan / apply** | AR / Run / IAM / SA 作成 | TFC の variable set 内 **`GOOGLE_CREDENTIALS`**（Environment / Sensitive） |
 | **gcloud / Cloud Build** | Cloud Build 実行、鍵作成 | 手元の `gcloud auth login` |
-| **Supabase Edge** | invoker カスタムロール（Run Job API） | **`GCP_SERVICE_ACCOUNT_JSON`** 等（ルート `.env` → `pnpm deploy`） |
+| **Supabase Edge** | invoker カスタムロール（Run Job API） | **`GCP_SERVICE_ACCOUNT_JSON`** 等。手元 **`pnpm secrets:edge`**（`.env`）。CI / `pnpm deploy` では載せない |
 
 ## CI（GitHub Actions）
 

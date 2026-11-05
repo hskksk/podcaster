@@ -11,8 +11,10 @@ permissions:
 
 jobs:
   validate:
-    if: ${{ secrets.TF_API_TOKEN != '' }}
     runs-on: ubuntu-latest
+    env:
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+    if: ${{ env.TF_API_TOKEN != '' }}
     defaults:
       run:
         working-directory: infra/gcp/audio-transcode
@@ -22,7 +24,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.17.1
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+          cli_config_credentials_token: ${{ env.TF_API_TOKEN }}
 
       - name: terraform fmt
         run: terraform fmt -check -recursive
@@ -34,8 +36,10 @@ jobs:
         run: terraform validate
 
   validate-skipped:
-    if: ${{ secrets.TF_API_TOKEN == '' }}
     runs-on: ubuntu-latest
+    env:
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+    if: ${{ env.TF_API_TOKEN == '' }}
     steps:
       - name: note
         run: |

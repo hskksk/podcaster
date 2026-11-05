@@ -62,8 +62,7 @@ $$;
     : "";
   run(`supabase link --project-ref ${projectRef}${passwordFlag}`);
 
-  // 2. Push secrets (edge function env vars)
-  run("supabase secrets set --env-file .env");
+  // Edge secrets: set locally with `pnpm secrets:edge` (.env). Deploy does not push .env (no secrets in CI).
   run(`supabase secrets set PGFLOW_AUTH_SECRET=${JSON.stringify(serviceKey)}`);
 
   // 3. Apply migrations (20260424000001 drops old broken cron jobs)

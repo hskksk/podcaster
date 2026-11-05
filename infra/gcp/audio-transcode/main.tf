@@ -58,10 +58,12 @@ resource "google_project_iam_custom_role" "transcode_invoker" {
   ]
 }
 
-resource "google_project_iam_member" "invoker_custom" {
-  project = var.project_id
-  role    = google_project_iam_custom_role.transcode_invoker.id
-  member  = "serviceAccount:${google_service_account.invoker.email}"
+resource "google_cloud_run_v2_job_iam_member" "invoker" {
+  project  = google_cloud_run_v2_job.audio_transcode.project
+  location = google_cloud_run_v2_job.audio_transcode.location
+  name     = google_cloud_run_v2_job.audio_transcode.name
+  role     = google_project_iam_custom_role.transcode_invoker.id
+  member   = "serviceAccount:${google_service_account.invoker.email}"
 }
 
 resource "google_cloud_run_v2_job" "audio_transcode" {
@@ -90,6 +92,7 @@ resource "google_cloud_run_v2_job" "audio_transcode" {
   depends_on = [
     google_project_service.required,
     google_artifact_registry_repository_iam_member.runner_pull,
+    google_cloud_run_v2_job_iam_member.invoker,
   ]
 
   lifecycle {

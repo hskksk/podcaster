@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
-const SIGNED_URL_TTL_SEC = 3600;
+/** Cloud Run Job timeout is 900s; keep download URL slightly above that margin. */
+const SIGNED_URL_TTL_SEC = 1800;
 
 export async function createSignedDownloadUrl(
   db: SupabaseClient,

@@ -19,6 +19,7 @@
         "pgflow:install": "npx pgflow@latest install",
         "pgflow:compile": "npx pgflow@latest compile runJob",
         "deploy": "npx tsx scripts/deploy.ts",
+        "secrets:edge": "npx tsx scripts/set-edge-secrets.ts",
         "deploy:local": "TARGET=local npx tsx scripts/deploy.ts",
         "deploy:remote": "npx tsx scripts/deploy.ts",
         "setup:gh-secrets": "npx tsx scripts/setup-gh-secrets.ts",

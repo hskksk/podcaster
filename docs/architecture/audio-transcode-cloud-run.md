@@ -110,12 +110,22 @@ GCP では、Supabase に近いリージョン（例: `asia-northeast1`）に Jo
 
 | キー | 例 | 意味 |
 |------|-----|------|
-| `audio.delivery.format` | `m4a` / `wav` | `wav` なら transcode をスキップ（デバッグ用） |
+| `audio.delivery.format` | `m4a` / `wav` | **`audio.transcode.enabled=true` のときのみ**意味あり。`enabled=false` なら常に WAV 配信（`delivery_format` は無視） |
 | `audio.transcode.enabled` | `true` | マスタースイッチ |
 | `audio.transcode.bitrate_kbps` | `128` | ffmpeg `-b:a` |
 | `audio.transcode.container` | `m4a` | 出力 MIME `audio/mp4` |
 
-GCP の **プロジェクト・リージョン・Job 名**は **`podcast_config` には載せない**。Edge Secret / `.env` の `GCP_PROJECT_ID` / `GCP_REGION` / `GCP_RUN_JOB_NAME`（+ 認証 `GCP_SERVICE_ACCOUNT_JSON`）から読む。トランスコードの ON/OFF と bitrate は上表の `podcast_config` のまま。
+GCP の **プロジェクト・リージョン・Job 名**は **`podcast_config` には載せない**。Edge Secret / `.env` の `GCP_PROJECT_ID` / `GCP_REGION` / `GCP_RUN_JOB_NAME`（+ 認証 `GCP_SERVICE_ACCOUNT_JSON`）から読む。Terraform 向き先は **TFC variable set** のみ（ローカル tfvars なし）。
+
+ドメインイベント（production ストリーム）:
+
+| イベント | タイミング |
+|----------|------------|
+| `AudioTranscodeSubmitted` | Cloud Run Execution 作成直後（`AudioRendered` より前） |
+| `AudioTranscoded` | m4a finalize 成功、`AudioRendered` 直前 |
+| `AudioRendered` | 従来どおり（配信用 blob 確定） |
+
+Policy は `AudioRendered` のみ反応。中間イベントは投影 no-op・監査用。
 
 transcode が有効なときの `render_audio` の流れ:
 
@@ -183,7 +193,8 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 | 原則 | 実装 |
 |------|------|
 | Job に Supabase service role を載せない | 署名 URL のみ |
-| 署名 URL の TTL | Job timeout より長く（15〜60 分） |
+| 署名 URL の TTL（WAV GET） | **1800 s**（Job timeout 900s + マージン。`signed-urls.ts`） |
+| 署名 upload URL | Supabase `createSignedUploadUrl` の既定 TTL（コードでは短縮不可） |
 | upload 先 | env で固定（公開 `audio/{episodeId}.m4a`。WAV staging は `jobs/.../audio.wav` のみ） |
 | GCP SA JSON | Supabase Secret のみ |
 | GCP project / region / Job 名 | Edge Secret / `.env`（`podcast_config`・公開 Git に載せない） |
@@ -192,7 +203,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 
 - 同一 job で Execution が RUNNING のときは再 submit しない（`job.output.transcode.execution` を参照）。
 - 成功後、`mime_type` が既に `audio/mp4` なら finalize は no-op とする（staging WAV は初回 finalize で既に削除済み）。
-- 失敗時は job を `failed` とし、WAV staging Blob を正本として transcode をやり直せる。
+- 失敗時: `job.output` に **WAV フェーズ**（`wav_storage_path`）が残っていれば Gemini Batch を再 submit せず Cloud Run transcode から再開する。完全失敗時は job `failed` と Production 側 requeue。
 - upload が途中で切れた場合、m4a は upsert する。失敗時は WAV だけが残る。
 
 ## 実装フェーズ
@@ -209,7 +220,7 @@ transcode 完了前に `AudioRendered` を出さないため、WAV や `byte_siz
 2. `render_audio` で WAV 保存のあと transcode を submit し、`waiting_external` にする。
 3. `external-operation-poller` に `projects/` 分岐を足す。
 4. `config.toml` → `seed:config` で `audio.transcode.*` を反映。migration で旧 `gcp.*` podcast_config 行を削除。
-5. ローカルで `pipeline.mode=events` とモック Gemini を使い、ingest から m4a Blob・`feed.xml` の length まで通す。
+5. **ローカル:** Cloud Run トランスコード E2E は対象外。`pnpm functions:serve:mock` + Gemini mock で Batch/WAV まで。transcode は **remote Supabase + GCP** または `audio.transcode.enabled=false`（WAV 配信）。
 
 ### Phase 2 — 品質・運用
 

@@ -4,6 +4,7 @@ import { storeBlob } from "../../_adapters/storage.ts";
 import { recordLlmInvocation } from "../job-db.ts";
 import { resolveProfile } from "../runner.ts";
 import type { JobHandler, RenderAudioInput } from "../types.ts";
+import { appendAudioTranscodeSubmitted } from "../transcode-domain-events.ts";
 import {
   isCloudRunExecutionName,
   isGeminiBatchOperationName,
@@ -75,14 +76,15 @@ async function beginTranscodeAfterWav(
   fetchedChunkCount: number,
 ): Promise<{ outcome: "succeeded"; waitingExternal: true }> {
   const cfg = await loadConfig();
+  const scriptId = String((ctx.job.input as RenderAudioInput).script_id ?? "").trim();
   const episodeId = await loadEpisodeIdForJob(ctx.db, ctx.job);
-  const existingTranscode = ((ctx.job.output ?? {}) as Record<string, unknown>).transcode as
-    | Record<string, unknown>
-    | undefined;
+  const prior = (ctx.job.output ?? {}) as Record<string, unknown>;
+  const existingTranscode = (prior.transcode ?? {}) as Record<string, unknown>;
   const existingExecution = String(existingTranscode?.execution ?? "").trim();
 
   let executionName = existingExecution;
   let outputStoragePath = String(existingTranscode?.output_storage_path ?? "").trim();
+  const newlySubmitted = !executionName;
 
   if (!executionName) {
     const submitted = await submitCloudRunTranscode({
@@ -105,23 +107,38 @@ async function beginTranscodeAfterWav(
     if (insertErr) throw new Error(`external_operations transcode insert: ${insertErr.message}`);
   }
 
-  await ctx.db.schema("jobs").from("jobs").update({
-    output: {
-      batch: batchMeta,
-      script_id: (ctx.job.input as RenderAudioInput).script_id,
+  const nextOutput = {
+    ...prior,
+    batch: batchMeta,
+    script_id: scriptId,
+    wav_blob_id: wav.blobId,
+    wav_storage_path: wav.storagePath,
+    casting,
+    chunk_count: chunkCount,
+    transcode: {
+      execution: executionName,
       wav_blob_id: wav.blobId,
       wav_storage_path: wav.storagePath,
-      casting,
-      chunk_count: chunkCount,
-      transcode: {
-        execution: executionName,
-        wav_blob_id: wav.blobId,
-        wav_storage_path: wav.storagePath,
-        output_storage_path: outputStoragePath,
-        ready_to_finalize: false,
-      },
+      output_storage_path: outputStoragePath,
+      ready_to_finalize: false,
     },
+  };
+
+  const { error: updateErr } = await ctx.db.schema("jobs").from("jobs").update({
+    output: nextOutput,
   }).eq("id", ctx.job.id);
+  if (updateErr) throw new Error(`persist transcode phase: ${updateErr.message}`);
+
+  if (newlySubmitted) {
+    await appendAudioTranscodeSubmitted(ctx.db, ctx.job, {
+      job_id: ctx.job.id,
+      script_id: scriptId,
+      wav_blob_id: wav.blobId,
+      wav_storage_path: wav.storagePath,
+      output_storage_path: outputStoragePath,
+      execution_name: executionName,
+    });
+  }
 
   for (let i = 0; i < fetchedChunkCount; i++) {
     await recordLlmInvocation(ctx.db, {
@@ -134,6 +151,10 @@ async function beginTranscodeAfterWav(
   }
 
   return { outcome: "succeeded", waitingExternal: true };
+}
+
+function transcodeMetaFrom(meta: Record<string, unknown>): Record<string, unknown> | undefined {
+  return meta.transcode as Record<string, unknown> | undefined;
 }
 
 export const handleRenderAudio: JobHandler = async (ctx) => {
@@ -149,8 +170,10 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
   const ttsModel = String(profile["tts.model"] || "gemini-3.1-flash-tts-preview");
   const meta = (ctx.job.output ?? {}) as Record<string, unknown>;
   const batchMeta = (meta.batch ?? {}) as Record<string, unknown>;
-  const transcodeMeta = (meta.transcode ?? {}) as Record<string, unknown>;
+  const transcodeMeta = transcodeMetaFrom(meta) ?? {};
   const apiRoot = String(batchMeta.apiRoot ?? profile["gemini.api_root"] ?? "");
+  const wavBlobId = String(meta.wav_blob_id ?? "").trim();
+  const wavStoragePath = String(meta.wav_storage_path ?? "").trim();
 
   if (transcodeMeta.finalized === true || meta.mime_type === "audio/mp4") {
     return {
@@ -170,6 +193,25 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
     return { outcome: "succeeded", output };
   }
 
+  if (
+    isTranscodeEnabled(cfg) &&
+    wavStoragePath &&
+    wavBlobId &&
+    !String(transcodeMeta.execution ?? "").trim()
+  ) {
+    const batchExternalId = String(meta.batch_external_id ?? "").trim();
+    return beginTranscodeAfterWav(
+      ctx,
+      { blobId: wavBlobId, storagePath: wavStoragePath },
+      batchMeta,
+      meta.casting ?? batchMeta.casting ?? {},
+      Number(meta.chunk_count ?? batchMeta.requestCount ?? 0),
+      batchExternalId || ctx.attemptId,
+      ttsModel,
+      Number(meta.chunk_count ?? batchMeta.requestCount ?? 0),
+    );
+  }
+
   let external = await loadLatestExternalOp(ctx.db, ctx.job.id);
 
   if (external && isCloudRunExecutionName(external.operation_name)) {
@@ -180,6 +222,19 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
   }
 
   if (!external && ctx.job.status !== "waiting_external") {
+    if (isTranscodeEnabled(cfg) && wavStoragePath && wavBlobId) {
+      return beginTranscodeAfterWav(
+        ctx,
+        { blobId: wavBlobId, storagePath: wavStoragePath },
+        batchMeta,
+        meta.casting ?? batchMeta.casting ?? {},
+        Number(meta.chunk_count ?? 0),
+        String(meta.batch_external_id ?? ctx.attemptId),
+        ttsModel,
+        Number(meta.chunk_count ?? 0),
+      );
+    }
+
     const submitted = await submitAudioBatch({
       profile,
       scriptId,
@@ -266,12 +321,27 @@ export const handleRenderAudio: JobHandler = async (ctx) => {
     fileName: "audio.wav",
   });
 
+  const casting = batchMeta.casting ?? {};
+  const phaseOutput = {
+    ...meta,
+    batch: batchMeta,
+    script_id: scriptId,
+    wav_blob_id: stored.blobId,
+    wav_storage_path: stored.storagePath,
+    batch_external_id: external.id,
+    casting,
+    chunk_count: fetched.chunkCount,
+  };
+
+  const { error: phaseErr } = await ctx.db.schema("jobs").from("jobs").update({
+    output: phaseOutput,
+  }).eq("id", ctx.job.id);
+  if (phaseErr) throw new Error(`persist wav phase: ${phaseErr.message}`);
+
   await ctx.db.schema("jobs").from("external_operations").update({
     completed_at: new Date().toISOString(),
     state,
   }).eq("id", external.id);
-
-  const casting = batchMeta.casting ?? {};
 
   if (isTranscodeEnabled(cfg)) {
     return beginTranscodeAfterWav(
