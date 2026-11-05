@@ -257,6 +257,10 @@ export async function applyProjection(
     case "ProductionFailed":
       break;
 
+    case "AudioTranscodeSubmitted":
+    case "AudioTranscoded":
+      break;
+
     default: {
       const _exhaustive: never = event;
       throw new Error(`Unknown event: ${String(_exhaustive)}`);

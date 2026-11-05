@@ -62,9 +62,8 @@ $$;
     : "";
   run(`supabase link --project-ref ${projectRef}${passwordFlag}`);
 
-  // 2. Push secrets (edge function env vars)
-  run("supabase secrets set --env-file .env");
-  run(`supabase secrets set PGFLOW_AUTH_SECRET=${JSON.stringify(serviceKey)}`);
+  // Edge Function secrets (GEMINI_API_KEY, GCP_*, etc.): set in Supabase Dashboard.
+  // pgflow cron auth uses Vault pgflow_auth_secret below (not Edge env).
 
   // 3. Apply migrations (20260424000001 drops old broken cron jobs)
   run("supabase db push");

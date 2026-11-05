@@ -6,6 +6,8 @@ export type DomainEventType =
   | "EpisodeOpened"
   | "ProductionRequested"
   | "ScriptWritten"
+  | "AudioTranscodeSubmitted"
+  | "AudioTranscoded"
   | "AudioRendered"
   | "ArtworkPainted"
   | "EpisodeAssembled"
@@ -87,6 +89,25 @@ export interface ScriptWrittenPayload {
   content: string;
 }
 
+export interface AudioTranscodeSubmittedPayload {
+  job_id: string;
+  script_id: string;
+  wav_blob_id: string;
+  wav_storage_path: string;
+  output_storage_path: string;
+  execution_name: string;
+}
+
+export interface AudioTranscodedPayload {
+  job_id: string;
+  script_id: string;
+  blob_id: string;
+  storage_path: string;
+  execution_name: string;
+  duration_ms: number;
+  byte_size: number;
+}
+
 export interface AudioRenderedPayload {
   audio_id: string;
   job_id: string | null;
@@ -147,6 +168,8 @@ export interface DomainEventPayload {
   EpisodeOpened: EpisodeOpenedPayload;
   ProductionRequested: ProductionRequestedPayload;
   ScriptWritten: ScriptWrittenPayload;
+  AudioTranscodeSubmitted: AudioTranscodeSubmittedPayload;
+  AudioTranscoded: AudioTranscodedPayload;
   AudioRendered: AudioRenderedPayload;
   ArtworkPainted: ArtworkPaintedPayload;
   EpisodeAssembled: EpisodeAssembledPayload;

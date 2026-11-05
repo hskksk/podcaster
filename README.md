@@ -361,11 +361,9 @@ Flow started (script): {"episodeId":"b2c3d4e5-...","startFrom":"script","trigger
 supabase login
 ```
 
-3. `.env.production` を作成（AI API キーのみ）:
+3. 本番 Edge Function Secrets を Supabase Dashboard で設定:
 
-```bash
-GEMINI_API_KEY=<your-gemini-api-key>
-```
+   **Project Settings → Edge Functions → Secrets** に少なくとも `GEMINI_API_KEY` を登録。Cloud Run トランスコードを有効にする場合は `GCP_SERVICE_ACCOUNT_JSON` / `GCP_PROJECT_ID` / `GCP_REGION` / `GCP_RUN_JOB_NAME` も（[`infra/gcp/audio-transcode/README.md`](infra/gcp/audio-transcode/README.md) §3）。
 
 4. ワンコマンドでデプロイ:
 
@@ -377,12 +375,13 @@ pnpm deploy
 1. `supabase projects list` でプロジェクト自動検出（複数ある場合は `SUPABASE_PROJECT_REF` を env に設定）
 2. `supabase projects api-keys` でサービスロールキー自動取得
 3. `supabase link` でプロジェクトに接続
-4. `supabase secrets set` で AI API キーを Edge Function に反映
-5. `supabase db push` でマイグレーションを適用
-6. worker 管理用 Vault secret (`supabase_project_id`, `pgflow_auth_secret`) を更新
-7. `pgflow.track_worker_function('craft-episode-worker')` で監視対象を登録
-8. `supabase functions deploy` で Edge Functions（`ingest`, `craft-episode-worker`, `craft-episode-download-worker`, `download-monitor`, `pgflow`）をデプロイ
-9. `seed-config.ts` で `cover.png` をアップロードし `podcast_config` を初期化
+4. `supabase db push` でマイグレーションを適用
+5. worker 管理用 Vault secret (`supabase_project_id`, `pgflow_auth_secret`) を更新（`pgflow.ensure_workers` cron が Edge worker を Bearer 認証で ping するため）
+6. `pgflow.track_worker_function` で `job-worker` / `domain-subscriber` を監視対象に登録
+7. `supabase functions deploy` で Edge Functions（`ingest`, `job-worker`, `external-operation-poller`, `domain-subscriber`, `publish`, `pgflow` 等）をデプロイ
+8. `seed-config.ts` で `cover.png` をアップロードし `podcast_config` を初期化
+
+**Edge Secrets（API キー・GCP 鍵）は deploy では更新しない。** Dashboard で手動設定した値がそのまま使われる。
 
 ### 本番 RSS フィード URL
 
@@ -417,11 +416,12 @@ GitHub リポジトリの **Settings → Secrets and variables → Actions** で
 | `SUPABASE_ACCESS_TOKEN` | https://supabase.com/dashboard/account/tokens でトークン発行 |
 | `SUPABASE_DB_PASSWORD` | プロジェクト作成時に設定したDBパスワード |
 | `SUPABASE_PROJECT_REF` | `supabase projects list` で確認（以下の自動登録スクリプトで設定可） |
-| `GEMINI_API_KEY` | `.env` の値（以下の自動登録スクリプトで設定可） |
+
+`GEMINI_API_KEY` や GCP 鍵は **GitHub Secrets には不要**（Supabase Dashboard → Edge Functions → Secrets で設定）。
 
 ### Secrets の一括登録（オプション）
 
-`SUPABASE_PROJECT_REF` / `GEMINI_API_KEY` は以下で自動登録できます（[GitHub CLI](https://cli.github.com/) が必要）:
+`SUPABASE_PROJECT_REF` は以下で自動登録できます（[GitHub CLI](https://cli.github.com/) が必要）:
 
 ```bash
 pnpm setup:gh-secrets

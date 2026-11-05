@@ -36,9 +36,5 @@ jobs:
         with:
           install: "false"
 
-      - name: Create .env
-        run: |
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
-
       - name: Deploy
         run: pnpm run deploy

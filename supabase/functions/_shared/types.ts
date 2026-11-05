@@ -85,4 +85,8 @@ export interface PodcastConfigMap {
   "image.image_size"?: string;
   "image.mime_type"?: string;
   "image.prompt_template"?: string;
+  "audio.delivery.format"?: string;
+  "audio.transcode.enabled"?: boolean | string;
+  "audio.transcode.bitrate_kbps"?: number;
+  "audio.transcode.container"?: string;
 }

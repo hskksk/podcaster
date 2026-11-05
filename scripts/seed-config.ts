@@ -81,6 +81,14 @@ const config = parseToml(readFileSync(configPath, "utf8")) as {
     mime_type?: string;
     prompt_template?: string;
   };
+  audio?: {
+    delivery_format?: string;
+    transcode?: {
+      enabled?: boolean;
+      bitrate_kbps?: number;
+      container?: string;
+    };
+  };
 };
 
 // Upload cover image to Storage
@@ -136,6 +144,10 @@ const defaults: Record<string, unknown> = {
   "image.aspect_ratio": config.image?.aspect_ratio ?? "16:9",
   "image.image_size": config.image?.image_size ?? "1K",
   "image.mime_type": config.image?.mime_type ?? "image/jpeg",
+  "audio.delivery.format": config.audio?.delivery_format ?? "m4a",
+  "audio.transcode.enabled": config.audio?.transcode?.enabled ?? false,
+  "audio.transcode.bitrate_kbps": config.audio?.transcode?.bitrate_kbps ?? 128,
+  "audio.transcode.container": config.audio?.transcode?.container ?? "m4a",
 };
 
 if (config.generator.system_instruction) {

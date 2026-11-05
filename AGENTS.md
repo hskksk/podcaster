@@ -55,7 +55,8 @@ CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）�
 - **`supabase status` flag**: Use `-o json` (not `--json`) with this CLI version to get machine-readable output.
 - **Edge Functions return immediately**: All worker functions use `EdgeRuntime.waitUntil()` and return `{"ok":true}` right away. Check `processing_logs` via `TARGET=local pnpm cli logs` to see actual results.
 - **No test suite**: `pnpm typecheck` is the primary correctness check. There are no unit/integration tests.
-- **API keys required for full pipeline**: `GEMINI_API_KEY` must be in `.env` for pgflow stages to succeed. Without it, `generateScript` fails.
+- **API keys required for full pipeline**: Remote Edge needs **`GEMINI_API_KEY`** (and GCP secrets when transcode is enabled) in **Supabase Dashboard → Edge Functions → Secrets**. Local dev uses root `.env` with `pnpm functions:serve`.
+- **Edge / deploy**: **`pnpm deploy` and CI do not push operator secrets** (no `.env` bulk upload). Deploy upserts **Vault** `pgflow_auth_secret` / `supabase_project_id` for DB cron HTTP pings to workers; that is separate from Edge Secrets.
 - **TUI requires TTY**: `pnpm tui` (Ink-based) needs a real terminal with raw mode support. Use `pnpm tui -- --mock` for mock data. It will fail with "Raw mode is not supported" in non-interactive shells.
 - **`TARGET=local`**: Set this env var for CLI/TUI commands to connect to the local Supabase stack instead of remote.
 - **Never edit existing migrations**: Schema changes require a new `supabase/migrations/` file named `YYYYMMDD{seq}_snake_case_description.sql` (never modify committed migrations). See CLAUDE.md → Database Migrations.

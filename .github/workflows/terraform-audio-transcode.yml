@@ -1,0 +1,43 @@
+name: terraform-audio-transcode
+
+on:
+  pull_request:
+    paths:
+      - "infra/gcp/audio-transcode/**"
+      - ".github/workflows/terraform-audio-transcode.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+    defaults:
+      run:
+        working-directory: infra/gcp/audio-transcode
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.17.1
+          cli_config_credentials_token: ${{ env.TF_API_TOKEN }}
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: terraform init
+        if: ${{ env.TF_API_TOKEN != '' }}
+        run: terraform init -input=false
+
+      - name: terraform validate
+        if: ${{ env.TF_API_TOKEN != '' }}
+        run: terraform validate
+
+      - name: note (init/validate skipped)
+        if: ${{ env.TF_API_TOKEN == '' }}
+        run: |
+          echo "Skipping terraform init/validate: repository secret TF_API_TOKEN is not set."
+          echo "See infra/gcp/audio-transcode/TFC.md (TFC workspace variables for project_id)"

@@ -33,6 +33,12 @@ scripts/*.txt
 # Vercel CLI
 .vercel/
 
+# Terraform (local artifacts only; state is Terraform Cloud)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
 # Serena (local AI assistant config, auto-regenerated)
 .serena/
 

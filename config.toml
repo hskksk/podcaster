@@ -131,5 +131,16 @@ aspect_ratio = "16:9"
 image_size = "1K"
 mime_type = "image/jpeg"
 
+# Cloud Run audio transcode (see infra/gcp/audio-transcode/README.md §3)
+# GCP project/region/job: Edge Secrets via .env — not config.toml (avoid leaking in git)
+[audio]
+delivery_format = "m4a"
+
+[audio.transcode]
+# Keep false until Edge GCP secrets are set in Supabase Dashboard. When false, delivery stays WAV regardless of delivery_format.
+enabled = false
+bitrate_kbps = 128
+container = "m4a"
+
 [tui.markdown]
 math_label = "ᵐ"

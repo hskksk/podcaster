@@ -1,0 +1,19 @@
+# Files excluded from the configuration upload for HCP Terraform remote runs.
+# .gitignore does NOT apply here; only this file controls what is uploaded.
+
+# Local assistant / editor state
+.serena/
+.claude/
+.vscode/
+
+# Local Terraform artifacts
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Local overrides and credentials must never leave this machine
+*.tfvars
+*.tfvars.json
+*.json
+!*.tf.json
+*.pem
