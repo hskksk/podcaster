@@ -2,6 +2,13 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { JobTypeName } from "../../_jobs/types.ts";
 import { dispatchRunJob } from "../pgflow.ts";
 
+/** PostgREST may expose unique violations without .code === 23505 (e.g. in message text). */
+function isUniqueConstraintViolation(err: { code?: string; message?: string } | null): boolean {
+  if (err?.code === "23505") return true;
+  const msg = err?.message ?? "";
+  return msg.includes("23505") || /duplicate key/i.test(msg);
+}
+
 export async function requestJob(
   db: SupabaseClient,
   params: {
@@ -24,7 +31,7 @@ export async function requestJob(
   });
 
   if (insertErr) {
-    if (insertErr.code === "23505") {
+    if (isUniqueConstraintViolation(insertErr)) {
       const { data: existing } = await db
         .schema("jobs")
         .from("jobs")
