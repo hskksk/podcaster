@@ -137,8 +137,8 @@ mime_type = "image/jpeg"
 delivery_format = "m4a"
 
 [audio.transcode]
-# Keep false until Edge GCP secrets are set in Supabase Dashboard. When false, delivery stays WAV regardless of delivery_format.
-enabled = false
+# Requires GCP_* in Supabase Dashboard (Edge Secrets); see infra/gcp/audio-transcode/README.md §3.
+enabled = true
 bitrate_kbps = 128
 container = "m4a"
 
