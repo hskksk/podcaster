@@ -52,6 +52,12 @@ if (target === "local") {
 
 const db = createClient(url, key, { auth: { persistSession: false } });
 
+function isUniqueConstraintViolation(err: { code?: string; message?: string } | null): boolean {
+  if (err?.code === "23505") return true;
+  const msg = err?.message ?? "";
+  return msg.includes("23505") || /duplicate key/i.test(msg);
+}
+
 async function main() {
   const jobId = randomUUID();
   const { error: insertErr } = await db.schema("jobs").from("jobs").insert({
@@ -62,7 +68,7 @@ async function main() {
     status: "requested",
   });
   if (insertErr) {
-    if (insertErr.code === "23505") {
+    if (isUniqueConstraintViolation(insertErr)) {
       const { data: existing } = await db
         .schema("jobs")
         .from("jobs")
