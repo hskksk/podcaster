@@ -1,4 +1,4 @@
-import { ThinkingLevel } from "npm:@google/genai";
+import { ThinkingLevel } from "npm:@google/genai@2.31.0";
 import { generateScriptWithGemini } from "../../_adapters/gemini/script-provider.ts";
 import { generateScriptFromArticle } from "../../../../shared/script-generation.ts";
 import { recordLlmInvocation } from "../job-db.ts";

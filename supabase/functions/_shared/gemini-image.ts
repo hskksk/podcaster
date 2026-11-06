@@ -1,9 +1,13 @@
-import { GoogleGenAI } from "npm:@google/genai";
+// Pinned on purpose: see gemini-provider.ts. @google/genai 3.x defaults to the
+// v1 endpoint, which does not serve the preview models used here.
+import { GoogleGenAI } from "npm:@google/genai@2.31.0";
 import { resolveGeminiApiRoot } from "./gemini-endpoint.ts";
 import type { PodcastConfigMap } from "./types.ts";
 
 const MOCK_API_KEY = "mock-api-key";
 const DEFAULT_GEMINI_API_ROOT = "https://generativelanguage.googleapis.com";
+/** Set explicitly so an SDK bump cannot silently switch the endpoint. */
+const GEMINI_API_VERSION = "v1beta";
 /** Gemini interactions image response_format only accepts image/jpeg. */
 const GEMINI_IMAGE_RESPONSE_MIME = "image/jpeg";
 /**
@@ -27,7 +31,7 @@ function createClient(cfg: Record<string, string>): GoogleGenAI {
   const apiRoot = resolveGeminiApiRoot(cfg);
   return new GoogleGenAI({
     apiKey: resolveApiKey(apiRoot),
-    httpOptions: { baseUrl: apiRoot },
+    httpOptions: { baseUrl: apiRoot, apiVersion: GEMINI_API_VERSION },
   });
 }
 
