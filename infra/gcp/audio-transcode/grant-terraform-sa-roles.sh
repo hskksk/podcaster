@@ -13,6 +13,10 @@
 # After stage-1 terraform apply (runner SA exists), grant actAs for Cloud Run Job:
 #   GRANT_RUNNER_ACT_AS=1 ./grant-terraform-sa-roles.sh
 #
+# If TFC plan fails with Cloud Resource Manager API disabled: enable it on the
+# project that OWNS this service account (JSON "project_id"), not only on the
+# Terraform target project. See TFC.md § "Cloud Resource Manager API".
+#
 set -euo pipefail
 
 : "${GCP_PROJECT_ID:?Set GCP_PROJECT_ID}"

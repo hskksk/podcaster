@@ -17,6 +17,7 @@ Terraform で Artifact Registry・Cloud Run Job・Supabase 用 invoker SA を定
 - `terraform login`
 - **Execution mode = Remote**（state も plan/apply も TFC。手元の GCP ADC は不要）
 - GCP プロジェクトで Billing 有効
+- **Terraform 用 SA の JSON が属するプロジェクト**で **Cloud Resource Manager API**（`cloudresourcemanager.googleapis.com`）が有効（TFC plan で `SERVICE_DISABLED` になる場合は [TFC.md § Variable set 直後](./TFC.md#terraform-用-sajsonのプロジェクトで-cloud-resource-manager-api-を有効化)）
 
 ## 1. 初回セットアップ
 

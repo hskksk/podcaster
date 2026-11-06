@@ -79,6 +79,25 @@ Variable set の scope で **`podcaster-audio-transcode` を明示的に適用**
 
 初回 apply 前に、同じ `project_id` をルート **`.env`** の `GCP_PROJECT_ID` にも書く（Cloud Build・Edge 用。[`scripts/gcp-env.sh`](../../../scripts/gcp-env.sh) が読む）。
 
+### Terraform 用 SA（JSON）のプロジェクトで Cloud Resource Manager API を有効化
+
+TFC / `terraform plan` が **`Cloud Resource Manager API has not been used in project …` / `SERVICE_DISABLED`**（`cloudresourcemanager.googleapis.com`）で落ちる場合、**`GOOGLE_CREDENTIALS` の JSON に書いてある `project_id`（鍵が属する GCP プロジェクト）** で API を有効にする。課金・API の「consumer」はそのプロジェクトになる。
+
+Owner など強い権限で:
+
+```bash
+# JSON の project_id を確認（"project_id": "my-sa-project"）
+SA_PROJECT_ID="$(jq -r .project_id <<<"$GOOGLE_CREDENTIALS")"   # またはファイルから読む
+
+gcloud services enable cloudresourcemanager.googleapis.com --project="$SA_PROJECT_ID"
+```
+
+Console からなら: **APIs & Services → Library** で「Cloud Resource Manager API」→ Enable。
+
+有効化直後は数分伝播する。これをしないと `google_project_service` / `google_project_iam_*` / IAM policy read がすべて 403 になり、**Terraform 自身では先に有効化できない**（初回だけ手動ブートストラップが必要）。
+
+ターゲットの `project_id`（例: `gen-lang-client-0572779080`）とは別プロジェクトの鍵を使っている場合、まず **鍵のホームプロジェクト** で有効化する（エラーに出る `consumer ... projects/数字` がそのプロジェクト番号）。
+
 ### CLI ログイン
 
 ```bash
