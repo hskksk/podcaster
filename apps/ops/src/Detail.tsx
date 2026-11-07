@@ -190,8 +190,10 @@ function Disclosure({ open, title, onClick }: { open: boolean; title: string; on
 function StageBlock({ name, stage }: { name: string; stage: BoardEpisode["stages"]["script"] }) {
   return (
     <div className="stage-block">
-      <div className="name">{name}</div>
-      <StageMark stage={stage} />
+      <div className="stage-line">
+        <StageMark name={name} stage={stage} />
+        <span className="name">{name}</span>
+      </div>
       {stage.detail ? <div className="detail-line">{stage.detail}</div> : null}
     </div>
   );

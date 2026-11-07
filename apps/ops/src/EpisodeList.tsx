@@ -17,10 +17,10 @@ export function EpisodeList({
     <div>
       <div className="list-head">
         <span>Episode</span>
-        <span>Script</span>
-        <span>Audio</span>
-        <span>Artwork</span>
-        <span>Publish</span>
+        <ColumnMark name="Script" glyph="📝" />
+        <ColumnMark name="Audio" glyph="🔊" />
+        <ColumnMark name="Artwork" glyph="🎨" />
+        <ColumnMark name="Publish" glyph="📮" />
       </div>
       {episodes.map((episode) => {
         const alert = episode.failure?.reason ?? episode.stall;
@@ -40,10 +40,10 @@ export function EpisodeList({
                 {episode.path ? ` · ${episode.path}` : ""}
               </span>
             </span>
-            <StageMark stage={episode.stages.script} />
-            <StageMark stage={episode.stages.audio} />
-            <StageMark stage={episode.stages.artwork} />
-            <StageMark stage={episode.stages.publish} />
+            <StageMark name="Script" stage={episode.stages.script} />
+            <StageMark name="Audio" stage={episode.stages.audio} />
+            <StageMark name="Artwork" stage={episode.stages.artwork} />
+            <StageMark name="Publish" stage={episode.stages.publish} />
             {alert ? <span className={`alert ${tone}`}>{alert}</span> : null}
           </button>
         );
@@ -52,11 +52,38 @@ export function EpisodeList({
   );
 }
 
-export function StageMark({ stage }: { stage: Stage }) {
+function ColumnMark({ name, glyph }: { name: string; glyph: string }) {
+  return <span className="col-mark" title={name} aria-label={name}>{glyph}</span>;
+}
+
+export function StageMark({ name, stage }: { name: string; stage: Stage }) {
+  const tip = stage.detail ? `${name}: ${stage.label} — ${stage.detail}` : `${name}: ${stage.label}`;
   return (
-    <span className="stage">
-      <span className={`dot ${stage.kind}`} />
-      {stage.label}
+    <span className={`mark ${stage.kind}`} title={tip} aria-label={tip}>
+      {glyphFor(stage)}
     </span>
   );
+}
+
+function glyphFor(stage: Stage): string {
+  switch (stage.kind) {
+    case "done":
+      return "✅";
+    case "live":
+      return "🟢";
+    case "failed":
+      return "❌";
+    case "running":
+      return "🔄";
+    case "waiting":
+      return "⏳";
+    case "reused":
+      return "♻️";
+    case "off":
+      return "🚫";
+    default:
+      if (stage.label === "Unpublished") return "📤";
+      if (stage.label === "No artwork") return "🖼️";
+      return "⚪";
+  }
 }
