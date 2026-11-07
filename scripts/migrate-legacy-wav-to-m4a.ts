@@ -14,6 +14,8 @@
  *   TARGET=remote pnpm migrate:legacy-wav --limit 5 --yes
  *   TARGET=remote pnpm migrate:legacy-wav --episode <episode_uuid> --yes
  *   TARGET=remote pnpm migrate:legacy-wav --published-only --republish --delete-wav --yes
+ *   TARGET=remote pnpm migrate:legacy-wav --delete-wav-only --dry-run
+ *   TARGET=remote pnpm migrate:legacy-wav --delete-wav-only --yes
  */
 import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline";
@@ -96,6 +98,12 @@ type MigrateTarget = {
   published_revision_id: string | null;
 };
 
+type OrphanWavBlob = {
+  blob_id: string;
+  storage_path: string;
+  byte_size: number;
+};
+
 const TARGETS_QUERY = `
   select
     a.id as audio_id,
@@ -145,6 +153,63 @@ async function loadTargets(
   values.push(max);
   const q = `${TARGETS_QUERY}${extra} order by a.created_at asc limit $${limitParam}`;
   return sql.unsafe(q, values) as unknown as Promise<MigrateTarget[]>;
+}
+
+const ORPHAN_WAV_QUERY = `
+  select
+    b.id as blob_id,
+    b.storage_path,
+    b.byte_size::bigint as byte_size
+  from podcast.blobs b
+  where b.mime_type = 'audio/wav'
+    and not exists (select 1 from podcast.audios a where a.blob_id = b.id)
+`;
+
+async function loadOrphanWavBlobs(
+  sql: ReturnType<typeof connectPostgres>,
+  opts: { episodeId?: string; limit: number },
+): Promise<OrphanWavBlob[]> {
+  const max = opts.limit > 0 ? opts.limit : 10_000;
+  let extra = "";
+  const values: (string | number)[] = [];
+  if (opts.episodeId) {
+    const exact = `audio/${opts.episodeId}.wav`;
+    const prefix = `audio/${opts.episodeId}/%`;
+    extra += ` and (b.storage_path = $${values.length + 1} or b.storage_path like $${values.length + 2})`;
+    values.push(exact, prefix);
+  }
+  const limitParam = values.length + 1;
+  values.push(max);
+  const q = `${ORPHAN_WAV_QUERY}${extra} order by b.created_at asc limit $${limitParam}`;
+  return sql.unsafe(q, values) as unknown as Promise<OrphanWavBlob[]>;
+}
+
+async function deleteLegacyWavBlob(
+  sql: ReturnType<typeof connectPostgres>,
+  db: ReturnType<typeof supabaseClient>,
+  blob: OrphanWavBlob,
+  dryRun: boolean,
+): Promise<void> {
+  const [{ refs }] = await sql<Array<{ refs: string }>>`
+    select count(*)::text as refs
+    from podcast.audios a
+    where a.blob_id = ${blob.blob_id}::uuid
+  `;
+  if (Number(refs) > 0) {
+    throw new Error(`blob ${blob.blob_id} is still referenced by podcast.audios`);
+  }
+
+  if (dryRun) {
+    console.log(`  [dry-run] delete  ${blob.storage_path}  (blob ${shortId(blob.blob_id)})`);
+    return;
+  }
+
+  const { error: storageErr } = await db.storage.from("podcast").remove([blob.storage_path]);
+  if (storageErr) {
+    console.warn(`  storage delete failed: ${blob.storage_path} (${storageErr.message})`);
+  }
+  await sql`delete from podcast.blobs where id = ${blob.blob_id}::uuid`;
+  console.log(`  removed  ${blob.storage_path}`);
 }
 
 function supabaseClient() {
@@ -233,21 +298,15 @@ async function migrateOne(
   });
 
   if (opts.deleteWav) {
-    const [{ refs }] = await sql<Array<{ refs: string }>>`
-      select count(*)::text as refs
-      from podcast.audios a
-      where a.blob_id = ${target.blob_id}::uuid
-    `;
-    if (Number(refs) === 0) {
-      const { error: storageErr } = await db.storage.from("podcast").remove([target.storage_path]);
-      if (storageErr) {
-        console.warn(`  wav storage delete failed: ${storageErr.message}`);
-      }
-      await sql`delete from podcast.blobs where id = ${target.blob_id}::uuid`;
-      console.log(`  removed legacy wav blob  ${target.storage_path}`);
-    } else {
-      console.log(`  kept legacy wav blob (still referenced)`);
-    }
+    await deleteLegacyWavBlob(
+      sql,
+      db,
+      { blob_id: target.blob_id, storage_path: target.storage_path, byte_size: target.byte_size },
+      false,
+    ).catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.log(`  kept legacy wav blob: ${message}`);
+    });
   }
 
   console.log(
@@ -260,14 +319,81 @@ async function migrateOne(
   };
 }
 
+async function runDeleteWavOnly(opts: {
+  dryRun: boolean;
+  yes: boolean;
+  limit: number;
+  episodeId?: string;
+}): Promise<void> {
+  const sql = connectPostgres();
+  const db = supabaseClient();
+  const orphans = await loadOrphanWavBlobs(sql, {
+    episodeId: opts.episodeId,
+    limit: opts.limit > 0 ? opts.limit : 10_000,
+  });
+  await sql.end();
+
+  if (orphans.length === 0) {
+    console.log("No unreferenced audio/wav blobs in podcast.blobs.");
+    return;
+  }
+
+  console.log(`${orphans.length} unreferenced WAV blob row(s) (not pointed to by podcast.audios).`);
+  printLong(orphans.map((b) => ({
+    "Blob ID": b.blob_id,
+    "Storage path": b.storage_path,
+    "Bytes": String(b.byte_size),
+  })));
+
+  if (opts.dryRun) {
+    console.log("Dry run: pass --yes to delete Storage objects and blob rows.");
+    const sqlDry = connectPostgres();
+    for (const b of orphans) {
+      await deleteLegacyWavBlob(sqlDry, db, b, true);
+    }
+    await sqlDry.end();
+    return;
+  }
+
+  if (!opts.yes) {
+    const ok = await confirm(`Delete ${orphans.length} orphan WAV blob(s) from Storage and DB?`);
+    if (!ok) {
+      console.log("Aborted.");
+      return;
+    }
+  }
+
+  const sqlWork = connectPostgres();
+  let deleted = 0;
+  let failed = 0;
+  for (const b of orphans) {
+    try {
+      await deleteLegacyWavBlob(sqlWork, db, b, false);
+      deleted++;
+    } catch (err) {
+      failed++;
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`  failed  ${b.storage_path}  ${message}`);
+    }
+  }
+  await sqlWork.end();
+  console.log(`Done: ${deleted} removed, ${failed} failed.`);
+}
+
 async function main(): Promise<void> {
   const dryRun = flagBool("--dry-run");
   const yes = flagBool("--yes");
   const publishedOnly = flagBool("--published-only");
   const deleteWav = flagBool("--delete-wav");
+  const deleteWavOnly = flagBool("--delete-wav-only");
   const republish = flagBool("--republish");
   const limit = flag("--limit", 0);
   const episodeId = flagStr("--episode");
+
+  if (deleteWavOnly) {
+    await runDeleteWavOnly({ dryRun, yes, limit, episodeId });
+    return;
+  }
 
   if (!dryRun) {
     assertGcpRunPlacement();
