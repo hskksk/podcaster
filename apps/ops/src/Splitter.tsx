@@ -35,7 +35,7 @@ export function Split({
     if (!bounds) return;
     const total = direction === "row" ? bounds.width : bounds.height;
     const origin = direction === "row" ? bounds.left : bounds.top;
-    const available = total - 8;
+    const available = total - 5;
     const limit = available <= minFirst + minSecond
       ? available / 2
       : Math.min(Math.max(client - origin, minFirst), available - minSecond);
@@ -73,7 +73,7 @@ export function Split({
     localStorage.setItem(storageKey, String(next));
   }
 
-  const size = `calc((100% - 8px) * ${ratio})`;
+  const size = `calc((100% - 5px) * ${ratio})`;
   const firstStyle = direction === "row"
     ? { width: size, flex: "0 0 auto" }
     : { height: size, flex: "0 0 auto" };

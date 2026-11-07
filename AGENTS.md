@@ -89,4 +89,4 @@ See `CLAUDE.md` for the full list. Key commands:
 | Seed config | `TARGET=local pnpm seed:config` |
 | CLI (local) | `TARGET=local pnpm cli list articles` |
 | TUI (mock) | `pnpm tui -- --mock` |
-| Local production console | `pnpm ops` (http://127.0.0.1:5180, after `supabase start`) |
+| Production console | `pnpm ops` (http://127.0.0.1:5180; Supabase CLI login, linked remote project) |

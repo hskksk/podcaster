@@ -138,7 +138,7 @@ export function App() {
           <strong>{board?.subscription.lag ?? "—"}</strong>
           Unprocessed events
         </div>
-        <div className="meta">{window.location.host} · updated {age}</div>
+        <div className="meta">{board?.projectRef ?? "remote"} · {window.location.host} · updated {age}</div>
         <button type="button" className="button" onClick={() => void reload().catch((err: unknown) => setError(err instanceof Error ? err.message : "Refresh failed."))}>Refresh</button>
       </header>
       {error ? <div className="banner danger"><p>{error}</p></div> : null}

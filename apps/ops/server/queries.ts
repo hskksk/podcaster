@@ -1,6 +1,5 @@
-import type postgres from "postgres";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
-  AttemptView,
   BoardEpisode,
   BoardResponse,
   EpisodeDetail,
@@ -8,7 +7,7 @@ import type {
   SubscriptionResponse,
 } from "../shared/types.ts";
 import { HttpError } from "./http-error.ts";
-import { sqlClient } from "./local-db.ts";
+import { remote, type Remote } from "./remote.ts";
 import {
   presentEpisode,
   type ExternalOp,
@@ -28,14 +27,14 @@ type BoardRow = {
   id: string;
   title: string;
   content_path: string | null;
-  updated_at: Date;
+  updated_at: string;
   scope: string | null;
   trigger: string | null;
   production_id: string | null;
-  failed_at: Date | null;
+  failed_at: string | null;
   failure_stage: string | null;
   failure_reason: string | null;
-  published_at: Date | null;
+  published_at: string | null;
   assembled: boolean;
   this_assembled: boolean;
   has_script: boolean;
@@ -50,9 +49,76 @@ type BoardRow = {
   failed_job: FailedJob | null;
 };
 
-function iso(value: Date | string | null | undefined): string | null {
+type EpisodeRow = { id: string; article_id: string; created_at: string };
+type ArticleRow = { id: string; content_path: string | null };
+type ProductionRow = {
+  id: string;
+  episode_id: string;
+  scope: string;
+  trigger: string;
+  requested_at: string;
+  profile: unknown;
+  failed_at: string | null;
+  failure_stage: string | null;
+  failure_reason: string | null;
+};
+type RevisionRow = { id: string; episode_id: string; production_id: string; title: string; assembled_at: string };
+type ArticleTitleRow = { article_id: string; title: string; registered_at: string };
+type ScriptRow = { production_id: string; title: string; created_at: string };
+type AudioRow = { production_id: string; blob_id: string; duration_ms: number | null; created_at: string };
+type ArtworkRow = { production_id: string; blob_id: string; created_at: string };
+type BlobRow = { id: string; storage_path: string };
+type PublicationRow = { episode_revision_id: string; published_at: string };
+type JobDbRow = {
+  id: string;
+  correlation_id: string | null;
+  job_type: string;
+  status: string;
+  requested_at: string;
+  finished_at: string | null;
+};
+type AttemptDbRow = {
+  id: string;
+  job_id: string;
+  attempt_no: number | null;
+  outcome: string | null;
+  error_message: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+};
+type ExternalDbRow = {
+  attempt_id: string;
+  state: string | null;
+  poll_count: number | null;
+  next_poll_at: string | null;
+  submitted_at: string;
+};
+type EventDbRow = {
+  position: number | string;
+  occurred_at: string;
+  type: string;
+  actor: string;
+  stage: string | null;
+  reason: string | null;
+  scope: string | null;
+  failed_job_id: string | null;
+};
+type PendingDbRow = {
+  position: number | string;
+  type: string;
+  stream_type: string;
+  actor: string;
+  occurred_at: string;
+};
+type FailureDbRow = {
+  event_position: number | string;
+  error_message: string;
+  failed_at: string;
+};
+
+function iso(value: string | null | undefined): string | null {
   if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
+  const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
@@ -63,30 +129,64 @@ function artworkEnabled(profile: unknown): boolean {
   return !(enabled === false || enabled === "false" || enabled === 0);
 }
 
-function parseJson(value: unknown): unknown {
-  if (typeof value !== "string") return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
+function fail(ref: string, label: string, message: string): never {
+  throw new HttpError(502, `${label} on project ${ref} failed: ${message}`);
+}
+
+async function rowsOf<T>(
+  ref: string,
+  label: string,
+  query: PromiseLike<{ data: unknown; error: { message: string } | null }>,
+): Promise<T[]> {
+  const result = await query;
+  if (result.error) fail(ref, label, result.error.message);
+  return (result.data ?? []) as T[];
+}
+
+async function selectIn<T>(
+  ref: string,
+  label: string,
+  ids: string[],
+  run: (chunk: string[]) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let index = 0; index < ids.length; index += 80) {
+    out.push(...await rowsOf<T>(ref, label, run(ids.slice(index, index + 80))));
   }
+  return out;
 }
 
-function asJobs(value: unknown): JobRow[] {
-  const parsed = parseJson(value);
-  return Array.isArray(parsed) ? parsed as JobRow[] : [];
+function latestBy<T>(rows: T[], key: (row: T) => string, time: (row: T) => string): Map<string, T> {
+  const map = new Map<string, T>();
+  for (const row of rows) {
+    const id = key(row);
+    const prev = map.get(id);
+    if (!prev || time(row) > time(prev)) map.set(id, row);
+  }
+  return map;
 }
 
-function asObject<T>(value: unknown): T | null {
-  const parsed = parseJson(value);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  return parsed as T;
+function groupBy<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const row of rows) {
+    const id = key(row);
+    const list = map.get(id);
+    if (list) list.push(row);
+    else map.set(id, [row]);
+  }
+  return map;
+}
+
+function podcast(db: SupabaseClient) {
+  return db.schema("podcast");
+}
+
+function jobsSchema(db: SupabaseClient) {
+  return db.schema("jobs");
 }
 
 function toEpisode(row: BoardRow, now: number): BoardEpisode {
-  const jobs = asJobs(row.jobs);
-  const external = asObject<ExternalOp>(row.external_op);
-  const failedJob = asObject<FailedJob>(row.failed_job);
+  const jobs = Array.isArray(row.jobs) ? row.jobs : [];
   const input: StageSource = {
     scope: row.scope,
     failedAt: iso(row.failed_at),
@@ -107,8 +207,12 @@ function toEpisode(row: BoardRow, now: number): BoardEpisode {
       requestedAt: iso(job.requestedAt),
       finishedAt: iso(job.finishedAt),
     })),
-    external: external ? { ...external, nextPollAt: iso(external.nextPollAt) } : null,
-    failedJob: failedJob ? { ...failedJob, finishedAt: iso(failedJob.finishedAt) } : null,
+    external: row.external_op
+      ? { ...row.external_op, nextPollAt: iso(row.external_op.nextPollAt) }
+      : null,
+    failedJob: row.failed_job
+      ? { ...row.failed_job, finishedAt: iso(row.failed_job.finishedAt) }
+      : null,
     now,
   };
   return presentEpisode({
@@ -126,249 +230,248 @@ function toEpisode(row: BoardRow, now: number): BoardEpisode {
 }
 
 export async function loadBoard(): Promise<BoardResponse> {
-  const sql = sqlClient();
+  const link = remote();
   const now = Date.now();
   const [episodes, subscription] = await Promise.all([
-    sql<BoardRow[]>`
-      with latest_prod as (
-        select distinct on (episode_id)
-          id, episode_id, scope, trigger, requested_at, profile,
-          failed_at, failure_stage, failure_reason
-        from podcast.productions
-        order by episode_id, requested_at desc
-      ),
-      latest_article as (
-        select distinct on (article_id) article_id, title
-        from podcast.article_revisions
-        order by article_id, registered_at desc
-      ),
-      latest_rev as (
-        select distinct on (episode_id) episode_id, title
-        from podcast.episode_revisions
-        order by episode_id, assembled_at desc
-      ),
-      active_pub as (
-        select distinct on (er.episode_id)
-          er.episode_id,
-          ep.published_at
-        from podcast.episode_publications ep
-        join podcast.episode_revisions er on er.id = ep.episode_revision_id
-        where ep.withdrawn_at is null
-        order by er.episode_id, ep.published_at desc
-      ),
-      prod_script as (
-        select distinct on (production_id) production_id, title
-        from podcast.scripts
-        order by production_id, created_at desc
-      ),
-      prod_audio as (
-        select distinct on (a.production_id)
-          a.production_id,
-          b.storage_path,
-          a.duration_ms
-        from podcast.audios a
-        join podcast.blobs b on b.id = a.blob_id
-        order by a.production_id, a.created_at desc
-      ),
-      prod_art as (
-        select distinct on (aw.production_id)
-          aw.production_id,
-          b.storage_path
-        from podcast.artworks aw
-        join podcast.blobs b on b.id = aw.blob_id
-        order by aw.production_id, aw.created_at desc
-      )
-      select
-        e.id,
-        coalesce(lr.title, ps.title, lar.title, 'Untitled') as title,
-        a.content_path,
-        greatest(
-          e.created_at,
-          lp.requested_at,
-          lp.failed_at,
-          ap.published_at,
-          (
-            select max(coalesce(j.finished_at, j.requested_at))
-            from jobs.jobs j
-            where j.correlation_id = lp.id
-          )
-        ) as updated_at,
-        lp.scope,
-        lp.trigger,
-        lp.id as production_id,
-        lp.failed_at,
-        lp.failure_stage,
-        lp.failure_reason,
-        ap.published_at,
-        exists(
-          select 1 from podcast.episode_revisions er where er.episode_id = e.id
-        ) as assembled,
-        exists(
-          select 1 from podcast.episode_revisions er where er.production_id = lp.id
-        ) as this_assembled,
-        (ps.production_id is not null) as has_script,
-        (pa.production_id is not null) as has_audio,
-        pa.storage_path as audio_path,
-        pa.duration_ms,
-        (part.production_id is not null) as has_artwork,
-        part.storage_path as image_path,
-        lp.profile,
-        coalesce((
-          select jsonb_agg(jsonb_build_object(
-            'id', j.id,
-            'jobType', j.job_type,
-            'status', j.status,
-            'requestedAt', j.requested_at,
-            'finishedAt', j.finished_at
-          ) order by j.requested_at)
-          from jobs.jobs j
-          where j.correlation_id = lp.id
-        ), '[]'::jsonb) as jobs,
-        (
-          select jsonb_build_object(
-            'state', eo.state,
-            'pollCount', eo.poll_count,
-            'nextPollAt', eo.next_poll_at
-          )
-          from jobs.jobs j
-          join jobs.job_attempts att on att.job_id = j.id
-          join jobs.external_operations eo on eo.attempt_id = att.id
-          where j.correlation_id = lp.id
-            and j.job_type = 'render_audio'
-            and eo.completed_at is null
-          order by eo.submitted_at desc
-          limit 1
-        ) as external_op,
-        (
-          select jsonb_build_object(
-            'id', j.id,
-            'jobType', j.job_type,
-            'error', att.error_message,
-            'finishedAt', j.finished_at
-          )
-          from jobs.jobs j
-          left join lateral (
-            select error_message
-            from jobs.job_attempts
-            where job_id = j.id
-            order by attempt_no desc
-            limit 1
-          ) att on true
-          where j.correlation_id = lp.id
-            and j.status = 'failed'
-          order by j.finished_at desc nulls last
-          limit 1
-        ) as failed_job
-      from podcast.episodes e
-      join podcast.articles a on a.id = e.article_id
-      left join latest_article lar on lar.article_id = e.article_id
-      left join latest_rev lr on lr.episode_id = e.id
-      left join latest_prod lp on lp.episode_id = e.id
-      left join active_pub ap on ap.episode_id = e.id
-      left join prod_script ps on ps.production_id = lp.id
-      left join prod_audio pa on pa.production_id = lp.id
-      left join prod_art part on part.production_id = lp.id
-      order by updated_at desc
-      limit 200
-    `,
-    loadSubscription(sql),
+    loadEpisodeRows(link),
+    loadSubscription(),
   ]);
   return {
+    projectRef: link.projectRef,
     episodes: episodes.map((row) => toEpisode(row, now)),
-    subscription: subscription,
+    subscription,
     fetchedAt: new Date(now).toISOString(),
   };
 }
 
-type AttemptRow = {
-  job_type: string;
-  status: string;
-  attempt_no: number | null;
-  outcome: string | null;
-  error_message: string | null;
-  started_at: Date | null;
-  finished_at: Date | null;
-};
+async function loadEpisodeRows(link: Remote): Promise<BoardRow[]> {
+  const db = podcast(link.db);
+  const episodes = await rowsOf<EpisodeRow>(
+    link.projectRef,
+    "episodes",
+    db.from("episodes").select("id, article_id, created_at").order("created_at", { ascending: false }).limit(1000),
+  );
+  if (episodes.length === 0) return [];
+  const episodeIds = episodes.map((row) => row.id);
+  const articleIds = [...new Set(episodes.map((row) => row.article_id))];
+  const [articles, productions, revisions, articleTitles] = await Promise.all([
+    selectIn<ArticleRow>(link.projectRef, "articles", articleIds, (ids) =>
+      db.from("articles").select("id, content_path").in("id", ids)),
+    selectIn<ProductionRow>(link.projectRef, "productions", episodeIds, (ids) =>
+      db.from("productions").select("id, episode_id, scope, trigger, requested_at, profile, failed_at, failure_stage, failure_reason").in("episode_id", ids)),
+    selectIn<RevisionRow>(link.projectRef, "episode revisions", episodeIds, (ids) =>
+      db.from("episode_revisions").select("id, episode_id, production_id, title, assembled_at").in("episode_id", ids)),
+    selectIn<ArticleTitleRow>(link.projectRef, "article revisions", articleIds, (ids) =>
+      db.from("article_revisions").select("article_id, title, registered_at").in("article_id", ids)),
+  ]);
+  const latestProduction = latestBy(productions, (row) => row.episode_id, (row) => row.requested_at);
+  const productionIds = [...latestProduction.values()].map((row) => row.id);
+  const revisionIds = revisions.map((row) => row.id);
+  const [scripts, audios, artworks, publications, jobRows] = await Promise.all([
+    selectIn<ScriptRow>(link.projectRef, "scripts", productionIds, (ids) =>
+      db.from("scripts").select("production_id, title, created_at").in("production_id", ids)),
+    selectIn<AudioRow>(link.projectRef, "audios", productionIds, (ids) =>
+      db.from("audios").select("production_id, blob_id, duration_ms, created_at").in("production_id", ids)),
+    selectIn<ArtworkRow>(link.projectRef, "artworks", productionIds, (ids) =>
+      db.from("artworks").select("production_id, blob_id, created_at").in("production_id", ids)),
+    selectIn<PublicationRow>(link.projectRef, "publications", revisionIds, (ids) =>
+      db.from("episode_publications").select("episode_revision_id, published_at, withdrawn_at").is("withdrawn_at", null).in("episode_revision_id", ids)),
+    selectIn<JobDbRow>(link.projectRef, "jobs", productionIds, (ids) =>
+      jobsSchema(link.db).from("jobs").select("id, correlation_id, job_type, status, requested_at, finished_at").in("correlation_id", ids).limit(2000)),
+  ]);
+  const blobIds = [...new Set([...audios.map((row) => row.blob_id), ...artworks.map((row) => row.blob_id)])];
+  const jobIds = jobRows.map((row) => row.id);
+  const [blobs, attempts] = await Promise.all([
+    selectIn<BlobRow>(link.projectRef, "blobs", blobIds, (ids) =>
+      db.from("blobs").select("id, storage_path").in("id", ids)),
+    selectIn<AttemptDbRow>(link.projectRef, "job attempts", jobIds, (ids) =>
+      jobsSchema(link.db).from("job_attempts").select("id, job_id, attempt_no, error_message, finished_at").in("job_id", ids).limit(5000)),
+  ]);
+  const audioJobIds = new Set(jobRows.filter((job) => job.job_type === "render_audio").map((job) => job.id));
+  const audioAttemptIds = attempts.filter((row) => audioJobIds.has(row.job_id)).map((row) => row.id);
+  const externals = await selectIn<ExternalDbRow>(link.projectRef, "external operations", audioAttemptIds, (ids) =>
+    jobsSchema(link.db).from("external_operations").select("attempt_id, state, poll_count, next_poll_at, submitted_at").is("completed_at", null).in("attempt_id", ids).limit(500));
+  return assembleBoard(episodes, articles, latestProduction, revisions, articleTitles, scripts, audios, artworks, publications, jobRows, blobs, attempts, externals);
+}
 
-type EventRow = {
-  position: string;
-  occurred_at: Date;
-  type: string;
-  actor: string;
-  stage: string | null;
-  reason: string | null;
-  scope: string | null;
-  failed_job_id: string | null;
-};
+function assembleBoard(
+  episodes: EpisodeRow[],
+  articles: ArticleRow[],
+  latestProduction: Map<string, ProductionRow>,
+  revisions: RevisionRow[],
+  articleTitles: ArticleTitleRow[],
+  scripts: ScriptRow[],
+  audios: AudioRow[],
+  artworks: ArtworkRow[],
+  publications: PublicationRow[],
+  jobRows: JobDbRow[],
+  blobs: BlobRow[],
+  attempts: AttemptDbRow[],
+  externals: ExternalDbRow[],
+): BoardRow[] {
+  const articleById = new Map(articles.map((row) => [row.id, row]));
+  const latestRevision = latestBy(revisions, (row) => row.episode_id, (row) => row.assembled_at);
+  const revisionsByEpisode = groupBy(revisions, (row) => row.episode_id);
+  const latestArticleTitle = latestBy(articleTitles, (row) => row.article_id, (row) => row.registered_at);
+  const latestScript = latestBy(scripts, (row) => row.production_id, (row) => row.created_at);
+  const latestAudio = latestBy(audios, (row) => row.production_id, (row) => row.created_at);
+  const latestArtwork = latestBy(artworks, (row) => row.production_id, (row) => row.created_at);
+  const blobById = new Map(blobs.map((row) => [row.id, row.storage_path]));
+  const revisionById = new Map(revisions.map((row) => [row.id, row]));
+  const publishedAt = new Map<string, string>();
+  for (const row of publications) {
+    const revision = revisionById.get(row.episode_revision_id);
+    if (!revision) continue;
+    const prev = publishedAt.get(revision.episode_id);
+    if (!prev || row.published_at > prev) publishedAt.set(revision.episode_id, row.published_at);
+  }
+  const jobsByProduction = groupBy(
+    jobRows.filter((row) => row.correlation_id),
+    (row) => row.correlation_id as string,
+  );
+  const attemptsByJob = groupBy(attempts, (row) => row.job_id);
+  const jobIdByAttempt = new Map(attempts.map((row) => [row.id, row.job_id]));
+
+  return episodes.map((episode) => {
+    const production = latestProduction.get(episode.id) ?? null;
+    const revision = latestRevision.get(episode.id) ?? null;
+    const script = production ? latestScript.get(production.id) ?? null : null;
+    const audio = production ? latestAudio.get(production.id) ?? null : null;
+    const artwork = production ? latestArtwork.get(production.id) ?? null : null;
+    const jobs = production ? jobsByProduction.get(production.id) ?? [] : [];
+    const failed = [...jobs].filter((job) => job.status === "failed").sort((a, b) => (b.finished_at ?? "").localeCompare(a.finished_at ?? ""))[0];
+    const failedAttempt = failed
+      ? [...(attemptsByJob.get(failed.id) ?? [])].sort((a, b) => (b.attempt_no ?? 0) - (a.attempt_no ?? 0))[0]
+      : undefined;
+    const audioJob = [...jobs].filter((job) => job.job_type === "render_audio").sort((a, b) => b.requested_at.localeCompare(a.requested_at))[0];
+    const external = externals
+      .filter((row) => audioJob && jobIdByAttempt.get(row.attempt_id) === audioJob.id)
+      .sort((a, b) => b.submitted_at.localeCompare(a.submitted_at))[0];
+    const times = [
+      episode.created_at,
+      production?.requested_at,
+      production?.failed_at,
+      publishedAt.get(episode.id),
+      ...jobs.map((job) => job.finished_at ?? job.requested_at),
+    ].filter((value): value is string => Boolean(value));
+    times.sort();
+    return {
+      id: episode.id,
+      title: revision?.title || script?.title || latestArticleTitle.get(episode.article_id)?.title || "Untitled",
+      content_path: articleById.get(episode.article_id)?.content_path ?? null,
+      updated_at: times[times.length - 1] ?? episode.created_at,
+      scope: production?.scope ?? null,
+      trigger: production?.trigger ?? null,
+      production_id: production?.id ?? null,
+      failed_at: production?.failed_at ?? null,
+      failure_stage: production?.failure_stage ?? null,
+      failure_reason: production?.failure_reason ?? null,
+      published_at: publishedAt.get(episode.id) ?? null,
+      assembled: (revisionsByEpisode.get(episode.id) ?? []).length > 0,
+      this_assembled: (revisionsByEpisode.get(episode.id) ?? []).some((row) => row.production_id === production?.id),
+      has_script: script != null,
+      has_audio: audio != null,
+      audio_path: audio ? blobById.get(audio.blob_id) ?? null : null,
+      duration_ms: audio?.duration_ms ?? null,
+      has_artwork: artwork != null,
+      image_path: artwork ? blobById.get(artwork.blob_id) ?? null : null,
+      profile: production?.profile ?? null,
+      jobs: jobs.map((job) => ({
+        id: job.id,
+        jobType: job.job_type,
+        status: job.status,
+        requestedAt: job.requested_at,
+        finishedAt: job.finished_at,
+      })),
+      external_op: external
+        ? { state: external.state, pollCount: external.poll_count ?? 0, nextPollAt: external.next_poll_at }
+        : null,
+      failed_job: failed
+        ? {
+          id: failed.id,
+          jobType: failed.job_type,
+          error: failedAttempt?.error_message ?? null,
+          finishedAt: failed.finished_at,
+        }
+        : null,
+    };
+  }).sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 200);
+}
 
 export async function loadEpisode(episodeId: string): Promise<EpisodeDetail> {
   const id = assertUuid(episodeId);
-  const sql = sqlClient();
-  const [attempts, events] = await Promise.all([
-    sql<AttemptRow[]>`
-      select
-        j.job_type,
-        j.status,
-        ja.attempt_no,
-        ja.outcome,
-        ja.error_message,
-        ja.started_at,
-        ja.finished_at
-      from jobs.jobs j
-      left join jobs.job_attempts ja on ja.job_id = j.id
-      where j.correlation_id = (
-        select id from podcast.productions
-        where episode_id = ${id}::uuid
-        order by requested_at desc
-        limit 1
-      )
-      order by j.requested_at, ja.attempt_no
-    `,
-    sql<EventRow[]>`
-      select position::text, occurred_at, type, actor, stage, reason, scope, failed_job_id
-      from (
-        select
-          de.position,
-          de.occurred_at,
-          de.type,
-          de.actor,
-          de.payload->>'stage' as stage,
-          de.payload->>'reason' as reason,
-          de.payload->>'scope' as scope,
-          de.payload->>'failed_job_id' as failed_job_id
-        from podcast.domain_events de
-        where de.stream_id = ${id}::uuid
-          or de.stream_id in (
-            select id from podcast.productions where episode_id = ${id}::uuid
-          )
-          or de.stream_id = (
-            select article_id from podcast.episodes where id = ${id}::uuid
-          )
-          or de.payload->>'episode_id' = ${id}
-        order by de.position desc
-        limit 80
-      ) recent
-      order by position asc
-    `,
-  ]);
+  const link = remote();
+  const db = podcast(link.db);
+  const episodeResult = await db.from("episodes").select("article_id").eq("id", id).maybeSingle();
+  if (episodeResult.error) fail(link.projectRef, "episode", episodeResult.error.message);
+  const articleId = (episodeResult.data as { article_id: string } | null)?.article_id ?? null;
+  const productions = await rowsOf<Pick<ProductionRow, "id" | "requested_at">>(
+    link.projectRef,
+    "productions",
+    db.from("productions").select("id, requested_at").eq("episode_id", id).order("requested_at", { ascending: false }),
+  );
+  const latest = productions[0];
+  const productionIds = productions.map((row) => row.id);
+  const jobRows = latest
+    ? await rowsOf<JobDbRow>(
+      link.projectRef,
+      "jobs",
+      jobsSchema(link.db).from("jobs").select("id, job_type, status, requested_at, finished_at").eq("correlation_id", latest.id).order("requested_at"),
+    )
+    : [];
+  const attempts = jobRows.length === 0
+    ? []
+    : await selectIn<AttemptDbRow>(link.projectRef, "job attempts", jobRows.map((row) => row.id), (ids) =>
+      jobsSchema(link.db).from("job_attempts").select("job_id, attempt_no, outcome, error_message, started_at, finished_at").in("job_id", ids).order("attempt_no"));
+  const attemptsByJob = groupBy(attempts, (row) => row.job_id);
+  const eventSelect = "position, occurred_at, type, actor, stage:payload->>stage, reason:payload->>reason, scope:payload->>scope, failed_job_id:payload->>failed_job_id";
+  const eventQueries = [
+    rowsOf<EventDbRow>(link.projectRef, "events", db.from("domain_events").select(eventSelect).eq("stream_id", id).order("position", { ascending: false }).limit(80)),
+    rowsOf<EventDbRow>(link.projectRef, "events", db.from("domain_events").select(eventSelect).filter("payload->>episode_id", "eq", id).order("position", { ascending: false }).limit(80)),
+  ];
+  if (articleId) {
+    eventQueries.push(rowsOf<EventDbRow>(link.projectRef, "events", db.from("domain_events").select(eventSelect).eq("stream_id", articleId).order("position", { ascending: false }).limit(80)));
+  }
+  if (productionIds.length > 0) {
+    eventQueries.push(selectIn<EventDbRow>(link.projectRef, "events", productionIds, (ids) =>
+      db.from("domain_events").select(eventSelect).in("stream_id", ids).order("position", { ascending: false }).limit(80)));
+  }
+  const eventGroups = await Promise.all(eventQueries);
+  const seen = new Set<number>();
+  const events = eventGroups.flat().filter((row) => {
+    const position = Number(row.position);
+    if (seen.has(position)) return false;
+    seen.add(position);
+    return true;
+  }).sort((a, b) => Number(a.position) - Number(b.position)).slice(-80);
+
   return {
-    attempts: attempts.map(toAttempt),
+    attempts: jobRows.flatMap((job) => {
+      const rows = attemptsByJob.get(job.id) ?? [];
+      if (rows.length === 0) {
+        return [{
+          jobType: job.job_type,
+          status: job.status,
+          attempt: "—",
+          startedAt: null,
+          finishedAt: iso(job.finished_at),
+          note: "",
+        }];
+      }
+      return [...rows].sort((a, b) => (a.attempt_no ?? 0) - (b.attempt_no ?? 0)).map((row) => ({
+        jobType: job.job_type,
+        status: row.outcome ?? job.status,
+        attempt: row.attempt_no == null ? "—" : String(row.attempt_no),
+        startedAt: iso(row.started_at),
+        finishedAt: iso(row.finished_at),
+        note: row.error_message ?? "",
+      }));
+    }),
     events: events.map(toEvent),
   };
 }
 
-function toAttempt(row: AttemptRow): AttemptView {
-  return {
-    jobType: row.job_type,
-    status: row.outcome ?? row.status,
-    attempt: row.attempt_no == null ? "—" : String(row.attempt_no),
-    startedAt: iso(row.started_at),
-    finishedAt: iso(row.finished_at),
-    note: row.error_message ?? "",
-  };
-}
-
-function toEvent(row: EventRow): EventView {
+function toEvent(row: EventDbRow): EventView {
   const bits = [
     row.scope ? `scope=${row.scope}` : "",
     row.stage ? `stage=${row.stage}` : "",
@@ -384,60 +487,26 @@ function toEvent(row: EventRow): EventView {
   };
 }
 
-type CheckpointRow = {
-  last_processed_position: string;
-  leased_until: Date | null;
-};
-
-type FailureRow = {
-  event_position: string;
-  error_message: string;
-  failed_at: Date;
-};
-
-type PendingRow = {
-  position: string;
-  type: string;
-  stream_type: string;
-  actor: string;
-  occurred_at: Date;
-};
-
-export async function loadSubscription(sql: postgres.Sql = sqlClient()): Promise<SubscriptionResponse> {
-  const [checkpoint, head, failures, pending] = await Promise.all([
-    sql<CheckpointRow[]>`
-      select last_processed_position::text, leased_until
-      from podcast.event_subscriptions
-      where subscriber_id = 'production-policy'
-      limit 1
-    `,
-    sql<Array<{ head: string }>>`
-      select coalesce(max(position), 0)::text as head
-      from podcast.domain_events
-    `,
-    sql<FailureRow[]>`
-      select event_position::text, error_message, failed_at
-      from podcast.event_subscription_failures
-      where subscriber_id = 'production-policy'
-      order by event_position desc
-      limit 20
-    `,
-    sql<PendingRow[]>`
-      select position::text, type, stream_type, actor, occurred_at
-      from podcast.domain_events
-      where position > coalesce((
-        select last_processed_position
-        from podcast.event_subscriptions
-        where subscriber_id = 'production-policy'
-      ), 0)
-      order by position
-      limit 50
-    `,
+export async function loadSubscription(): Promise<SubscriptionResponse> {
+  const link = remote();
+  const db = podcast(link.db);
+  const [checkpointResult, headResult, failures] = await Promise.all([
+    db.from("event_subscriptions").select("last_processed_position, leased_until").eq("subscriber_id", "production-policy").maybeSingle(),
+    db.from("domain_events").select("position").order("position", { ascending: false }).limit(1).maybeSingle(),
+    rowsOf<FailureDbRow>(link.projectRef, "subscription failures", db.from("event_subscription_failures").select("event_position, error_message, failed_at").eq("subscriber_id", "production-policy").order("event_position", { ascending: false }).limit(20)),
   ]);
-  const processed = Number(checkpoint[0]?.last_processed_position ?? 0);
-  const latest = Number(head[0]?.head ?? 0);
-  const leaseUntil = checkpoint[0]?.leased_until ?? null;
-  const leaseExpired = !leaseUntil || leaseUntil.getTime() < Date.now();
+  if (checkpointResult.error) fail(link.projectRef, "subscription", checkpointResult.error.message);
+  if (headResult.error) fail(link.projectRef, "event head", headResult.error.message);
+  const checkpoint = checkpointResult.data as { last_processed_position: number | string; leased_until: string | null } | null;
+  const processed = Number(checkpoint?.last_processed_position ?? 0);
+  const pending = await rowsOf<PendingDbRow>(
+    link.projectRef,
+    "unprocessed events",
+    db.from("domain_events").select("position, type, stream_type, actor, occurred_at").gt("position", processed).order("position").limit(50),
+  );
+  const latest = Number((headResult.data as { position: number | string } | null)?.position ?? 0);
+  const leaseUntil = checkpoint?.leased_until ? new Date(checkpoint.leased_until).getTime() : null;
+  const leaseExpired = leaseUntil == null || leaseUntil < Date.now();
   const blocking = failures
     .map((row) => ({
       position: Number(row.event_position),

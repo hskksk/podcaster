@@ -55,6 +55,7 @@ export type SubscriptionSummary = {
 };
 
 export type BoardResponse = {
+  projectRef: string;
   episodes: BoardEpisode[];
   subscription: SubscriptionSummary;
   fetchedAt: string;

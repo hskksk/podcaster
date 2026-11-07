@@ -1,15 +1,15 @@
 :root {
-  color-scheme: dark;
-  --bg: #141414;
-  --raised: #1c1c1c;
-  --line: #2e2e2e;
-  --text: #ececec;
-  --muted: #a3a3a3;
-  --faint: #737373;
-  --accent: #8eb0ff;
-  --danger: #f0a0a0;
-  --ok: #8dcea8;
-  --warn: #e3c27a;
+  color-scheme: light;
+  --bg: #f6f4ef;
+  --raised: #ffffff;
+  --line: #e3ddd2;
+  --text: #1d1b16;
+  --muted: #5e584e;
+  --faint: #8a8376;
+  --accent: #2c5f9e;
+  --danger: #9d2f2f;
+  --ok: #2c7a45;
+  --warn: #8a5a10;
   --font: ui-sans-serif, system-ui, sans-serif;
   --mono: ui-monospace, sfmono-regular, menlo, monospace;
 }
@@ -63,7 +63,7 @@ button, input { font: inherit; color: inherit; }
 
 .button { border-radius: 6px; }
 .button:disabled { opacity: 0.4; cursor: default; }
-.button.primary { background: var(--accent); color: #141414; border-color: var(--accent); }
+.button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 .button.ghost { background: transparent; }
 
 .meta { color: var(--faint); font-size: 12px; margin-left: auto; }
@@ -99,13 +99,22 @@ button, input { font: inherit; color: inherit; }
 .pane > .split { flex: 1; min-height: 0; }
 
 .gutter {
-  flex: 0 0 8px;
-  background: var(--line);
+  flex: 0 0 5px;
+  background: transparent;
   touch-action: none;
+  position: relative;
+}
+.gutter::after {
+  content: "";
+  position: absolute;
+  background: #cfc6b8;
 }
 .split-row > .gutter { cursor: col-resize; }
+.split-row > .gutter::after { width: 1px; top: 0; bottom: 0; left: 2px; }
 .split-column > .gutter { cursor: row-resize; }
-.gutter:hover, .gutter:focus { background: var(--accent); outline: none; }
+.split-column > .gutter::after { height: 1px; left: 0; right: 0; top: 2px; }
+.gutter:hover::after, .gutter:focus::after { background: var(--accent); }
+.gutter:focus { outline: none; }
 
 .banner {
   margin: 12px 16px 0;
@@ -140,7 +149,7 @@ button, input { font: inherit; color: inherit; }
 .row.selected { background: var(--raised); }
 .row.failed { border-left: 3px solid var(--danger); }
 .row.stalled { border-left: 3px solid var(--accent); }
-.row:hover { background: #202020; }
+.row:hover { background: #efeae2; }
 
 .row > span:first-child { min-width: 0; }
 .row .title, .row .sub {

@@ -121,9 +121,6 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.49.0
         version: 2.104.0
-      postgres:
-        specifier: ^3.4.7
-        version: 3.4.9
       react:
         specifier: ^19.2.5
         version: 19.2.5
