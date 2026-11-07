@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getBoard, getEpisode, getSubscription } from "./api.ts";
-import { DetailTop, EventsPanel, JobsPanel } from "./Detail.tsx";
+import { DetailTop, LowerDock } from "./Detail.tsx";
 import { EpisodeList } from "./EpisodeList.tsx";
 import { Split } from "./Splitter.tsx";
 import { SubscriptionView } from "./Subscription.tsx";
@@ -20,6 +20,7 @@ export function App() {
   const [subscription, setSubscription] = useState<SubscriptionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [age, setAge] = useState("—");
+  const [lowerFolded, setLowerFolded] = useState(() => localStorage.getItem("ops-lower-collapsed") === "1");
 
   const reload = useCallback(async () => {
     const next = await getBoard();
@@ -186,16 +187,21 @@ export function App() {
                 initialRatio={0.48}
                 minFirst={180}
                 minSecond={160}
+                collapsed={lowerFolded}
                 first={<DetailTop key={selected?.id ?? "none"} episode={selected} onChanged={() => void reload()} />}
                 second={
-                  <Split
-                    direction="row"
-                    storageKey="ops-lower"
-                    initialRatio={0.5}
-                    minFirst={220}
-                    minSecond={220}
-                    first={selected ? <JobsPanel attempts={detail?.attempts ?? null} /> : <p className="empty">Select an episode.</p>}
-                    second={selected ? <EventsPanel events={detail?.events ?? null} /> : <p className="empty">Select an episode.</p>}
+                  <LowerDock
+                    folded={lowerFolded}
+                    onToggle={() => {
+                      setLowerFolded((value) => {
+                        const next = !value;
+                        localStorage.setItem("ops-lower-collapsed", next ? "1" : "0");
+                        return next;
+                      });
+                    }}
+                    selected={selected != null}
+                    attempts={detail?.attempts ?? null}
+                    events={detail?.events ?? null}
                   />
                 }
               />

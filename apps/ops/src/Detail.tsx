@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { mediaUrl, postProduction, postPublication } from "./api.ts";
 import { StageMark } from "./EpisodeList.tsx";
+import { Split } from "./Splitter.tsx";
 import type { AttemptView, BoardEpisode, EpisodeDetail, EventView, ProductionScope } from "../shared/types.ts";
 import { formatJst } from "../shared/time.ts";
 
@@ -97,7 +98,7 @@ export function DetailTop({
       </div>
       <div className="media">
         {episode.audioPath ? <audio controls src={mediaUrl(episode.audioPath)} /> : null}
-        {episode.imagePath ? <img alt="" src={mediaUrl(episode.imagePath)} /> : null}
+        {episode.imagePath ? <img alt={episode.title} src={mediaUrl(episode.imagePath)} /> : null}
       </div>
       {pendingCopy ? (
         <div className="banner warn">
@@ -139,11 +140,62 @@ function StageBlock({ name, stage }: { name: string; stage: BoardEpisode["stages
   );
 }
 
-export function JobsPanel({ attempts }: { attempts: AttemptView[] | null }) {
+export function LowerDock({
+  folded,
+  onToggle,
+  selected,
+  attempts,
+  events,
+}: {
+  folded: boolean;
+  onToggle: () => void;
+  selected: boolean;
+  attempts: AttemptView[] | null;
+  events: EventView[] | null;
+}) {
+  if (folded) {
+    return (
+      <div className="lower-bar">
+        <button type="button" aria-expanded={false} onClick={onToggle}>Jobs for this production</button>
+        <button type="button" aria-expanded={false} onClick={onToggle}>Events</button>
+      </div>
+    );
+  }
+  return (
+    <Split
+      direction="row"
+      storageKey="ops-lower"
+      initialRatio={0.5}
+      minFirst={220}
+      minSecond={220}
+      first={<JobsPanel attempts={selected ? attempts : []} idle={!selected} onCollapse={onToggle} />}
+      second={<EventsPanel events={selected ? events : []} idle={!selected} onCollapse={onToggle} />}
+    />
+  );
+}
+
+function SectionHead({ title, onCollapse }: { title: string; onCollapse: () => void }) {
+  return (
+    <div className="section-head">
+      <h3>{title}</h3>
+      <button type="button" className="fold" aria-expanded onClick={onCollapse}>Collapse</button>
+    </div>
+  );
+}
+
+export function JobsPanel({
+  attempts,
+  idle = false,
+  onCollapse,
+}: {
+  attempts: AttemptView[] | null;
+  idle?: boolean;
+  onCollapse?: () => void;
+}) {
   return (
     <section className="section">
-      <h3>Jobs for this production</h3>
-      {attempts == null ? <p className="hint">Loading jobs…</p> : attempts.length === 0 ? (
+      {onCollapse ? <SectionHead title="Jobs for this production" onCollapse={onCollapse} /> : <h3>Jobs for this production</h3>}
+      {idle ? <p className="hint">Select an episode.</p> : attempts == null ? <p className="hint">Loading jobs…</p> : attempts.length === 0 ? (
         <p className="hint">The latest production has no job attempts yet.</p>
       ) : (
         <>
@@ -176,11 +228,19 @@ export function JobsPanel({ attempts }: { attempts: AttemptView[] | null }) {
   );
 }
 
-export function EventsPanel({ events }: { events: EventView[] | null }) {
+export function EventsPanel({
+  events,
+  idle = false,
+  onCollapse,
+}: {
+  events: EventView[] | null;
+  idle?: boolean;
+  onCollapse?: () => void;
+}) {
   return (
     <section className="section">
-      <h3>Events</h3>
-      {events == null ? <p className="hint">Loading events…</p> : events.length === 0 ? <p className="hint">No events for this episode.</p> : (
+      {onCollapse ? <SectionHead title="Events" onCollapse={onCollapse} /> : <h3>Events</h3>}
+      {idle ? <p className="hint">Select an episode.</p> : events == null ? <p className="hint">Loading events…</p> : events.length === 0 ? <p className="hint">No events for this episode.</p> : (
         <table>
           <thead>
             <tr>

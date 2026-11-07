@@ -8,6 +8,7 @@ type SplitProps = {
   initialRatio: number;
   minFirst: number;
   minSecond: number;
+  collapsed?: boolean;
   first: ReactNode;
   second: ReactNode;
 };
@@ -18,6 +19,7 @@ export function Split({
   initialRatio,
   minFirst,
   minSecond,
+  collapsed = false,
   first,
   second,
 }: SplitProps) {
@@ -73,35 +75,40 @@ export function Split({
     localStorage.setItem(storageKey, String(next));
   }
 
+  const folded = collapsed && direction === "column";
   const size = `calc((100% - 5px) * ${ratio})`;
-  const firstStyle = direction === "row"
-    ? { width: size, flex: "0 0 auto" }
-    : { height: size, flex: "0 0 auto" };
+  const firstStyle = folded
+    ? { flex: "1 1 auto", minHeight: 0 }
+    : direction === "row"
+      ? { width: size, flex: "0 0 auto" }
+      : { height: size, flex: "0 0 auto" };
 
   return (
-    <div ref={frame} className={`split split-${direction}`}>
+    <div ref={frame} className={`split split-${direction}${folded ? " collapsed" : ""}`}>
       <div className="pane" style={firstStyle}>{first}</div>
-      <div
-        className="gutter"
-        role="separator"
-        aria-orientation={direction === "row" ? "vertical" : "horizontal"}
-        aria-valuemin={15}
-        aria-valuemax={85}
-        aria-valuenow={Math.round(ratio * 100)}
-        aria-label="Resize panels"
-        tabIndex={0}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={finish}
-        onPointerCancel={finish}
-        onDoubleClick={() => {
-          ratioRef.current = initialRatio;
-          setRatio(initialRatio);
-          localStorage.setItem(storageKey, String(initialRatio));
-        }}
-        onKeyDown={onKeyDown}
-      />
-      <div className="pane pane-fill">{second}</div>
+      {folded ? null : (
+        <div
+          className="gutter"
+          role="separator"
+          aria-orientation={direction === "row" ? "vertical" : "horizontal"}
+          aria-valuemin={15}
+          aria-valuemax={85}
+          aria-valuenow={Math.round(ratio * 100)}
+          aria-label="Resize panels"
+          tabIndex={0}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={finish}
+          onPointerCancel={finish}
+          onDoubleClick={() => {
+            ratioRef.current = initialRatio;
+            setRatio(initialRatio);
+            localStorage.setItem(storageKey, String(initialRatio));
+          }}
+          onKeyDown={onKeyDown}
+        />
+      )}
+      <div className={folded ? "pane pane-bar" : "pane pane-fill"}>{second}</div>
     </div>
   );
 }
