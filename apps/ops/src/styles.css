@@ -130,8 +130,8 @@ button, input { font: inherit; color: inherit; }
 
 .list-head, .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 104px 104px 112px 112px;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 80px 80px 80px 88px;
+  gap: 6px;
   align-items: center;
   padding: 8px 12px;
 }
@@ -165,7 +165,8 @@ button, input { font: inherit; color: inherit; }
 .alert.failed { color: var(--danger); }
 .alert.stalled { color: var(--accent); }
 
-.stage { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+.stage { display: flex; gap: 4px; align-items: center; font-size: 12px; white-space: nowrap; }
+.list-head > span:not(:first-child) { white-space: nowrap; }
 .dot { width: 8px; height: 8px; background: var(--faint); flex: none; }
 .dot.done, .dot.live { background: var(--ok); }
 .dot.failed { background: var(--danger); }
