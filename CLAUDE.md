@@ -39,6 +39,9 @@ pnpm migrate:legacy-wav      # transcode legacy WAV→m4a; --delete-wav-only dro
 pnpm tui                      # connects to remote by default
 TARGET=local pnpm tui         # connect to local Supabase
 
+# Local production console (English UI, loopback only)
+pnpm ops                      # http://127.0.0.1:5180  — requires supabase start
+
 # Production deploy (one-command)
 pnpm deploy
 ```
