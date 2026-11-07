@@ -25,7 +25,7 @@ export const PIPELINE_STAGES = [
   { key: 'script_ready', label: 'SCRIPT OK', statuses: ['script_ready'] },
   { key: 'audio_running', label: 'AUDIO RUN', statuses: ['audio_running', 'audio_generated', 'audio_downloading'] },
   { key: 'audio_ready', label: 'AUDIO OK', statuses: ['audio_ready'] },
-  { key: 'failed', label: 'FAILED', statuses: ['script_failed', 'audio_failed', 'rss_failed', 'failed'] },
+  { key: 'failed', label: 'FAILED', statuses: ['script_failed', 'audio_failed', 'image_failed', 'rss_failed', 'failed'] },
   { key: 'published', label: 'PUBLISHED', statuses: ['published'] }
 ];
 

@@ -76,6 +76,7 @@ export async function handleProductionPolicyEvent(
         payload: {
           production_id: production.production_id,
           failed_job_id: null,
+          stage: command.stage,
           reason: command.reason,
         },
       }]);

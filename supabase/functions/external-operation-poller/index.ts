@@ -110,7 +110,9 @@ Deno.serve(async (req) => {
               status: "failed",
               finished_at: new Date().toISOString(),
             }).eq("id", job.id);
-            await onJobFinished(db, job.id);
+            await onJobFinished(db, job.id, {
+              reason: `Cloud Run execution ${state}`,
+            });
           }
           continue;
         }
@@ -155,10 +157,15 @@ Deno.serve(async (req) => {
         await db.schema("jobs").from("external_operations").update({
           completed_at: new Date().toISOString(),
         }).eq("id", row.id);
-        await db.schema("jobs").from("jobs").update({
-          status: "failed",
-          finished_at: new Date().toISOString(),
-        }).eq("id", job.id);
+        if (!TERMINAL_JOB_STATUSES.has(job.status as string)) {
+          await db.schema("jobs").from("jobs").update({
+            status: "failed",
+            finished_at: new Date().toISOString(),
+          }).eq("id", job.id);
+          await onJobFinished(db, job.id, {
+            reason: `Gemini batch ${state}`,
+          });
+        }
         continue;
       }
 

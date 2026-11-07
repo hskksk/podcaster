@@ -528,13 +528,14 @@ function buildPipelineNodes(
   imageUrl: string | null | undefined,
   imageEnabled: boolean
 ): Array<{ key: string; label: string; state: PipelineNodeState }> {
-  const scriptDone = ['script_ready', 'audio_running', 'audio_generated', 'audio_downloading', 'audio_ready', 'audio_failed', 'published', 'rss_failed'].includes(status);
-  const audioDone = ['audio_generated', 'audio_downloading', 'audio_ready', 'published', 'rss_failed'].includes(status);
+  const scriptDone = ['script_ready', 'audio_running', 'audio_generated', 'audio_downloading', 'audio_ready', 'audio_failed', 'image_failed', 'published', 'rss_failed'].includes(status);
+  const audioDone = ['audio_generated', 'audio_downloading', 'audio_ready', 'image_failed', 'published', 'rss_failed'].includes(status);
   const rssDone = status === 'published';
   const scriptRunning = status === 'script_running';
   const audioRunning = ['audio_running', 'audio_generated', 'audio_downloading'].includes(status);
   const scriptFailed = status === 'script_failed' || status === 'failed';
   const audioFailed = status === 'audio_failed' || (status === 'failed' && scriptDone && !audioDone);
+  const imageFailed = status === 'image_failed';
   const rssFailed = status === 'rss_failed';
 
   const imageDone = !!imageUrl?.trim();
@@ -545,7 +546,9 @@ function buildPipelineNodes(
     (status === 'script_ready' || audioRunning || audioDone);
 
   let imageState: PipelineNodeState = 'pending';
-  if (!imageEnabled) {
+  if (imageFailed) {
+    imageState = 'failed';
+  } else if (!imageEnabled) {
     imageState = 'skipped';
   } else if (imageDone) {
     imageState = 'done';
