@@ -15,7 +15,7 @@ export async function publishEpisodeRevision(
     episodeId: string;
     episodeRevisionId: string;
     actor: string;
-    causationEventId: string;
+    causationEventId: string | null;
     withdraw?: boolean;
     publicationId?: string;
   },
@@ -54,7 +54,7 @@ export async function publishEpisodeRevision(
 async function withdrawPublication(
   db: SupabaseClient,
   sql: Sql,
-  opts: { publicationId: string; actor: string; causationEventId: string },
+  opts: { publicationId: string; actor: string; causationEventId: string | null },
 ): Promise<void> {
   const [ep] = await sql<Array<{ episode_id: string }>>`
     select er.episode_id
@@ -118,7 +118,7 @@ async function uploadFeed(
   storageUrl: string,
   meta: {
     actor: string;
-    causationEventId: string;
+    causationEventId: string | null;
     occurredAt: string;
     episodeId: string;
     episodeRevisionId: string;

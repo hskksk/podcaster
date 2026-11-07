@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
         episodeId: body.episode_id ?? "",
         episodeRevisionId: body.episode_revision_id ?? "",
         actor: "publish-api",
-        causationEventId: crypto.randomUUID(),
+        causationEventId: null,
         withdraw: true,
         publicationId: body.publication_id,
       });
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
         episodeId: body.episode_id,
         episodeRevisionId: body.episode_revision_id,
         actor: "publish-api",
-        causationEventId: crypto.randomUUID(),
+        causationEventId: null,
       });
     }
 
