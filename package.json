@@ -29,6 +29,7 @@
         "typecheck:mcp": "pnpm --filter @podcaster/mcp typecheck",
         "web:build": "tsx scripts/build-pages-redirects.ts",
         "content:migrate": "tsx scripts/migrate-content.ts",
+        "migrate:legacy-wav": "tsx scripts/migrate-legacy-wav-to-m4a.ts",
         "ingest:queued": "tsx scripts/ingest-queued.ts",
         "web:dev": "pnpm --filter @podcaster/web dev",
         "web:github": "NEXT_PUBLIC_KEYSTATIC_STORAGE=github pnpm --filter @podcaster/web dev",

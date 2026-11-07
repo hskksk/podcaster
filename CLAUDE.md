@@ -33,6 +33,7 @@ pnpm cli status <article_id>  # show full pipeline state for one article
 pnpm cli logs --status failure
 pnpm cli requeue audio <episode_id>
 pnpm cli backfill images     # ProductionRequested scope=artwork for published episodes missing artwork
+pnpm migrate:legacy-wav      # transcode existing WAV blobs to m4a (no TTS); see script --help
 
 # TUI (Ink/React terminal UI)
 pnpm tui                      # connects to remote by default
