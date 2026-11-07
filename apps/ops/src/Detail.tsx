@@ -35,9 +35,11 @@ const COPY: Record<ActionId, { title: string; body: string; confirm: string; sco
 
 export function DetailTop({
   episode,
+  sources,
   onChanged,
 }: {
   episode: BoardEpisode | null;
+  sources: EpisodeDetail | null;
   onChanged: () => void;
 }) {
   const [pending, setPending] = useState<ActionId | null>(null);
@@ -126,10 +128,50 @@ export function DetailTop({
       )}
       {error ? <div className="banner danger"><p>{error}</p></div> : null}
       {sent ? <div className="banner info"><h2>Requested</h2><p>{sent}</p></div> : null}
+      <SourceTabs article={sources?.article ?? null} script={sources?.script ?? null} loading={sources == null} />
     </div>
   );
 }
 
+function SourceTabs({
+  article,
+  script,
+  loading,
+}: {
+  article: EpisodeDetail["article"];
+  script: EpisodeDetail["script"];
+  loading: boolean;
+}) {
+  const [tab, setTab] = useState<"article" | "script">("article");
+  const current = tab === "article" ? article : script;
+  return (
+    <div className="source">
+      <div className="tabs" role="tablist">
+        <button type="button" role="tab" className={tab === "article" ? "tab active" : "tab"} aria-selected={tab === "article"} onClick={() => setTab("article")}>Article</button>
+        <button type="button" role="tab" className={tab === "script" ? "tab active" : "tab"} aria-selected={tab === "script"} onClick={() => setTab("script")}>Script</button>
+      </div>
+      <div className="source-body" role="tabpanel">
+        {loading ? <p className="hint">Loading…</p> : current ? (
+          <>
+            {current.title ? <p className="hint">{current.title}</p> : null}
+            <pre>{current.body}</pre>
+          </>
+        ) : (
+          <p className="hint">{tab === "article" ? "No article text for this episode." : "No script for this episode."}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Disclosure({ open, title, onClick }: { open: boolean; title: string; onClick: () => void }) {
+  return (
+    <button type="button" className="disclosure" aria-expanded={open} aria-label={`${open ? "Collapse" : "Expand"} ${title}`} onClick={onClick}>
+      <span className={open ? "chevron open" : "chevron"} aria-hidden="true" />
+      <span>{title}</span>
+    </button>
+  );
+}
 function StageBlock({ name, stage }: { name: string; stage: BoardEpisode["stages"]["script"] }) {
   return (
     <div className="stage-block">
@@ -156,8 +198,8 @@ export function LowerDock({
   if (folded) {
     return (
       <div className="lower-bar">
-        <button type="button" aria-expanded={false} onClick={onToggle}>Jobs for this production</button>
-        <button type="button" aria-expanded={false} onClick={onToggle}>Events</button>
+        <Disclosure open={false} title="Jobs for this production" onClick={onToggle} />
+        <Disclosure open={false} title="Events" onClick={onToggle} />
       </div>
     );
   }
@@ -175,12 +217,7 @@ export function LowerDock({
 }
 
 function SectionHead({ title, onCollapse }: { title: string; onCollapse: () => void }) {
-  return (
-    <div className="section-head">
-      <h3>{title}</h3>
-      <button type="button" className="fold" aria-expanded onClick={onCollapse}>Collapse</button>
-    </div>
-  );
+  return <Disclosure open title={title} onClick={onCollapse} />;
 }
 
 export function JobsPanel({

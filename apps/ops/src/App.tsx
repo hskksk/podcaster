@@ -90,7 +90,7 @@ export function App() {
     const load = () => {
       getEpisode(selectedId)
         .then((data) => { if (!cancelled) setDetail(data); })
-        .catch(() => { if (!cancelled) setDetail({ attempts: [], events: [] }); });
+        .catch(() => { if (!cancelled) setDetail({ attempts: [], events: [], article: null, script: null }); });
     };
     load();
     const timer = window.setInterval(load, 5000);
@@ -188,7 +188,7 @@ export function App() {
                 minFirst={180}
                 minSecond={160}
                 collapsed={lowerFolded}
-                first={<DetailTop key={selected?.id ?? "none"} episode={selected} onChanged={() => void reload()} />}
+                first={<DetailTop key={selected?.id ?? "none"} episode={selected} sources={selected ? detail : null} onChanged={() => void reload()} />}
                 second={
                   <LowerDock
                     folded={lowerFolded}

@@ -5,6 +5,7 @@ import type {
   EpisodeDetail,
   EventView,
   SubscriptionResponse,
+  TextView,
 } from "../shared/types.ts";
 import { HttpError } from "./http-error.ts";
 import { remote, type Remote } from "./remote.ts";
@@ -405,10 +406,15 @@ export async function loadEpisode(episodeId: string): Promise<EpisodeDetail> {
   const episodeResult = await db.from("episodes").select("article_id").eq("id", id).maybeSingle();
   if (episodeResult.error) fail(link.projectRef, "episode", episodeResult.error.message);
   const articleId = (episodeResult.data as { article_id: string } | null)?.article_id ?? null;
-  const productions = await rowsOf<Pick<ProductionRow, "id" | "requested_at">>(
+  const productions = await rowsOf<{
+    id: string;
+    requested_at: string;
+    article_revision_id: string;
+    base_revision_id: string | null;
+  }>(
     link.projectRef,
     "productions",
-    db.from("productions").select("id, requested_at").eq("episode_id", id).order("requested_at", { ascending: false }),
+    db.from("productions").select("id, requested_at, article_revision_id, base_revision_id").eq("episode_id", id).order("requested_at", { ascending: false }),
   );
   const latest = productions[0];
   const productionIds = productions.map((row) => row.id);
@@ -437,6 +443,7 @@ export async function loadEpisode(episodeId: string): Promise<EpisodeDetail> {
       db.from("domain_events").select(eventSelect).in("stream_id", ids).order("position", { ascending: false }).limit(80)));
   }
   const eventGroups = await Promise.all(eventQueries);
+  const texts = await loadTexts(link, articleId, latest, productionIds);
   const seen = new Set<number>();
   const events = eventGroups.flat().filter((row) => {
     const position = Number(row.position);
@@ -468,7 +475,49 @@ export async function loadEpisode(episodeId: string): Promise<EpisodeDetail> {
       }));
     }),
     events: events.map(toEvent),
+    article: texts.article,
+    script: texts.script,
   };
+}
+
+async function loadTexts(
+  link: Remote,
+  articleId: string | null,
+  latest: { id: string; article_revision_id: string; base_revision_id: string | null } | undefined,
+  productionIds: string[],
+): Promise<{ article: TextView | null; script: TextView | null }> {
+  const db = podcast(link.db);
+  const articleQuery = latest?.article_revision_id
+    ? db.from("article_revisions").select("title, content").eq("id", latest.article_revision_id).maybeSingle()
+    : articleId
+      ? db.from("article_revisions").select("title, content").eq("article_id", articleId).order("registered_at", { ascending: false }).limit(1).maybeSingle()
+      : null;
+  const articleResult = articleQuery ? await articleQuery : { data: null, error: null };
+  if (articleResult.error) fail(link.projectRef, "article", articleResult.error.message);
+  const articleRow = articleResult.data as { title: string; content: string } | null;
+  const article = articleRow ? { title: articleRow.title, body: articleRow.content } : null;
+
+  if (productionIds.length === 0) return { article, script: null };
+  const heads = await selectIn<{ id: string; production_id: string; created_at: string }>(
+    link.projectRef,
+    "scripts",
+    productionIds,
+    (ids) => db.from("scripts").select("id, production_id, created_at").in("production_id", ids),
+  );
+  const newest = (rows: typeof heads) => [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+  let chosen = latest ? newest(heads.filter((row) => row.production_id === latest.id)) : undefined;
+  if (!chosen && latest?.base_revision_id) {
+    const revision = await db.from("episode_revisions").select("script_id").eq("id", latest.base_revision_id).maybeSingle();
+    if (revision.error) fail(link.projectRef, "episode revision", revision.error.message);
+    const scriptId = (revision.data as { script_id: string } | null)?.script_id;
+    chosen = scriptId ? heads.find((row) => row.id === scriptId) : undefined;
+  }
+  chosen ??= newest(heads);
+  if (!chosen) return { article, script: null };
+  const scriptResult = await db.from("scripts").select("title, content").eq("id", chosen.id).maybeSingle();
+  if (scriptResult.error) fail(link.projectRef, "script", scriptResult.error.message);
+  const scriptRow = scriptResult.data as { title: string; content: string } | null;
+  return { article, script: scriptRow ? { title: scriptRow.title, body: scriptRow.content } : null };
 }
 
 function toEvent(row: EventDbRow): EventView {

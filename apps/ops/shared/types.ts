@@ -78,9 +78,16 @@ export type EventView = {
   note: string;
 };
 
+export type TextView = {
+  title: string;
+  body: string;
+};
+
 export type EpisodeDetail = {
   attempts: AttemptView[];
   events: EventView[];
+  article: TextView | null;
+  script: TextView | null;
 };
 
 export type SubscriptionResponse = SubscriptionSummary & {
