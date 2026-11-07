@@ -1,7 +1,17 @@
-import { GoogleGenAI } from "npm:@google/genai";
+// Pinned on purpose. @google/genai 3.x changed the default API version from
+// v1beta to v1, where preview models such as gemini-3-flash-preview are not
+// served, and every job started failing with a 404. Keep this version in sync
+// with the `@google/genai` dependency in package.json.
+import { GoogleGenAI } from "npm:@google/genai@2.31.0";
 
 const DEFAULT_GEMINI_API_ROOT = "https://generativelanguage.googleapis.com";
 const MOCK_API_KEY = "mock-api-key";
+
+/**
+ * Set explicitly so that bumping the SDK can never silently switch the
+ * endpoint. Matches `gemini.api_path` in config.toml.
+ */
+const GEMINI_API_VERSION = "v1beta";
 
 type GeminiProviderOptions = {
   apiRoot?: string;
@@ -41,6 +51,7 @@ function createGeminiClient(options: GeminiProviderOptions = {}): GoogleGenAI {
 
   const httpOptions = {
     baseUrl: apiRoot,
+    apiVersion: GEMINI_API_VERSION,
   };
 
   return new GoogleGenAI({
