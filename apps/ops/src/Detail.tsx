@@ -1,9 +1,11 @@
+import { MarkdocView } from "@hskksk/markdoc-react";
 import { useState } from "react";
 import { mediaUrl, postProduction, postPublication } from "./api.ts";
 import { StageMark } from "./EpisodeList.tsx";
 import { Split } from "./Splitter.tsx";
 import type { AttemptView, BoardEpisode, EpisodeDetail, EventView, ProductionScope } from "../shared/types.ts";
 import { formatJst } from "../shared/time.ts";
+import { parseScript, summarizeScript } from "./script-lines.ts";
 
 type ActionId = "full" | "audio" | "artwork" | "publish";
 
@@ -143,7 +145,6 @@ function SourceTabs({
   loading: boolean;
 }) {
   const [tab, setTab] = useState<"article" | "script">("article");
-  const current = tab === "article" ? article : script;
   return (
     <div className="source">
       <div className="tabs" role="tablist">
@@ -151,15 +152,29 @@ function SourceTabs({
         <button type="button" role="tab" className={tab === "script" ? "tab active" : "tab"} aria-selected={tab === "script"} onClick={() => setTab("script")}>Script</button>
       </div>
       <div className="source-body" role="tabpanel">
-        {loading ? <p className="hint">Loading…</p> : current ? (
-          <>
-            {current.title ? <p className="hint">{current.title}</p> : null}
-            <pre>{current.body}</pre>
-          </>
+        {loading ? <p className="hint">Loading…</p> : tab === "article" ? (
+          article ? <MarkdocView source={article.body} /> : <p className="hint">No article text for this episode.</p>
+        ) : script ? (
+          <ScriptLines script={script} />
         ) : (
-          <p className="hint">{tab === "article" ? "No article text for this episode." : "No script for this episode."}</p>
+          <p className="hint">No script for this episode.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function ScriptLines({ script }: { script: NonNullable<EpisodeDetail["script"]> }) {
+  const lines = parseScript(script.body, script.hostName, script.cohostName);
+  return (
+    <div className="script-view">
+      <p className="hint">{summarizeScript(lines)}</p>
+      {lines.map((line, index) => (
+        <div className="script-line" key={index}>
+          <div className={line.speaker.toLowerCase() === "host" ? "speaker host" : "speaker other"}>{line.speaker}:</div>
+          <div className="script-text">{line.text}</div>
+        </div>
+      ))}
     </div>
   );
 }

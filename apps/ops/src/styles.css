@@ -239,22 +239,19 @@ button, input { font: inherit; color: inherit; }
 }
 .tab.active { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
 .source-body {
-  max-height: 320px;
+  max-height: 480px;
   overflow: auto;
   border: 1px solid var(--line);
   border-top: 0;
   background: var(--raised);
   padding: 10px 12px;
 }
-.source-body pre {
-  margin: 8px 0 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.5;
-}
-.source-body .hint { margin: 0; }
+.source-body .hint { margin: 0 0 8px; }
+.script-line { margin: 0 0 10px; }
+.speaker { font-weight: 700; }
+.speaker.host { color: #1d4e89; }
+.speaker.other { color: #9b3d7a; }
+.script-text { margin-left: 16px; white-space: pre-wrap; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--faint); font-weight: 500; }

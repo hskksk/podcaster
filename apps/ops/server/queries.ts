@@ -5,6 +5,7 @@ import type {
   EpisodeDetail,
   EventView,
   SubscriptionResponse,
+  ScriptView,
   TextView,
 } from "../shared/types.ts";
 import { HttpError } from "./http-error.ts";
@@ -485,7 +486,7 @@ async function loadTexts(
   articleId: string | null,
   latest: { id: string; article_revision_id: string; base_revision_id: string | null } | undefined,
   productionIds: string[],
-): Promise<{ article: TextView | null; script: TextView | null }> {
+): Promise<{ article: TextView | null; script: ScriptView | null }> {
   const db = podcast(link.db);
   const articleQuery = latest?.article_revision_id
     ? db.from("article_revisions").select("title, content").eq("id", latest.article_revision_id).maybeSingle()
@@ -517,7 +518,22 @@ async function loadTexts(
   const scriptResult = await db.from("scripts").select("title, content").eq("id", chosen.id).maybeSingle();
   if (scriptResult.error) fail(link.projectRef, "script", scriptResult.error.message);
   const scriptRow = scriptResult.data as { title: string; content: string } | null;
-  return { article, script: scriptRow ? { title: scriptRow.title, body: scriptRow.content } : null };
+  if (!scriptRow) return { article, script: null };
+  const names = await speakerNames(link);
+  return { article, script: { title: scriptRow.title, body: scriptRow.content, ...names } };
+}
+
+async function speakerNames(link: Remote): Promise<{ hostName: string; cohostName: string }> {
+  const result = await link.db.from("podcast_config").select("key, value").in("key", ["tts.host.name", "tts.cohost.name"]);
+  if (result.error) fail(link.projectRef, "podcast config", result.error.message);
+  const map = new Map<string, string>();
+  for (const row of (result.data ?? []) as Array<{ key: string; value: unknown }>) {
+    if (typeof row.value === "string" && row.value.trim()) map.set(row.key, row.value);
+  }
+  return {
+    hostName: map.get("tts.host.name") ?? "Host",
+    cohostName: map.get("tts.cohost.name") ?? "CoHost",
+  };
 }
 
 function toEvent(row: EventDbRow): EventView {

@@ -118,6 +118,9 @@ importers:
 
   apps/ops:
     dependencies:
+      '@hskksk/markdoc-react':
+        specifier: ^0.6.2
+        version: 0.6.2(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@supabase/supabase-js':
         specifier: ^2.49.0
         version: 2.104.0

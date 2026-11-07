@@ -83,11 +83,16 @@ export type TextView = {
   body: string;
 };
 
+export type ScriptView = TextView & {
+  hostName: string;
+  cohostName: string;
+};
+
 export type EpisodeDetail = {
   attempts: AttemptView[];
   events: EventView[];
   article: TextView | null;
-  script: TextView | null;
+  script: ScriptView | null;
 };
 
 export type SubscriptionResponse = SubscriptionSummary & {
