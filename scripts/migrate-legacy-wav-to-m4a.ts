@@ -101,7 +101,7 @@ const TARGETS_QUERY = `
     a.id as audio_id,
     a.script_id,
     p.episode_id,
-    e.title as episode_title,
+    s.title as episode_title,
     b.id as blob_id,
     b.storage_path,
     b.byte_size::bigint as byte_size,
@@ -111,7 +111,7 @@ const TARGETS_QUERY = `
   from podcast.audios a
   join podcast.blobs b on b.id = a.blob_id
   join podcast.productions p on p.id = a.production_id
-  join podcast.episodes e on e.id = p.episode_id
+  join podcast.scripts s on s.id = a.script_id
   left join lateral (
     select pub.id, er.id as episode_revision_id
     from podcast.episode_revisions er
