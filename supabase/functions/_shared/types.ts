@@ -29,8 +29,10 @@ export interface Episode {
     | "audio_downloading"
     | "audio_ready"
     | "audio_failed"
+    | "image_failed"
     | "published"
-    | "rss_failed";
+    | "rss_failed"
+    | "failed";
   created_at: string;
   published_at?: string;
 }

@@ -85,6 +85,52 @@ Deno.test("ScriptWritten requests audio and artwork when enabled", () => {
   assertEquals(commands.filter((c) => c.kind === "request_job").length, 2);
 });
 
+Deno.test("audio scope without a base script fails that creation", () => {
+  const audioProduction: ProductionRequestedPayload = {
+    ...production,
+    scope: "audio",
+    base_revision_id: "66666666-6666-4666-8666-666666666666",
+  };
+  const event = productionEvent("ProductionRequested", audioProduction);
+  const commands = commandsForEvent(event, {
+    progress: emptyProductionProgress(audioProduction, false),
+    production: audioProduction,
+    publicationPolicy: "manual",
+    articleContent: "body",
+    causationEventId: event.id!,
+    baseScript: null,
+  });
+  assertEquals(commands, [{
+    kind: "production_failed",
+    productionId: audioProduction.production_id,
+    stage: "audio",
+    reason: "audio scope requires base script",
+  }]);
+});
+
+Deno.test("a failed production does not request more jobs", () => {
+  const progress = {
+    ...emptyProductionProgress(production, true),
+    failed: true,
+  };
+  const event = productionEvent("ScriptWritten", {
+    script_id: "44444444-4444-4444-8444-444444444444",
+    job_id: null,
+    title: "t",
+    description: "d",
+    content: "Host: hi",
+  });
+  const commands = commandsForEvent(event, {
+    progress,
+    production,
+    publicationPolicy: "auto",
+    articleContent: "body",
+    causationEventId: event.id!,
+    baseScript: null,
+  });
+  assertEquals(commands, [{ kind: "noop" }]);
+});
+
 Deno.test("canAssemble requires audio and optional artwork", () => {
   let progress = emptyProductionProgress(production, true);
   progress = {

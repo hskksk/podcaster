@@ -156,9 +156,17 @@ export interface FeedRebuiltPayload {
   items: FeedRebuiltItem[];
 }
 
+/** Which creation stopped. `policy` is a stop that is not script, audio, or artwork. */
+export type ProductionFailureStage = "script" | "audio" | "artwork" | "policy";
+
 export interface ProductionFailedPayload {
   production_id: string;
   failed_job_id: string | null;
+  /**
+   * Absent on events appended before the stage was recorded.
+   * New events always set it.
+   */
+  stage?: ProductionFailureStage;
   reason: string;
 }
 
@@ -186,6 +194,10 @@ export type DomainEvent = {
 export type NewDomainEvent = Omit<EventEnvelope, "id" | "position"> & {
   id?: string;
 };
+
+export type NewDomainEventOf<T extends DomainEventType> =
+  & Omit<EventEnvelope<T>, "id" | "position">
+  & { id?: string };
 
 /** Single show for this deployment (backfill / legacy). */
 export const DEFAULT_SHOW_ID = "00000000-0000-4000-8000-000000000001";

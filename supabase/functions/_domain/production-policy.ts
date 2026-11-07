@@ -1,4 +1,8 @@
-import type { DomainEvent, ProductionRequestedPayload } from "./events.ts";
+import type {
+  DomainEvent,
+  ProductionFailureStage,
+  ProductionRequestedPayload,
+} from "./events.ts";
 import { flattenProductionProfile, isArtworkEnabled } from "./profile.ts";
 import { canAssemble, type ProductionProgress } from "./production-state.ts";
 
@@ -13,7 +17,12 @@ export type PolicyCommand =
   }
   | { kind: "assemble"; episodeId: string; productionId: string }
   | { kind: "auto_publish"; episodeId: string; episodeRevisionId: string }
-  | { kind: "production_failed"; productionId: string; reason: string }
+  | {
+    kind: "production_failed";
+    productionId: string;
+    stage: ProductionFailureStage;
+    reason: string;
+  }
   | { kind: "noop" };
 
 export interface PolicyScriptContext {
@@ -107,6 +116,7 @@ function commandsForProductionRequested(ctx: PolicyContext): PolicyCommand[] {
       return [{
         kind: "production_failed",
         productionId: production.production_id,
+        stage: "audio",
         reason: "audio scope requires base script",
       }];
     }
@@ -128,6 +138,7 @@ function commandsForProductionRequested(ctx: PolicyContext): PolicyCommand[] {
       return [{
         kind: "production_failed",
         productionId: production.production_id,
+        stage: "artwork",
         reason: "artwork scope requires base script",
       }];
     }

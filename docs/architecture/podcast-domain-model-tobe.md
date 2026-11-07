@@ -297,7 +297,7 @@ erDiagram
 | `EpisodePublished` | `publication_id`、`episode_revision_id`、`superseded_publication_id` | 同名 |
 | `EpisodeWithdrawn` | `publication_id`、`reason` | 新規 |
 | `FeedRebuilt` | `feed_snapshot_id`、`blob_id`、`items`（版 ID・GUID・pubDate の並び） | 同名 |
-| `ProductionFailed` | `production_id`、`failed_job_id`、`reason` | 新規 |
+| `ProductionFailed` | `production_id`、`failed_job_id`、`stage`（`script` / `audio` / `artwork` / `policy`）、`reason` | 新規 |
 
 イベントは正本なので、payload には射影を作り直すのに要る事実をすべて入れる。ID だけを入れて中身を別表に置くと、その表が実質の正本になる。記事の本文も `ArticleRegistered.content` に入れる。Git の `content_path` と `content_sha` は出どころの記録であり、制作時にどの本文を読んだかはイベントだけで決まる。Git の履歴が書き換わっても、制作の入力は再現できる。例外はバイト列で、音声・画像・feed.xml は Blob に置き、イベントは `blob_id` で参照する。Blob は上書きせず、内容ごとに新しいパスへ書く。
 
@@ -333,6 +333,8 @@ flowchart LR
 | `AudioRendered` / `ArtworkPainted` | 必要な生成物が揃った。足りない側は `base_revision_id` から流用 | `EpisodeRevision` を組み立て、`EpisodeAssembled` |
 | `EpisodeAssembled` | 公開方針が自動 | 公開コマンドを実行する（下記） |
 | `JobFailed`（再試行の上限に達した） | — | `ProductionFailed` |
+
+再試行の途中で落ちた試行は `JobAttempt` に残り、ドメインイベントにはしない。記事の ingest が検証エラーや重複で拒否されたときも、集約は変わらないのでイベントにしない。台本・音声・画像の作成が再試行の上限で止まったとき、または流用する台本が無く工程を始められないときは、`ProductionFailed` を追記する。`stage` は、どの作成で止まったかを示す。
 
 公開と取り下げでは、RSS を同期的に作り直す。公開コマンドは次の順で動く。
 

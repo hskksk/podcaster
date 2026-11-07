@@ -255,6 +255,14 @@ export async function applyProjection(
       break;
 
     case "ProductionFailed":
+      await sql`
+        update podcast.productions
+        set
+          failed_at = ${event.occurred_at}::timestamptz,
+          failure_stage = ${event.payload.stage ?? null},
+          failure_reason = ${event.payload.reason}
+        where id = ${event.payload.production_id}::uuid
+      `;
       break;
 
     case "AudioTranscodeSubmitted":
