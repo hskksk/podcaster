@@ -181,7 +181,7 @@ body {
 }
 
 .article-minimap-layout .tm-tile:not([data-tile-expanded]) b {
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
 }
 
 .article-minimap-layout .tm-tile:not([data-tile-expanded]) small {
