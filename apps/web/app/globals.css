@@ -154,10 +154,14 @@ body {
 
 .article-minimap-layout .tm-ch {
   border-radius: var(--treemap-radius-chapter);
+  border-width: 1px;
+  border-color: var(--color-border);
 }
 
 .article-minimap-layout .tm-grp {
   border-radius: var(--treemap-radius-group);
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--color-border) 88%, transparent);
 }
 
 .article-minimap-layout .tm-ch > h2,
@@ -187,6 +191,9 @@ body {
 .article-minimap-layout .tm-tile {
   min-height: 0;
   border-radius: var(--treemap-radius-tile);
+  border: 1px solid var(--color-border);
+  border-left-width: 3px;
+  border-left-color: color-mix(in srgb, var(--k) 55%, var(--color-border));
 }
 
 .article-minimap-layout .tm-tile .tm-tile-expand {
