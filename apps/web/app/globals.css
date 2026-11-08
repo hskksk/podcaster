@@ -72,7 +72,7 @@ body {
   --markdoc-surface: var(--color-muted);
 }
 
-/* Minimap: article column + collapsible treemap below (not a side column) */
+/* Minimap: collapsible treemap above article (not a side column) */
 .article-minimap-layout.markdoc-reader {
   display: flex;
   flex-direction: column;
@@ -200,30 +200,17 @@ body {
   flex-direction: column;
   gap: 0;
   width: 100%;
-  margin-top: 2rem;
-  border-top: 1px solid var(--color-border);
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
-@media (max-width: 720px) {
-  .article-minimap-layout .article-minimap-mobile {
-    order: -1;
-    margin-top: 0;
-    margin-bottom: 1.25rem;
-    border-top: 0;
-    border-bottom: 1px solid var(--color-border);
-  }
+.article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile {
+  margin-bottom: 0.75rem;
+  border-bottom: 0;
+}
 
-  .article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile {
-    margin-top: 0;
-    margin-bottom: 0.75rem;
-    border-bottom: 0;
-  }
-
-  .article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile-toggle {
-    border-top: 0;
-    border-bottom: 0;
-    border-radius: var(--radius-card);
-  }
+.article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile-toggle {
+  border-radius: var(--radius-card);
 }
 
 .article-minimap-mobile-toggle {
@@ -243,16 +230,6 @@ body {
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-}
-
-.article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile {
-  margin-top: 1.5rem;
-  border-top: 0;
-}
-
-.article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile-toggle {
-  border-top: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
 }
 
 .article-minimap-mobile-toggle:focus-visible {
@@ -275,7 +252,7 @@ body {
   background: var(--color-bg);
 }
 
-/* Open: full treemap height below the article (no viewport-clipped sticky frame). */
+/* Open: full treemap height above the article (no viewport-clipped sticky frame). */
 .article-minimap-layout .markdoc-treemap-host.article-minimap {
   max-height: none;
   min-height: 0;
