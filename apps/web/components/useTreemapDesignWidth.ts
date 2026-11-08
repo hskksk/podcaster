@@ -17,7 +17,7 @@ function initialDesignWidth(): number {
 
 /**
  * Match treemap `designWidth` to the rendered host width so minimap mode does not
- * scale content down (desktop sidebar uses `display: contents`, so measure `.markdoc-treemap-host`).
+ * scale content down (measure `.markdoc-treemap-host` inside the collapsible panel).
  */
 export function useTreemapDesignWidth(panelRef: RefObject<HTMLElement | null>): number {
   const [designWidth, setDesignWidth] = useState(initialDesignWidth);

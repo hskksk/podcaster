@@ -74,18 +74,10 @@ export function ArticleMinimapLayout(props: {
 
   return (
     <div
-      className="markdoc-reader article-minimap-layout mx-auto w-full min-w-0 max-w-6xl"
+      className="markdoc-reader article-minimap-layout mx-auto w-full min-w-0 max-w-3xl"
       data-minimap-variant="treemap"
       data-minimap-collapsed={mobileMinimapCollapsed ? "true" : undefined}
     >
-      <article
-        ref={scrollRef}
-        className="markdoc-reader__main mx-auto w-full min-w-0 max-w-3xl lg:mx-0"
-        data-pagefind-body
-        data-pagefind-filter={props.pagefindSite ? `site:${props.pagefindSite}` : undefined}
-      >
-        {props.children}
-      </article>
       <div ref={mobileMinimapShellRef} className="article-minimap-mobile">
         <button
           type="button"
@@ -117,6 +109,14 @@ export function ArticleMinimapLayout(props: {
           />
         </div>
       </div>
+      <article
+        ref={scrollRef}
+        className="markdoc-reader__main mx-auto w-full min-w-0 max-w-3xl"
+        data-pagefind-body
+        data-pagefind-filter={props.pagefindSite ? `site:${props.pagefindSite}` : undefined}
+      >
+        {props.children}
+      </article>
     </div>
   );
 }
