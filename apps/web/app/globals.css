@@ -37,6 +37,46 @@
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.2), 0 4px 16px rgb(0 0 0 / 0.35);
   --shadow-card-hover: 0 8px 32px rgb(0 0 0 / 0.45);
+
+  --treemap-c-flow: var(--color-accent);
+  --treemap-c-apply: #34d399;
+  --treemap-c-vs: #fbbf24;
+  --treemap-c-rec: #a78bfa;
+  --treemap-c-end: #f472b6;
+  --treemap-c-ref: var(--color-muted-fg);
+  --treemap-c-cause: #f87171;
+  --treemap-c-evid: #22d3ee;
+  --treemap-k0: var(--color-accent);
+  --treemap-k1: var(--treemap-c-apply);
+  --treemap-k2: var(--color-muted-fg);
+  --treemap-k3: var(--treemap-c-evid);
+  --treemap-k4: #fb923c;
+  --treemap-k5: #fbbf24;
+}
+
+/*
+ * Treemap semantics (@hskksk/markdoc-react .tm reads --c-* / --k*).
+ * Layered on article minimap layout (#308); tune hues here only.
+ */
+:root {
+  --treemap-c-flow: var(--color-accent);
+  --treemap-c-apply: #047857;
+  --treemap-c-vs: #a16207;
+  --treemap-c-rec: #6d28d9;
+  --treemap-c-end: #be185d;
+  --treemap-c-ref: var(--color-muted-fg);
+  --treemap-c-cause: #b91c1c;
+  --treemap-c-evid: #0e7490;
+  --treemap-k0: var(--color-accent);
+  --treemap-k1: var(--treemap-c-apply);
+  --treemap-k2: #57534e;
+  --treemap-k3: var(--treemap-c-evid);
+  --treemap-k4: #7c2d12;
+  --treemap-k5: #a16207;
+  --treemap-radius-chapter: var(--radius-card);
+  --treemap-radius-group: calc(var(--radius-card) - 2px);
+  --treemap-radius-tile: calc(var(--radius-card) - 4px);
+  --treemap-radius-control: calc(var(--radius-card) - 8px);
 }
 
 html {
@@ -85,7 +125,7 @@ body {
   min-height: auto;
 }
 
-/* Treemap palette: match site stone / amber tokens (package default is slate/sky). */
+/* Treemap design system: bridge site tokens onto markdoc-react .tm (layout is #308). */
 .article-minimap-layout .tm {
   --bg: var(--color-bg);
   --fg: var(--color-fg);
@@ -95,43 +135,65 @@ body {
   --tile: var(--color-surface);
   --halo: var(--color-bg);
   --act: var(--color-accent);
-  --c-flow: #a16207;
-  --c-apply: #047857;
-  --c-vs: #b45309;
-  --c-rec: #6d28d9;
-  --c-end: #be185d;
-  --c-ref: #78716c;
-  --c-cause: #b91c1c;
-  --c-evid: #0e7490;
-  --k0: #b45309;
-  --k1: #047857;
-  --k2: #57534e;
-  --k3: #0e7490;
-  --k4: #7c2d12;
-  --k5: #a16207;
+  --c-flow: var(--treemap-c-flow);
+  --c-apply: var(--treemap-c-apply);
+  --c-vs: var(--treemap-c-vs);
+  --c-rec: var(--treemap-c-rec);
+  --c-end: var(--treemap-c-end);
+  --c-ref: var(--treemap-c-ref);
+  --c-cause: var(--treemap-c-cause);
+  --c-evid: var(--treemap-c-evid);
+  --k0: var(--treemap-k0);
+  --k1: var(--treemap-k1);
+  --k2: var(--treemap-k2);
+  --k3: var(--treemap-k3);
+  --k4: var(--treemap-k4);
+  --k5: var(--treemap-k5);
   font-family: var(--font-sans);
 }
 
-.dark .article-minimap-layout .tm.tm-dark {
-  --c-flow: #fbbf24;
-  --c-apply: #34d399;
-  --c-vs: #f59e0b;
-  --c-rec: #a78bfa;
-  --c-end: #f472b6;
-  --c-ref: #a8a29e;
-  --c-cause: #f87171;
-  --c-evid: #22d3ee;
-  --k0: #f59e0b;
-  --k1: #34d399;
-  --k2: #a8a29e;
-  --k3: #22d3ee;
-  --k4: #fb923c;
-  --k5: #fbbf24;
+.article-minimap-layout .tm-ch {
+  border-radius: var(--treemap-radius-chapter);
+  border-width: 1px;
+  border-color: var(--color-border);
+}
+
+.article-minimap-layout .tm-grp {
+  border-radius: var(--treemap-radius-group);
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--color-border) 88%, transparent);
+}
+
+.article-minimap-layout .tm-ch > h2,
+.article-minimap-layout .tm-grp > h3 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.article-minimap-layout .tm-num {
+  color: var(--color-accent-fg);
+}
+
+.article-minimap-layout .tm-chip {
+  border-radius: 999px;
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.article-minimap-layout .tm-detail {
+  border-radius: var(--treemap-radius-chapter);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
 }
 
 /* Treemap tiles: compact by default; subtitle expands via .tm-tile-expand */
 .article-minimap-layout .tm-tile {
   min-height: 0;
+  border-radius: var(--treemap-radius-tile);
+  border: 1px solid var(--color-border);
+  border-left-width: 3px;
+  border-left-color: color-mix(in srgb, var(--k) 55%, var(--color-border));
 }
 
 .article-minimap-layout .tm-tile .tm-tile-expand {
@@ -146,7 +208,7 @@ body {
   height: 1.25rem;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--treemap-radius-control);
   background: color-mix(in srgb, var(--color-bg) 88%, transparent);
   color: var(--color-muted-fg);
   cursor: pointer;
@@ -282,6 +344,7 @@ body {
 .article-minimap-layout .article-minimap-mobile .tm-ch > h2,
 .article-minimap-layout .article-minimap-mobile .tm-grp > h3 {
   font-size: 13px;
+  font-family: var(--font-serif);
 }
 
 .article-minimap-layout .article-minimap-mobile .tm-tiles {
