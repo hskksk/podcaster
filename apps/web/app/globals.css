@@ -79,9 +79,10 @@ body {
   gap: 0;
 }
 
-.article-minimap-layout .markdoc-reader__main {
+.article-minimap-layout.markdoc-reader .markdoc-reader__main {
   max-height: none;
   overflow: visible;
+  min-height: auto;
 }
 
 /* Treemap palette: match site stone / amber tokens (package default is slate/sky). */
@@ -201,6 +202,28 @@ body {
   width: 100%;
   margin-top: 2rem;
   border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 720px) {
+  .article-minimap-layout .article-minimap-mobile {
+    order: -1;
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    border-top: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 0;
+  }
+
+  .article-minimap-layout[data-minimap-collapsed='true'] .article-minimap-mobile-toggle {
+    border-top: 0;
+    border-bottom: 0;
+    border-radius: var(--radius-card);
+  }
 }
 
 .article-minimap-mobile-toggle {
