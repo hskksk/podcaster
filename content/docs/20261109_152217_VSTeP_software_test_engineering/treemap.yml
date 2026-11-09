@@ -1,0 +1,177 @@
+version: 1
+sourceSha256: "ca3c16676312a3f76d754934c564d608de25537a435d8c9818797b5a11ad54cb"
+nodes:
+  i2:
+    title: "単一技法ではない全体プロセス"
+    subtitle: "境界値のような値の取り方ではなく、テスト観点を軸に要求からケース・手順まで段階的に作るテスト開発の方法論である。"
+  i5:
+    title: "西氏提唱と国内での展開"
+    subtitle: "電気通信大学の西康晴氏が考案し、JASST講演・Qualab資料・GIHOZなどで解説と演習が続いている。"
+  i9:
+    title: "既存ケースからの逆生成"
+    subtitle: "過去のテスト資産から観点を抜き出して整理し直す道は示されるが、大規模資産を機械的に戻す手順はまだ薄い。"
+  i10:
+    title: "コンテナ分割の正当化"
+    subtitle: "工数とリスクのバランスを取る共通ルールは未整備。実践例では対象と前提条件の関係表で見積もりを補強した。"
+  i11:
+    title: "VKDTと自動化の止めどころ"
+    subtitle: "VSTePとKDTをつなぐVKDTは理想形に近いが、C&RからMBTまで四段階のうちどこで止めるかの指針は弱い。"
+  s13:
+    title: "技法は下流で使う"
+    subtitle: "VSTePはプロセスとNGT記法の組。境界値などはテストフレームができたあとの詳細設計で網羅基準に沿って当てはめる。"
+  s14:
+    title: "開発工程との対応表"
+    subtitle: "要求・アーキテクチャ・詳細設計・実装が、テスト側では観点図・コンテナ・フレーム・ケース・スクリプトに並ぶ。"
+  s16:
+    title: "観点は意図の抽象化"
+    subtitle: "テストすべき側面を短い語で階層化し、最下層のボトムビューポイントが詳細設計の条件粒度になる。"
+  s18:
+    title: "コンテナとフレームの役割"
+    subtitle: "コンテナはレベルやタイプで観点を俯瞰する箱。フレームは観点の組み合わせでケースの骨格を示すひな形。"
+  s20:
+    title: "要求分析で観点を広げる"
+    subtitle: "仕様だけでなく環境・非機能・品質特性まで洗い出し、なぜ・どうなるかをチームで問い続ける。"
+  s21:
+    title: "アーキテクチャで分割"
+    subtitle: "観点モデルを磨き、コンテナに分け、フレームを組む。実践では対象と前提の関係表で工数とリスクを調整した例がある。"
+  s22:
+    title: "詳細設計と実装"
+    subtitle: "網羅基準と技法でケースを機械的に広げ、集約やキーワード駆動で手順や自動化スクリプトへ落とす。"
+  s24:
+    title: "HAYSTなど並立手法"
+    subtitle: "HAYST法やゆもつよメソッドは強みが異なり、改良型ゆもつよとVSTePを組み合わせる例も資料にある。"
+  s25:
+    title: "GIHOZなど支援ツール"
+    subtitle: "マインドマップやGIHOZで観点図とフレームを描き、同一製品内で境界値やペアワイズなど技法も選べる。"
+  s26:
+    title: "四世代とVKDT"
+    subtitle: "C&RからKDT+MBTまで四段階に分け、VSTeP上でケース生成とKDT実行をつなぐ構想がある。"
+  s28:
+    title: "漏れとレビューに向く"
+    subtitle: "観点が曖昧で漏れやすい現場や、過去ケースの意図が見えないときに、図とフレーム名で合意を作りやすい。"
+  s29:
+    title: "銀の弾丸ではない"
+    subtitle: "手法だけでは網羅は保証されず、巨大な一枚図はレビュー不能になるため分割と見直しが前提になる。"
+  p44:
+    title: "逆生成の限界"
+    subtitle: "既存ケースから観点を再構成して可視化できるが、命名や粒度がばらつく資産では機械化ルールは未確認。"
+  p45:
+    title: "工数表の一例"
+    subtitle: "対象と前提の関係表を挟んだ実践は工数とリスクの調整に役立つが、他社への一般化には事例が足りない。"
+  p46:
+    title: "自動化の現実線"
+    subtitle: "VKDTは魅力が大きいが、DDTで足りる領域にMBTを持ち込むとコストが跳ねる点と読み合わせる。"
+  ch31:
+    title: "導入時の四つの合意"
+    subtitle: "全体プロセスとして観点・コンテナ・フレームを経てケースへ降ろす。分割、レビュー、逆整理、自動化の線引きを先に決める。"
+  i33:
+    title: "Veriserve解説"
+    subtitle: "HQW記事。観点の洗い出しからフレーム、技法適用までの手順と注意点を実務向けに整理している。"
+  i34:
+    title: "JASST2016基調"
+    subtitle: "西康晴氏のVSTeP全体像、NGT、コンテナ、VKDT、開発工程との対応を述べたシンポジウム資料。"
+  i35:
+    title: "GIHOZ資料"
+    subtitle: "VSTePの四ステップと、GIHOZ上で技法一覧と並べた位置づけを示すプレゼン資料。"
+  i36:
+    title: "Qualab概要"
+    subtitle: "NGT/VSTePの提案ページ。概要PDFへの入口として方法論の背景を短く示す。"
+  i37:
+    title: "2013アーキテクチャ"
+    subtitle: "智美塾ダイジェスト。テストアーキテクチャ設計とボトムビューポイント、MBT自動化の可能性を詳述。"
+  i38:
+    title: "2025ワーク概要"
+    subtitle: "チーム演習向け資料。VSTePを通じてテスト開発の四点（なぜ・全体最適・つながり・合意）を体験する。"
+  i39:
+    title: "2007実践事例"
+    subtitle: "企業プロジェクトでVSTPを適用し、対象と前提の関係表を足して工数とリスクのバランスを取った報告。"
+links:
+  - from: ch1
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch12
+    type: flow
+  - from: ch12
+    to: ch15
+    type: flow
+  - from: ch15
+    to: ch19
+    type: flow
+  - from: ch19
+    to: ch23
+    type: flow
+  - from: ch23
+    to: ch27
+    type: flow
+  - from: ch27
+    to: ch30
+    type: flow
+  - from: ch30
+    to: ch31
+    type: flow
+  - from: ch31
+    to: ch32
+    type: flow
+  - from: i2
+    to: s13
+    type: contrast
+    label: プロセス対技法
+  - from: s13
+    to: s14
+    type: seq
+    label: 工程対応
+  - from: s16
+    to: s18
+    type: seq
+    label: 成果物
+  - from: s18
+    to: s20
+    type: flow
+    label: プロセスへ
+  - from: s20
+    to: s21
+    type: seq
+  - from: s21
+    to: s22
+    type: seq
+  - from: s24
+    to: s25
+    type: contrast
+    label: 手法とツール
+  - from: s25
+    to: s26
+    type: apply
+  - from: s28
+    to: s29
+    type: contrast
+    label: 強みと限界
+  - from: i9
+    to: p44
+    type: apply
+  - from: i10
+    to: p45
+    type: apply
+  - from: i11
+    to: p46
+    type: apply
+  - from: s22
+    to: s26
+    type: ref
+    label: 自動化
+  - from: ch31
+    to: i2
+    type: end
+  - from: i5
+    to: i34
+    type: evidence
+chapterFlow:
+  - "要約から調査範囲と未解決の問いへ"
+  - "技法との違いと工程対応"
+  - "観点・NGT・コンテナ・フレームの地図"
+  - "要求分析から実装までの各段"
+  - "近縁手法・GIHOZ・VKDT"
+  - "適用シーンと限界"
+  - "三つの問いの補足"
+  - "読者が持ち帰る要点"
+  - "出典と捨てた枝の記録"
