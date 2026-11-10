@@ -1,76 +1,79 @@
-# 記事セクション可視化（AntV Infographic）
+# 記事セクション可視化（Article Visual engine）
 
 ## 目的
 
 長文記事の各セクションについて、本文を読まなくても主張・関係・流れを短時間で把握できる図を表示する。
 
-記事作成エージェントは本文完成後にセクションごとの AntV Infographic DSL を作り、記事と同じディレクトリの sidecar に保存する。公開サイトはビルド時に sidecar を読み、デスクトップでは本文横の sticky rail、狭い画面では該当セクション内に描画する。
+記事作成エージェントは本文完成後に構造化データを作り、記事と同じディレクトリのsidecarへ保存する。公開サイトはsidecarを読み、自前のArticle Visual engineで描画する。デスクトップでは本文横のsticky rail、狭い画面では該当セクション内に表示する。
 
-この設計の状態は **Proposed** である。既存の `treemap.yml` と Markdoc 本文の挙動は、実装が完了するまで変えない。
+この設計の状態は**Proposed**である。既存の`treemap.yml`とMarkdoc本文の挙動は、実装が完了するまで変えない。
 
 ## 解決する問題
 
-`treemap.yml` は記事全体の構造、読書位置、段落間の関係を示す。一方、個々のタイルは短い要約文が中心であり、セクションが伝える仕組み・比較・因果を一目で理解する用途には向かない。
+`treemap.yml`は記事全体の構造・読書位置・段落間の関係を示す。一方、個々のタイルは短い要約文が中心であり、セクションが伝える仕組み・比較・因果を一目で理解する用途には向かない。
 
-セクション可視化は treemap を置き換えず、役割を分ける。
+セクション可視化はtreemapを置き換えず、役割を分ける。
 
 | 表示 | 役割 |
 | --- | --- |
-| treemap | 記事全体の地図、ナビゲーション、段落間リンク |
-| セクション可視化 | 現在のセクションの主張、関係、流れの直感的理解 |
+| treemap | 記事全体の地図・ナビゲーション・段落間リンク |
+| セクション可視化 | 現在のセクションの主張・関係・流れの直感的理解 |
 
 ## 設計原則
 
 1. **本文が正である。** 図は本文の派生物であり、本文にない事実・数字・因果を加えない。
-2. **生成物はコードではなく AntV DSL とする。** エージェントに HTML、SVG、JavaScript、React を書かせない。
-3. **envelope は変換しない。** 汎用 YAML から各描画エンジンへ翻訳せず、選択したエンジンの native source を保持する。
-4. **描画エンジンは明示する。** v1 の許可値は `antv-infographic` だけだが、スキーマ上は将来の追加を可能にする。
-5. **見た目はサイトが所有する。** 記事 sidecar は色、座標、フォント、CSS、アニメーションを指定しない。
-6. **AI はビルド時に動かさない。** 記事を書いたエージェントが sidecar を作り、サイトは検証済みファイルを読むだけにする。
-7. **図を強制しない。** 空間的な表現で意味が明確にならないセクションには図を置かない。
-8. **アクセシビリティを図と同じ成果物として扱う。** 各図に本文と矛盾しない代替説明を必須とする。
+2. **生成物は構造化データとする。** エージェントにHTML・SVG・JavaScript・React・座標を書かせない。
+3. **envelopeは変換しない。** envelopeはengineへpayloadを渡すだけであり、汎用形式からengine固有形式への翻訳層にはしない。
+4. **engineを明示する。** v1は自前の`article-visual`だけを許可する。将来別のengineを追加しても、既存payloadの意味は変えない。
+5. **仕様と実装を分ける。** 記事作成スキルはArticle Visual specだけに依存し、Reactコンポーネントやサイト構造を知らない。
+6. **見た目はrendererが所有する。** sidecarは色・座標・フォント・CSS・アニメーションを指定しない。
+7. **AIはビルド時・実行時に動かさない。** 記事を書いたエージェントがsidecarを作り、サイトは検証済みファイルを読むだけにする。
+8. **図を強制しない。** 空間的な表現で意味が明確にならないセクションには図を置かない。
+9. **アクセシビリティを図と同じ成果物として扱う。** 各図に本文と矛盾しない代替説明を必須とする。
 
 ## 対象外
 
-- treemap の撤去または統合
-- Mermaid、D2、Vega-Lite の置き換え
-- ブラウザ上での infographic 編集
-- 生成済み SVG や PNG の Git 管理
-- 任意 HTML、任意 JavaScript、外部 URL の埋め込み
-- 複数エンジンを横断する共通 diagram IR
-- 全 H2・H3 への機械的な図の割り当て
+- treemapの撤去または統合
+- Mermaid・D2・Vega-Liteの置き換え
+- ブラウザ上での図の編集
+- 生成済みSVG・PNGのGit管理
+- 任意HTML・JavaScript・外部URLの埋め込み
+- 複数engineを横断する共通diagram IR
+- 全H2・H3への機械的な図の割り当て
 - ポッドキャスト音声への図の内容の読み上げ
+- 外部の図生成スキルやリモートテンプレートの実行
 
-## 採用する既存仕様
+## Article Visual engine
 
-図の内容とテンプレートは [`@antv/infographic`](https://github.com/antvis/Infographic) の DSL を正として保存する。独自仕様は記事との紐付けを担う薄い envelope だけに限定する。
+`article-visual`は、記事セクションの説明に必要な少数の図を描く自前engineである。公開仕様は構造化されたArticle Visual specとし、`@hskksk/markdoc-react`が標準rendererを提供する。
 
-記事作成では公式の `infographic-syntax-creator` スキルを使う。このスキルは AntV DSL だけを返し、HTML やコンポーネントを生成しない。AntV 本体開発用の sibling skill と、CDN 付き単独 HTML を生成する `infographic-creator` は記事ワークフローでは使わない。
+Article Visual specはengineのnative payloadであり、別の描画言語へ変換しない。rendererはpayloadから安全なReact要素とSVGを決定論的に組み立てる。
+
+初期実装では外部の描画ライブラリを使わない。カード・比較・手順はHTMLとCSS、接続線・階層・数値図はReactが生成するSVGで描画する。文字列はReactの通常のtext nodeとして扱い、`dangerouslySetInnerHTML`は使わない。
 
 ## 全体構成
 
 ```mermaid
 flowchart LR
-  A["記事作者<br/>index.mdoc 完成"] --> B["section manifest<br/>見出しID・本文範囲・SHA"]
-  B --> C["article-section-visuals"]
-  C --> D["infographic-syntax-creator<br/>AntV公式スキル"]
-  D --> E["section-visuals.yml"]
-  E --> F["sidecar validator"]
-  F --> G["Git / PR"]
-  G --> H["Next.js build<br/>sidecar loader"]
-  H --> I["markdoc-react Infographic host"]
-  I --> J["AntV adapter<br/>SVG描画"]
+  A["記事作者<br/>index.mdoc完成"] --> B["section manifest<br/>見出しID・本文範囲・SHA"]
+  B --> C["article-section-visuals<br/>ローカルスキル"]
+  C --> D["section-visuals.yml<br/>Article Visual spec"]
+  D --> E["sidecar validator<br/>同一parser"]
+  E --> F["Git / PR"]
+  F --> G["Next.js build<br/>sidecar loader"]
+  G --> H["SectionVisual host"]
+  H --> I["Article Visual engine<br/>React / SVG"]
 ```
 
 責務の境界は次のとおり。
 
 | 部品 | 責務 |
 | --- | --- |
-| `infographic-syntax-creator` | セクションの意味構造に合う AntV テンプレートを選び、DSL を返す |
-| `article-section-visuals` | 対象セクションの選定、本文との整合、sidecar 保存、検証完了までの進行 |
-| 検証スクリプト | SHA、見出しID、envelope、AntV構文、安全制約を機械検査する |
-| `@hskksk/markdoc-react` | engine-neutral な Infographic host と AntV adapter API を提供する |
-| `apps/web` | sidecar 読込、記事との結合、active section、responsive layout、テーマ、ローカル資源を管理する |
+| `article-section-visuals` | 対象セクションの選定・図の種類の選択・payload作成・本文との照合 |
+| Article Visual spec | engineが受理するデータ構造と上限の定義 |
+| 検証スクリプト | SHA・見出しID・envelope・payload・安全制約の機械検査 |
+| `@hskksk/markdoc-react` | engine-neutralなhost・Article Visual parser・各図のrenderer |
+| `apps/web` | sidecar読込・記事との結合・active section・responsive layout・サイトテーマ |
 
 ## ファイル配置
 
@@ -81,68 +84,294 @@ content/docs/<slug>/
   section-visuals.yml
 ```
 
-長文 Wiki 記事では記事作成フローの対象とする。`content/web-clips/` は任意とし、初期実装では自動生成対象にしない。
+長文Wiki記事では記事作成フローの対象とする。`content/web-clips/`は任意とし、初期実装では自動生成対象にしない。
 
-`treemap.yml` と `section-visuals.yml` は別ファイルにする。更新条件、読込先、表示責務が異なるため、一つの sidecar へ統合しない。
+`treemap.yml`と`section-visuals.yml`は別ファイルにする。更新条件・読込先・表示責務が異なるため、一つのsidecarへ統合しない。
 
-## sidecar スキーマ
+## sidecar envelope
 
 ```yaml
 version: 1
 sourceSha256: "39a0650aeaaebd7bab3894ea7d8c1c81423c9c42ead839c917998516d7c64e5b"
 visuals:
   - sectionId: "cloudflare-osの中身"
-    engine: antv-infographic
-    engineVersion: "0.2"
-    alt: "社員から社内サービスへの操作はGatekeeperを経由し、許可された能力だけが渡される。"
-    syntax: |
-      infographic relation-dagre-flow-tb-badge-card
-      data
-        title 権限ゼロから必要な能力だけ渡す
-        nodes
-          - id employee
-            label 社員
-            icon user
-          - id workspace
-            label Workspace
-            icon layout dashboard
-          - id gatekeeper
-            label Gatekeeper
-            icon shield check
-          - id service
-            label 社内サービス
-            icon database
-        relations
-          employee - 操作 -> workspace
-          workspace - 許可を要求 -> gatekeeper
-          gatekeeper - 許可済み能力 -> service
+    engine: article-visual
+    engineVersion: "1"
+    alt: "社員の操作はWorkspaceとGatekeeperを経由し、許可された能力だけが社内サービスへ渡される。"
+    spec:
+      type: flow
+      title: 権限ゼロから必要な能力だけ渡す
+      nodes:
+        - id: employee
+          label: 社員
+          icon: person
+        - id: workspace
+          label: Workspace
+          icon: workspace
+        - id: gatekeeper
+          label: Gatekeeper
+          icon: shield
+          emphasis: true
+        - id: service
+          label: 社内サービス
+          icon: database
+      edges:
+        - from: employee
+          to: workspace
+          label: 操作
+        - from: workspace
+          to: gatekeeper
+          label: 許可を要求
+        - from: gatekeeper
+          to: service
+          label: 許可済み能力
 ```
 
 ### ルート
 
 | キー | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
-| `version` | `1` | yes | sidecar envelope の版 |
-| `sourceSha256` | string | yes | frontmatter を除いた Markdoc 本文の SHA-256 |
+| `version` | `1` | yes | sidecar envelopeの版 |
+| `sourceSha256` | string | yes | frontmatterを除いたMarkdoc本文のSHA-256 |
 | `visuals` | array | yes | セクションに割り当てる図。空配列は許可しない |
 
 ### `visuals[]`
 
 | キー | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
-| `sectionId` | string | yes | Markdoc transform 後の見出し DOM `id` |
-| `engine` | string | yes | v1 は `antv-infographic` のみ |
-| `engineVersion` | string | yes | v1 は互換系列 `0.2` |
-| `alt` | string | yes | スクリーンリーダーおよび描画失敗時の代替説明 |
-| `syntax` | string | yes | AntV Infographic native DSL。コードフェンスは含めない |
+| `sectionId` | string | yes | Markdoc transform後の見出しDOM `id` |
+| `engine` | string | yes | v1は`article-visual`のみ |
+| `engineVersion` | string | yes | Article Visual specのmajor version。v1は`"1"` |
+| `alt` | string | yes | スクリーンリーダーと描画失敗時に使う代替説明 |
+| `spec` | object | yes | 指定engineが直接解釈するnative payload |
 
-`sectionId` は見出し文字列そのものではなく、公開ページと同じ Markdoc config が生成した ID を使う。見出し名変更や本文変更後は sidecar 全体を再生成する。
+`version`は記事との結合方法を表し、`engineVersion`はpayloadの意味を表す。両者を独立させることで、engineを変更せずにenvelopeを拡張できる。
 
-エンジン固有の source は `syntax` にそのまま保存する。envelope は AntV DSL を別の表現へ変換しない。
+`sectionId`には見出し文字列そのものではなく、公開ページと同じMarkdoc configが生成したIDを使う。見出し名または本文を変更した場合はsidecar全体を再生成する。
+
+envelopeは`spec`の内部を解釈も変換もしない。`article-visual`のparserだけが、対応する`engineVersion`のpayloadを解釈する。
+
+## Article Visual spec v1
+
+### 共通フィールド
+
+すべての`spec`は次の共通フィールドを持つ。
+
+| キー | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `type` | enum | yes | 描く情報構造 |
+| `title` | string | yes | 図が伝える主張。見出しの転載ではなく結論を書く |
+| `caption` | string | no | 図の読み方に必要な短い補足 |
+
+項目やノードでは次の共通語彙を使う。
+
+| キー | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `id` | string | 種類による | payload内で一意の参照ID |
+| `label` | string | yes | 短い名詞句または動詞句 |
+| `detail` | string | no | 一文以内の補足 |
+| `icon` | string | no | rendererが提供するsemantic icon ID |
+| `emphasis` | boolean | no | 主張上の中心を示す。1図につき最大2件 |
+
+色・大きさ・位置・フォント・class名・URL・SVG pathはspecへ入れない。
+
+### `cards`
+
+順序や接続を持たない、並列の要点を示す。
+
+```yaml
+type: cards
+title: 信頼境界を守る三つの仕組み
+items:
+  - label: 短命な権限
+    detail: 必要な時間だけ能力を渡す
+    icon: timer
+  - label: 操作の記録
+    detail: 誰が何をしたかを残す
+    icon: document
+```
+
+`items`は2〜6件とする。単に見出しを並べただけのcardsは作らない。
+
+### `sequence`
+
+順序・段階・時系列・段階的な絞り込みを示す。
+
+```yaml
+type: sequence
+title: 要求は検証を経て一時的な能力になる
+mode: steps
+items:
+  - label: 要求
+  - label: 検証
+  - label: 能力を発行
+    emphasis: true
+  - label: 失効
+```
+
+`mode`は`steps`・`timeline`・`funnel`のいずれかとする。`items`は3〜7件で、記載順を意味のある順序として扱う。
+
+### `interaction`
+
+人物やシステム間のメッセージ交換を時系列で示す。
+
+```yaml
+type: interaction
+title: Workspaceが権限発行を仲介する
+actors:
+  - id: employee
+    label: 社員
+  - id: workspace
+    label: Workspace
+  - id: gatekeeper
+    label: Gatekeeper
+steps:
+  - from: employee
+    to: workspace
+    label: 操作を要求
+  - from: workspace
+    to: gatekeeper
+    label: 許可を照会
+  - from: gatekeeper
+    to: workspace
+    label: 短命な能力
+```
+
+`actors`は2〜4件、`steps`は2〜8件とする。rendererがactorのlaneとstepの位置を計算する。
+
+### `comparison`
+
+二者・変更前後・二つの選択肢を同じ観点で比較する。
+
+```yaml
+type: comparison
+title: 常設権限を短命な能力へ置き換える
+sides:
+  - label: 常設権限
+    items:
+      - label: 有効期間
+        detail: 明示的に失効させるまで残る
+      - label: 漏えい時
+        detail: 長期間悪用される
+  - label: 短命な能力
+    emphasis: true
+    items:
+      - label: 有効期間
+        detail: 操作に必要な時間だけ
+      - label: 漏えい時
+        detail: 時間経過で使えなくなる
+```
+
+`sides`は必ず2件とする。両側の`items`は同じ順序と観点で2〜5件を並べる。
+
+### `hierarchy`
+
+包含・分類・構成要素を根から子へ示す。
+
+```yaml
+type: hierarchy
+title: 制御面が三つの機能を束ねる
+root:
+  label: 制御面
+  children:
+    - label: ID確認
+    - label: ポリシー判定
+    - label: 監査記録
+```
+
+深さは4段、ノード総数は12件までとする。複数の親を持つ関係は`flow`を使う。
+
+### `flow`
+
+依存・因果・データ移動を有向グラフで示す。
+
+```yaml
+type: flow
+title: 許可済み能力だけがサービスへ届く
+nodes:
+  - id: request
+    label: 操作要求
+  - id: policy
+    label: ポリシー判定
+    emphasis: true
+  - id: capability
+    label: 短命な能力
+  - id: service
+    label: 社内サービス
+edges:
+  - from: request
+    to: policy
+  - from: policy
+    to: capability
+    label: 許可
+  - from: capability
+    to: service
+```
+
+ノードは3〜9件、edgeは2〜12件とする。v1は有向非巡回グラフだけを扱う。rendererはトポロジカル順序からlayerを決め、同じlayer内の配置をIDと入力順で安定させる。
+
+### `matrix`
+
+二つの軸による位置づけを四象限で示す。エージェントは座標ではなく象限を指定する。
+
+```yaml
+type: matrix
+title: 権限は期間と範囲をともに絞る
+xAxis:
+  low: 狭い範囲
+  high: 広い範囲
+yAxis:
+  low: 短い期間
+  high: 長い期間
+items:
+  - label: 短命な能力
+    quadrant: low-low
+    emphasis: true
+  - label: 管理者キー
+    quadrant: high-high
+```
+
+`quadrant`は`low-low`・`low-high`・`high-low`・`high-high`のいずれかとする。同じ象限の項目はrendererが重ならないよう整列する。
+
+### `chart`
+
+本文に明記された数量の比較または推移を示す。
+
+```yaml
+type: chart
+title: 権限の有効期間を短縮する
+variant: bar
+unit: 分
+values:
+  - label: 常設キー
+    value: 1440
+  - label: 短命な能力
+    value: 15
+    emphasis: true
+```
+
+`variant`は`bar`・`line`・`donut`のいずれかとする。`values`は2〜8件で、`value`は有限数とする。本文に同じ数値と単位がない場合はchartを作らない。軸の切り詰めや対数変換はv1で扱わない。
+
+## rendererの選択
+
+記事作成エージェントは視覚テンプレートを選ばない。本文の意味構造に対応する`type`だけを選び、rendererが画面幅・項目数・文字量から具体的な配置を決める。
+
+| 本文の関係 | `type` |
+| --- | --- |
+| 順序を持たない並列の要点 | `cards` |
+| 順序・段階・時系列 | `sequence` |
+| 複数人物・システムのやりとり | `interaction` |
+| 二者比較・前後比較・トレードオフ | `comparison` |
+| 階層・包含・構成 | `hierarchy` |
+| 依存・因果・データ移動 | `flow` |
+| 2軸による位置づけ | `matrix` |
+| 本文に明記された数量 | `chart` |
+
+図の主張は一つに絞る。複数の異なる主張を一枚へ詰めず、本文の見出しをそのまま並べるだけの図も作らない。
 
 ## section manifest
 
-記事作者が手で見出し ID や行範囲を推測しないよう、専用の抽出スクリプトが JSON manifest を出力する。
+記事作者が見出しIDや行範囲を推測しないよう、専用の抽出スクリプトがJSON manifestを出力する。
 
 ```json
 {
@@ -161,13 +390,13 @@ visuals:
 }
 ```
 
-抽出には公開サイトと同じ Markdoc heading transform と `slugify` を使う。treemap の内部ノード ID は section binding に使わない。
+抽出には公開サイトと同じMarkdoc heading transformと`slugify`を使う。treemapの内部ノードIDはsection bindingに使わない。
 
-manifest は作業用であり Git に保存しない。
+manifestは作業用でありGitへ保存しない。
 
 ## 対象セクションの選定
 
-既定では内容を持つ H2 を候補とする。次は原則として除外する。
+既定では内容を持つH2を候補とする。次は原則として除外する。
 
 - `TL;DR`
 - 概要だけを再掲する導入
@@ -176,132 +405,120 @@ manifest は作業用であり Git に保存しない。
 - 付録の参考リンク
 - 本文を図にしても見出しと同程度の情報しか増えない節
 
-H3 は、親 H2 の図では表現できない独立した仕組み・比較・時系列を持つ場合だけ対象にする。1 記事あたりの上限は 8 枚を初期値とする。
+H3は、親H2の図では表現できない独立した仕組み・比較・時系列を持つ場合だけ対象にする。1記事あたりの上限は8枚を初期値とする。
 
-選択時は本文中の関係を先に分類し、その後でテンプレートを選ぶ。
+## `article-section-visuals`スキル
 
-| 本文の関係 | AntV テンプレート系列 |
-| --- | --- |
-| 順序、段階、時系列 | `sequence-*` |
-| 複数人物・システムのやりとり | `sequence-interaction-*` |
-| 並列の要点 | `list-*` |
-| 二者比較、前後比較、トレードオフ | `compare-binary-*` |
-| 2 軸の位置づけ | `compare-quadrant-*` |
-| 階層、包含、構成 | `hierarchy-*` |
-| ノード間の依存、因果、交換 | `relation-*` |
-| 本文に明記された数量 | `chart-*` |
+このリポジトリへローカルのcallable skillとして追加する。外部スキルは呼び出さない。
 
-図の主張は一つに絞る。複数の異なる主張を一枚に詰めず、本文の見出しをそのまま項目として並べるだけの図も作らない。
-
-## スキルの構成
-
-ローカルの callable skill として `article-section-visuals` を追加する。
-
-入力は完成した `index.mdoc`、出力は検証済みの `section-visuals.yml` とする。同じ記事を書いたエージェントが続けて実行し、別のサブエージェントへ委譲しない。
+入力は完成した`index.mdoc`、出力は検証済みの`section-visuals.yml`とする。同じ記事を書いたエージェントが続けて実行し、別のサブエージェントへ委譲しない。
 
 ワークフローは次のとおり。
 
-1. section manifest を生成する。
-2. 各セクションを読み、図にすることで理解が速くなる候補を選ぶ。
-3. 候補ごとに主張一つと必要な要素・関係を決める。
-4. `infographic-syntax-creator` を名前で読み、その手順に従って AntV DSL を作る。
-5. 公式スキルが返した単一コードフェンスから DSL 本体だけを取り出す。
-6. 色・フォント・theme・アニメーションを除き、ローカルのアイコン語彙に合わせる。
-7. `section-visuals.yml` を保存する。
-8. validator が成功するまで本文との不整合と DSL を直す。
+1. section manifestを生成する。
+2. 各セクションを読み、図にすると理解が速くなる候補を選ぶ。
+3. 候補ごとに、図で伝える主張を一つに絞る。
+4. 本文の関係を分類し、対応する`type`を選ぶ。
+5. Article Visual spec v1に従って`spec`を作る。
+6. 固有名詞・数値・因果を対象セクション本文と照合する。
+7. envelopeへ格納して`section-visuals.yml`を保存する。
+8. validatorが成功するまでpayloadを直す。
 
-親の `podcast-research2` はスキル名、呼ぶ時点、入力成果物、検証成功を次へ進む条件としてだけ記載する。公式スキルのテンプレート一覧や内部ファイルは親へコピーしない。
+スキルはArticle Visual specと検証コマンドだけを知る。React component名・CSS・SVG構造・`apps/web`の配置は記載しない。これにより、rendererを作り直してもspec v1を維持する限りスキルは変わらない。
 
-## AntV DSL の制約
+親の`podcast-research2`には、スキル名・呼ぶ時点・入力成果物・検証成功を次へ進む条件としてだけ記載する。specの全フィールドを親スキルへコピーしない。
 
-公式 DSL のうち、記事 sidecar では次の profile だけを許可する。
+## specの正本と互換性
 
-- 先頭行は登録済みの `infographic <template-name>`
-- `data` ブロックを一つ持つ
-- 主要データ系列はテンプレートに対応する一種類だけ
-- `title`、`desc`、`label` は記事本文と同じ言語
-- 一つの図の主要項目は原則 3〜7 個
-- ラベルは短い名詞句、説明は一文以内
-- `value` は本文に同じ数値がある場合だけ使用
-- template、node、relation、item の個数に上限を設ける
+Article Visual specの正本は、`@hskksk/markdoc-react`が公開するversion付きTypeScript型・機械検証用schema・parserとする。Reactを読み込まないexport pathを用意し、Node.jsのvalidatorからも利用できるようにする。
 
-次は禁止する。
+記事作成スキルは文章だけで正しさを保証せず、最後に同じparserを使うrepository commandを実行する。rendererとauthoring validatorが異なる解釈を持つ状態を避ける。
 
-- `theme` ブロック
-- `design` ブロック
-- 名前に `animated` を含むテンプレート
-- `http:`、`https:`、`data:` URL
-- inline SVG、HTML、script
-- `illus`
-- remote、search、custom resource 指定
-- 任意の width、height、padding
+互換性は次の規則で管理する。
 
-配色、フォント、余白、ダークモードは renderer が指定する。
+- optional field追加など後方互換の変更はengine version 1のまま行う。
+- fieldの意味・必須条件・描画結果を変える場合は新しいmajor versionを追加する。
+- rendererは移行期間中、現行版と一つ前のmajor versionを読めるようにする。
+- envelopeはpayloadを自動変換しない。移行は明示的なcodemodでsidecarを書き換える。
+- 未対応のengineまたはversionは`alt`へfallbackする。
 
-## アイコンと外部資源
+## `@hskksk/markdoc-react`の変更
 
-AntV は icon キーワードに対して search resource へフォールバックできるため、既定挙動のままでは実行時に外部アクセスが発生しうる。
+engine-neutralなhostと、自前のArticle Visual engineを追加する。
 
-公開サイトでは remote/search loader を使わない。アプリが登録する resource loader は、許可された semantic icon ID をローカル SVG へ解決する。初期候補は Lucide の限定セットとし、未知の ID は汎用プレースホルダーへ置き換える。
-
-sidecar validator は URL、resource object、未知の icon ID を拒否する。これにより、記事データからネットワークアクセス先や SVG 本文を指定できないようにする。
-
-## `@hskksk/markdoc-react` の変更
-
-AntV の個別テンプレートを React コンポーネントとして再実装しない。AntV がレイアウトと SVG を所有し、markdoc-react は engine-neutral な host を提供する。
-
-追加する公開 API の概念形は次のとおり。
+公開APIの概念形は次のとおり。
 
 ```ts
-type InfographicEngine = "antv-infographic";
-
-type InfographicInput = {
-  engine: InfographicEngine;
-  source: string;
-  theme?: "light" | "dark";
+type SectionVisualEnvelope = {
+  engine: string;
+  engineVersion: string;
   alt: string;
+  spec: unknown;
 };
 
-type InfographicRenderer = (
-  input: InfographicInput,
-  container: HTMLElement,
-) => Promise<VizMountResult>;
+type VisualEngineDefinition<T> = {
+  id: string;
+  versions: readonly string[];
+  parse(version: string, spec: unknown): T;
+  Component: React.ComponentType<{
+    spec: T;
+    alt: string;
+    theme?: "light" | "dark";
+  }>;
+};
 ```
 
 ```tsx
-<Infographic
-  engine="antv-infographic"
-  source={syntax}
-  alt={alt}
+<SectionVisual
+  visual={visual}
+  engines={[articleVisualEngine]}
 />
 ```
 
-markdoc-react 側の変更範囲:
+markdoc-react側の変更範囲:
 
-- `Infographic` component
-- `InfographicRenderer` / `InfographicHandler` 型
-- `MarkdocProvider` の `infographicRenderer`
-- mount、dispose、resize、theme change を扱う共通処理
-- AntV インスタンスを受け取る optional adapter
-- fallback と accessibility
-- 必要なら fenced source を受ける `{% infographic %}` Markdoc tag
+- `SectionVisual` host component
+- `VisualEngineDefinition`とfallbackの型
+- Article Visual spec v1の型・schema・parser
+- `cards`・`sequence`・`interaction`・`comparison`・`hierarchy`・`flow`・`matrix`・`chart` component
+- 共通のicon resolver・theme token・text wrapping
+- server renderingとhydrationを壊さない決定論的layout
+- accessibility・tests・demo
 
-`@antv/infographic` 自体を markdoc-react の必須 dependency にしない。既存の Mermaid、D2、ECharts と同様に、アプリが dynamic import した実装を adapter へ渡す。
+Article Visual engineはmarkdoc-reactのfirst-party engineとして同梱する。アプリが描画ライブラリやadapterを注入する必要はない。将来別engineを追加する場合だけ、`VisualEngineDefinition`をregistryへ追加する。
 
-## podcaster の描画
+任意のMarkdoc tagは初期実装に含めない。セクション可視化はsidecarからのみ読み、記事本文へengine payloadを直接埋め込ませない。
+
+## layout engine
+
+エージェントは座標を出力しない。各componentは入力順・ID・項目数から配置を計算する。
+
+- `cards`・`comparison`はCSS Gridで列数を決める。
+- `sequence`は広い画面で横、狭い画面で縦に並べる。
+- `interaction`はactorごとのlaneとstep順から位置を決める。
+- `hierarchy`は深さごとにlevelを分け、親の子を入力順に並べる。
+- `flow`は有向非巡回グラフをlayerへ分け、同じlayerを安定順で並べる。
+- `matrix`は指定された象限内で項目を等間隔に並べる。
+- `chart`は0を起点とし、値域からbar・line・arcを計算する。
+
+結果は同じspec・engine version・container classに対して常に同じになる。乱数・現在時刻・ブラウザ固有の文字計測をlayoutの入力にしない。
+
+日本語ラベルはrendererが意味の切れ目で折り返す。最大行数を超える場合は省略せずvalidatorで拒否し、記事作者に短い表現へ直させる。
+
+## podcasterの描画
 
 ### sidecar loader
 
-`apps/web` に server-only loader を置く。
+`apps/web`へserver-only loaderを置く。
 
-1. `section-visuals.yml` が無ければ `null`。
-2. YAML parse、version、必須フィールドを検証する。
-3. `sourceSha256` がレンダー用本文またはディスク上の本文のどちらにも一致しなければ sidecar 全体を無視する。
-4. `sectionId` が transformed article tree に存在しない図を除外する。
-5. engine、version、syntax profile、alt を検証する。
-6. 不正な図だけを除外し、警告を出す。残りの図は表示する。
+1. `section-visuals.yml`がなければ`null`を返す。
+2. YAML parse・version・必須フィールドを検証する。
+3. `sourceSha256`がレンダー用本文またはディスク上の本文のどちらにも一致しなければsidecar全体を無視する。
+4. `sectionId`がtransformed article treeに存在しない図を除外する。
+5. engine・engineVersion・spec・altをengine parserで検証する。
+6. 不正な図だけを除外して警告を出し、残りの図は表示する。
 
-記事本文の変更を古い図が説明し続けることを防ぐため、SHA mismatch は部分採用しない。
+記事本文の変更後に古い図が残らないよう、SHA mismatchでは一部を採用しない。
 
 ### デスクトップ
 
@@ -311,48 +528,73 @@ markdoc-react 側の変更範囲:
 ┌──────────────────────────────────────────────────────┐
 │ 章マップ                                               │
 ├────────────────────────────────┬─────────────────────┤
-│ 本文（最大 48rem）               │ sticky visual rail  │
+│ 本文（最大48rem）                │ sticky visual rail  │
 │                                │ 20〜26rem            │
 └────────────────────────────────┴─────────────────────┘
 ```
 
-- rail は viewport 上部から一定位置で sticky にする。
-- `IntersectionObserver` で現在の見出し階層を追跡する。
+- railはviewport上部から一定位置でstickyにする。
+- `IntersectionObserver`で現在の見出し階層を追跡する。
 - 現在の最深セクションに図があればそれを表示する。
-- H3 に図が無ければ、図を持つ親 H2 を表示する。
-- 図を持たない H2 へ移った場合、直前の無関係な図を残さず rail を空にする。
-- 図の切替は opacity の短い transition だけとし、reduced motion では無効にする。
-- rail 内の重複テキストは Pagefind の検索対象から除く。
+- H3に図がなければ、図を持つ親H2を表示する。
+- 図を持たないH2へ移った場合はrailを空にする。
+- 図の切替はopacityの短いtransitionだけとし、reduced motionでは無効にする。
+- rail内の重複テキストはPagefindの検索対象から除く。
 
 ### モバイル
 
-sticky rail を使わず、対応する見出しの直後に図を置く。
+sticky railを使わず、対応する見出しの直後に図を置く。
 
-server 側で transformed Markdoc tree に `SectionVisualSlot` を挿入し、client 側が sidecar map から該当図を描画する。DOM mount 後に見出しを検索して要素を移動する方式は採用しない。
+server側でtransformed Markdoc treeへ`SectionVisualSlot`を挿入し、sidecar mapから該当図を描画する。DOM mount後に見出しを検索して要素を移動する方式は採用しない。
 
-同じ画面幅で rail と inline slot の両方を mount しない。描画エンジンの二重起動を避けるため、responsive client component が表示方式を一つ選ぶ。
+同じ画面幅でrailとinline slotの両方をmountしない。responsive componentが表示方式を一つ選ぶ。
+
+### server rendering
+
+Article Visual componentはDOM測定や外部resourceを必要としないため、図本体をserver renderingできる。モバイルのinline図はHTMLへ含め、JavaScriptが無効でも読めるようにする。
+
+デスクトップrailではactive sectionの切替にclient componentを使うが、図の描画自体は事前に作られたReact要素を表示するだけにする。rendererをclientで再実行しない。
 
 ## テーマ
 
-sidecar に色を保存しない。サイトの light/dark token を AntV theme config へ変換する。
+sidecarへ色を保存しない。サイトのlight/dark tokenをArticle Visual componentへ渡す。
 
-- 背景は記事背景に合わせる
-- 文字色と線色は WCAG コントラストを満たす
-- 強調色は一色を基本とする
-- 色だけで状態を区別しない
-- 日本語フォントはサイトの既定 sans-serif を使う
-- SVG 内テキストが 360px 幅でも読める下限を設ける
+- 背景は記事背景に合わせる。
+- 文字色と線色はWCAGコントラストを満たす。
+- 強調色は一色を基本とする。
+- 正常・注意・危険などの意味を色だけで区別しない。
+- 日本語フォントはサイトの既定sans-serifを使う。
+- 360px幅でも本文と補足を読める文字サイズを保つ。
 
-テーマ変更時は infographic を再描画し、古い instance を dispose する。
+## icon
 
-## accessibility と fallback
+`icon`はengineが定義したsemantic IDだけを受理する。初期集合は`person`・`document`・`database`・`shield`・`timer`・`workspace`・`service`・`network`・`chart`など、記事で頻出する概念に絞る。
 
-- `alt` は必須とし、図が伝える結論と主要な関係を一文で書く。
-- 描画された SVG は `role="img"` と accessible name/description を持つ。
-- SVG 内の装飾要素は読み上げ対象にしない。
-- renderer 未設定、構文エラー、資源解決失敗時は `alt` のテキストカードを表示する。
-- 図だけにリンク、操作、本文にない情報を置かない。
+iconはmarkdoc-react内のReact componentへ解決する。sidecarからpackage名・ファイル名・URL・SVG本文は指定できない。未知のIDはvalidatorが拒否し、runtimeでは汎用placeholderへfallbackする。
+
+## accessibilityとfallback
+
+- `alt`は必須とし、図が伝える結論と主要な関係を一文で書く。
+- 図全体は`figure`とし、視覚表現には`role="img"`とaccessible nameを付ける。
+- rendererが生成する装飾線・矢印・iconは読み上げ対象にしない。
+- 図内の全文を順に読み上げず、`alt`を簡潔な代替表現として使う。
+- engine未登録・version未対応・payload不正の場合は`alt`のtext cardを表示する。
+- 図だけにリンク・操作・本文にない情報を置かない。
 - 図を見なくても記事本文を順番どおり読める。
+
+## 安全性
+
+sidecarは信頼済みコードではなく、検証対象のcontent dataとして扱う。
+
+- `spec`はversion付きparserでunknownから検証する。
+- objectの未知fieldを拒否する。
+- 文字数・配列長・階層深さ・node数・edge数へ上限を設ける。
+- prototype key、URL、HTML、SVG、CSS、event handlerを受理しない。
+- `eval`・動的import・`dangerouslySetInnerHTML`を使わない。
+- runtimeに外部resource取得・外部skill実行・AI呼び出しを置かない。
+- parserの失敗で記事本文のbuildや表示を止めない。
+
+記事生成時に使うのは、このリポジトリで管理する`article-section-visuals`だけとする。第三者が更新できる外部スキルをインストールまたは実行しない。
 
 ## 検証
 
@@ -360,105 +602,110 @@ sidecar に色を保存しない。サイトの light/dark token を AntV theme 
 
 一つの記事を対象に次を確認する。
 
-- YAML と envelope schema
+- YAMLとenvelope schema
 - `sourceSha256`
-- 重複しない `sectionId`
-- section manifest に存在する ID
-- engine と engineVersion
-- AntV parser が受理する syntax
-- template allowlist
-- field と項目数の上限
-- 禁止ブロック、URL、inline markup、外部 resource
-- `alt` の存在と長さ
-- sidecar 内の可視テキストと数値が対象セクション本文に根拠を持つこと
+- 重複しない`sectionId`
+- section manifestに存在するID
+- engineとengineVersion
+- Article Visual parserが受理するspec
+- type別の必須field・参照整合性・項目数上限
+- flowが有向非巡回グラフであること
+- icon allowlist
+- 禁止field・URL・inline markup
+- `alt`の存在と長さ
+- sidecar内の固有名詞と数値が対象セクション本文に根拠を持つこと
 
-最後の項目は機械的な文字列照合だけで決めず、記事作者が本文と照合する。数値と固有名詞は機械検査でも差分を出す。
+最後の項目は機械的な文字列照合だけで決めず、記事作者が本文と照合する。数値・単位・固有名詞は機械検査でも差分を出す。
 
 ### repository check
 
-全 `section-visuals.yml` を走査する check command を CI と `pnpm typecheck` に含める。既存記事に sidecar が無いことはエラーにしない。
+全`section-visuals.yml`を走査するcheck commandをCIと`pnpm typecheck`に含める。既存記事にsidecarがないことはエラーにしない。
 
 ### markdoc-react
 
-- engine 未設定時の fallback
-- valid/invalid DSL
-- mount、resize、dispose
-- light/dark 切替
+- spec parserのvalid/invalid fixture
+- 全typeのserver rendering
+- 同じ入力から同じmarkupが得られること
+- light/dark theme
 - reduced motion
-- alt と ARIA
-- resource loader が外部 URL を拒否すること
-- long Japanese label の wrapping
+- alt・ARIA・decorative element
+- 長い日本語labelの拒否と折り返し
+- flowのcycle・不正参照・過大payloadの拒否
+- unknown engine/versionのfallback
 
 ### web
 
-- sidecar 無しの記事が従来どおり表示される
-- stale SHA の sidecar が無視される
-- desktop rail の section 切替
+- sidecarなしの記事が従来どおり表示される
+- stale SHAのsidecarが無視される
+- desktop railのsection切替
 - mobile inline slot
-- heading deep link と treemap navigation
-- Pagefind に visual 文言が重複登録されない
-- Keystatic preview と公開ページの一致
+- JavaScript無効時のinline図
+- heading deep linkとtreemap navigation
+- Pagefindへvisual文言が重複登録されない
+- Keystatic previewと公開ページが一致する
 
 ## 性能
 
-- `@antv/infographic` は sidecar を持つ記事でだけ dynamic import する。
-- 同時に mount する infographic は desktop で一つ、mobile では viewport 周辺に限定する。
-- 非 active な desktop 図は instance を保持せず dispose する。
-- icon はローカルで解決し、ネットワーク待ちを発生させない。
-- 生成済み SVG の永続キャッシュは初期実装に含めない。実測後に必要なら build cache を追加する。
+- 外部描画ライブラリを追加しない。
+- 図本体は可能な限りserver renderingし、描画用client runtimeを持たない。
+- desktopで同時に表示する図は一つとする。
+- mobileでは通常のdocument flowに静的な図を置き、observerを追加しない。
+- SVG pathとlayoutは項目数に対して線形または`O(V + E)`で計算する。
+- payload上限により、極端に大きなDOMやSVGを生成できないようにする。
 
 ## エラー処理
 
 | エラー | 表示 |
 | --- | --- |
-| sidecar 不在 | セクション可視化を表示しない |
-| SHA mismatch | sidecar 全体を無視し、server warning |
-| 一部 entry が不正 | その entry を除外し、他は表示 |
-| AntV import 失敗 | `alt` fallback |
-| DSL parse/render 失敗 | `alt` fallback と client warning |
-| icon 不明 | ローカル placeholder。外部検索はしない |
+| sidecar不在 | セクション可視化を表示しない |
+| SHA mismatch | sidecar全体を無視し、server warning |
+| 一部entryが不正 | そのentryを除外し、他は表示 |
+| engine未登録 | `alt` fallback |
+| engine version未対応 | `alt` fallback |
+| spec parse失敗 | `alt` fallbackとserver warning |
+| icon不明 | authoring時はエラー、runtimeはlocal placeholder |
 
-記事本文の表示を infographic の失敗で止めない。
+記事本文の表示を図の失敗で止めない。
 
 ## 実装境界
 
 ### `hskksk/markdoc-react`
 
-1. Infographic runtime 型と host component
-2. AntV adapter
-3. optional Markdoc tag
-4. styles、tests、demo
-5. npm release
+1. engine-neutralな`SectionVisual` hostとregistry
+2. Article Visual spec v1の型・schema・parser
+3. type別React componentとlayout
+4. theme・icon・accessibility・fallback
+5. tests・demo・npm release
 
 ### `hskksk/podcaster`
 
-1. released markdoc-react と pinned `@antv/infographic` の導入
+1. 更新済みmarkdoc-reactの導入
 2. section manifest extractor
-3. sidecar 型、loader、validator、repository check
-4. desktop rail と mobile slot
-5. local icon resolver
-6. `article-section-visuals` skill
-7. `podcast-research2` からの呼び出し
-8. 一記事の pilot sidecar
+3. sidecar型・loader・validator・repository check
+4. desktop railとmobile slot
+5. `article-section-visuals` skill
+6. `podcast-research2`からの呼び出し
+7. 一記事のpilot sidecar
 
 ## 導入順
 
-1. Cloudflare 記事から代表的な `relation`、`compare`、`hierarchy`、`sequence`、`chart` fixture を作る。
-2. markdoc-react の host と AntV adapter で fixture を描画する。
-3. podcaster の loader と responsive layout を実装し、手書き sidecar で確認する。
-4. validator と repository check を追加する。
-5. `article-section-visuals` を追加し、公式スキルの出力を sidecar に保存する。
-6. `podcast-research2` の記事完成後工程へ接続する。
-7. pilot 記事で手書き版とスキル生成版を比較し、許可テンプレートと文字量上限を固定する。
+1. Cloudflare記事から`cards`・`sequence`・`interaction`・`comparison`・`hierarchy`・`flow`・`matrix`・`chart`のfixtureを作る。
+2. markdoc-reactへspec parserと各componentを追加し、fixtureをserver renderingする。
+3. podcasterのloaderとresponsive layoutを実装し、手書きsidecarで確認する。
+4. validatorとrepository checkを追加する。
+5. `article-section-visuals`を追加し、Article Visual specを生成する。
+6. `podcast-research2`の記事完成後工程へ接続する。
+7. pilot記事で手書き版とスキル生成版を比較し、文字量と項目数の上限を固定する。
 
 ## 受け入れ条件
 
-- Cloudflare 記事で少なくとも 5 セクションの図が本文と矛盾せず描画される。
-- desktop では現在のセクションに対応する図だけが右 rail に表示される。
-- mobile では同じ図が該当見出し直後に表示される。
-- 本文を変更すると古い sidecar は表示されない。
-- 図が壊れても本文と treemap は表示される。
-- runtime に AI 呼び出し、CDN `latest`、外部 icon fetch がない。
-- 記事作者は HTML、SVG、React、座標、色を生成しない。
-- sidecar は公式 AntV DSL と薄い記事 envelope だけで構成される。
-- `pnpm typecheck` と visual sidecar check が成功する。
+- Cloudflare記事で少なくとも5セクションの図が本文と矛盾せず描画される。
+- 5種類以上の`type`が、外部描画ライブラリなしで表示される。
+- desktopでは現在のセクションに対応する図だけが右railへ表示される。
+- mobileでは同じ図が該当見出しの直後へ表示される。
+- 本文を変更すると古いsidecarは表示されない。
+- 図が壊れても本文とtreemapは表示される。
+- runtimeにAI呼び出し・外部resource fetch・外部skill実行がない。
+- 記事作者はHTML・SVG・React・座標・色を生成しない。
+- sidecarはArticle Visual specと記事envelopeだけで構成される。
+- `pnpm typecheck`とvisual sidecar checkが成功する。
