@@ -7,13 +7,6 @@
       "skillPath": "skills/how-to-survey/SKILL.md",
       "computedHash": "275b622bf7be86795f90c407643829f78c3ca38e4685bb1f01e1e7a9cc30254a"
     },
-    "infographic-syntax-creator": {
-      "source": "antvis/Infographic",
-      "sourceType": "github",
-      "skillPath": "skills/infographic-syntax-creator/SKILL.md",
-      "computedHash": "4a4d5f5868fd2dae44f11b62107a79c2fd467bfee8019412ed7bde009765f48e",
-      "installMode": "copy"
-    },
     "japanese-writing": {
       "source": "hskksk/agent-skills",
       "sourceType": "github",
