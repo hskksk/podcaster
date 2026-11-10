@@ -1,0 +1,267 @@
+---
+title: "Cloudflareとそのサービス — Cloudflare OSを中心とした2026年の地図"
+publishedAt: 2026-11-10
+podcast: queued
+legacyFilename: 20261110_182100_cloudflare_cloudflare_os.md
+---
+# Cloudflareとそのサービス — Cloudflare OSを中心とした2026年の地図
+
+## TL;DR
+
+- Cloudflareは「Connectivity Cloud」として、CDN・セキュリティ・Zero Trust・Workers系の開発基盤を1つのグローバルネットワーク上で束ね、2025年の売上は約21.7億ドルと30%近い成長だった[1][2]。
+- 2026年8月にオープンソース化されたCloudflare OSは、ブラウザ上の社員向けAIワークスペースであり、Gadget（フルスタックアプリ）、Gatekeeper（権限付きコネクタ）、Workers上のDynamic Workerで動く[3][4]。
+- 評判の中心は、エージェントを最初から権限ゼロで動かす設計と、社内利用の実績だが、「OS」という名称やCloudflareプラットフォーム依存、セットアップの壁も議論になっている[5][6]。
+- 類似候補はMicrosoft Copilot Studio、Glean、Difyなどで、Cloudflare OSは汎用SaaSより「自社Cloudflareアカウントに載せるカスタム可能な基盤」に近い[7][8]。
+- コストの床はWorkers Paidの月5ドルにContainers・AI Gateway等の従量が乗る形で、OS単体の定額SKUは2026年11月時点では未公開である[9][10]。
+
+## 概要
+
+インターネット上のアプリは、コンテンツ配信、ボット対策、社内アクセス制御、エッジでのコード実行を別々のベンダーに頼みがちだった。Cloudflareは2000年代後半からCDNを出発点に、ファイアウォールやDNS、順にWorkersやR2、Zero Trust製品へ広げ、**1枚のネットワークと1つの契約帳**でまとめる戦略を取っている[1][11]。
+
+2026年の話題の一つが**Cloudflare OS**である。これはデスクトップ用の新しいOSではなく、社員全員にエージェントとワークスペースを配り、資料作成や社内システム接続、小さな社内アプリ構築をブラウザから行うためのプラットフォームだ[3][4]。Cloudflare社内では2026年5月から全社展開され、同年8月にApache-2.0で公開された[3][12]。
+
+本レポートの範囲は、2026年11月10日時点の公開情報に基づく。**Cloudflare社の事業全体の地図**、**Cloudflare OSの機能・評判**、**エンタープライズ向けAIワークスペースとの比較軸**、**公式料金の読み方**に焦点を当てる。個別企業の導入事例の検証や、マネージド版Cloudflare OSの最終価格は未公開のため詳細には踏み込まない。
+
+### 次に解くべき3つの問い
+
+1. **マネージド版Cloudflare OSが出たとき、自前デプロイより何が買えるのか。** ダッシュボード統合やサポートの価値は、Workers従量とのトレードオフになる[12][13]。
+2. **Gatekeeperと観測ベースの共有制御が、実際の監査要件を満たすか。** 設計思想は評価されているが、業界標準のコンプライアンス認証そのものではない[5][14]。
+3. **エージェント時代に、Connectivity Cloudの収益はアプリ層へどれだけ移るか。** Workers・Containers・AI Gatewayの伸びが、従来のCDN/セキュリティ契約と置き換わるのか補完するのかで、他社クラウドとの競合像が変わる[1][2]。
+
+## Cloudflare社は何を売っているか
+
+Cloudflare, Inc.（NYSE: NET）は2010年設立、サンフランシスコ拠点。SEC提出の2025年Form 10-Kでは、自社を「Connectivity Cloud」のリーダーと位置づけ、顧客がオンプレ・ハイブリッド・クラウド・SaaSをまたいだ**セキュリティ・性能・信頼性の統一コントロールプレーン**として製品群を説明している[1]。
+
+財務面では、2025会計年度の売上約21.68億ドル（前年比約30%増）、四半期ベースでも30%台の成長が続いた[2]。粗利率はGAAPで約74.5%と高い一方、GAAP営業利益は依然マイナス圏にあり、成長投資とストック報酬が利益を押し下げている[2]。収益モデルは主にサブスクリプションとサポートだが、Workersなど**従量課金**の比率が上がっている[1]。
+
+経営層の2026年初頭のメッセージでは、「エージェントがウェブの新しい利用者になる」という前提のもと、**Workers上のコード**、**性能・セキュリティ・ネットワーク**、**エージェント向けアクセス制御**が相互に需要を生む「フライホイール」と語られている[2]。Cloudflare OSは、その物語のうち「社内のエージェント利用」を具体化した内部製品の外部公開と読める[3][12]。
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart TB
+  subgraph edge["グローバルエッジ"]
+    CDN["CDN / キャッシュ"]
+    SEC["WAF / DDoS / Bot"]
+    DNS["DNS / トラフィック制御"]
+  end
+  subgraph access["アクセス層"]
+    ZT["Zero Trust / Cloudflare One"]
+    ACC["Cloudflare Access"]
+  end
+  subgraph dev["開発者・AI層"]
+    WRK["Workers / Pages"]
+    DOB["Durable Objects / Queues"]
+    CTR["Containers / Sandboxes"]
+    STO["R2 / D1 / KV / Vectorize"]
+    AI["Workers AI / AI Gateway"]
+    COS["Cloudflare OS"]
+  end
+  Users["エンドユーザー"] --> CDN
+  Employees["社員・エージェント"] --> ZT
+  Employees --> COS
+  Devs["開発者"] --> WRK
+  WRK --> DOB
+  WRK --> CTR
+  COS --> WRK
+  COS --> ACC
+  COS --> AI
+```
+{% /diagram %}
+
+## 主要サービスを四つの束ね方で見る
+
+Cloudflareの製品は公式10-Kでも四層に整理されている[1]。実務上の比較軸として、次の表は**誰が買うか**と**何を置き換えるか**を示す（全部を同時導入する必要はない）。
+
+{% table %}
+- 束ね方
+- 代表製品
+- 主な買い手
+- よくある置き換え・併用
+---
+- アプリケーションサービス
+- CDN、WAF、DDoS、Bot Management、APIシールド
+- Web担当、SRE
+- 従来CDN、オンプレWAF、Akamai/Fastlyの一部
+---
+- SASE / Zero Trust
+- Cloudflare One、Access、Gateway、Tunnel
+- 情シス、セキュリティ
+- VPN、レガシーSSE、Zscaler/Palo Altoの一部機能
+---
+- 開発者基盤
+- Workers、Pages、R2、D1、Queues、Hyperdrive、Workers AI
+- アプリ開発者
+- AWS Lambda@Edge、Vercelの一部、S3 egress削減
+---
+- 拡張コンピュート
+- Containers（2026年GA）、Sandboxes、Durable Objects
+- AIエージェント、メディア処理、既存コンテナ移行
+- Kubernetesの小規模代替、Cloud Runのエッジ志向代替
+{% /table %}
+
+**Containers**は2025年のパブリックベータから2026年4月にGAとなり、WorkerがHTTPを受け、Durable Object経由でLinuxコンテナ（Firecracker microVM内）を起動するモデルだ[15][16]。エージェントが`npm test`やネイティブバイナリを動かす用途と結びつけやすい。**Sandboxes**は信頼できないコード用に、コンテナかDynamic Workerの二択を提供する[17]。
+
+## Cloudflare OSの中身
+
+### 何を解決しようとしているか
+
+社内向けAI導入の典型課題は、(1) 社員ごとにバラバラなChatGPT利用、(2) MCPコネクタにAPIキーを散らす、(3) エージェントが見えない権限で本番データを触る、の三つに集約される[3][5]。Cloudflare OSは、**会社の文脈（用語・手順・スキル）**と**システム接続**をワークスペース単位で配り、非エンジニアもブラウザからエージェントを使えるようにする[3][12]。
+
+### 主要コンポーネント
+
+| 概念 | 役割 | 実装のイメージ |
+|---|---|---|
+| Workspace | ユーザー1人（またはチーム）の作業空間 | Durable Object 1インスタンス[4] |
+| Gadget | エージェントが作るフルスタック「アプリ」 | Dynamic Worker Facet上のクライアント＋サーバー、SQLite状態[4][18] |
+| Gatekeeper | 外部システムへの能力付き接続 | 認証情報はGatekeeper側、Cap'n Web RPC、監査・承認UI[3][5] |
+| Skills / Context | 社内手順・用語の再利用 | リポジトリ内の指示群（社内Wikipedia的ライブラリ）[3] |
+| AI Gateway | モデル呼び出しの一本化 | ルーティング、予算、レート制限、チーム別課金可視化[3][13] |
+
+Sandstorm系の**ケイパビリティベースセキュリティ**の系譜が指摘されている。エージェントは最初は何にもアクセスできず、許可されたリソースだけが生成コードに`env.PROJECT`のような型付きバインディングとして現れる[5][19]。
+
+**観測ベースの共有制御**は独自性が高い。エージェントが参照したリソースを記録し、成果物（ダッシュボードなど）を共有するとき、受け手が元リソースにアクセスできるか再検証する[5]。これにより「共有リンクが権限昇格の穴になる」問題を減らす意図がある。
+
+### セットアップと制約
+
+公式READMEはv2を**early access**と明言し、大規模書き直し中である[4]。デプロイはGitHubのコアリポジトリと、Cloudflare社内例に基づくスターターリポジトリを組み合わせ、顧客のCloudflareアカウントに載せる[3][4]。
+
+技術的制約として、バックエンドは**Dynamic Workers**を使うため、Workers **Paid**プラン（月5ドルから）が必要だとセットアップ時に案内される[5]。`workerd`上のローカル実行は可能だが、自サーバーへの本番デプロイ用ツールは2026年時点で「COMING SOON」である[4]。
+
+クライアントコードはnull-origin iframe＋postMessage RPCで隔離されるが、開発者コメントでは**悪意あるコードに対する完全サンドボックス**ではなく、**AIの誤操作を止める**用途を想定している（CSPでWebRTCなど塞げない穴が残る旨も認めている）[20]。
+
+### ロードマップ上の未着項目
+
+ブログでは、ダッシュボード上のフルマネージド製品、開発ワークフロー向けContainers統合、Slack等チャットへのワークスペース埋め込みが今後の項目として挙げられている[3][12]。
+
+## 評判とコミュニティの反応
+
+2026年8月の公開はHacker Newsで高得点を集め、Cloudflare OSのリードエンジニア（Kenton Varda）らがスレッドに参加した[5][19]。称賛の焦点は次に集まった。
+
+- **Gatekeeper＋権限デフォルト拒否**が、MCPコネクタ乱立より筋がいいという技術コメント[5][14]。
+- **Gadget**がチャットログではなく動く社内アプリになる点[3][5]。
+- **AI Gateway**でモデル固定を避けられる点[3][13]。
+
+批判・懸念も明確だった。
+
+- **「OS」ブランド**はShellやカーネルを期待させ、実体はエンタープライズエージェントワークスペースだという指摘[5][19]。
+- **オープンソースでも移植性は低い**。Dynamic Workers、Durable Object Facets、R2などCloudflare固有の土台に強く依存する[5][6]。
+- **デプロイ摩擦**。Freeプランでは動かず、R2契約や再試行が必要だったというユーザー報告がある（二次レビューでも言及）[6]。
+- ローカル小型モデルでは日常的なタスクに使いづらい、という初期体験談[6]。
+
+総じて、**セキュリティ設計を評価しつつ、プラットフォームコミットと未完成さを割り引く**のが2026年下半期の世論の中心にある。
+
+## 類似サービスとの比較軸
+
+「社内AIワークスペース」は2026年時点で複数カテゴリに分かれる。Cloudflare OSは**自社インフラ上に載せるフルスタック社内アプリ＋エージェント基盤**に寄っている。
+
+{% table %}
+- 製品・系統
+- デプロイ
+- 強み
+- Cloudflare OSとの差
+---
+- Cloudflare OS
+- 自社Cloudflareアカウント（OSS）
+- Gatekeeper、Gadget、Access統合、エッジ実行
+- —
+---
+- Microsoft Copilot Studio
+- Microsoft SaaS
+- M365/Power Platform連携、ローコード、エンタープライズ導入実績
+- Microsoftクラウド前提。生成アプリの実行モデルはPower Platform側[7][8]
+---
+- Glean
+- ベンダーSaaS
+- 社内検索・権限継承・ナレッジグラフ
+- フルスタックGadget型ランタイムは主目的ではない[8]
+---
+- Salesforce Agentforce
+- Salesforce SaaS
+- CRMデータ中心の顧客・業務エージェント
+- システムオブレコードがSalesforceにある組織向け[8]
+---
+- Dify / n8n（OSS）
+- 自前ホストまたはクラウド
+- ワークフロー・RAG・統合の柔軟性
+- 社員向け統一ワークスペースUIとGatekeeper模型は自作が必要[8]
+---
+- OpenAI Codex（Agents API等）
+- OpenAIマネージド
+- コーディングエージェントのハーネス成熟
+- 社内全業務のコンテキストポータルではない[8]
+{% /table %}
+
+選定の実務的な切り分けは次のようになる。**すでにCloudflare OneとWorkersを使っている**組織は、OSを既存のAccessポリシーとAI Gatewayに載せやすい。**Microsoft 365が業務の中心**ならCopilot Studioの方がコネクタとガバナンスの即到達性が高い。**ナレッジ検索が主題**ならGlean系、**CRMオペレーション**ならAgentforceが先に検討候補になる[7][8]。
+
+Cloudflare OSを他社エッジ（Fastly Compute、AWS CloudFront Functions）と単純比較するのは役割が異なる。比較対象は**エージェントワークスペース／社内AIポータル**か、あるいは**Workers＋Containers＋Zero Trustの総合ベンダー**のどちらかに揃えるのが妥当だ。
+
+## 価格体系の読み方
+
+Cloudflareは製品ごとにFree枠とPaid/Enterprise契約がある。Cloudflare OS自体の**単独SKU価格表**は2026年11月時点で公開されていない。利用コストは**下記基盤の和**として見積もるのが現実的である[9][10][13]。
+
+### Workers Paid（多くのOSデプロイの前提）
+
+| 項目 | Free | Workers Paid（Standard） |
+|---|---|---|
+| 月額基本料 | 0ドル | **5ドル/アカウント** |
+| リクエスト | 10万/日 | **1,000万/月込み**、超過0.30ドル/100万 |
+| CPU時間 | 10ms/呼び出し | **3,000万CPU-ms/月込み**、超過0.02ドル/100万ms |
+| データ転送（egress） | — | **Workers経由に追加課金なし**（公式Pricing） |
+
+Durable Objects、KV、Queues、R2、AI等は別表で従量となる[9]。
+
+### Containers（エージェントのLinux実行）
+
+Workers Paidに含まれる初期枠の後、**メモリ・ディスクは確保サイズ課金**、**CPUはアクティブ使用のみ**課金される[10]。インスタンスタイプは`lite`（256MiB）から`standard-4`（4 vCPU）まで段階がある。北米・欧州のegressは1TB/月込み、超過0.025ドル/GB[10]。
+
+### AI推論
+
+Workers AIとAI Gatewayはモデル・トークン・キャッシュヒット率で変動する。Cloudflare OSは推論をAI Gatewayに集約する設計のため、**社内利用のAI費用はGatewayのメータリング**が支配的になりやすい[3][13]。
+
+### エンタープライズ契約
+
+WAF、Bot、Cloudflare One、Workers Enterpriseは個別交渉が多く、10-KでもEnterpriseは契約書ベースの利用モデルと記載される[1][9]。小規模PoCはWorkers Paid＋利用者数分の推論で試せるが、全社展開ではZero Trustシートとサポート契約が別途乗る前提で見るべきだ。
+
+{% callout type="note" %}
+2026年11月時点で「Cloudflare OSを1ユーザーあたりいくら」とは公式には言えない。HN上の体験談でも、基盤プランとR2、再デプロイの手間がボトルネックとして語られている[5][6]。
+{% /callout %}
+
+## まとめ
+
+Cloudflareは配信・セキュリティ事業者から、**エッジでアプリとエージェントを動かすConnectivity Cloud**へ製品線を広げている。Cloudflare OSはその最上位の「社内利用物語」をOSS化したもので、技術的にはWorkersエコシステムのデモンストレーションでもある[1][3][4]。
+
+評判はセキュリティアーキテクチャに対する期待が高く、同時に名称・移植性・早期アクセス品質への批判がある[5][6]。他社製品との違いは、SaaSの完成度より**自社アカウント内でのカスタムとGatekeeperモデル**にある[7][8]。
+
+## 付録: 出典一覧
+
+1. Cloudflare, Inc. Form 10-K for fiscal year ended December 31, 2025. U.S. SEC. https://www.sec.gov/Archives/edgar/data/1477333/000147733326000016/cloud-20251231.htm — 製品四分類、Developer Solutions、収益モデル。
+2. Cloudflare, Inc. Q4 and FY2025 earnings release (February 10, 2026). https://www.cloudflare.com/press/press-releases/2026/cloudflare-announces-fourth-quarter-and-fiscal-year-2025-financial-results/ — 売上・粗利・エージェント関連コメント。
+3. Jones, P. and Carter, D. "Cloudflare OS: an open platform for agents, apps, and work" (August 5, 2026). Cloudflare Blog. https://blog.cloudflare.com/cloudflare-os/ — 公開背景、Gatekeeper、AI Gateway、ロードマップ。
+4. cloudflare/cloudflare-os GitHub repository README (accessed November 2026). https://github.com/cloudflare/cloudflare-os — v2 early access、workerd、Dynamic Workers、Durable Object。
+5. Hacker News thread "Cloudflare OS: an open platform for agents, apps, and work" (August 2026). https://news.ycombinator.com/item?id=49182996 — コミュニティ評価、Paidプラン要件、技術議論。
+6. ToolsDepth, "Cloudflare OS Review 2026" (August 2026). https://toolsdepth.com/reviews/cloudflare-os-review-2026/ — 二次レビュー（Pros/Cons、デプロイ摩擦）。一次体験ではない点に留意。
+7. Microsoft Copilot Studio product page. https://www.microsoft.com/en/copilot/products/copilot-studio — ローコードエージェント、Microsoft統合。
+8. AiCybr, "Cloudflare OS v2: Complete Guide" (August 2026). https://aicybr.com/blog/cloudflare-os-complete-guide — 競合比較表（二次整理。各社公式を別途確認すべき）。
+9. Cloudflare Developers, "Workers platform pricing" (updated October 2026). https://developers.cloudflare.com/workers/platform/pricing/
+10. Cloudflare Developers, "Containers pricing" (2026). https://developers.cloudflare.com/containers/pricing/
+11. Living Teardown, "Cloudflare (NET): how the business works" (2026). https://livingteardown.com/c/NET — 事業セグメントの平易な整理（二次）。
+12. Cloudflare Blog, "How we're rethinking work at Cloudflare with Cloudflare OS" (August 5, 2026). https://blog.cloudflare.com/tag/cloudflare-os/
+13. Cloudflare, "Cloudflare OS: your company's agent workspace, managed for you" (resource page, 2026). https://www.cloudflare.com/resource/cloudflare-os-managed/
+14. Lord, J. "Cloudflare OS is an architecture of distrust" (August 5, 2026). https://lord.technology/2026/08/05/cloudflare-os-is-an-architecture-of-distrust.html — Gatekeeper契約への技術ブログ評価。
+15. Cloudflare changelog, "Containers and Sandboxes GA" (April 13, 2026). https://developers.cloudflare.com/changelog/post/2026-04-13-containers-sandbox-ga/
+16. Cloudflare Developers, "Container fundamentals". https://developers.cloudflare.com/containers/concepts/
+17. Cloudflare Developers, "Choose a sandbox environment". https://developers.cloudflare.com/sandbox/concepts/
+18. Cloudflare Blog, "Containers are available in public beta" (June 24, 2025). https://blog.cloudflare.com/containers-are-available-in-public-beta-for-simple-global-and-programmable-compute/ — 初期インスタンスタイプ。
+19. Varda, K. Hacker News comment on Sandstorm/OS naming (August 2026). https://news.ycombinator.com/item?id=49365536
+20. Cloudflare OS team, HN comment on iframe sandbox limits (August 2026). https://news.ycombinator.com/item?id=49367063
+
+### 調べたが本文に採用しなかった枝
+
+- **Cisco傘下のSplunk買収後の統合ストーリー** — Cloudflare本体の2026年論点から外れたため除外。
+- **Workers Unbound/Bundledのレガシー料金** — 現行Standard料金に統一済みのため簡略化[9]。
+- **Cloudflare Computer（FUSEワークスペース）** — OS v2の直接コンポーネントとして一次資料で束ねられなかったため、Containers/Sandboxesに集約[16][17]。
+
+### 再調査に使える隣接テーマ
+
+- Agents Week 2026の他発表（WriteGuard、Agent Access Model）。https://blog.cloudflare.com/agents-week-review-august-2026/
+- SEC以外の四半期投資家資料（製品別成長の開示は限定的）。https://www.cloudflare.net/
