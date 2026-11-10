@@ -1,39 +1,39 @@
 {
-  "version": 2,
+  "version": 1,
   "skills": {
     "how-to-survey": {
       "source": "hskksk/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/how-to-survey/SKILL.md",
-      "computedHash": "275b622bf7be86795f90c407643829f78c3ca38e4685bb1f01e1e7a9cc30254a"
+      "computedHash": "c7c87b8eb140d96be1d28525ad7911fdfe1209118587feae5f037034e08c9c56"
     },
     "japanese-writing": {
       "source": "hskksk/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/japanese-writing/SKILL.md",
-      "computedHash": "e4e57b570b6b51d874d24897081d1f94c8488c959f32fac496621c6cda900ac6"
+      "computedHash": "52362eaf0265a24605524bc76a364ee6e148814fa8e26cab038a2c495eed3aea"
     },
     "skill-orchestration": {
       "source": "hskksk/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/skill-orchestration/SKILL.md",
-      "computedHash": "ecc3eadcdf9d255a7aad139e1138c54088c8f54b312a444bb638894284720be1"
+      "computedHash": "f8b3709b03d75341bd15682bc94f8ca1ae1bd027ba784cf20783918d8e24b16b"
     },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
-      "computedHash": "f52e83f1bd4e3640d2276e7db836cae8266dbe76543effab623462e9bdef32f3"
+      "computedHash": "cb675a889c60172febe84740e7c22b600c8241c390deaff3d368c408f10dffdf"
     },
     "supabase-postgres-best-practices": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
-      "computedHash": "d80d721fe81757792ecbd6b58ba38c78924052fb2faaa6143a188fce361d1267"
+      "computedHash": "d606a1146be6d54fb9e73f718b5320b9acac5ff2ba2d7230a555df4b5a923b4a"
     },
     "survey-report": {
       "source": "hskksk/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/survey-report/SKILL.md",
-      "computedHash": "7ba465cfe2d5f1560edf30326ea4f06a20fdcab36cc5d3037b335e201913c371"
+      "computedHash": "15c60f2ec023d54adcb52be72673659ddc46880a7fead7045f604ccf696c6617"
     }
   }
 }
