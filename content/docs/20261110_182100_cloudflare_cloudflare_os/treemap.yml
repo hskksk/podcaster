@@ -1,0 +1,225 @@
+version: 1
+sourceSha256: "39a0650aeaaebd7bab3894ea7d8c1c81423c9c42ead839c917998516d7c64e5b"
+nodes:
+  i2:
+    title: "Connectivity Cloudの成長"
+    subtitle: "CDN、セキュリティ、Zero Trust、Workersを一枚のネットワーク上で束ねる戦略が2025年度売上約21.7億ドル・30%成長に結びついた。"
+  i3:
+    title: "OSは社内AI基盤"
+    subtitle: "2026年8月公開のCloudflare OSはブラウザ上の社員ワークスペースであり、GadgetとGatekeeperをWorkersのDynamic Worker上で動かす。"
+  i4:
+    title: "評価と懸念が並立"
+    subtitle: "権限ゼロ設計と社内実績は高評価だが、名称の誤解、プラットフォーム依存、セットアップの壁も同時に議論されている。"
+  i5:
+    title: "SaaSより自前載せ"
+    subtitle: "Copilot StudioやGleanと比べ、完成済みSaaSより自社Cloudflareアカウントへ載せてカスタムする基盤に近い。"
+  i6:
+    title: "床はWorkers Paid"
+    subtitle: "月5ドルのWorkers PaidにContainersやAI Gatewayの従量が乗る。OS単体の定額SKUは2026年11月時点で未公開。"
+  i9:
+    title: "マネージド版の価値"
+    subtitle: "将来のダッシュボード統合型Cloudflare OSが、自前デプロイと比べ何を買えるか。サポートと従量のトレードオフが問いになる。"
+  i10:
+    title: "監査は未検証"
+    subtitle: "Gatekeeperと観測ベース共有は設計思想として評価されるが、特定のコンプライアンス認証を代替する証拠にはなっていない。"
+  i11:
+    title: "収益の層が動く"
+    subtitle: "エージェント需要がWorkers・Containers・AI Gatewayを伸ばすとき、従来CDN契約を補完するのか置き換えるのかで競争像が変わる。"
+  p62:
+    title: "10-Kの自己位置づけ"
+    subtitle: "SEC提出文書はConnectivity Cloudとして、オンプレからSaaSまで横断する統一コントロールプレーンを謳っている。"
+  p63:
+    title: "成長と赤字の両立"
+    subtitle: "売上と粗利率は高い一方、GAAP営業利益はマイナスで、成長投資とストック報酬が利益を押し下げている。"
+  p64:
+    title: "エージェント・フライホイール"
+    subtitle: "経営層はエージェントを新しいウェブ利用者と見なし、Workers・セキュリティ・ネットワーク需要が相互に増えると語る。"
+  p65:
+    title: "図：製品の層構造"
+    subtitle: "エッジ配信、Zero Trust、Workers群、Cloudflare OSの関係を示す。社内エージェントは開発者基盤の上に載る。"
+  p66:
+    title: "四層の整理軸"
+    subtitle: "公式分類を、誰が買い何を置き換えるかの実務視点に写し直した表の導入である。"
+  p67:
+    title: "表：四つの束ね方"
+    subtitle: "アプリサービス、SASE、開発基盤、拡張コンピュートを並べ、買い手と典型的な置き換え対象を示す。"
+  p68:
+    title: "ContainersがGA"
+    subtitle: "Worker経由でFirecracker内Linuxを起動するモデル。エージェントのテスト実行やネイティブ依存に結びつく。"
+  s15:
+    title: "社内AIの三つの痛み"
+    subtitle: "バラバラなChatGPT利用、散在するAPIキー、見えない権限での本番触りが典型的な導入障壁として整理される。"
+  s16:
+    title: "表：OSの部品"
+    subtitle: "Workspace、Gadget、Gatekeeper、Skills、AI Gatewayの役割を、Durable ObjectやDynamic Workerとの対応付きで示す。"
+  s17:
+    title: "early accessの現状"
+    subtitle: "v2は大規模書き直し中で、スターターリポジトリ経由のデプロイとWorkers Paid要件がセットアップの前提になる。"
+  s18:
+    title: "ロードマップの方向"
+    subtitle: "マネージド版、Containers連携、Slack等への埋め込みが今後の公表項目として挙げられている。"
+  i23:
+    title: "名称への反発"
+    subtitle: "Shellやカーネルを想起させる「OS」ブランドに対し、実体はエンタープライズエージェントワークスペースだという指摘がある。"
+  i24:
+    title: "OSSでも縛りは残る"
+    subtitle: "ライセンスは公開でもDynamic WorkersやFacetsなどCloudflare固有ランタイムへの依存が強く、他クラウドへの持ち運びは難しい。"
+  i25:
+    title: "デプロイのつまずき"
+    subtitle: "Freeプランでは動かず、R2設定や再試行が必要だった体験がコミュニティで報告されている。"
+  p69:
+    title: "カテゴリの切り分け"
+    subtitle: "社内AIワークスペース市場は複数系統に分かれ、Cloudflare OSはフルスタック社内アプリ基盤寄りに位置づけられる。"
+  p70:
+    title: "表：競合との差"
+    subtitle: "Copilot Studio、Glean、Agentforce、Difyなどをデプロイ形態と強みで比較し、Cloudflare OSとの差を示す。"
+  p71:
+    title: "既存スタックで選ぶ"
+    subtitle: "Cloudflare One利用企業、Microsoft 365中心、ナレッジ検索優先、CRM中心など、前提によって第一候補が変わる。"
+  p72:
+    title: "比較対象を揃える"
+    subtitle: "エッジCDN関数との単純比較は役割が異なる。エージェントポータルかConnectivity Cloud総合かで比較軸を決めるべきだ。"
+  s29:
+    title: "表：Workers料金"
+    subtitle: "FreeとPaidのリクエスト・CPU枠を示す。多くのOSデプロイは月5ドルのPaidが前提になる。"
+  s30:
+    title: "Containers従量"
+    subtitle: "メモリ・ディスクはサイズ課金、CPUはアクティブのみ。インスタンスタイプと地域別egressが足される。"
+  s31:
+    title: "AI費用の集中点"
+    subtitle: "推論をAI Gatewayに集約する設計のため、社内AIコストはGatewayメータリングが支配しやすい。"
+  s32:
+    title: "Enterpriseは別契約"
+    subtitle: "WAFやCloudflare Oneは交渉契約が多く、全社展開ではZero Trustシートとサポートが別途乗る前提が必要。"
+  p73:
+    title: "Connectivity Cloudへ"
+    subtitle: "配信・セキュリティ事業者からエッジでアプリとエージェントを動かす平台へ広げ、OSはその社内向け頂点のOSS化だ。"
+  p74:
+    title: "期待と割引の要約"
+    subtitle: "セキュリティ設計への期待と名称・移植性・早期品質への批判が共存し、Gatekeeperモデルが差別化の芯にある。"
+  i35:
+    title: "出典：SEC 10-K"
+    subtitle: "Cloudflare Form 10-K（2025年度）。製品四分類と開発者ソリューション、収益モデルの一次根拠。"
+  i36:
+    title: "出典：FY2025決算"
+    subtitle: "2026年2月の四半期・通期決算リリース。売上成長とエージェント関連の経営コメント。"
+  i38:
+    title: "出典：GitHub README"
+    subtitle: "cloudflare-osリポジトリ。v2のearly access、workerd、Dynamic Workersに関する技術記述。"
+  i40:
+    title: "出典：二次レビュー"
+    subtitle: "ToolsDepthの2026年レビュー。Pros/Cons整理だが一次体験ではない点に留意が必要。"
+  i41:
+    title: "出典：Copilot Studio"
+    subtitle: "Microsoftのローコードエージェント製品ページ。M365統合の比較軸として参照。"
+  i43:
+    title: "出典：Workers Pricing"
+    subtitle: "Cloudflare DevelopersのWorkers公式料金表（2026年10月更新）。"
+  i44:
+    title: "出典：Containers Pricing"
+    subtitle: "ContainersのCPU・メモリ・egress課金の公式ページ。"
+  i46:
+    title: "出典：社内利用ブログ"
+    subtitle: "Cloudflare OSを社内運用に載せた経験を述べたブログタグ記事。"
+  more75:
+    title: "その他の出典と枝"
+    subtitle: "Gatekeeper評価ブログ、Containers GA、HNコメント、付録の未採用枝と再調査リンクをまとめた参照群。"
+links:
+  - from: ch1
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch12
+    type: flow
+  - from: ch12
+    to: ch13
+    type: flow
+  - from: ch13
+    to: ch14
+    type: flow
+  - from: ch14
+    to: ch19
+    type: flow
+  - from: ch19
+    to: ch27
+    type: flow
+  - from: ch27
+    to: ch28
+    type: flow
+  - from: ch28
+    to: ch33
+    type: flow
+  - from: ch33
+    to: ch34
+    type: flow
+  - from: i2
+    to: p62
+    type: evidence
+    label: 根拠
+  - from: i3
+    to: s16
+    type: evidence
+  - from: i4
+    to: ch19
+    type: apply
+  - from: i5
+    to: p70
+    type: evidence
+  - from: i6
+    to: s29
+    type: evidence
+  - from: i9
+    to: s18
+    type: cause
+  - from: i10
+    to: s15
+    type: contrast
+  - from: i11
+    to: p64
+    type: cause
+  - from: p64
+    to: p68
+    type: seq
+  - from: p67
+    to: p68
+    type: seq
+  - from: s15
+    to: s16
+    type: seq
+  - from: s16
+    to: s17
+    type: seq
+  - from: s17
+    to: i25
+    type: cause
+  - from: i23
+    to: i24
+    type: seq
+  - from: i24
+    to: i25
+    type: seq
+  - from: p70
+    to: p71
+    type: apply
+  - from: p71
+    to: p72
+    type: contrast
+  - from: s29
+    to: s30
+    type: seq
+  - from: s30
+    to: s31
+    type: seq
+  - from: s31
+    to: s32
+    type: seq
+chapterFlow:
+  - "→ 調査範囲と次の問い"
+  - "→ 会社と財務の位置づけ"
+  - "→ 四層の製品ポートフォリオ"
+  - "→ Cloudflare OSの機能"
+  - "→ コミュニティの評価"
+  - "→ エンタープライズAIとの比較"
+  - "→ 公式料金の読み方"
+  - "→ 地図の要点"
+  - "→ 出典と枝葉"
