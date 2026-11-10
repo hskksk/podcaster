@@ -123,6 +123,8 @@ A skill that calls another, and a skill that other skills call, follow `skill-or
 
 **External skills** from [hskksk/agent-skills](https://skills.sh/hskksk/agent-skills) (`japanese-writing`, `how-to-survey`, `survey-report`, `skill-orchestration`) install into `.agents/skills/` via `npx skills add hskksk/agent-skills --skill <name>`. `podcast-research2` loads `how-to-survey`, `survey-report`, and (for Japanese prose) `japanese-writing` by skill name. It does not ship copies of their references.
 
+The external [`infographic-syntax-creator`](https://skills.sh/antvis/infographic) skill from `antvis/Infographic` generates AntV Infographic DSL only. Install it with `npx skills add antvis/infographic --skill infographic-syntax-creator`. Use this syntax-only skill for structured infographic authoring; do not substitute the sibling HTML-generating skill when the caller owns storage and rendering.
+
 ## Database Migrations
 
 ### Migration file rules
