@@ -8,7 +8,6 @@ import { useTheme } from "./ThemeProvider";
 import type { TreemapSidecarContent } from "../lib/site/treemap-labels-types";
 import type { SectionVisualsContent } from "../lib/site/section-visuals-types";
 import { SectionVisualsProvider } from "./SectionVisualsProvider";
-import { ArticleSectionVisualRail } from "./ArticleSectionVisualRail";
 import { useTreemapDesignWidth } from "./useTreemapDesignWidth";
 import { createStaticTreemapAi } from "../lib/treemap/createStaticTreemapAi";
 import { useTreemapSidecarTitleOverrides } from "./useTreemapSidecarLabels";
@@ -76,11 +75,9 @@ export function ArticleMinimapLayout(props: {
     );
   }
 
-  const withVisuals = Boolean(props.sectionVisuals?.visuals.length);
-
   return (
     <div
-      className={`markdoc-reader article-minimap-layout mx-auto w-full min-w-0 ${withVisuals ? "article-minimap-layout--with-visuals max-w-6xl" : "max-w-3xl"}`}
+      className="markdoc-reader article-minimap-layout article-minimap-layout--section-visuals-inline mx-auto w-full min-w-0 max-w-3xl"
       data-minimap-variant="treemap"
       data-minimap-collapsed={mobileMinimapCollapsed ? "true" : undefined}
     >
@@ -126,13 +123,6 @@ export function ArticleMinimapLayout(props: {
             {props.children}
           </SectionVisualsProvider>
         </article>
-        {props.sectionVisuals ? (
-          <ArticleSectionVisualRail
-            source={props.source}
-            visuals={props.sectionVisuals}
-            scrollRoot={scrollRef}
-          />
-        ) : null}
       </div>
     </div>
   );

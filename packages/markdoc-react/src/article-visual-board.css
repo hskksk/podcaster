@@ -14,8 +14,8 @@
   --av-fill-blue: var(--markdoc-av-fill-blue, #dbe6fb);
   --av-on-light: var(--markdoc-av-on-light, #1f2328);
   margin: 0;
-  padding: clamp(1rem, 2.5vw, 2rem);
-  border-radius: 0.25rem;
+  padding: 0.85rem 1rem 1rem;
+  border-radius: 0.55rem;
   border: 1px solid color-mix(in srgb, var(--av-line) 70%, transparent);
   background: var(--av-panel);
   color: var(--av-ink);
@@ -42,7 +42,7 @@
 }
 
 .article-visual__header {
-  margin-bottom: clamp(0.75rem, 2vw, 1.35rem);
+  margin-bottom: 0.75rem;
 }
 
 .article-visual__kicker {
@@ -56,7 +56,7 @@
 
 .article-visual__title {
   margin: 0;
-  font-size: clamp(1.35rem, 4.2vw, 1.875rem);
+  font-size: 1.15rem;
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.02em;
@@ -78,21 +78,21 @@
 }
 
 .article-visual__big-label--xl {
-  font-size: clamp(1.35rem, 3.8vw, 1.75rem);
+  font-size: 1.05rem;
 }
 
 .article-visual__big-label--lg {
-  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-size: 0.98rem;
 }
 
 .article-visual__big-label--md {
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  font-size: 0.92rem;
 }
 
 .article-visual__one-line {
   display: block;
-  margin-top: 0.35rem;
-  font-size: clamp(0.95rem, 2.2vw, 1.06rem);
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
   font-weight: 600;
   line-height: 1.35;
   color: inherit;
@@ -118,8 +118,8 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  min-height: 7.5rem;
-  padding: 1rem 1.15rem;
+  min-height: 5.25rem;
+  padding: 0.75rem 0.85rem;
   border-radius: 0.85rem;
   color: #fff;
   background: var(--av-blue);
@@ -140,11 +140,11 @@
 }
 
 .article-visual__card .article-visual__big-label {
-  font-size: clamp(1.15rem, 3.2vw, 1.75rem);
+  font-size: 1.02rem;
 }
 
 .article-visual__card .article-visual__one-line {
-  font-size: clamp(0.9rem, 2vw, 1.06rem);
+  font-size: 0.8rem;
   font-weight: 600;
   opacity: 0.95;
 }
@@ -163,10 +163,10 @@
   --av-chevron-first: polygon(0 0, 88% 0, 100% 50%, 88% 100%, 0 100%);
   --av-chevron: polygon(0 0, 88% 0, 100% 50%, 88% 100%, 0 100%, 12% 50%);
   position: relative;
-  flex: 1 1 4.5rem;
-  min-height: 8.5rem;
-  margin-left: -0.55rem;
-  padding: 1.35rem 0.85rem 0.75rem 1rem;
+  flex: 1 1 3.75rem;
+  min-height: 6.25rem;
+  margin-left: -0.45rem;
+  padding: 0.85rem 0.55rem 0.6rem 0.7rem;
   color: #fff;
   background: var(--av-blue);
   clip-path: var(--av-chevron);
@@ -194,14 +194,14 @@
 
 .article-visual__seq-index {
   display: block;
-  font-size: clamp(2rem, 6vw, 2.65rem);
+  font-size: 1.35rem;
   font-weight: 700;
   line-height: 1;
 }
 
 .article-visual__sequence--steps .article-visual__big-label {
-  margin-top: 0.35rem;
-  font-size: clamp(1rem, 2.8vw, 1.5rem);
+  margin-top: 0.25rem;
+  font-size: 0.92rem;
 }
 
 /* sequence — timeline */
@@ -238,7 +238,7 @@
 }
 
 .article-visual__sequence--timeline .article-visual__big-label {
-  font-size: clamp(1.15rem, 3.5vw, 1.875rem);
+  font-size: 1rem;
   color: var(--av-blue);
 }
 
@@ -247,7 +247,7 @@
 }
 
 .article-visual__sequence--timeline .article-visual__one-line {
-  font-size: clamp(0.95rem, 2.2vw, 1.125rem);
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--av-on-light);
   white-space: pre-line;
@@ -269,7 +269,7 @@
   min-height: 3.5rem;
   padding: 0.5rem 1rem;
   border-radius: 0.35rem;
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  font-size: 0.95rem;
   font-weight: 700;
   color: #fff;
   text-align: center;
@@ -301,7 +301,7 @@
   padding: 0.55rem 0.35rem;
   border-radius: 0.6rem;
   text-align: center;
-  font-size: clamp(0.95rem, 2.2vw, 1.25rem);
+  font-size: 0.86rem;
   font-weight: 700;
   color: #fff;
   background: var(--av-slate);
@@ -324,7 +324,7 @@
 .article-visual__interaction-step {
   padding: 0.55rem 0.65rem;
   border-bottom: 3px solid var(--av-blue);
-  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  font-size: 0.9rem;
   font-weight: 600;
   text-align: center;
   background: var(--av-panel);
@@ -348,7 +348,7 @@
   min-height: 4rem;
   padding: 0.75rem 0.85rem;
   border-radius: 0.6rem;
-  font-size: clamp(1.1rem, 3vw, 1.6rem);
+  font-size: 0.98rem;
   font-weight: 700;
   color: #fff;
 }
@@ -367,7 +367,7 @@
   min-height: 3.5rem;
   padding: 0.65rem 0.85rem;
   border-radius: 0.6rem;
-  font-size: clamp(0.95rem, 2.3vw, 1.25rem);
+  font-size: 0.86rem;
   font-weight: 700;
   color: var(--av-on-light);
   background: var(--av-fill);
@@ -425,7 +425,7 @@
 .article-visual__hierarchy-pillar {
   padding: 0.55rem 0.35rem;
   border-radius: 0.55rem;
-  font-size: clamp(0.95rem, 2.3vw, 1.25rem);
+  font-size: 0.88rem;
   font-weight: 700;
   color: #fff;
   background: var(--av-blue);
@@ -544,7 +544,7 @@
   margin: 0 0.35rem 0.35rem 0;
   padding: 0.35rem 0.85rem;
   border-radius: 999px;
-  font-size: clamp(0.95rem, 2.2vw, 1.25rem);
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--av-on-light);
   background: #fff;
@@ -578,12 +578,12 @@
 }
 
 .article-visual__chart-metric-label {
-  font-size: clamp(0.95rem, 2.2vw, 1.125rem);
+  font-size: 0.86rem;
   color: var(--av-muted);
 }
 
 .article-visual__chart-metric-value {
-  font-size: clamp(2rem, 5.5vw, 2.875rem);
+  font-size: 1.65rem;
   font-weight: 700;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -621,7 +621,7 @@
 
 /* chart — line */
 .article-visual__chart--line .article-visual__chart-hero {
-  font-size: clamp(2.5rem, 7vw, 3.5rem);
+  font-size: 1.75rem;
   font-weight: 700;
   line-height: 1;
   color: var(--av-blue);
@@ -659,8 +659,8 @@
 .article-visual__donut {
   --av-pct: 50%;
   flex: none;
-  width: min(13rem, 42vw);
-  height: min(13rem, 42vw);
+  width: 7.5rem;
+  height: 7.5rem;
   border-radius: 50%;
   background: conic-gradient(var(--av-accent) 0 var(--av-pct), var(--av-fill) 0);
   display: flex;
@@ -676,13 +676,13 @@
   height: 62%;
   border-radius: 50%;
   background: var(--av-panel);
-  font-size: clamp(1.35rem, 3.5vw, 2.25rem);
+  font-size: 1.05rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .article-visual__donut-legend {
-  font-size: clamp(1rem, 2.3vw, 1.35rem);
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
@@ -702,4 +702,126 @@
   padding: 0.75rem;
   font-size: 0.9rem;
   background: var(--av-fill);
+}
+
+@container av-slot (min-width: 22rem) and (max-width: 32rem) {
+  .article-visual__sequence--steps {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 0.2rem;
+    scrollbar-width: thin;
+  }
+
+  .article-visual__sequence--steps .article-visual__seq-item {
+    flex: 0 0 4.25rem;
+  }
+}
+
+/* Host width (inline slot): scale up slightly in wide article column only */
+@container av-slot (min-width: 32rem) {
+  .article-visual__title {
+    font-size: 1.25rem;
+  }
+
+  .article-visual__card .article-visual__big-label {
+    font-size: 1.08rem;
+  }
+
+  .article-visual__chart-metric-value {
+    font-size: 1.85rem;
+  }
+
+  .article-visual__chart--line .article-visual__chart-hero {
+    font-size: 2rem;
+  }
+}
+
+/* Narrow / mobile slot */
+@container av-slot (max-width: 22rem) {
+  .article-visual__cards {
+    grid-template-columns: 1fr;
+  }
+
+  .article-visual__card {
+    min-height: 4.25rem;
+  }
+
+  .article-visual__comparison-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+  }
+
+  .article-visual__cmp-head {
+    grid-column: 1 / -1;
+    min-height: 3rem;
+    font-size: 0.9rem;
+  }
+
+  .article-visual__sequence--steps {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .article-visual__sequence--steps .article-visual__seq-item {
+    flex: none;
+    width: 100%;
+    min-height: 4.5rem;
+    margin-left: 0;
+    clip-path: none;
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .article-visual__sequence--timeline .article-visual__seq-item {
+    flex: 1 1 100%;
+  }
+
+  .article-visual__hierarchy-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .article-visual__lanes {
+    grid-template-columns: 1fr;
+  }
+
+  .article-visual__chart--donut {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .article-visual__matrix-pill {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.6rem;
+  }
+}
+
+@container av-slot (max-width: 18rem) {
+  .article-visual__flow-layer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .article-visual__flow-node {
+    width: 100%;
+  }
+}
+
+@media (max-width: 30rem) {
+  .article-visual__cards {
+    grid-template-columns: 1fr;
+  }
+
+  .article-visual__sequence--steps {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .article-visual__sequence--steps .article-visual__seq-item {
+    flex: none;
+    width: 100%;
+    margin-left: 0;
+    clip-path: none;
+    border-radius: 0.5rem;
+  }
 }

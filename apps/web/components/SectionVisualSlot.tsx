@@ -10,7 +10,7 @@ export function SectionVisualSlot(props: { sectionId: string }) {
   const entry = visuals?.bySectionId[props.sectionId];
   if (!entry) return null;
   return (
-    <div className="article-section-visual-inline" data-nosnippet>
+    <div className="article-section-visual-inline article-visual-host" data-nosnippet>
       <SectionVisual
         visual={entry}
         engines={[articleVisualEngine as VisualEngineDefinition<unknown>]}
