@@ -1,46 +1,41 @@
-# Reference sidecar for docs/architecture/article-section-visuals.md (Step 1).
-# Copy beside index.mdoc as section-visuals.yml after markdoc-react engine ships.
 version: 1
 sourceSha256: "39a0650aeaaebd7bab3894ea7d8c1c81423c9c42ead839c917998516d7c64e5b"
 visuals:
   - sectionId: "主要サービスを四つの束ね方で見る"
     engine: article-visual
     engineVersion: "1"
-    alt: "Cloudflareの製品はアプリ配信・Zero Trust・開発者基盤・Containersの四束に分かれ、買い手と置き換え対象が異なる。"
+    alt: "Cloudflareは配信・防御、社内アクセス、Workers、Containersの四束で1つのネットワーク契約にまとめる。"
     spec:
       type: cards
-      title: 四つの製品束ね方で誰が何を買うか整理する
+      title: 売るのは、1枚のネットワーク
       items:
-        - label: アプリケーションサービス
-          detail: CDNとWAFなどWeb担当向け
-          icon: network
-        - label: SASE / Zero Trust
-          detail: AccessとGatewayでVPN代替
-          icon: shield
-        - label: 開発者基盤
-          detail: Workers・R2・AIなど開発者向け
-          icon: workspace
-        - label: 拡張コンピュート
-          detail: ContainersとSandboxes
-          icon: service
+        - label: 配信・防御
+          detail: CDN / WAF
+        - label: 社内アクセス
+          detail: Zero Trust
+        - label: アプリ実行
+          detail: Workers
+        - label: コンテナ
+          detail: Containers
+          emphasis: true
 
   - sectionId: "何を解決しようとしているか"
     engine: article-visual
     engineVersion: "1"
-    alt: "社内AI導入の三課題はバラバラなChatGPT利用、MCPへのキー散在、見えない権限での本番接触である。"
+    alt: "バラバラなChatGPT利用、MCPへのキー散在、見えない権限の三課題を、社内向けワークスペース配布でまとめる。"
     spec:
       type: flow
-      title: 社内AI導入の三課題がワークスペース配布の背景になる
+      title: 三つの乱れを、ひとつに
       nodes:
         - id: chatgpt
-          label: 個別ChatGPT利用
+          label: バラバラ利用
         - id: mcp
-          label: MCPキー散在
+          label: キー散在
         - id: blind
           label: 見えない権限
           emphasis: true
         - id: workspace
-          label: ワークスペース配布
+          label: ワークスペース
       edges:
         - from: chatgpt
           to: workspace
@@ -48,15 +43,14 @@ visuals:
           to: workspace
         - from: blind
           to: workspace
-          label: 是正対象
 
   - sectionId: "主要コンポーネント"
     engine: article-visual
     engineVersion: "1"
-    alt: "社員はWorkspaceへ操作を送り、WorkspaceがGatekeeperへ許可照会し、短命な能力が返る。"
+    alt: "社員の操作はWorkspaceへ送られ、Gatekeeperが許可を照会して短命な能力だけを返す。"
     spec:
       type: interaction
-      title: Gatekeeperが外部接続の能力を仲介する
+      title: 権限ゼロから始まる
       actors:
         - id: employee
           label: 社員
@@ -67,79 +61,80 @@ visuals:
       steps:
         - from: employee
           to: workspace
-          label: 操作を要求
+          label: 操作を送る
         - from: workspace
           to: gatekeeper
           label: 許可を照会
         - from: gatekeeper
           to: workspace
-          label: 短命な能力
+          label: 能力を返す
 
   - sectionId: "cloudflare-osの中身"
     engine: article-visual
     engineVersion: "1"
-    alt: "Cloudflare OSはWorkspace・Gadget・Gatekeeper・AI Gatewayを束ねるプラットフォームとして位置づけられる。"
+    alt: "Cloudflare OSはWorkspace・Gadget・Gatekeeperを束ね、AI Gatewayで推論を一本化する。"
     spec:
       type: hierarchy
-      title: OSはワークスペースと接続制御の層を束ねる
+      title: OSは3本柱で束ねる
       root:
         label: Cloudflare OS
         children:
           - label: Workspace
+            children:
+              - label: Skills
           - label: Gadget
+            children:
+              - label: 社内アプリ
           - label: Gatekeeper
             emphasis: true
-          - label: AI Gateway
+            children:
+              - label: 外部接続
 
   - sectionId: "セットアップと制約"
     engine: article-visual
     engineVersion: "1"
-    alt: "v2はearly accessで、本番はWorkers Paidが前提となり、自サーバー本番デプロイは未提供である。"
+    alt: "OSSとスターターを取得しCloudflareアカウントに載せる。Workers Paidが前提で、自サーバー本番は未提供。"
     spec:
       type: sequence
-      title: デプロイはOSSとスターターを載せる段階的導入
+      title: 導入は4ステップ
       mode: steps
       items:
-        - label: コアとスターターを取得
-        - label: Cloudflareアカウントへ載せる
-        - label: Workers Paidを前提にする
+        - label: 取得
+        - label: 載せる
+        - label: Paid前提
           emphasis: true
-        - label: 自サーバー本番は未提供
+        - label: 自前本番なし
 
   - sectionId: "評判とコミュニティの反応"
     engine: article-visual
     engineVersion: "1"
-    alt: "称賛はGatekeeperとGadget、批判はOS名称・移植性・デプロイ摩擦に集中している。"
+    alt: "称賛はGatekeeperとGadget、懸念はOSという名称とCloudflare依存・セットアップの壁に集まる。"
     spec:
       type: comparison
-      title: 評価はセキュリティ設計とプラットフォーム依存のトレードオフ
+      title: 称賛と懸念、二極化
       sides:
-        - label: 称賛の焦点
+        - label: 称賛
           items:
             - label: Gatekeeper
-              detail: 権限デフォルト拒否
             - label: Gadget
-              detail: 動く社内アプリ
-        - label: 懸念の焦点
+        - label: 懸念
           emphasis: true
           items:
-            - label: OS名称
-              detail: ワークスペース実体とのギャップ
+            - label: 「OS」名称
             - label: 移植性
-              detail: Cloudflare固有土台への依存
 
   - sectionId: "類似サービスとの比較軸"
     engine: article-visual
     engineVersion: "1"
-    alt: "Cloudflare OSは自社アカウント載せ型、Copilot StudioはM365 SaaS、DifyはワークフローOSSとして位置づけられる。"
+    alt: "Cloudflare OSは自社アカウント載せ型で社員ワークスペース寄り。Copilot StudioはSaaS、DifyはワークフローOSS。"
     spec:
       type: matrix
-      title: デプロイ自由度と完成度でポータル候補を分ける
+      title: 自前 × 仕事場 で見ると
       xAxis:
-        low: ベンダーSaaS
-        high: 自社インフラ載せ
+        low: SaaS
+        high: 自前載せ
       yAxis:
-        low: ワークフロー中心
+        low: ワークフロー
         high: 社員ワークスペース
       items:
         - label: Cloudflare OS
@@ -153,12 +148,12 @@ visuals:
   - sectionId: "workers-paid多くのosデプロイの前提"
     engine: article-visual
     engineVersion: "1"
-    alt: "Workers Paidは月5ドルの基本料があり、Freeの0ドルと比べ月次リクエスト枠も大きい。"
+    alt: "Workers Paidは月5ドルの基本料があり、Freeの0ドルと比べリクエスト枠が大きい。"
     spec:
       type: chart
-      title: OSデプロイの床はWorkers Paidの月額基本料
+      title: まず、月5ドルから
       variant: bar
-      unit: 米ドル/月
+      unit: ドル
       values:
         - label: Workers Free
           value: 0
