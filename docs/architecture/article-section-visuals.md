@@ -6,7 +6,7 @@
 
 記事作成エージェントは本文完成後に構造化データを作り、記事と同じディレクトリのsidecarへ保存する。公開サイトはsidecarを読み、自前のArticle Visual engineで描画する。デスクトップでは本文横のsticky rail、狭い画面では該当セクション内に表示する。
 
-この設計の状態は**In progress**である。既存の`treemap.yml`とMarkdoc本文の挙動は、描画実装が完了するまで変えない。podcaster 側の tooling と導入ステータスは [`scripts/article-section-visuals/README.md`](../../scripts/article-section-visuals/README.md) を参照する。Article Visual の renderer は `@hskksk/markdoc-react`（現行 npm には未収載）への追加が先である。
+この設計の状態は**In progress**である。既存の`treemap.yml`とMarkdoc本文の挙動は、描画実装が完了するまで変えない。podcaster 側の tooling と導入ステータスは [`scripts/article-section-visuals/README.md`](../../scripts/article-section-visuals/README.md) を参照する。engine 実装は monorepo 内 [`packages/markdoc-react`](../../packages/markdoc-react)（0.7.0）にあり、npm への publish 後は依存を workspace から切り替える。
 
 ## 解決する問題
 

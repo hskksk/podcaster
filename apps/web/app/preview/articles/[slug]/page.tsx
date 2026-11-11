@@ -20,6 +20,7 @@ import { articleOpenGraph } from "../../../../lib/site/open-graph";
 import { MarkdocArticleBody } from "../../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
 import { loadTreemapSidecar } from "../../../../lib/site/treemap-labels";
+import { loadSectionVisualsSidecar } from "../../../../lib/site/section-visuals";
 import { prepareMarkdoc } from "../../../../lib/markdoc";
 import { textify } from "../../../../../../scripts/lib/mdoc";
 
@@ -79,7 +80,10 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
   const coverImageUrl = imageForPublicDoc(imageMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
   const treemapSidecar = loadTreemapSidecar("docs", doc.dir, renderSource);
-  const { content } = prepareMarkdoc(renderSource);
+  const sectionVisuals = loadSectionVisualsSidecar("docs", doc.dir, renderSource);
+  const { content } = prepareMarkdoc(renderSource, {
+    sectionVisualIds: sectionVisuals ? Object.keys(sectionVisuals.bySectionId) : undefined,
+  });
   const { prev, next } = await adjacentPublicDocsForRequest(slug);
   const rss = feedUrl();
 
@@ -111,7 +115,11 @@ export default async function PreviewArticlePage({ params }: { params: Promise<P
           {audioUrl ? <EpisodePlayer src={audioUrl} className="mb-10" /> : null}
         </div>
 
-        <ArticleMinimapLayout source={renderSource} treemapSidecar={treemapSidecar}>
+        <ArticleMinimapLayout
+          source={renderSource}
+          treemapSidecar={treemapSidecar}
+          sectionVisuals={sectionVisuals}
+        >
           <div className="markdoc">
             <MarkdocArticleBody content={content} />
           </div>

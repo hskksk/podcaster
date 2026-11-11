@@ -119,6 +119,55 @@ body {
   gap: 0;
 }
 
+.article-minimap-layout__body-row {
+  display: block;
+  width: 100%;
+}
+
+.article-section-visual-rail {
+  display: none;
+}
+
+.article-section-visual-inline {
+  margin: 0.75rem 0 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .article-minimap-layout--with-visuals .article-minimap-layout__body-row {
+    display: grid;
+    grid-template-columns: minmax(0, 48rem) minmax(20rem, 26rem);
+    gap: 1.5rem;
+    align-items: start;
+    justify-content: center;
+  }
+
+  .article-minimap-layout--with-visuals .markdoc-reader__main {
+    max-width: none;
+  }
+
+  .article-section-visual-rail {
+    display: block;
+    position: sticky;
+    top: 5.5rem;
+    align-self: start;
+    max-width: 26rem;
+  }
+
+  .article-section-visual-rail__panel {
+    transition: opacity 0.2s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .article-section-visual-rail__panel {
+      transition: none;
+    }
+  }
+
+  .article-minimap-layout--with-visuals .article-section-visual-inline {
+    display: none;
+  }
+}
+
 .article-minimap-layout.markdoc-reader .markdoc-reader__main {
   max-height: none;
   overflow: visible;

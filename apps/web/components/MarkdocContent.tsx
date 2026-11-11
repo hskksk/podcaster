@@ -21,6 +21,7 @@ import { createSiteShikiHighlighter } from "../lib/markdoc/shiki-highlighter";
 import { Callout } from "./markdoc/Callout";
 import { Heading } from "./markdoc/Heading";
 import { PodcastPlayer } from "./markdoc/PodcastPlayer";
+import { SectionVisualSlot } from "./SectionVisualSlot";
 import { useTheme } from "./ThemeProvider";
 
 type MarkdocComponent = ComponentType<any>;
@@ -32,6 +33,7 @@ const siteComponents = {
   Callout,
   Heading,
   PodcastPlayer,
+  SectionVisualSlot,
 };
 
 const markdocComponents = {

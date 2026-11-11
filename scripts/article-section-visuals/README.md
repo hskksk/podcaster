@@ -7,9 +7,9 @@
 | Step | 内容 | 状態（podcaster） |
 | --- | --- | --- |
 | 1 | Cloudflare 記事由来の fixture | `fixtures/cloudflare-os.section-visuals.yml` |
-| 2 | `@hskksk/markdoc-react` に Article Visual engine | **未着手**（npm 0.6.2 に未収載） |
-| 3 | `apps/web` loader と responsive layout | 未着手 |
-| 4 | validator と repository check | `extract_sections.ts` / `validate_section_visuals.ts` / `check_all_section_visuals.ts` |
+| 2 | `@hskksk/markdoc-react` に Article Visual engine | **`packages/markdoc-react` 0.7.0**（upstream publish 待ち） |
+| 3 | `apps/web` loader と responsive layout | **完了**（loader・rail・mobile slot） |
+| 4 | validator と repository check | **完了**（parser は markdoc-react `/section-visual` と共有） |
 | 5 | `article-section-visuals` スキル | 未着手 |
 | 6 | `podcast-research2` 連携 | 未着手 |
 | 7 | pilot 比較と上限固定 | 未着手 |
@@ -30,4 +30,4 @@ pnpm section-visuals:validate content/docs/20261110_182100_cloudflare_cloudflare
 | `validate_section_visuals.ts` | `section-visuals.yml` の envelope と Article Visual spec v1 |
 | `check_all_section_visuals.ts` | `content/docs` / `content/web-clips` 内の sidecar を一括検証 |
 
-`spec-v1.ts` は markdoc-react 側の parser が入るまでの **暫定** 正本である。engine リリース後は同じ検査を `@hskksk/markdoc-react` から呼び出す。
+`spec-v1.ts` は `@hskksk/markdoc-react/section-visual` の re-export である。
