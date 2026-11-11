@@ -178,6 +178,14 @@ html.dark .markdoc .article-visual {
   padding: 0.85rem 1rem 1rem;
 }
 
+/* Prose adds bullet padding on ul > li; reset on infographic tiles */
+.markdoc .article-visual ul.article-visual__cards > li.article-visual__card {
+  margin-block: 0;
+  padding-inline: 1.1rem;
+  padding-inline-start: 1.1rem;
+  text-align: center;
+}
+
 .article-minimap-layout.markdoc-reader .markdoc-reader__main {
   max-height: none;
   overflow: visible;

@@ -41,10 +41,10 @@ function ItemText({
   size?: 'xl' | 'lg' | 'md'
 }) {
   return (
-    <>
+    <div className="article-visual__item-text">
       <span className={`article-visual__big-label article-visual__big-label--${size}`}>{label}</span>
       {detail ? <span className="article-visual__one-line">{detail}</span> : null}
-    </>
+    </div>
   )
 }
 
