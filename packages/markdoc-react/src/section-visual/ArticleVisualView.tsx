@@ -268,6 +268,10 @@ function SequenceBody({ mode, items }: { mode: string; items: Item[] }) {
   )
 }
 
+function laneCenterPct(index: number, laneCount: number): number {
+  return ((index + 0.5) / laneCount) * 100
+}
+
 function InteractionBody({
   actors,
   steps,
@@ -276,35 +280,55 @@ function InteractionBody({
   steps: { from: string; to: string; label: string }[]
 }) {
   const laneIndex = new Map(actors.map((a, i) => [a.id, i]))
+  const laneCount = actors.length
   return (
-    <div className="article-visual__interaction">
-      <div className="article-visual__lanes" style={{ '--av-lanes': actors.length } as CSSProperties}>
+    <div className="article-visual__interaction" style={{ '--av-lanes': laneCount } as CSSProperties}>
+      <div className="article-visual__interaction-actors">
         {actors.map((a, i) => (
           <div
             key={a.id}
             className="article-visual__lane"
             data-emphasis={i === Math.floor(actors.length / 2) ? true : undefined}
           >
-            {a.label}
+            <span className="article-visual__lane-label">{a.label}</span>
           </div>
         ))}
       </div>
-      <ol className="article-visual__interaction-steps">
-        {steps.map((step, i) => {
-          const fromIdx = laneIndex.get(step.from) ?? 0
-          const toIdx = laneIndex.get(step.to) ?? 0
-          const returning = toIdx < fromIdx
-          return (
-            <li
-              key={`${step.from}-${step.to}-${i}`}
-              className="article-visual__interaction-step"
-              data-return={returning || undefined}
-            >
-              {step.label}
-            </li>
-          )
-        })}
-      </ol>
+      <div className="article-visual__interaction-trace">
+        <div className="article-visual__interaction-lifelines" aria-hidden="true">
+          {actors.map((a) => (
+            <span key={a.id} className="article-visual__interaction-lifeline" />
+          ))}
+        </div>
+        <ol className="article-visual__interaction-steps">
+          {steps.map((step, i) => {
+            const fromIdx = laneIndex.get(step.from) ?? 0
+            const toIdx = laneIndex.get(step.to) ?? 0
+            const returning = toIdx < fromIdx
+            const fromPct = laneCenterPct(fromIdx, laneCount)
+            const toPct = laneCenterPct(toIdx, laneCount)
+            const left = Math.min(fromPct, toPct)
+            const width = Math.abs(toPct - fromPct)
+            return (
+              <li
+                key={`${step.from}-${step.to}-${i}`}
+                className="article-visual__interaction-step"
+                data-return={returning || undefined}
+                style={
+                  {
+                    '--msg-left': `${left}%`,
+                    '--msg-width': `${width}%`,
+                    '--msg-tip': `${toPct}%`,
+                  } as CSSProperties
+                }
+              >
+                <span className="article-visual__interaction-step-arrow" aria-hidden="true" />
+                <span className="article-visual__interaction-step-label">{step.label}</span>
+              </li>
+            )
+          })}
+        </ol>
+      </div>
     </div>
   )
 }

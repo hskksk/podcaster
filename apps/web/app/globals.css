@@ -186,6 +186,18 @@ html.dark .markdoc .article-visual {
   text-align: center;
 }
 
+.markdoc .article-visual ul.article-visual__hierarchy-columns > li.article-visual__hierarchy-col,
+.markdoc .article-visual ul.article-visual__hierarchy-leaves > li.article-visual__hierarchy-leaf {
+  margin-block: 0;
+  padding-inline-start: 0;
+  text-align: center;
+}
+
+.markdoc .article-visual .article-visual__hierarchy-pillar,
+.markdoc .article-visual .article-visual__hierarchy-leaf {
+  text-align: center;
+}
+
 .article-minimap-layout.markdoc-reader .markdoc-reader__main {
   max-height: none;
   overflow: visible;
