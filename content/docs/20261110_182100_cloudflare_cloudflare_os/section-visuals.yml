@@ -1,0 +1,167 @@
+# Reference sidecar for docs/architecture/article-section-visuals.md (Step 1).
+# Copy beside index.mdoc as section-visuals.yml after markdoc-react engine ships.
+version: 1
+sourceSha256: "39a0650aeaaebd7bab3894ea7d8c1c81423c9c42ead839c917998516d7c64e5b"
+visuals:
+  - sectionId: "主要サービスを四つの束ね方で見る"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Cloudflareの製品はアプリ配信・Zero Trust・開発者基盤・Containersの四束に分かれ、買い手と置き換え対象が異なる。"
+    spec:
+      type: cards
+      title: 四つの製品束ね方で誰が何を買うか整理する
+      items:
+        - label: アプリケーションサービス
+          detail: CDNとWAFなどWeb担当向け
+          icon: network
+        - label: SASE / Zero Trust
+          detail: AccessとGatewayでVPN代替
+          icon: shield
+        - label: 開発者基盤
+          detail: Workers・R2・AIなど開発者向け
+          icon: workspace
+        - label: 拡張コンピュート
+          detail: ContainersとSandboxes
+          icon: service
+
+  - sectionId: "何を解決しようとしているか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "社内AI導入の三課題はバラバラなChatGPT利用、MCPへのキー散在、見えない権限での本番接触である。"
+    spec:
+      type: flow
+      title: 社内AI導入の三課題がワークスペース配布の背景になる
+      nodes:
+        - id: chatgpt
+          label: 個別ChatGPT利用
+        - id: mcp
+          label: MCPキー散在
+        - id: blind
+          label: 見えない権限
+          emphasis: true
+        - id: workspace
+          label: ワークスペース配布
+      edges:
+        - from: chatgpt
+          to: workspace
+        - from: mcp
+          to: workspace
+        - from: blind
+          to: workspace
+          label: 是正対象
+
+  - sectionId: "主要コンポーネント"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "社員はWorkspaceへ操作を送り、WorkspaceがGatekeeperへ許可照会し、短命な能力が返る。"
+    spec:
+      type: interaction
+      title: Gatekeeperが外部接続の能力を仲介する
+      actors:
+        - id: employee
+          label: 社員
+        - id: workspace
+          label: Workspace
+        - id: gatekeeper
+          label: Gatekeeper
+      steps:
+        - from: employee
+          to: workspace
+          label: 操作を要求
+        - from: workspace
+          to: gatekeeper
+          label: 許可を照会
+        - from: gatekeeper
+          to: workspace
+          label: 短命な能力
+
+  - sectionId: "cloudflare-osの中身"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Cloudflare OSはWorkspace・Gadget・Gatekeeper・AI Gatewayを束ねるプラットフォームとして位置づけられる。"
+    spec:
+      type: hierarchy
+      title: OSはワークスペースと接続制御の層を束ねる
+      root:
+        label: Cloudflare OS
+        children:
+          - label: Workspace
+          - label: Gadget
+          - label: Gatekeeper
+            emphasis: true
+          - label: AI Gateway
+
+  - sectionId: "セットアップと制約"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "v2はearly accessで、本番はWorkers Paidが前提となり、自サーバー本番デプロイは未提供である。"
+    spec:
+      type: sequence
+      title: デプロイはOSSとスターターを載せる段階的導入
+      mode: steps
+      items:
+        - label: コアとスターターを取得
+        - label: Cloudflareアカウントへ載せる
+        - label: Workers Paidを前提にする
+          emphasis: true
+        - label: 自サーバー本番は未提供
+
+  - sectionId: "評判とコミュニティの反応"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "称賛はGatekeeperとGadget、批判はOS名称・移植性・デプロイ摩擦に集中している。"
+    spec:
+      type: comparison
+      title: 評価はセキュリティ設計とプラットフォーム依存のトレードオフ
+      sides:
+        - label: 称賛の焦点
+          items:
+            - label: Gatekeeper
+              detail: 権限デフォルト拒否
+            - label: Gadget
+              detail: 動く社内アプリ
+        - label: 懸念の焦点
+          emphasis: true
+          items:
+            - label: OS名称
+              detail: ワークスペース実体とのギャップ
+            - label: 移植性
+              detail: Cloudflare固有土台への依存
+
+  - sectionId: "類似サービスとの比較軸"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Cloudflare OSは自社アカウント載せ型、Copilot StudioはM365 SaaS、DifyはワークフローOSSとして位置づけられる。"
+    spec:
+      type: matrix
+      title: デプロイ自由度と完成度でポータル候補を分ける
+      xAxis:
+        low: ベンダーSaaS
+        high: 自社インフラ載せ
+      yAxis:
+        low: ワークフロー中心
+        high: 社員ワークスペース
+      items:
+        - label: Cloudflare OS
+          quadrant: high-high
+          emphasis: true
+        - label: Copilot Studio
+          quadrant: low-high
+        - label: Dify
+          quadrant: high-low
+
+  - sectionId: "workers-paid多くのosデプロイの前提"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Workers Paidは月5ドルの基本料があり、Freeの0ドルと比べ月次リクエスト枠も大きい。"
+    spec:
+      type: chart
+      title: OSデプロイの床はWorkers Paidの月額基本料
+      variant: bar
+      unit: 米ドル/月
+      values:
+        - label: Workers Free
+          value: 0
+        - label: Workers Paid
+          value: 5
+          emphasis: true
