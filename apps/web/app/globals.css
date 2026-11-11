@@ -112,6 +112,15 @@ body {
   --markdoc-surface: var(--color-muted);
 }
 
+.markdoc .article-visual {
+  --markdoc-accent: var(--color-accent);
+  --markdoc-bg: var(--color-bg);
+  --markdoc-fg: var(--color-fg);
+  --markdoc-muted: var(--color-muted-fg);
+  --markdoc-positive: #047857;
+  --av-accent-fg: var(--color-accent-fg);
+}
+
 /* Minimap: collapsible treemap above article (not a side column) */
 .article-minimap-layout.markdoc-reader {
   display: flex;
