@@ -160,6 +160,7 @@ body {
     top: 5.5rem;
     align-self: start;
     max-width: 26rem;
+    min-width: 0;
   }
 
   .article-section-visual-rail__panel {

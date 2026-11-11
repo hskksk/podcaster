@@ -1,7 +1,21 @@
 import type { CSSProperties } from 'react'
+import { useId } from 'react'
 import { layerNodes } from './flowLayers'
 import { SemanticIcon } from './SemanticIcon'
 import type { ArticleVisualSpecV1 } from './types'
+
+const TYPE_LABELS: Record<string, string> = {
+  cards: 'Cards',
+  sequence: 'Sequence',
+  interaction: 'Interaction',
+  comparison: 'Comparison',
+  hierarchy: 'Hierarchy',
+  flow: 'Flow',
+  matrix: 'Matrix',
+  chart: 'Chart',
+}
+
+const numberFormatter = new Intl.NumberFormat()
 
 type Item = {
   id?: string
@@ -35,14 +49,33 @@ function LabelStack({
   )
 }
 
-function TitleBlock({ title, caption, type }: { title: string; caption?: string; type: string }) {
+function TitleBlock({
+  title,
+  caption,
+  type,
+  titleId,
+  captionId,
+}: {
+  title: string
+  caption?: string
+  type: string
+  titleId: string
+  captionId: string
+}) {
+  const kicker = TYPE_LABELS[type] ?? type
   return (
     <header className="article-visual__header">
-      <span className="article-visual__kicker" aria-hidden>
-        {type}
+      <span className="article-visual__kicker" aria-hidden="true" translate="no">
+        {kicker}
       </span>
-      <p className="article-visual__title">{title}</p>
-      {caption ? <p className="article-visual__caption">{caption}</p> : null}
+      <p id={titleId} className="article-visual__title">
+        {title}
+      </p>
+      {caption ? (
+        <p id={captionId} className="article-visual__caption">
+          {caption}
+        </p>
+      ) : null}
     </header>
   )
 }
@@ -58,14 +91,31 @@ export function ArticleVisualView({
 }) {
   const caption = typeof spec.caption === 'string' ? spec.caption : undefined
   const body = renderBody(spec)
+  const titleId = useId()
+  const captionId = useId()
+  const altId = useId()
+  const describesAlt = alt.trim() !== '' && alt !== spec.title
   return (
     <figure
       className={`article-visual article-visual--${theme}`}
-      role="img"
-      aria-label={alt}
+      aria-labelledby={titleId}
+      aria-describedby={
+        [describesAlt ? altId : null, caption ? captionId : null].filter(Boolean).join(' ') || undefined
+      }
       data-article-visual-type={spec.type}
     >
-      <TitleBlock title={spec.title} caption={caption} type={spec.type} />
+      <TitleBlock
+        title={spec.title}
+        caption={caption}
+        type={spec.type}
+        titleId={titleId}
+        captionId={captionId}
+      />
+      {describesAlt ? (
+        <p id={altId} className="article-visual__sr-only">
+          {alt}
+        </p>
+      ) : null}
       <div className="article-visual__body">{body}</div>
     </figure>
   )
@@ -138,11 +188,11 @@ function SequenceBody({ mode, items }: { mode: string; items: Item[] }) {
     <ol className={`article-visual__sequence article-visual__sequence--${mode}`}>
       {items.map((item, i) => (
         <li key={`${item.label}-${i}`} className="article-visual__seq-item" data-emphasis={item.emphasis || undefined}>
-          <span className="article-visual__seq-index" aria-hidden>
+          <span className="article-visual__seq-index" aria-hidden="true">
             {i + 1}
           </span>
           <LabelStack label={item.label} detail={item.detail} emphasis={item.emphasis} icon={item.icon} />
-          {i < items.length - 1 ? <span className="article-visual__seq-connector" aria-hidden /> : null}
+          {i < items.length - 1 ? <span className="article-visual__seq-connector" aria-hidden="true" /> : null}
         </li>
       ))}
     </ol>
@@ -177,11 +227,11 @@ function InteractionBody({
               className="article-visual__step"
               data-dir={dir}
             >
-              <span className="article-visual__step-badge" aria-hidden>
+              <span className="article-visual__step-badge" aria-hidden="true">
                 {i + 1}
               </span>
               <span className="article-visual__step-label">{step.label}</span>
-              <span className="article-visual__step-meta" aria-hidden>
+              <span className="article-visual__step-meta" aria-hidden="true">
                 {actors.find((a) => a.id === step.from)?.label} → {actors.find((a) => a.id === step.to)?.label}
               </span>
             </li>
@@ -198,7 +248,7 @@ function ComparisonBody({ sides }: { sides: { label: string; emphasis?: boolean;
   return (
     <div className="article-visual__comparison">
       <section className="article-visual__side" data-emphasis={left.emphasis || undefined}>
-        <h3 className="article-visual__side-title">{left.label}</h3>
+        <p className="article-visual__side-title">{left.label}</p>
         <ul className="article-visual__side-list">
           {left.items.map((item) => (
             <li key={item.label} className="article-visual__side-row">
@@ -208,9 +258,9 @@ function ComparisonBody({ sides }: { sides: { label: string; emphasis?: boolean;
           ))}
         </ul>
       </section>
-      <span className="article-visual__comparison-vs" aria-hidden />
+      <span className="article-visual__comparison-vs" aria-hidden="true" />
       <section className="article-visual__side" data-emphasis={right.emphasis || undefined}>
-        <h3 className="article-visual__side-title">{right.label}</h3>
+        <p className="article-visual__side-title">{right.label}</p>
         <ul className="article-visual__side-list">
           {right.items.map((item) => (
             <li key={item.label} className="article-visual__side-row">
@@ -275,7 +325,7 @@ function FlowBody({
             })}
           </div>
           {li < layers.length - 1 ? (
-            <div className="article-visual__flow-connector" aria-hidden>
+            <div className="article-visual__flow-connector" aria-hidden="true">
               <span className="article-visual__flow-arrow" />
               {labelsBetweenLayers[li]?.length ? (
                 <span className="article-visual__flow-edge-labels">{labelsBetweenLayers[li].join(' · ')}</span>
@@ -350,12 +400,19 @@ function ChartBody({
           <li key={row.label} className="article-visual__chart-row" data-emphasis={row.emphasis || undefined}>
             <div className="article-visual__chart-row-head">
               <span className="article-visual__label">{row.label}</span>
-              <span className="article-visual__chart-value">
-                {row.value}
+              <span className="article-visual__chart-value" translate="no">
+                {numberFormatter.format(row.value)}
                 {unit ? <span className="article-visual__chart-unit">{unit}</span> : null}
               </span>
             </div>
-            <div className="article-visual__bar-track" aria-hidden>
+            <div
+              className="article-visual__bar-track"
+              role="meter"
+              aria-valuemin={0}
+              aria-valuemax={max}
+              aria-valuenow={row.value}
+              aria-label={row.label}
+            >
               <div
                 className="article-visual__bar-fill"
                 style={{ width: `${Math.round((row.value / max) * 100)}%` }}

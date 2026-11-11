@@ -76,11 +76,11 @@ export function ArticleSectionVisualRail(props: {
   return (
     <aside
       className="article-section-visual-rail"
-      aria-hidden={!entry}
+      aria-hidden={entry ? undefined : true}
       data-nosnippet
     >
       {entry ? (
-        <div className="article-section-visual-rail__panel" key={visibleId}>
+        <div className="article-section-visual-rail__panel" key={visibleId} aria-live="polite" aria-atomic="true">
           <SectionVisual
             visual={entry}
             engines={[articleVisualEngine as VisualEngineDefinition<unknown>]}

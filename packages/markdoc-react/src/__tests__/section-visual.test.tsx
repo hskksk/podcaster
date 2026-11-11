@@ -17,7 +17,8 @@ describe('Article Visual engine', () => {
         }}
       />,
     )
-    expect(screen.getByRole('img', { name: 'test alt' })).toBeInTheDocument()
+    expect(screen.getByRole('figure', { name: 'Three pillars' })).toBeInTheDocument()
+    expect(screen.getByText('test alt')).toBeInTheDocument()
     expect(screen.getByText('Three pillars')).toBeInTheDocument()
     expect(screen.getByText('Alpha')).toBeInTheDocument()
   })

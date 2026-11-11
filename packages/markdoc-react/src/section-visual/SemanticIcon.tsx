@@ -62,9 +62,9 @@ const ICONS: Record<string, ReactElement> = {
 export function SemanticIcon({ id }: { id?: string }) {
   if (!id) return null
   return (
-    <span className="article-visual__icon" aria-hidden data-icon={id}>
+    <span className="article-visual__icon" aria-hidden="true" data-icon={id}>
       {ICONS[id] ?? (
-        <svg viewBox="0 0 24 24" fill="currentColor">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <circle cx="12" cy="12" r="4" />
         </svg>
       )}
