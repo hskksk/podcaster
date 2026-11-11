@@ -33,9 +33,9 @@ visuals:
           label: キー散在
         - id: blind
           label: 見えない権限
-          emphasis: true
         - id: workspace
           label: ワークスペース
+          emphasis: true
       edges:
         - from: chatgpt
           to: workspace

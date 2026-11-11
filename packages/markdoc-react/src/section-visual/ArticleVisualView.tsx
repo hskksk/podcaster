@@ -372,6 +372,13 @@ function HierarchyBody({ root }: { root: Item & { children?: Item[] } }) {
   )
 }
 
+function isConvergeFlow(layers: string[][], edges: { from: string; to: string }[]) {
+  if (layers.length !== 2) return false
+  if (layers[0].length < 2 || layers[1].length !== 1) return false
+  const sink = layers[1][0]
+  return edges.length > 0 && edges.every((e) => e.to === sink)
+}
+
 function FlowBody({
   nodes,
   edges,
@@ -389,6 +396,36 @@ function FlowBody({
       .filter((e) => fromSet.has(e.from) && toSet.has(e.to) && e.label)
       .map((e) => e.label as string)
     labelsBetweenLayers.push([...new Set(labels)])
+  }
+
+  if (isConvergeFlow(layers, edges)) {
+    const sources = layers[0]
+    const sinkId = layers[1][0]
+    const sink = nodeMap.get(sinkId)
+    return (
+      <div className="article-visual__flow article-visual__flow--converge">
+        <div className="article-visual__flow-sources">
+          {sources.map((id) => {
+            const node = nodeMap.get(id)
+            if (!node) return null
+            return (
+              <div key={id} className="article-visual__flow-node article-visual__flow-node--source">
+                <ItemText label={node.label} size="md" />
+              </div>
+            )
+          })}
+        </div>
+        <div className="article-visual__flow-merge" aria-hidden="true" />
+        {sink ? (
+          <div
+            className="article-visual__flow-node article-visual__flow-node--sink"
+            data-emphasis={sink.emphasis || true}
+          >
+            <ItemText label={sink.label} size="lg" />
+          </div>
+        ) : null}
+      </div>
+    )
   }
 
   return (
