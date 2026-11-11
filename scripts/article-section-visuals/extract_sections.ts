@@ -9,7 +9,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { extractMinimapOutline } from "@hskksk/markdoc-react";
+import { extractMinimapOutline } from "@hskksk/markdoc-react/server";
 import { parseFrontmatter } from "../lib/mdoc.ts";
 
 function scanHeadingLines(body: string): { startLine: number; level: number; title: string }[] {

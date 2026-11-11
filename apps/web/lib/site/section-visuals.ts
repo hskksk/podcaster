@@ -9,7 +9,7 @@ import {
   ARTICLE_VISUAL_ENGINE_VERSION,
   parseArticleVisualSpecV1,
 } from "@hskksk/markdoc-react/section-visual";
-import { extractMinimapOutline } from "@hskksk/markdoc-react";
+import { extractMinimapOutline } from "@hskksk/markdoc-react/server";
 import { parseFrontmatter } from "../../../../scripts/lib/mdoc";
 import { getRepoRoot } from "../repo-root";
 import type { SectionVisualEntry, SectionVisualsContent } from "./section-visuals-types";

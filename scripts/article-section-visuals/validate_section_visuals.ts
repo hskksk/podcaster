@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import yaml from "js-yaml";
-import { extractMinimapOutline } from "@hskksk/markdoc-react";
+import { extractMinimapOutline } from "@hskksk/markdoc-react/server";
 import { parseFrontmatter } from "../lib/mdoc.ts";
 import {
   ARTICLE_VISUAL_ENGINE,
