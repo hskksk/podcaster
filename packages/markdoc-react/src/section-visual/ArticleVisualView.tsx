@@ -334,26 +334,32 @@ function HierarchyBody({ root }: { root: Item & { children?: Item[] } }) {
       <span className="article-visual__hierarchy-root">{root.label}</span>
       {children.length > 0 ? (
         <>
-          <div className="article-visual__hierarchy-stem" aria-hidden="true" />
-          <div className="article-visual__hierarchy-rail" aria-hidden="true" />
+          <div
+            className="article-visual__hierarchy-bridge"
+            style={{ '--av-cols': cols } as CSSProperties}
+            aria-hidden="true"
+          >
+            <span className="article-visual__hierarchy-bridge__down" />
+            <span className="article-visual__hierarchy-bridge__bar" />
+          </div>
           <ul className="article-visual__hierarchy-columns" style={{ '--av-cols': cols } as CSSProperties}>
             {children.map((child, i) => (
               <li key={child.label} className="article-visual__hierarchy-col">
-                <div className="article-visual__hierarchy-stem" aria-hidden="true" />
+                <span className="article-visual__hierarchy-col-tick" aria-hidden="true" />
                 <div
                   className="article-visual__hierarchy-pillar"
                   data-tone={tileTone(i, child.emphasis)}
                   data-emphasis={child.emphasis || undefined}
                 >
-                  {child.label}
+                  <span className="article-visual__hierarchy-pillar-label">{child.label}</span>
                 </div>
                 {(child as Item & { children?: Item[] }).children?.length ? (
                   <>
-                    <div className="article-visual__hierarchy-stem" aria-hidden="true" />
+                    <span className="article-visual__hierarchy-leaf-stem" aria-hidden="true" />
                     <ul className="article-visual__hierarchy-leaves">
                       {((child as Item & { children?: Item[] }).children ?? []).map((leaf) => (
                         <li key={leaf.label} className="article-visual__hierarchy-leaf">
-                          {leaf.label}
+                          <span className="article-visual__hierarchy-leaf-label">{leaf.label}</span>
                         </li>
                       ))}
                     </ul>
