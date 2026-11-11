@@ -52,6 +52,7 @@ metadata:
 | `japanese-writing` | 日本語の語彙・文・推敲 | 出力が日本語のとき、執筆前と推敲前 |
 | `write-d2-diagram` | D2 の図 | D2 を使うとき |
 | `index.mdoc` を書き終えた直後 | `article-treemap-labels` | 同ディレクトリの `treemap.yml`（章マップ用ラベルとリンク） |
+| `treemap.yml` を書き終えた直後 | `article-section-visuals` | 同ディレクトリの `section-visuals.yml`（セクション図 sidecar。長文 Wiki 記事向け） |
 
 `how-to-survey` と `survey-report` に同じ規則があるときは、レポートの形は `survey-report`、調査の実行は `how-to-survey` に従う。作業メモは完成原稿へ載せない。
 
@@ -105,18 +106,22 @@ flowchart TD
 
 2. **章マップ sidecar（`treemap.yml`）**: 本文を保存したあと、**同じエージェント**が `article-treemap-labels` を読み、手順どおり `treemap.yml` を書く（サブエージェントに委譲しない）。構成と論旨は執筆直後の頭の中にあるので、ラベルと `links` / `chapterFlow` もここで一気に決める。`extract_nodes` → 執筆 → `validate_treemap` が通るまで直す。`scripts/article-treemap/_dev/` は使わない。設計の背景は `docs/architecture/article-treemap-labels.md`。
 
-3. origin/main ベースの新しいブランチを作成してコミット:
+3. **セクション図 sidecar（`section-visuals.yml`）**: `treemap.yml` の直後、**同じエージェント**が `article-section-visuals` を読み、手順どおり `section-visuals.yml` を書く（サブエージェントに委譲しない）。図に値がない短い節は付けない。`section-visuals:extract` → 執筆 → `section-visuals:validate` が通るまで直す。設計の背景は `docs/architecture/article-section-visuals.md`。
+
+4. origin/main ベースの新しいブランチを作成してコミット:
 
    ```bash
    SLUG="YYYYMMDD_HHMMSS_<topic-slug>"
    BRANCH="article/$SLUG"
    git checkout -b "$BRANCH" origin/main
    git add "content/docs/$SLUG/index.mdoc" "content/docs/$SLUG/treemap.yml"
+   # section-visuals.yml を書いたときだけ追加:
+   git add "content/docs/$SLUG/section-visuals.yml"
    git commit -m "Add podcast research article: <テーマ>"
    git push -u origin "$BRANCH"
    ```
 
-4. PR を作成する:
+5. PR を作成する:
    - `gh` CLI が使える場合:
 
      ```bash
@@ -134,8 +139,8 @@ flowchart TD
 
    - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
 
-5. 完了メッセージはレポートとは別物。**選んだ Phase、読者の前提レベル、主重心とその理由**、価値の中心、見出し一覧、答えの一文、**計測の出力**、章マップラベル数の一行を示す。本文をチャットに貼らない
-6. 「`content/docs/` に保存して PR を作成しました。main にマージすると `podcast: queued` により ingest / TTS が走ります。」と伝える
+6. 完了メッセージはレポートとは別物。**選んだ Phase、読者の前提レベル、主重心とその理由**、価値の中心、見出し一覧、答えの一文、**計測の出力**、章マップラベル数の一行、セクション図を付けたときは visual 数の一行を示す。本文をチャットに貼らない
+7. 「`content/docs/` に保存して PR を作成しました。main にマージすると `podcast: queued` により ingest / TTS が走ります。」と伝える
 
 ### 注意事項
 
