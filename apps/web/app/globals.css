@@ -118,7 +118,25 @@ body {
   --markdoc-fg: var(--color-fg);
   --markdoc-muted: var(--color-muted-fg);
   --markdoc-positive: #047857;
-  --av-accent-fg: var(--color-accent-fg);
+  --markdoc-panel: var(--color-surface);
+  --markdoc-accent-fg: var(--color-accent-fg);
+  /* Infographic blues: GitHub-adjacent but tuned for stone theme */
+  --markdoc-av-blue: #2457d6;
+  --markdoc-av-blue-deep: color-mix(in srgb, var(--markdoc-av-blue) 78%, var(--color-fg));
+  --markdoc-av-slate: color-mix(in srgb, var(--color-fg) 72%, #394450);
+  --markdoc-av-line: color-mix(in srgb, var(--color-border) 75%, #94a3b8);
+  --markdoc-av-fill: color-mix(in srgb, var(--color-muted) 55%, var(--color-surface));
+  --markdoc-av-fill-blue: color-mix(in srgb, var(--markdoc-av-blue) 14%, var(--color-surface));
+  --markdoc-av-on-light: var(--color-fg);
+}
+
+html.dark .markdoc .article-visual {
+  --markdoc-av-blue: color-mix(in srgb, #5b8def 70%, var(--color-accent));
+  --markdoc-av-blue-deep: color-mix(in srgb, #3d6ec9 65%, var(--color-fg));
+  --markdoc-av-slate: color-mix(in srgb, var(--color-muted) 40%, var(--color-fg));
+  --markdoc-av-fill: color-mix(in srgb, var(--color-muted) 80%, var(--color-bg));
+  --markdoc-av-fill-blue: color-mix(in srgb, var(--markdoc-av-blue) 22%, var(--color-surface));
+  --markdoc-av-on-light: var(--color-fg);
 }
 
 /* Minimap: collapsible treemap above article (not a side column) */

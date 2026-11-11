@@ -10,6 +10,7 @@ const sectionVisualServer = resolve(dist, 'section-visual-server.js')
 
 await mkdir(dist, { recursive: true })
 await copyFile(resolve(root, 'src/markdoc.css'), resolve(dist, 'markdoc.css'))
+await copyFile(resolve(root, 'src/article-visual-board.css'), resolve(dist, 'article-visual-board.css'))
 
 const source = await readFile(entry, 'utf8')
 if (!source.startsWith('"use client"')) {

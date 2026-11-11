@@ -1,18 +1,24 @@
 import type { CSSProperties } from 'react'
-import { useId } from 'react'
+import { Fragment, useId } from 'react'
 import { layerNodes } from './flowLayers'
-import { SemanticIcon } from './SemanticIcon'
 import type { ArticleVisualSpecV1 } from './types'
 
 const TYPE_LABELS: Record<string, string> = {
-  cards: 'Cards',
-  sequence: 'Sequence',
-  interaction: 'Interaction',
-  comparison: 'Comparison',
-  hierarchy: 'Hierarchy',
-  flow: 'Flow',
-  matrix: 'Matrix',
-  chart: 'Chart',
+  cards: 'cards',
+  sequence: 'sequence',
+  interaction: 'interaction',
+  comparison: 'comparison',
+  hierarchy: 'hierarchy',
+  flow: 'flow',
+  matrix: 'matrix',
+  chart: 'chart',
+}
+
+const TILE_TONES = ['blue', 'blue-deep', 'slate', 'accent'] as const
+
+function tileTone(index: number, emphasis?: boolean): (typeof TILE_TONES)[number] {
+  if (emphasis) return 'accent'
+  return TILE_TONES[index % TILE_TONES.length]
 }
 
 const numberFormatter = new Intl.NumberFormat()
@@ -25,27 +31,20 @@ type Item = {
   emphasis?: boolean
 }
 
-function LabelStack({
+function ItemText({
   label,
   detail,
-  emphasis,
-  icon,
+  size = 'lg',
 }: {
   label: string
   detail?: string
-  emphasis?: boolean
-  icon?: string
+  size?: 'xl' | 'lg' | 'md'
 }) {
   return (
-    <div className="article-visual__label-block">
-      {icon ? <SemanticIcon id={icon} /> : null}
-      <div className="article-visual__label-stack">
-        <span className={emphasis ? 'article-visual__label article-visual__label--emphasis' : 'article-visual__label'}>
-          {label}
-        </span>
-        {detail ? <span className="article-visual__detail">{detail}</span> : null}
-      </div>
-    </div>
+    <>
+      <span className={`article-visual__big-label article-visual__big-label--${size}`}>{label}</span>
+      {detail ? <span className="article-visual__one-line">{detail}</span> : null}
+    </>
   )
 }
 
@@ -53,20 +52,26 @@ function TitleBlock({
   title,
   caption,
   type,
+  mode,
+  variant,
   titleId,
   captionId,
 }: {
   title: string
   caption?: string
   type: string
+  mode?: string
+  variant?: string
   titleId: string
   captionId: string
 }) {
-  const kicker = TYPE_LABELS[type] ?? type
+  const bits = [TYPE_LABELS[type] ?? type]
+  if (type === 'sequence' && mode) bits.push(mode)
+  if (type === 'chart' && variant) bits.push(variant)
   return (
     <header className="article-visual__header">
       <span className="article-visual__kicker" aria-hidden="true" translate="no">
-        {kicker}
+        {bits.join(' · ')}
       </span>
       <p id={titleId} className="article-visual__title">
         {title}
@@ -95,6 +100,9 @@ export function ArticleVisualView({
   const captionId = useId()
   const altId = useId()
   const describesAlt = alt.trim() !== '' && alt !== spec.title
+  const sequenceMode = spec.type === 'sequence' ? String(spec.mode) : undefined
+  const chartVariant = spec.type === 'chart' ? String(spec.variant) : undefined
+
   return (
     <figure
       className={`article-visual article-visual--${theme}`}
@@ -108,6 +116,8 @@ export function ArticleVisualView({
         title={spec.title}
         caption={caption}
         type={spec.type}
+        mode={sequenceMode}
+        variant={chartVariant}
         titleId={titleId}
         captionId={captionId}
       />
@@ -145,7 +155,7 @@ function renderBody(spec: ArticleVisualSpecV1) {
     case 'flow':
       return (
         <FlowBody
-          nodes={spec.nodes as { id: string; label: string; emphasis?: boolean; icon?: string }[]}
+          nodes={spec.nodes as { id: string; label: string; emphasis?: boolean }[]}
           edges={spec.edges as { from: string; to: string; label?: string }[]}
         />
       )
@@ -171,12 +181,17 @@ function renderBody(spec: ArticleVisualSpecV1) {
 }
 
 function CardsBody({ items }: { items: Item[] }) {
-  const cols = Math.min(3, items.length)
+  const cols = items.length <= 2 ? items.length : 2
   return (
     <ul className="article-visual__cards" style={{ '--av-cols': cols } as CSSProperties}>
       {items.map((item, i) => (
-        <li key={`${item.label}-${i}`} className="article-visual__card" data-emphasis={item.emphasis || undefined}>
-          <LabelStack label={item.label} detail={item.detail} emphasis={item.emphasis} icon={item.icon} />
+        <li
+          key={`${item.label}-${i}`}
+          className="article-visual__card"
+          data-tone={tileTone(i, item.emphasis)}
+          data-emphasis={item.emphasis || undefined}
+        >
+          <ItemText label={item.label} detail={item.detail} size="xl" />
         </li>
       ))}
     </ul>
@@ -184,15 +199,59 @@ function CardsBody({ items }: { items: Item[] }) {
 }
 
 function SequenceBody({ mode, items }: { mode: string; items: Item[] }) {
+  if (mode === 'funnel') {
+    const minWidth = 38
+    return (
+      <div className="article-visual__funnel">
+        {items.map((item, i) => {
+          const width = minWidth + ((100 - minWidth) * (items.length - 1 - i)) / Math.max(items.length - 1, 1)
+          const tone = i === 0 ? 'blue-deep' : i === items.length - 1 ? 'accent' : 'blue'
+          return (
+            <div
+              key={`${item.label}-${i}`}
+              className="article-visual__funnel-step"
+              data-tone={item.emphasis ? 'accent' : tone}
+              data-emphasis={item.emphasis || undefined}
+              style={{ width: `${width}%` }}
+            >
+              {item.label}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  if (mode === 'timeline') {
+    return (
+      <ol className="article-visual__sequence article-visual__sequence--timeline">
+        {items.map((item, i) => (
+          <li
+            key={`${item.label}-${i}`}
+            className="article-visual__seq-item"
+            data-tone={tileTone(i, item.emphasis)}
+            data-emphasis={item.emphasis || undefined}
+          >
+            <ItemText label={item.label} detail={item.detail} size="lg" />
+          </li>
+        ))}
+      </ol>
+    )
+  }
+
   return (
-    <ol className={`article-visual__sequence article-visual__sequence--${mode}`}>
+    <ol className="article-visual__sequence article-visual__sequence--steps">
       {items.map((item, i) => (
-        <li key={`${item.label}-${i}`} className="article-visual__seq-item" data-emphasis={item.emphasis || undefined}>
+        <li
+          key={`${item.label}-${i}`}
+          className="article-visual__seq-item"
+          data-tone={tileTone(i, item.emphasis)}
+          data-emphasis={item.emphasis || undefined}
+        >
           <span className="article-visual__seq-index" aria-hidden="true">
             {i + 1}
           </span>
-          <LabelStack label={item.label} detail={item.detail} emphasis={item.emphasis} icon={item.icon} />
-          {i < items.length - 1 ? <span className="article-visual__seq-connector" aria-hidden="true" /> : null}
+          <span className="article-visual__big-label">{item.label}</span>
         </li>
       ))}
     </ol>
@@ -211,29 +270,27 @@ function InteractionBody({
     <div className="article-visual__interaction">
       <div className="article-visual__lanes" style={{ '--av-lanes': actors.length } as CSSProperties}>
         {actors.map((a, i) => (
-          <div key={a.id} className="article-visual__lane" data-lane={i}>
-            <span className="article-visual__lane-label">{a.label}</span>
+          <div
+            key={a.id}
+            className="article-visual__lane"
+            data-emphasis={i === Math.floor(actors.length / 2) ? true : undefined}
+          >
+            {a.label}
           </div>
         ))}
       </div>
-      <ol className="article-visual__steps">
+      <ol className="article-visual__interaction-steps">
         {steps.map((step, i) => {
           const fromIdx = laneIndex.get(step.from) ?? 0
           const toIdx = laneIndex.get(step.to) ?? 0
-          const dir = fromIdx === toIdx ? 'same' : fromIdx < toIdx ? 'right' : 'left'
+          const returning = toIdx < fromIdx
           return (
             <li
               key={`${step.from}-${step.to}-${i}`}
-              className="article-visual__step"
-              data-dir={dir}
+              className="article-visual__interaction-step"
+              data-return={returning || undefined}
             >
-              <span className="article-visual__step-badge" aria-hidden="true">
-                {i + 1}
-              </span>
-              <span className="article-visual__step-label">{step.label}</span>
-              <span className="article-visual__step-meta" aria-hidden="true">
-                {actors.find((a) => a.id === step.from)?.label} → {actors.find((a) => a.id === step.to)?.label}
-              </span>
+              {step.label}
             </li>
           )
         })}
@@ -245,56 +302,81 @@ function InteractionBody({
 function ComparisonBody({ sides }: { sides: { label: string; emphasis?: boolean; items: Item[] }[] }) {
   const [left, right] = sides
   if (!left || !right) return null
+  const rows = Math.max(left.items.length, right.items.length, 0)
+
   return (
-    <div className="article-visual__comparison">
-      <section className="article-visual__side" data-emphasis={left.emphasis || undefined}>
-        <p className="article-visual__side-title">{left.label}</p>
-        <ul className="article-visual__side-list">
-          {left.items.map((item) => (
-            <li key={item.label} className="article-visual__side-row">
-              <span className="article-visual__row-key">{item.label}</span>
-              {item.detail ? <span className="article-visual__detail">{item.detail}</span> : null}
-            </li>
-          ))}
-        </ul>
-      </section>
-      <span className="article-visual__comparison-vs" aria-hidden="true" />
-      <section className="article-visual__side" data-emphasis={right.emphasis || undefined}>
-        <p className="article-visual__side-title">{right.label}</p>
-        <ul className="article-visual__side-list">
-          {right.items.map((item) => (
-            <li key={item.label} className="article-visual__side-row">
-              <span className="article-visual__row-key">{item.label}</span>
-              {item.detail ? <span className="article-visual__detail">{item.detail}</span> : null}
-            </li>
-          ))}
-        </ul>
-      </section>
+    <div className="article-visual__comparison-grid">
+      <div className="article-visual__cmp-head" data-side="0">
+        {left.label}
+      </div>
+      <div className="article-visual__cmp-head" data-side="1">
+        {right.label}
+      </div>
+      {Array.from({ length: rows }, (_, i) => (
+        <Fragment key={i}>
+          <div className="article-visual__cmp-cell" data-side="0" data-filled={left.items[i] ? true : undefined}>
+            {left.items[i]?.label ?? ''}
+          </div>
+          <div className="article-visual__cmp-cell" data-side="1" data-filled={right.items[i] ? true : undefined}>
+            {right.items[i]?.label ?? ''}
+          </div>
+        </Fragment>
+      ))}
     </div>
   )
 }
 
 function HierarchyBody({ root }: { root: Item & { children?: Item[] } }) {
-  const renderNode = (node: Item & { children?: Item[] }, depth: number) => (
-    <li key={`${node.label}-${depth}`} className="article-visual__tree-node" data-depth={depth}>
-      <div className="article-visual__tree-card" data-emphasis={node.emphasis || undefined}>
-        <LabelStack label={node.label} detail={node.detail} emphasis={node.emphasis} icon={node.icon} />
-      </div>
-      {node.children?.length ? (
-        <ul className="article-visual__tree-children">
-          {node.children.map((child) => renderNode(child as Item & { children?: Item[] }, depth + 1))}
-        </ul>
+  const children = root.children ?? []
+  const cols = Math.min(Math.max(children.length, 1), 3)
+  return (
+    <div className="article-visual__hierarchy-board">
+      <span className="article-visual__hierarchy-root">{root.label}</span>
+      {children.length > 0 ? (
+        <>
+          <div className="article-visual__hierarchy-stem" aria-hidden="true" />
+          <div className="article-visual__hierarchy-rail" aria-hidden="true" />
+          <ul className="article-visual__hierarchy-columns" style={{ '--av-cols': cols } as CSSProperties}>
+            {children.map((child, i) => (
+              <li key={child.label} className="article-visual__hierarchy-col">
+                <div className="article-visual__hierarchy-stem" aria-hidden="true" />
+                <div
+                  className="article-visual__hierarchy-pillar"
+                  data-tone={tileTone(i, child.emphasis)}
+                  data-emphasis={child.emphasis || undefined}
+                >
+                  {child.label}
+                </div>
+                {(child as Item & { children?: Item[] }).children?.length ? (
+                  <>
+                    <div className="article-visual__hierarchy-stem" aria-hidden="true" />
+                    <ul className="article-visual__hierarchy-leaves">
+                      {((child as Item & { children?: Item[] }).children ?? []).map((leaf) => (
+                        <li key={leaf.label} className="article-visual__hierarchy-leaf">
+                          {leaf.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : root.detail ? (
+        <p className="article-visual__one-line" style={{ marginTop: '0.75rem' }}>
+          {root.detail}
+        </p>
       ) : null}
-    </li>
+    </div>
   )
-  return <ul className="article-visual__hierarchy">{renderNode(root, 0)}</ul>
 }
 
 function FlowBody({
   nodes,
   edges,
 }: {
-  nodes: { id: string; label: string; emphasis?: boolean; icon?: string }[]
+  nodes: { id: string; label: string; emphasis?: boolean }[]
   edges: { from: string; to: string; label?: string }[]
 }) {
   const layers = layerNodes(nodes, edges)
@@ -312,24 +394,21 @@ function FlowBody({
   return (
     <div className="article-visual__flow">
       {layers.map((layer, li) => (
-        <div key={li} className="article-visual__flow-stage">
+        <div key={li}>
           <div className="article-visual__flow-layer">
             {layer.map((id) => {
               const node = nodeMap.get(id)
               if (!node) return null
               return (
                 <div key={id} className="article-visual__flow-node" data-emphasis={node.emphasis || undefined}>
-                  <LabelStack label={node.label} emphasis={node.emphasis} icon={node.icon} />
+                  <ItemText label={node.label} size="md" />
                 </div>
               )
             })}
           </div>
           {li < layers.length - 1 ? (
             <div className="article-visual__flow-connector" aria-hidden="true">
-              <span className="article-visual__flow-arrow" />
-              {labelsBetweenLayers[li]?.length ? (
-                <span className="article-visual__flow-edge-labels">{labelsBetweenLayers[li].join(' · ')}</span>
-              ) : null}
+              {labelsBetweenLayers[li]?.join(' · ')}
             </div>
           ) : null}
         </div>
@@ -359,26 +438,25 @@ function MatrixBody({
 
   return (
     <div className="article-visual__matrix">
-      <div className="article-visual__matrix-axis article-visual__matrix-axis--y-high">{yAxis.high}</div>
-      <div className="article-visual__matrix-board">
-        <div className="article-visual__matrix-axis article-visual__matrix-axis--x-low">{xAxis.low}</div>
-        <div className="article-visual__matrix-grid">
-          {QUADRANT_ORDER.map((q) => (
-            <div key={q} className={`article-visual__matrix-cell article-visual__matrix-cell--${q}`}>
-              {(byQuad.get(q) ?? []).map((item) => (
-                <div key={item.label} className="article-visual__matrix-item" data-emphasis={item.emphasis || undefined}>
-                  <span className={item.emphasis ? 'article-visual__label article-visual__label--emphasis' : 'article-visual__label'}>
-                    {item.label}
-                  </span>
-                  {item.detail ? <span className="article-visual__detail">{item.detail}</span> : null}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        <div className="article-visual__matrix-axis article-visual__matrix-axis--x-high">{xAxis.high}</div>
+      <div className="article-visual__matrix-y-high">{yAxis.high}</div>
+      <div className="article-visual__matrix-grid">
+        {QUADRANT_ORDER.map((q) => (
+          <div key={q} className={`article-visual__matrix-cell article-visual__matrix-cell--${q}`}>
+            {(byQuad.get(q) ?? []).map((item) => (
+              <span key={item.label} className="article-visual__matrix-pill" data-emphasis={item.emphasis || undefined}>
+                {item.label}
+              </span>
+            ))}
+          </div>
+        ))}
       </div>
-      <div className="article-visual__matrix-axis article-visual__matrix-axis--y-low">{yAxis.low}</div>
+      <div className="article-visual__matrix-x">
+        <span>{xAxis.low}</span>
+        <span>{xAxis.high}</span>
+      </div>
+      <div className="article-visual__matrix-y-high" style={{ marginTop: '0.15rem' }}>
+        {yAxis.low}
+      </div>
     </div>
   )
 }
@@ -393,34 +471,79 @@ function ChartBody({
   values: { label: string; value: number; emphasis?: boolean }[]
 }) {
   const max = Math.max(...values.map((v) => v.value), 1)
-  return (
-    <div className={`article-visual__chart article-visual__chart--${variant}`} data-unit={unit || undefined}>
-      <ul>
-        {values.map((row) => (
-          <li key={row.label} className="article-visual__chart-row" data-emphasis={row.emphasis || undefined}>
-            <div className="article-visual__chart-row-head">
-              <span className="article-visual__label">{row.label}</span>
-              <span className="article-visual__chart-value" translate="no">
-                {numberFormatter.format(row.value)}
-                {unit ? <span className="article-visual__chart-unit">{unit}</span> : null}
+
+  if (variant === 'line') {
+    const headline = values.find((v) => v.emphasis) ?? values[0]
+    const points = values
+      .map((v, i) => {
+        const x = 24 + (i * 528) / Math.max(values.length - 1, 1)
+        const y = 110 - (v.value / max) * 70
+        return `${x},${y}`
+      })
+      .join(' ')
+    return (
+      <div className="article-visual__chart article-visual__chart--line">
+        <div className="article-visual__chart-hero" translate="no">
+          {numberFormatter.format(headline.value)}
+          {unit ? unit : ''}
+        </div>
+        <p className="article-visual__chart-metric-label">{headline.label}</p>
+        <svg className="article-visual__chart-spark" viewBox="0 0 576 120" role="img" aria-hidden="true">
+          <line x1="0" y1="110" x2="576" y2="110" />
+          <polyline points={points} />
+          {values.map((v, i) => {
+            const x = 24 + (i * 528) / Math.max(values.length - 1, 1)
+            const y = 110 - (v.value / max) * 70
+            return <circle key={v.label} cx={x} cy={y} r="7" />
+          })}
+        </svg>
+      </div>
+    )
+  }
+
+  if (variant === 'donut') {
+    const primary = values.find((v) => v.emphasis) ?? values[0]
+    const pct = `${Math.min(100, Math.max(0, primary.value))}%`
+    return (
+      <div
+        className="article-visual__chart article-visual__chart--donut"
+        style={{ '--av-pct': pct } as CSSProperties}
+      >
+        <div className="article-visual__donut">
+          <div className="article-visual__donut-hole" translate="no">
+            {numberFormatter.format(primary.value)}
+            {unit ?? '%'}
+          </div>
+        </div>
+        <div className="article-visual__donut-legend">
+          <span style={{ color: 'var(--av-accent)' }}>■ {primary.label}</span>
+          {values
+            .filter((v) => v !== primary)
+            .slice(0, 1)
+            .map((v) => (
+              <span key={v.label} data-muted>
+                ■ {v.label}
               </span>
-            </div>
-            <div
-              className="article-visual__bar-track"
-              role="meter"
-              aria-valuemin={0}
-              aria-valuemax={max}
-              aria-valuenow={row.value}
-              aria-label={row.label}
-            >
-              <div
-                className="article-visual__bar-fill"
-                style={{ width: `${Math.round((row.value / max) * 100)}%` }}
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
+            ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="article-visual__chart article-visual__chart--bar">
+      {values.map((row) => (
+        <div key={row.label} className="article-visual__chart-metric" data-emphasis={row.emphasis || undefined}>
+          <span className="article-visual__chart-metric-label">{row.label}</span>
+          <span className="article-visual__chart-metric-value" translate="no">
+            {numberFormatter.format(row.value)}
+            {unit ? unit : ''}
+          </span>
+          <div className="article-visual__chart-metric-bar" role="meter" aria-valuemin={0} aria-valuemax={max} aria-valuenow={row.value} aria-label={row.label}>
+            <span style={{ width: `${Math.round((row.value / max) * 100)}%` }} />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
