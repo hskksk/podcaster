@@ -23,8 +23,13 @@ function lineForHeadingTitle(source: string, title: string): number {
   const lines = source.split('\n')
   const target = title.trim()
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/^#{1,6}\s+(.*)$/)
-    if (m && m[1].trim() === target) return i
+    const line = lines[i]
+    let level = 0
+    while (level < line.length && line[level] === '#') level += 1
+    if (level < 1 || level > 6) continue
+    if (line[level] !== ' ') continue
+    const text = line.slice(level + 1).trim()
+    if (text === target) return i
   }
   return -1
 }

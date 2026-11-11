@@ -37,7 +37,7 @@
         "ops": "pnpm --filter @podcaster/ops dev",
         "web:github": "NEXT_PUBLIC_KEYSTATIC_STORAGE=github pnpm --filter @podcaster/web dev",
         "web:start": "pnpm --filter @podcaster/web start",
-        "vercel-build": "pnpm --filter @podcaster/web build",
+        "vercel-build": "pnpm markdoc:build && pnpm --filter @podcaster/web build",
         "capture": "tsx scripts/capture.ts",
         "mcp": "pnpm --filter @podcaster/mcp start",
         "d2:validate": "tsx scripts/d2-validate.ts",

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --port 3000",
+    "prebuild": "pnpm --filter @hskksk/markdoc-react build",
     "build": "next build",
     "postbuild": "pagefind --site .next/server/app --output-path public/pagefind --force-language ja",
     "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
