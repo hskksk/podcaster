@@ -117,12 +117,42 @@
 .article-visual__card {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  min-height: 5.25rem;
-  padding: 0.75rem 0.85rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 4.25rem;
+  padding: 0.65rem 1.05rem;
   border-radius: 0.85rem;
+  text-align: center;
   color: #fff;
   background: var(--av-blue);
+}
+
+.article-visual__card .article-visual__big-label,
+.article-visual__card .article-visual__one-line {
+  width: 100%;
+  text-align: center;
+}
+
+/* 3 items: one row (compact width) */
+.article-visual__cards[data-count='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* 5 items: 3+2 centered rows */
+.article-visual__cards[data-count='5'] {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.article-visual__cards[data-count='5'] .article-visual__card:nth-child(-n + 3) {
+  grid-column: span 2;
+}
+
+.article-visual__cards[data-count='5'] .article-visual__card:nth-child(4) {
+  grid-column: 2 / span 2;
+}
+
+.article-visual__cards[data-count='5'] .article-visual__card:nth-child(5) {
+  grid-column: 4 / span 2;
 }
 
 .article-visual__card[data-tone='blue-deep'] {
@@ -406,27 +436,34 @@
   background: var(--av-on-light);
 }
 
-.article-visual__hierarchy-bridge {
+.article-visual__hierarchy-fork {
   --fork-inset: calc(50% / var(--av-cols, 3));
-  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--av-cols, 3), minmax(0, 1fr));
+  column-gap: 0.5rem;
   width: 100%;
-  height: 1.35rem;
   margin-top: 0.15rem;
 }
 
-.article-visual__hierarchy-bridge__down {
-  position: absolute;
-  top: 0;
-  left: 50%;
+.article-visual__hierarchy-fork-down {
+  grid-column: 1 / -1;
+  justify-self: center;
   width: 2px;
-  height: 0.65rem;
-  translate: -50% 0;
+  height: 0.6rem;
   background: var(--av-line);
 }
 
-.article-visual__hierarchy-bridge__bar {
+.article-visual__hierarchy-fork-bar {
+  grid-column: 1 / -1;
+  position: relative;
+  height: 2px;
+  margin-top: -1px;
+}
+
+.article-visual__hierarchy-fork-bar::before {
+  content: '';
   position: absolute;
-  top: 0.63rem;
+  top: 0;
   left: var(--fork-inset);
   right: var(--fork-inset);
   height: 2px;
@@ -434,9 +471,10 @@
 }
 
 .article-visual__hierarchy-columns {
+  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(var(--av-cols, 3), minmax(0, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: subgrid;
+  gap: 0.5rem 0;
   margin: 0;
   padding: 0;
   width: 100%;
@@ -453,8 +491,8 @@
 .article-visual__hierarchy-col-tick {
   display: block;
   width: 2px;
-  height: 0.65rem;
-  margin: 0 auto;
+  height: 0.6rem;
+  margin: -1px auto 0;
   background: var(--av-line);
 }
 
@@ -507,22 +545,24 @@
 }
 
 .article-visual__hierarchy-leaf {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   min-height: 2.15rem;
-  padding: 0.35rem 0.5rem;
+  padding: 0.4rem 0.65rem;
   border: 1px solid var(--av-line);
   border-radius: 0.4rem;
   font-size: 0.82rem;
   font-weight: 600;
+  text-align: center;
   color: var(--av-on-light);
   background: color-mix(in srgb, var(--av-panel) 92%, var(--av-fill));
 }
 
 .article-visual__hierarchy-leaf-label {
   display: block;
+  width: 100%;
   line-height: 1.25;
+  text-align: center;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
@@ -883,11 +923,16 @@
     min-height: 2.75rem;
   }
   .article-visual__cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .article-visual__cards[data-count='3'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .article-visual__card {
-    min-height: 4.25rem;
+    min-height: 3.65rem;
+    padding: 0.55rem 0.75rem;
   }
 
   .article-visual__comparison-grid {
@@ -925,13 +970,13 @@
     gap: 0.85rem;
   }
 
-  .article-visual__hierarchy-bridge__bar,
-  .article-visual__hierarchy-col-tick {
-    display: none;
+  .article-visual__hierarchy-fork-bar::before {
+    content: none;
   }
 
-  .article-visual__hierarchy-bridge {
-    height: 0.85rem;
+  .article-visual__hierarchy-fork-down,
+  .article-visual__hierarchy-col-tick {
+    display: none;
   }
 
   .article-visual__lanes {
@@ -961,8 +1006,8 @@
 }
 
 @media (max-width: 30rem) {
-  .article-visual__cards {
-    grid-template-columns: 1fr;
+  .article-visual__cards:not([data-count='3']) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .article-visual__sequence--steps {

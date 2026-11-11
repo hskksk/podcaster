@@ -180,10 +180,20 @@ function renderBody(spec: ArticleVisualSpecV1) {
   }
 }
 
+function cardGridCols(count: number): number {
+  if (count <= 2) return count
+  if (count === 3) return 3
+  return 2
+}
+
 function CardsBody({ items }: { items: Item[] }) {
-  const cols = items.length <= 2 ? items.length : 2
+  const cols = cardGridCols(items.length)
   return (
-    <ul className="article-visual__cards" style={{ '--av-cols': cols } as CSSProperties}>
+    <ul
+      className="article-visual__cards"
+      data-count={items.length}
+      style={{ '--av-cols': cols } as CSSProperties}
+    >
       {items.map((item, i) => (
         <li
           key={`${item.label}-${i}`}
@@ -333,16 +343,10 @@ function HierarchyBody({ root }: { root: Item & { children?: Item[] } }) {
     <div className="article-visual__hierarchy-board">
       <span className="article-visual__hierarchy-root">{root.label}</span>
       {children.length > 0 ? (
-        <>
-          <div
-            className="article-visual__hierarchy-bridge"
-            style={{ '--av-cols': cols } as CSSProperties}
-            aria-hidden="true"
-          >
-            <span className="article-visual__hierarchy-bridge__down" />
-            <span className="article-visual__hierarchy-bridge__bar" />
-          </div>
-          <ul className="article-visual__hierarchy-columns" style={{ '--av-cols': cols } as CSSProperties}>
+        <div className="article-visual__hierarchy-fork" style={{ '--av-cols': cols } as CSSProperties}>
+          <span className="article-visual__hierarchy-fork-down" aria-hidden="true" />
+          <span className="article-visual__hierarchy-fork-bar" aria-hidden="true" />
+          <ul className="article-visual__hierarchy-columns">
             {children.map((child, i) => (
               <li key={child.label} className="article-visual__hierarchy-col">
                 <span className="article-visual__hierarchy-col-tick" aria-hidden="true" />
@@ -368,7 +372,7 @@ function HierarchyBody({ root }: { root: Item & { children?: Item[] } }) {
               </li>
             ))}
           </ul>
-        </>
+        </div>
       ) : root.detail ? (
         <p className="article-visual__one-line" style={{ marginTop: '0.75rem' }}>
           {root.detail}
