@@ -40,6 +40,7 @@ describe('Article Visual engine', () => {
     expect(screen.getByText('Good design')).toBeInTheDocument()
     expect(screen.getByText('Lock-in')).toBeInTheDocument()
     expect(screen.getByText('VS')).toBeInTheDocument()
+    expect(document.querySelector('.article-visual__pros-cons-list[data-side="0"]')).toBeTruthy()
   })
 
   it('falls back to alt when engine version is unsupported', () => {

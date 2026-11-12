@@ -473,56 +473,85 @@
   overflow: hidden;
 }
 
-.article-visual__pros-cons-rows {
+.article-visual__pros-cons-columns {
   grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-}
-
-.article-visual__pros-cons-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.article-visual__pros-cons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.75rem 0.65rem 0.9rem;
+  list-style: none;
+}
+
+.article-visual__pros-cons-list[data-side='0'] {
+  background: var(--av-blue);
+}
+
+.article-visual__pros-cons-list[data-side='1'] {
+  background: var(--av-slate);
 }
 
 .article-visual__pros-cons-item {
   display: flex;
-  align-items: center;
-  min-height: 2.85rem;
-  padding: 0.55rem 0.85rem;
-  border-top: 1px solid color-mix(in srgb, #fff 35%, transparent);
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.15rem 0.1rem;
   font-size: 0.88rem;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.35;
   color: #fff;
 }
 
-.article-visual__pros-cons-item[data-side='0'][data-filled] {
-  justify-content: flex-start;
+.article-visual__pros-cons-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.article-visual__pros-cons-list[data-side='0'] .article-visual__pros-cons-text {
   text-align: left;
-  padding-right: 1.15rem;
-  background: var(--av-blue);
 }
 
-.article-visual__pros-cons-item[data-side='1'][data-filled] {
-  justify-content: flex-end;
+.article-visual__pros-cons-list[data-side='1'] .article-visual__pros-cons-text {
   text-align: right;
-  padding-left: 1.15rem;
-  background: var(--av-slate);
 }
 
-.article-visual__pros-cons-item[data-side='1'][data-emphasis] {
+.article-visual__pros-cons-item[data-emphasis] .article-visual__pros-cons-text {
   color: var(--av-accent-fg);
-  background: color-mix(in srgb, var(--av-accent) 88%, var(--av-slate));
 }
 
-.article-visual__pros-cons-item[data-side='0']:not([data-filled]) {
-  border-top: 1px solid color-mix(in srgb, #fff 35%, transparent);
-  background: color-mix(in srgb, var(--av-blue) 35%, var(--av-fill));
+.article-visual__pros-cons-mark {
+  flex: none;
+  width: 1.15rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
 }
 
-.article-visual__pros-cons-item[data-side='1']:not([data-filled]) {
-  border-top: 1px solid color-mix(in srgb, #fff 35%, transparent);
-  background: color-mix(in srgb, var(--av-slate) 35%, var(--av-fill));
+.article-visual__pros-cons-list[data-side='0'] .article-visual__pros-cons-mark::before {
+  content: '✅';
+}
+
+.article-visual__pros-cons-list[data-side='1'] {
+  align-items: flex-end;
+}
+
+.article-visual__pros-cons-list[data-side='1'] .article-visual__pros-cons-item {
+  flex-direction: row-reverse;
+}
+
+.article-visual__pros-cons-list[data-side='1'] .article-visual__pros-cons-mark::before {
+  content: '✕';
+  color: #ffc9c4;
 }
 
 /* comparison — split panel with center VS */
@@ -1345,19 +1374,18 @@
     font-size: 0.65rem;
   }
 
-  .article-visual__pros-cons-item[data-filled] {
-    min-height: 2.55rem;
+  .article-visual__pros-cons-list {
+    gap: 0.45rem;
+    padding: 0.6rem 0.45rem 0.75rem;
+  }
+
+  .article-visual__pros-cons-item {
     font-size: 0.78rem;
   }
 
-  .article-visual__pros-cons-item[data-side='0'][data-filled] {
-    padding-right: 0.85rem;
-    padding-left: 0.55rem;
-  }
-
-  .article-visual__pros-cons-item[data-side='1'][data-filled] {
-    padding-left: 0.85rem;
-    padding-right: 0.55rem;
+  .article-visual__pros-cons-mark {
+    width: 1rem;
+    font-size: 0.85rem;
   }
 
   .article-visual__sequence--steps {
