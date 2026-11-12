@@ -1,0 +1,177 @@
+version: 1
+sourceSha256: "e07bd56d7126275fd948ccff663d95dde9392a35c6917e93a7f45ead52bc737b"
+visuals:
+  - sectionId: "背景-1つの場所に置けないファイル"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "階層・ブール検索・RDBはそれぞれ経路の単一性、絞り込み手がかりの欠如、学習コストという弱点を持ち、LISFSはパス構文で3つを束ねようとする。"
+    spec:
+      type: cards
+      title: 3つの探し方、3つの欠点
+      items:
+        - label: 階層
+          detail: 経路が1本、配置先も1つ
+          icon: workspace
+        - label: ブール検索
+          detail: ヒット一覧だけで次の語はユーザー任せ
+          icon: document
+        - label: リレーショナル
+          detail: 値条件は書けるが学習コストが高い
+          icon: database
+        - label: LISFS
+          detail: パス語法で階層と式を1本化
+          emphasis: true
+
+  - sectionId: "は連言-は選言-は否定"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "LISFSではスラッシュが論理積、パイプが選言、感嘆符が否定を表し、lib/usrとusr/libは同じ場所になる。"
+    spec:
+      type: cards
+      title: パスは式で、順序は効かない
+      items:
+        - label: /
+          detail: 論理積（連言）
+        - label: "|"
+          detail: 選言
+        - label: "!"
+          detail: 否定
+        - label: mkdir / cd / touch
+          detail: 属性登録・移動・付与
+          emphasis: true
+
+  - sectionId: "外延と-increments"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "式の外延は条件を満たすファイル集合で、lsは現在地を真に広げる性質だけをincrementsとして返し、残りをファイル一覧とする。"
+    spec:
+      type: flow
+      title: lsは外延を2種類に分けて返す
+      nodes:
+        - id: formula
+          label: 現在地の式 φ
+        - id: extension
+          label: 外延（ファイル集合）
+        - id: ls
+          label: ls
+          emphasis: true
+        - id: increments
+          label: 仮想サブディレクトリ
+        - id: files
+          label: ファイル一覧
+      edges:
+        - from: formula
+          to: extension
+        - from: extension
+          to: ls
+        - from: ls
+          to: increments
+        - from: ls
+          to: files
+
+  - sectionId: "タクソノミは-mkdir-が作る公理"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "mkdirは分類の公理を宣言し分類は有向非巡回グラフになり、lsは上から辿って最も一般なincrementsだけを先に見せる。"
+    spec:
+      type: hierarchy
+      title: mkdirが分類の公理を積む
+      root:
+        label: 分類グラフ（DAG）
+        children:
+          - label: OperatingSystem
+            children:
+              - label: Unix
+                detail: Unix ⇒ OperatingSystem
+                emphasis: true
+          - label: 細かい属性
+            children:
+              - label: increments（後から）
+
+  - sectionId: "プロトタイプの構成"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "2003年プロトタイプはPerlFS上にBerkeley DBでメタデータを持ち本体はEXT2に置き、keyword-object行列で外延を事前計算する。"
+    spec:
+      type: flow
+      title: 参照を速く、作成は索引に回す
+      nodes:
+        - id: perlfS
+          label: PerlFS
+        - id: bdb
+          label: Berkeley DB
+          emphasis: true
+        - id: ext2
+          label: EXT2（本体）
+        - id: matrix
+          label: keyword↔object 行列
+        - id: ext
+          label: 外延の事前計算
+      edges:
+        - from: perlfS
+          to: bdb
+        - from: bdb
+          to: ext2
+        - from: bdb
+          to: matrix
+        - from: matrix
+          to: ext
+
+  - sectionId: "計測された性能"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "同じ関数検索でfindは2.899秒、LISFSのlookupは0.081秒であった。一方Copyはtransducer有効時に46.296秒まで伸びる。"
+    spec:
+      type: chart
+      title: 検索は桁違いに速い
+      variant: bar
+      unit: 秒
+      values:
+        - label: find
+          value: 2.899
+        - label: LISFS lookup
+          value: 0.081
+          emphasis: true
+
+  - sectionId: "semantic-file-system-との差"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "SFSはtransducerで属性付き仮想ディレクトリを並べるが結果内ナビは別扱い。LISFSはユーザー属性と仮想ディレクトリ内のcdができる。"
+    spec:
+      type: comparison
+      title: SFSより、式の中を移動できる
+      sides:
+        - label: SFS (1991)
+        - label: LISFS
+          emphasis: true
+      rows:
+        - axis: 属性の付け方
+          cells:
+            - label: transducer の自動抽出
+            - label: ユーザーが自由に付与
+        - axis: 仮想ディレクトリ
+          cells:
+            - label: 問い合わせ結果を並べる
+            - label: 中をさらに移動できる
+        - axis: transducer
+          cells:
+            - label: 種別ごとの抽出プログラム
+            - label: SFS の考え方を継承
+
+  - sectionId: "他の非階層ファイルシステム"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "同時代のSFS・HAC・BeFS・Nebula・LiFSは各1特徴に留まり、LISFSは式が場所でintra-fileまで扱う点が整理上の差になる。"
+    spec:
+      type: cards
+      title: 似た試みは1機能ずつ止まった
+      items:
+        - label: SFS
+          detail: 自動属性のみ、結果内移動なし
+        - label: HAC
+          detail: クエリ結果を実ディレクトリ化
+        - label: Nebula
+          detail: 名前付きクエリ、中は移動不可
+        - label: LISFS
+          detail: 式が場所、intra-file まで
+          emphasis: true

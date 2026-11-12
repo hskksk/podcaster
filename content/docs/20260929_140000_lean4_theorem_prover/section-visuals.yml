@@ -1,0 +1,170 @@
+version: 1
+sourceSha256: "f695006472a90a80ce35d3c04ba48628edc8af9605507b8a83399bc8a9a1e9fe"
+visuals:
+  - sectionId: "背景歴史-2013年の実験システムからai時代の検証基盤へ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: Leanは2013年に始まり、Lean 3で自己拡張とmathlib、Lean 4で自己記述、2020年代は自動化とAI接続へ移った。"
+    spec:
+      type: sequence
+      title: 信頼性と自動化を両立させる系譜
+      mode: timeline
+      items:
+        - label: Lean 0.1 公開
+          detail: 2014年6月、小さなカーネル
+        - label: Lean 3
+          detail: 自己拡張とmathlib育成
+        - label: Lean 4.0
+          detail: 2023年9月、処理系の約9割をLeanで記述
+          emphasis: true
+        - label: Lean FRO 設立
+          detail: 2023年8月
+        - label: AIとカーネル検査
+          detail: AlphaProofと健全性バグ修正
+
+  - sectionId: "1-型が命題項が証明-同じ構文で関数と定理を書く"
+    engine: article-visual
+    engineVersion: "1"
+    alt: カリー・ハワード対応により命題は型、証明はその型を持つ項であり、正しさは型検査に還元される。theoremとdefはカーネル上同じ宣言である。
+    spec:
+      type: flow
+      title: 証明の正しさは型検査へ
+      nodes:
+        - id: prop
+          label: 命題
+        - id: type
+          label: 型として書く
+          emphasis: true
+        - id: term
+          label: 型を持つ項
+        - id: check
+          label: 型検査
+      edges:
+        - from: prop
+          to: type
+          label: 区別しない
+        - from: type
+          to: term
+          label: 証明＝項
+        - from: term
+          to: check
+          label: 正当性を確かめる
+
+  - sectionId: "2-帰納型と構造体-データ型の定義がそのまま数学の対象になる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: 帰納型はコンストラクタ列挙と帰納原理、構造体は単一コンストラクタのフィールド定義としてデータ型を定める。
+    spec:
+      type: comparison
+      title: データ型の二つの入口
+      sides:
+        - label: inductive
+        - label: structure
+      rows:
+        - axis: 定義の形
+          cells:
+            - label: コンストラクタを列挙
+            - label: フィールドを束ねる
+        - axis: 再帰と場合分け
+          cells:
+            - label: 帰納原理が自動導出
+            - label: 非再帰が前提
+        - axis: 終了性
+          cells:
+            - label: 構造的再帰を既定で要求
+            - label: partial で区別
+
+  - sectionId: "3-タクティク-ゴールを書き換えて証明を組み立てる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: タクティクはゴールを変形する命令で、introで仮定を増やし、rwとsimpで式を整え、exactやrflで閉じる流れが基本である。
+    spec:
+      type: sequence
+      title: 対話的証明の基本の一手
+      mode: steps
+      items:
+        - label: intro
+          detail: 仮定を文脈へ
+        - label: rw / simp
+          detail: ゴールの式を整える
+        - label: induction / cases
+          detail: 帰納・場合分け
+        - label: exact / rfl
+          detail: ゴールを閉じる
+          emphasis: true
+
+  - sectionId: "4-mathlib-百万行の数学が証明の土台になる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: mathlibは型クラス階層で抽象代数を積み上げ、環の定理が具体例へ型クラスインスタンス経由で流れ込む。
+    spec:
+      type: hierarchy
+      title: 抽象定理が具体へ流れる
+      root:
+        label: 型クラス階層
+        children:
+          - label: 環・体・順序
+            children:
+              - label: 抽象定理
+                emphasis: true
+          - label: インスタンス
+            children:
+              - label: ℤ・ℚ・ℝ
+          - label: ring 等の自動化
+
+  - sectionId: "5-自動化-simp-と-ringomegagrind-が定型を片づける"
+    engine: article-visual
+    engineVersion: "1"
+    alt: 定型はsimpやomegaなどに任せ、届かなければ人間がタクティクでゴールを分解する順で進める。
+    spec:
+      type: sequence
+      title: 広い自動化から人手へ
+      mode: funnel
+      items:
+        - label: simp / omega
+          detail: 単純化・線形算術
+        - label: ring / field_simp
+          detail: 環・体の等式
+        - label: grind
+          detail: 汎用探索（組合せ爆発に弱い）
+        - label: タクティク
+          detail: 残ったゴールを人手で
+          emphasis: true
+
+  - sectionId: "6-メタプログラミング-lean-自身で-lean-を拡張する"
+    engine: article-visual
+    engineVersion: "1"
+    alt: 型検査のカーネルだけが信頼の核で、パーサやelaboratorやタクティクはLeanで拡張できる。記法追加はマクロ、ゴール操作はタクティク、構文受理はelaborator。
+    spec:
+      type: hierarchy
+      title: カーネル以外はLeanで足せる
+      root:
+        label: Lean 4 処理系
+        children:
+          - label: カーネル
+            emphasis: true
+          - label: パーサ
+          - label: elaborator
+            children:
+              - label: タクティク
+              - label: コマンド
+          - label: マクロ
+
+  - sectionId: "8-検証とai-同じカーネルが産業と自動証明を支える"
+    engine: article-visual
+    engineVersion: "1"
+    alt: 数学形式化、AWS Cedarの差分テスト、AlphaProofの自動証明が同じカーネルとmathlib上で動き、2026年はカーネル健全性の独立再検査も重視される。
+    spec:
+      type: cards
+      title: 一つのカーネル、三つの応用
+      items:
+        - label: 数学形式化
+          detail: FLT・液体テンソル
+        - label: ソフトウェア検証
+          detail: Cedar差分テスト
+          icon: shield
+        - label: 自動証明AI
+          detail: AlphaProof・LEAP
+          emphasis: true
+        - label: 再検査の仕組み
+          detail: nanoda・Comparator

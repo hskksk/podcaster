@@ -1,0 +1,137 @@
+version: 1
+sourceSha256: "e183f38b8a296ad2ad784c9607fd6323ccb2acf56e7bcaae57d815cfbc7f37f9"
+visuals:
+  - sectionId: "1-利息の累積-変更ごとの追加作業が機能開発の余力を削る"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "元金は避ける設計や返済の一回費用、利息は負債が残る間の変更ごとの追加作業として俊敏性を削る。"
+    spec:
+      type: comparison
+      title: 一回払いと、変更のたびの上乗せ
+      sides:
+        - label: 元金
+        - label: 利息
+          emphasis: true
+      rows:
+        - axis: いつかかるか
+          cells:
+            - label: 設計回避や返済時
+            - label: 将来の変更ごと
+        - axis: 俊敏性への効き方
+          cells:
+            - label: まとめて支払う作業
+            - label: 見積もり外しと新機能時間の減少
+
+  - sectionId: "2-サービス間の依存-局所変更をチーム横断の仕事に変える"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "変更境界と実依存がずれると、局所変更が共有DBや結合API経由で複数チームの調整と連鎖公開になる。"
+    spec:
+      type: flow
+      title: 境界のずれが調整を生む
+      nodes:
+        - id: local
+          label: 局所変更
+        - id: coupling
+          label: 共有DB・結合API
+          emphasis: true
+        - id: teams
+          label: 複数チーム
+        - id: work
+          label: 調整と連鎖公開
+      edges:
+        - from: local
+          to: coupling
+        - from: coupling
+          to: teams
+        - from: teams
+          to: work
+
+  - sectionId: "3-環境の変化-妥当だった初期判断も後から負債になる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "妥当だった初期選択も環境変化で負債化し、休眠から保守費増加・速度低下・機会損失へ進む。"
+    spec:
+      type: sequence
+      title: 休眠から損害へ
+      mode: steps
+      items:
+        - label: 当初妥当な選択
+        - label: 環境・事業の変化
+        - label: 休眠状態
+          emphasis: true
+        - label: 保守費と速度低下
+        - label: 機会損失
+
+  - sectionId: "4-組織的影響-負債の蓄積が変更の選択肢を狭める"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "元金が高く変更が少ない箇所は利息を払い続ける判断もあり、総量だけでは優先度を決められない。"
+    spec:
+      type: comparison
+      title: 返済と据え置きの合理性
+      sides:
+        - label: 直ちに返済
+        - label: 利息で使い続け
+          emphasis: true
+      rows:
+        - axis: 向く状況
+          cells:
+            - label: 変更が続く箇所
+            - label: 元金が高く変更が稀
+        - axis: 組織への効き
+          cells:
+            - label: 機能と修復で時間を分ける
+            - label: 小さな回避策が残るリスク
+
+  - sectionId: "5-atdx-の役割-比較の手掛かりだが俊敏性そのものではない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ATDxは同一ポートフォリオ内のコード上の負債を相対比較するが、俊敏性や返済優先度そのものは測らない。"
+    spec:
+      type: comparison
+      title: 比較入口、俊敏性の点数ではない
+      sides:
+        - label: ATDxが扱う
+        - label: ATDxが扱わない
+          emphasis: true
+      rows:
+        - axis: データの出所
+          cells:
+            - label: 静的解析違反の正規化
+            - label: 初期設計・組織知識
+        - axis: 読み方
+          cells:
+            - label: ポートフォリオ内の相対値
+            - label: 負債の全量や俊敏性
+
+  - sectionId: "6-負債の時間推移-増えやすくても単純な直線ではない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "コード負債は増加傾向でも停止期間があり、サービス数や一時点指標だけでは推移を説明できない。"
+    spec:
+      type: sequence
+      title: 直線では説明できない推移
+      mode: timeline
+      items:
+        - label: 全体として増加傾向
+        - label: 増加が止まる期間
+        - label: 追加・変更・返済
+          emphasis: true
+        - label: 境界が効く局所化
+
+  - sectionId: "背景歴史-技術的負債の議論はコードの欠陥から設計判断へ広がった"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "負債議論はコード分析中心の識別から、設計判断と組織・将来変更需要を含む実務研究へ広がった。"
+    spec:
+      type: cards
+      title: 議論の対象が設計へ広がる
+      items:
+        - label: Dagstuhl
+          detail: 利息を速度・品質の追加コストに整理
+        - label: マッピング研究
+          detail: 識別はソースコード分析が中心
+        - label: 実務研究へ
+          detail: 初期判断と組織知識を含む
+          emphasis: true

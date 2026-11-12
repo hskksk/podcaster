@@ -1,0 +1,182 @@
+version: 1
+sourceSha256: "59a3665550e4760e1395809634410aa406e9addcfd8a762f65b8781eba593c84"
+visuals:
+  - sectionId: "1-tclテスト-開発時の反復的フィードバックを支える層"
+    engine: article-visual
+    engineVersion: "1"
+    alt: TCLテストは数分で走り、修正直後の文脈で失敗を見つけ、直したバグは回帰ケースとして残る。"
+    spec:
+      type: cards
+      title: 開発の速度を最優先にする層
+      items:
+        - label: 数分で全体把握
+          detail: 完全実行が数分程度
+          emphasis: true
+        - label: 回帰の蓄積
+          detail: 修正バグをスイートに残す
+        - label: 文脈の鮮度
+          detail: 書いた直後に何が壊れたか
+
+  - sectionId: "2-th3テスト-100ブランチmcdc達成の証明層"
+    engine: article-visual
+    engineVersion: "1"
+    alt: ブランチカバレッジは真偽を通すだけだが、MC/DCは各条件が独立して分岐結果に影響することを検証する。TH3は100%ブランチと100%MC/DCを達成している。"
+    spec:
+      type: comparison
+      title: 通すだけでは足りない
+      sides:
+        - label: ブランチ
+        - label: MC/DC
+      rows:
+        - axis: 問い
+          cells:
+            - label: 真と偽を通すか
+            - label: 条件が独立に効くか
+        - axis: 基準
+          cells:
+            - label: 一般的なカバレッジ
+            - label: DO-178C Level A
+        - axis: TH3
+          cells:
+            - label: "100%"
+              emphasis: true
+            - label: "100%"
+              emphasis: true
+
+  - sectionId: "3-sql-logic-test-複数dbとの同等性検証層"
+    engine: article-visual
+    engineVersion: "1"
+    alt: SLTは同じSQLをSQLite・PostgreSQL・MySQLほか複数エンジンで実行し、結果の一致をリリース前のゲートとして確認する。"
+    spec:
+      type: interaction
+      title: 一つのSQLを多エンジンで照合
+      actors:
+        - id: slt
+          label: SLT
+        - id: sqlite
+          label: SQLite
+        - id: peers
+          label: 他DB
+      steps:
+        - from: slt
+          to: sqlite
+          label: 同じ文を実行
+        - from: slt
+          to: peers
+          label: 同じ文を実行
+        - from: sqlite
+          to: slt
+          label: 結果を返す
+        - from: peers
+          to: slt
+          label: 結果を比較
+
+  - sectionId: "4-dbsqlfuzz-構造認識のファジングテスト層"
+    engine: article-visual
+    engineVersion: "1"
+    alt: dbsqlfuzzはSQLテキストとDBファイルを同時に変異させ、構文を崩さず境界状態を探索し、外部報告をほぼ止めた。"
+    spec:
+      type: flow
+      title: 文法を保ちながら深く変異
+      nodes:
+        - id: sql
+          label: SQL文
+        - id: db
+          label: DBファイル
+        - id: mut
+          label: 同時変異
+          emphasis: true
+        - id: fuzz
+          label: libFuzzer
+        - id: bug
+          label: 境界バグ
+      edges:
+        - from: sql
+          to: mut
+        - from: db
+          to: mut
+        - from: mut
+          to: fuzz
+        - from: fuzz
+          to: bug
+
+  - sectionId: "5-oom-テスト-メモリ枯渇の綿密なシミュレーション"
+    engine: article-visual
+    engineVersion: "1"
+    alt: mallocを段階的に失敗させ、単発失敗と連続失敗の両方でロールバックと原子性を検証する。"
+    spec:
+      type: sequence
+      title: 失敗点を一つずつ進める
+      mode: steps
+      items:
+        - label: 最初のmalloc失敗
+        - label: テスト実行
+        - label: カウンターを増やす
+        - label: 操作完了まで反復
+          emphasis: true
+
+  - sectionId: "6-io-エラーテスト-ディスク障害の複雑な時相をシミュレートする層"
+    engine: article-visual
+    engineVersion: "1"
+    alt: VFSがN番目のI/Oから失敗を返し、Nを増やしながら各時点での整合性と復帰を検証する。"
+    spec:
+      type: sequence
+      title: N番目の障害を刻む
+      mode: steps
+      items:
+        - label: VFSを挟む
+        - label: N=1で失敗
+        - label: Nを増やして再実行
+          emphasis: true
+        - label: integrity_check
+
+  - sectionId: "7-クラッシュテストと復帰検証-予期せぬ終了の後の一貫性"
+    engine: article-visual
+    engineVersion: "1"
+    alt: TCLは子プロセスをSIGKILLで止め、TH3はスナップショット地点ごとに予期せぬ終了を再現して復帰を検証する。"
+    spec:
+      type: comparison
+      title: 同じ問い、二つの再現法
+      sides:
+        - label: TCL
+        - label: TH3
+      rows:
+        - axis: 再現
+          cells:
+            - label: 子プロセスをSIGKILL
+            - label: メモリVFSスナップショット
+        - axis: 狙う箇所
+          cells:
+            - label: ランダムな途中終了
+            - label: ジャーナル前後のキーポイント
+              emphasis: true
+        - axis: 確認
+          cells:
+            - label: integrity_check
+            - label: integrity_check
+
+  - sectionId: "8-動的解析静的解析リリース工程とテストの限界-投資の正当化と包括性の境界"
+    engine: article-visual
+    engineVersion: "1"
+    alt: 一般アプリは段階的デプロイで足りるが、数十億端末の基盤ライブラリでは590倍のテスト投資が社会的コストに見合う。"
+    spec:
+      type: comparison
+      title: 590倍が成り立つ条件
+      sides:
+        - label: 一般アプリ
+        - label: 基盤ライブラリ
+      rows:
+        - axis: 検証の場
+          cells:
+            - label: 本番デプロイで補う
+            - label: 本番前が唯一の防衛線
+        - axis: バグの届き方
+          cells:
+            - label: 限定ユーザー
+            - label: 数十億端末へ同時
+              emphasis: true
+        - axis: テスト規模
+          cells:
+            - label: 費用対効果が合わない
+            - label: 590倍が正当化される
+              emphasis: true

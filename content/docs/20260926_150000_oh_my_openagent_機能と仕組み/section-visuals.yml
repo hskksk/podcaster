@@ -1,0 +1,171 @@
+version: 1
+sourceSha256: "13a5e292432a52a3a364e9218aaec6e3b692e17a6c908355150dce8b58e43cb4"
+visuals:
+  - sectionId: "背景歴史-opencode-の追加設定から複数ハーネスを扱う製品へ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "コミュニティ製 OpenCode プラグインから v3.11.0 で oh-my-openagent に改称し、OpenCode 版に加え Codex Light と OmO Native ベータが並行する。"
+    spec:
+      type: sequence
+      title: プラグインから複数版へ
+      mode: timeline
+      items:
+        - label: oh-my-opencode として普及
+        - label: v3.11.0 で改称
+          emphasis: true
+        - label: OpenCode 版を維持
+        - label: Codex Light・Native ベータ
+
+  - sectionId: "1-メインエージェント-調査役と実装役へ仕事を分ける"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "メインエージェントがユーザーと会話を続け、task ツール経由で explore・librarian・plan 系へ委任し結果を受け取る。"
+    spec:
+      type: interaction
+      title: 会話は主役、作業は専門役へ
+      actors:
+        - id: user
+          label: 利用者
+        - id: main
+          label: メインエージェント
+        - id: specialist
+          label: 専門エージェント
+      steps:
+        - from: user
+          to: main
+          label: 依頼を送る
+        - from: main
+          to: specialist
+          label: task で委任
+        - from: specialist
+          to: main
+          label: 結果を返す
+        - from: main
+          to: user
+          label: 会話を継続
+
+  - sectionId: "2-カテゴリー-仕事の種類から委任先を選ぶ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "メインはモデル名ではなく quick や visual-engineering 等のカテゴリーを選び、接続プロバイダーと設定が実行先を決める。"
+    spec:
+      type: flow
+      title: 意図とモデル選択を分離
+      nodes:
+        - id: intent
+          label: 作業の意図
+        - id: category
+          label: カテゴリー
+          emphasis: true
+        - id: config
+          label: 設定・候補列
+        - id: provider
+          label: 接続プロバイダー
+        - id: model
+          label: 実行モデル
+      edges:
+        - from: intent
+          to: category
+        - from: category
+          to: config
+        - from: config
+          to: provider
+        - from: provider
+          to: model
+
+  - sectionId: "3-開発ツール-lspast-grepmcp-が調査と編集を補う"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "LSP・AST-Grep・MCP 連携に加え Hashline が行識別と編集検証で誤編集リスクを下げる。"
+    spec:
+      type: cards
+      title: モデル指示に加える道具群
+      items:
+        - label: LSP
+          detail: 定義・参照・診断
+        - label: AST-Grep
+          detail: 構文を見た検索
+        - label: MCP
+          detail: 検索・文書・GitHub
+        - label: Hashline
+          detail: 行検証付き編集
+          emphasis: true
+
+  - sectionId: "4-明示キーワードで実行モードを切り替える"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ulw は IntentGate が正規表現で検出する明示キーワードであり、/ulw-plan と /ulw-execute で計画と実行を分けられる。"
+    spec:
+      type: sequence
+      title: 合言葉で方針を選ぶ
+      mode: steps
+      items:
+        - label: ulw をプロンプトに含める
+        - label: IntentGate が検出
+          emphasis: true
+        - label: 実行モード指示を追加
+        - label: 計画は /ulw-plan
+        - label: 確認後 /ulw-execute
+
+  - sectionId: "5-継続制御-todogoalフックが中断と抜けを減らす"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Todo・Goal・フックが OpenCode イベントに反応するが、Goal や Team Mode は既定無効で検証は別途必要。"
+    spec:
+      type: hierarchy
+      title: フックが作業を引き継ぐ
+      root:
+        label: 継続制御
+        children:
+          - label: Todo 継続
+          - label: Goal 保持
+          - label: イベントフック
+            emphasis: true
+            children:
+              - label: エラー回復
+              - label: 品質確認
+
+  - sectionId: "6-team-mode-共有タスクと連絡手段で並列協調する"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "通常の task 委任は主役が結果を受け取る一方、Team Mode は最大8人が共有タスクとメールボックスで並行し team_* ツールを使う。"
+    spec:
+      type: comparison
+      title: 委任とチーム作業は別物
+      sides:
+        - label: 通常 task
+        - label: Team Mode
+          emphasis: true
+      rows:
+        - axis: 構成
+          cells:
+            - label: 主役が子へ依頼
+            - label: リード＋最大8人
+        - axis: 連絡
+          cells:
+            - label: 結果を主役へ返す
+            - label: 共有タスク・メールボックス
+        - axis: 有効化
+          cells:
+            - label: 標準動作
+            - label: 設定と再起動が必要
+
+  - sectionId: "7-導入条件-版認証ライセンスを分けて確認する"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "機能は強いがモデルは認証次第、プラグインはコード実行とデータ送信を伴い、ライセンスは SUL-1.0 で商用組み込みに制約がある。"
+    spec:
+      type: pros_cons
+      title: 導入前に押さえる制約
+      sides:
+        - label: できること
+          items:
+            - label: 役割分担と道具拡張
+            - label: 版ごとの公式ガイド
+            - label: doctor で環境診断
+        - label: 確認必須
+          emphasis: true
+          items:
+            - label: プロバイダー認証
+            - label: プラグイン権限とデータ
+            - label: SUL-1.0 の利用範囲

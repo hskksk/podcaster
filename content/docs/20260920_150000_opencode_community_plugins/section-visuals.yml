@@ -1,0 +1,133 @@
+version: 1
+sourceSha256: "37c25ff763798e2b822776c375aa0bde7fe6b3144d34c2289c2fc267908e9686"
+visuals:
+  - sectionId: "背景歴史-2025年の-api-公開から約2千本のエコシステムと破壊的刷新まで"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "plugins API 公開後、oh-my-opencode が流行し OpenDock が約2千本を数え、2026年夏の v2 で API が破壊的に変わった。"
+    spec:
+      type: sequence
+      title: プラグインは急成長のあと v2 で切られた
+      mode: timeline
+      items:
+        - label: plugins API 公開
+        - label: oh-my-opencode（2025年12月）
+          emphasis: true
+        - label: OpenDock が 1,983 本を数える
+        - label: v2 破壊的変更（2026年夏）
+
+  - sectionId: "1-プラグインの受け入れ口-設定の-plugin-配列とローカル2ディレクトリ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "npm は設定の plugin 配列から Bun で解決・キャッシュし、ローカルは二つの plugins ディレクトリから読み込む。登録や審査はない。"
+    spec:
+      type: flow
+      title: 入口は npm とローカルだけ
+      nodes:
+        - id: npm
+          label: npm パッケージ
+        - id: config
+          label: plugin 配列
+        - id: bun
+          label: Bun 解決
+        - id: local
+          label: ローカル2ディレクトリ
+        - id: load
+          label: 起動時読み込み
+          emphasis: true
+      edges:
+        - from: npm
+          to: config
+        - from: config
+          to: bun
+        - from: bun
+          to: load
+        - from: local
+          to: load
+
+  - sectionId: "2-規模の計測-npm-キーワードが1983本月間21m回を数える"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "opencode-plugin タグで 1,983 本・月間 2.1M 回が数えられる一方、審査と trusted workspace がなく安全確認は本人任せである。"
+    spec:
+      type: pros_cons
+      title: 規模は npm タグで膨らむが保証は置かれない
+      sides:
+        - label: 拡大
+          items:
+            - label: タグだけで翌日掲載
+            - label: 1,983 本・月間 2.1M 回
+            - label: 69% がアクティブ
+              emphasis: true
+        - label: 空白
+          items:
+            - label: 公式検収なし
+            - label: 審査なしで実行
+            - label: 安全確認は本人任せ
+
+  - sectionId: "3-発見の三方式-キュレーション自動収集市場が公式の外に並ぶ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "awesome-opencode・OpenDock・opencode.cafe の三方式が発見を担い、いずれも公式の検収層はない。"
+    spec:
+      type: cards
+      title: 発見は公式外の三方式に分散
+      items:
+        - label: awesome-opencode
+          detail: PR と人手の目利き
+        - label: OpenDock
+          detail: npm タグの自動クロール
+          emphasis: true
+        - label: opencode.cafe
+          detail: 投稿とモデレーション
+
+  - sectionId: "4-エコシステムの重心-オーケストレーションとハーネスが最多派閥"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenDock カテゴリでは Agent Orchestration が Tools に次ぐ件数で、oh-my-opencode 系が最大派閥である。"
+    spec:
+      type: chart
+      title: 需要の重心は単機能より編成側
+      variant: bar
+      values:
+        - label: Tools & Commands
+          value: 279
+        - label: Agent Orchestration
+          value: 258
+          emphasis: true
+        - label: Memory & Context
+          value: 187
+        - label: Model Providers
+          value: 170
+
+  - sectionId: "5-互換性の破壊-v2-が-plugin-を-plugins-に変え作者へ移植を課す"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "v2 は plugin を plugins に改名し V1 の hook から setup() オブジェクトへ変え、移行と読み込み失敗は作者側に残る。"
+    spec:
+      type: sequence
+      title: v2 の移植コストは作者に残る
+      mode: steps
+      items:
+        - label: plugin → plugins 改名
+        - label: 関数 export → setup() オブジェクト
+        - label: コード移植が必須
+          emphasis: true
+        - label: SchemaError・黙殺 WARN
+
+  - sectionId: "6-標準の不在-プラグインの形式は三つに割れ一本化されない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Claude Code・Codex・opencode の三形式は相互に動かず、Agent Plugins 1.0 の広がりと一本化の遅れが並存する。"
+    spec:
+      type: cards
+      title: 三つの形式はまだ相互運用しない
+      items:
+        - label: Claude Code
+          detail: plugin.json・公式/市場
+        - label: Codex
+          detail: Agent Plugins 1.0
+        - label: opencode
+          detail: npm パッケージ形式
+          emphasis: true
+      caption: 2026年3月時点で相互に動かない

@@ -1,0 +1,162 @@
+version: 1
+sourceSha256: "06590ac5289d57ff9b0b37b99b408d2e28d8712ee3cbe42509070861adda1b1e"
+visuals:
+  - sectionId: 設計思想docs-as-dataコードとコンテンツの分離
+    engine: article-visual
+    engineVersion: "1"
+    alt: Markdocはdocs as dataとして、タグ・アノテーション・変数補間の3拡張だけを許し、ループと変数代入は意図的に持たない。
+    spec:
+      type: cards
+      title: 拡張は3種、捨てた2つが守る
+      items:
+        - label: タグ
+          detail: "{% foo %} ブロック"
+        - label: アノテーション
+          detail: 見出しへ安定ID
+        - label: 変数補間
+          detail: 読み取り専用
+        - label: ループなし
+          emphasis: true
+        - label: 代入なし
+          emphasis: true
+
+  - sectionId: パース変換のパイプライン
+    engine: article-visual
+    engineVersion: "1"
+    alt: markdown-itでトークン化し、peg由来パーサでタグを解析、AST生成・変数解決・transform・レンダラの順で処理する。
+    spec:
+      type: sequence
+      title: パースは五段でASTまで
+      mode: steps
+      items:
+        - label: トークン化
+          detail: markdown-it＋タグパーサ
+        - label: AST生成
+        - label: 変数解決
+        - label: transform
+        - label: レンダリング
+          emphasis: true
+
+  - sectionId: レガシー平台ruby-erb-モノリスの失敗
+    engine: article-visual
+    engineVersion: "1"
+    alt: 旧Stripe docsはERB混在で読者別注入はできたが、数百ページで執筆が開発化し保守が破綻した。
+    spec:
+      type: pros_cons
+      title: 自由な混在が招いた破綻
+      sides:
+        - label: 旧ERB基盤
+          items:
+            - label: 読者別の注入
+            - label: コード混在の自由
+        - label: 帰結
+          items:
+            - label: 執筆の開発化
+            - label: 保守性の崩壊
+            - label: 境界規律の必要性
+
+  - sectionId: 2022年オープンソース化とエコシステム構築
+    engine: article-visual
+    engineVersion: "1"
+    alt: 2022年5月にMIT公開とnpm出荷、同時期にmarkdoc.devとNext.jsプラグイン等を整備し、9月にブログとタグ構文ドラフト仕様を出した。
+    spec:
+      type: sequence
+      title: 2022年に枠組みが外へ出る
+      mode: timeline
+      items:
+        - label: 2022-05
+          detail: MIT公開・npm
+        - label: 同年
+          detail: devサイト・拡張
+        - label: 2022-09
+          detail: ブログ・仕様Draft
+        - label: 以後
+          detail: Redocly等が採用
+
+  - sectionId: ドキュメントの役割と体験
+    engine: article-visual
+    engineVersion: "1"
+    alt: Stripe docsはガイド、APIリファレンス、チェックリスト、stripe.dev転用の四系統があり、アプリのように振る舞う。
+    spec:
+      type: cards
+      title: 説明書ではなく体験を売る
+      items:
+        - label: ガイド系
+          detail: 多層・タブ分岐
+        - label: API参照
+          detail: 深い相互リンク
+        - label: チェックリスト
+          detail: Go Live手順
+        - label: ブログ転用
+          detail: stripe.dev
+
+  - sectionId: 書きやすさと検証体制
+    engine: article-visual
+    engineVersion: "1"
+    alt: 書き手はMarkdown延長で書き、エンジニアが部品を用意し、CIとIDEの自動検証が安全網になる三階層。
+    spec:
+      type: hierarchy
+      title: 三層で品質を固定する
+      root:
+        label: Stripe Docs AX
+        children:
+          - label: 書き手
+            detail: Markdown延長
+          - label: エンジニア
+            detail: React部品
+          - label: 自動検証
+            detail: CI＋IDE
+            emphasis: true
+
+  - sectionId: 確認できないけど実装されていること
+    engine: article-visual
+    engineVersion: "1"
+    alt: docs.stripe.comの.md出力ではMarkdocタグが消え、タブは見出し列に扁平化されるため内部タグ名は外部から読めない。
+    spec:
+      type: flow
+      title: エクスポートでタグは消える
+      nodes:
+        - id: source
+          label: Markdocソース
+        - id: react
+          label: カスタムタグ
+        - id: md
+          label: .mdエクスポート
+        - id: flat
+          label: 見出し扁平化
+          emphasis: true
+      edges:
+        - from: source
+          to: react
+        - from: react
+          to: md
+        - from: md
+          to: flat
+
+  - sectionId: mdx-との比較
+    engine: article-visual
+    engineVersion: "1"
+    alt: MDXはdocs as codeでJSX埋め込みが強い一方、Markdocはdocs as dataで分離と静的解析に優れると公式FAQが対比する。
+    spec:
+      type: comparison
+      title: code埋め込みか、データ分離か
+      sides:
+        - label: MDX
+        - label: Markdoc
+      rows:
+        - axis: 思想
+          cells:
+            - label: docs as code
+            - label: docs as data
+        - axis: 執筆
+          cells:
+            - label: プログラミング化しやすい
+            - label: レビュー負荷が軽い
+        - axis: 静的解析
+          cells:
+            - label: JS ASTが重い
+            - label: 宣言的木が軽い
+        - axis: 機能
+          cells:
+            - label: 多機能
+            - label: MDXより控えめ
