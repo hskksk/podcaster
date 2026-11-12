@@ -1,0 +1,177 @@
+version: 1
+sourceSha256: "2ba31e25657cb5d0439d1359109d07138667e9c2ac7c03c5814230d5ca47829f"
+visuals:
+  - sectionId: "連携方式の分類軸"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "銀行API・スクレイピング・手動取込・B2Bアグリゲータの四方式は、認証の置き場所と取得の実体が異なる。"
+    spec:
+      type: cards
+      title: 認証の置き場所で四方式に分かれる
+      items:
+        - label: 銀行オープン API
+          detail: トークンのみ保持、HTTPS で明細
+          icon: shield
+        - label: スクレイピング
+          detail: ID・パスワードを暗号化保管
+        - label: ファイル手動取込
+          detail: 認証情報は利用者端末のみ
+        - label: B2B アグリゲータ
+          detail: 統一 REST だけ実装すればよい
+          emphasis: true
+
+  - sectionId: "論理アーキテクチャの全体像"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "クライアント、接続・オーケストレーション層、アプリ層、外部金融機関の四層で責務が分かれる。"
+    spec:
+      type: hierarchy
+      title: 接続層が金融機関との窓口
+      root:
+        label: PFM 連携
+        children:
+          - label: クライアント
+            detail: 連携登録 UI
+          - label: 接続層
+            emphasis: true
+            children:
+              - label: 連携ジョブ
+              - label: トークン保管
+              - label: 金融機関アダプタ
+          - label: アプリ層
+            children:
+              - label: 家計簿 DB
+              - label: カテゴリ・仕訳
+          - label: 外部
+            children:
+              - label: 銀行 API
+              - label: Web 明細
+
+  - sectionId: "銀行-api-連携のフロー"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "利用者が銀行で同意し、PFMは認可コードからトークンを得て、定期同期で明細APIを呼ぶ。"
+    spec:
+      type: interaction
+      title: OAuth でパスワードを預けない
+      actors:
+        - id: user
+          label: 利用者
+        - id: pfm
+          label: PFM
+        - id: bank
+          label: 銀行認可/API
+      steps:
+        - from: user
+          to: pfm
+          label: 連携開始
+        - from: pfm
+          to: bank
+          label: 認可リクエスト
+        - from: user
+          to: bank
+          label: ログイン・同意
+        - from: bank
+          to: pfm
+          label: トークン発行
+        - from: pfm
+          to: bank
+          label: 定期で明細取得
+
+  - sectionId: "スクレイピング連携のフローと実装パターン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "実装はHTMLパース、CSV自動取得、追加認証の人手待ちの三パターンに集約される。"
+    spec:
+      type: sequence
+      title: 画面変更と追加認証が難所
+      mode: steps
+      items:
+        - label: フォーム＋HTML パース
+        - label: CSV/PDF 自動取得
+        - label: 追加認証は人手待ち
+          emphasis: true
+
+  - sectionId: "b2b-アグリゲータを挟む構成"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "自社サービスはアグリゲータのOAuthと統一APIだけを実装し、数百コネクタが金融機関へ接続する。"
+    spec:
+      type: flow
+      title: 接続実装をアグリゲータへ集約
+      nodes:
+        - id: app
+          label: 自社サービス
+        - id: link
+          label: 統一 API
+          emphasis: true
+        - id: conn
+          label: 数百コネクタ
+        - id: api
+          label: 銀行 API
+        - id: web
+          label: Web 明細
+      edges:
+        - from: app
+          to: link
+          label: OAuth
+        - from: link
+          to: conn
+        - from: conn
+          to: api
+        - from: conn
+          to: web
+
+  - sectionId: "主要プレイヤーごとの位置づけ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Zaimとマネーフォワードは内製接続、Moneytree LINKは開発者向け入側API、MoneyLookは法人向けに接続を束ねる。"
+    spec:
+      type: cards
+      title: 内製か、接続を製品化か
+      items:
+        - label: Zaim
+          detail: 個人家計簿、API へ順次移行
+        - label: マネーフォワード
+          detail: API とスクレイピング併用
+        - label: Moneytree LINK
+          detail: 入側金融データ API
+          emphasis: true
+        - label: MoneyLook
+          detail: 法人経理向け契約集約
+
+  - sectionId: "データ同期正規化運用"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "増分取得、冪等取込、正規化、ジョブ運用の四段で接続層の後処理が組み立てられる。"
+    spec:
+      type: sequence
+      title: 口座単位で状態を持つ
+      mode: steps
+      items:
+        - label: 増分取得
+        - label: 冪等な取込
+        - label: 正規化・仕訳
+        - label: バッチと手動更新
+          emphasis: true
+
+  - sectionId: "規制と契約がインフラ形を決める"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "API方式は銀行発行トークンでアクセスし、スクレイピングは電代業者が認証情報を預かるレガシー認証に分類される。"
+    spec:
+      type: comparison
+      title: 同意の置き場所が法令の分岐点
+      sides:
+        - label: API 方式
+        - label: スクレイピング
+          emphasis: true
+      rows:
+        - axis: 認証
+          cells:
+            - label: 銀行画面で同意、トークンのみ
+            - label: ID・パスワードを暗号化保管
+        - axis: 法区分
+          cells:
+            - label: 銀行発行トークンで参照
+            - label: レガシー認証として分類

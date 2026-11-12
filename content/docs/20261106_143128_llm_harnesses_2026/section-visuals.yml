@@ -1,0 +1,167 @@
+version: 1
+sourceSha256: "b00fadb4eb0a6a89b0bc728cd073a2e684f485d1b4e744b9c0994804aa8123d9"
+visuals:
+  - sectionId: "ハーネスはモデルを動かす実行時の層である"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ハーネスは実行ループ・ツール・コンテキスト管理・モデル非依存の制御を中核とし、実行後に成績を測る評価ハーネスとは別である。"
+    spec:
+      type: cards
+      title: 部品数より、観測と完了のつながり
+      items:
+        - label: 実行ループ
+        - label: ツールと実行環境
+        - label: コンテキスト管理
+        - label: モデル非依存の制御
+          emphasis: true
+        - label: 評価ハーネスとは別物
+
+  - sectionId: "生成役と評価役を分け動くアプリを実際に試す"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Anthropicの長時間開発実験では、単独エージェントより計画・生成・評価の分割のほうが時間と費用は増えるが主要機能が動いた。"
+    spec:
+      type: comparison
+      title: 分割と実物検証は品質に寄与しうる
+      sides:
+        - label: 単独エージェント
+        - label: 計画・生成・評価
+      rows:
+        - axis: 所要時間
+          cells:
+            - label: 約20分
+            - label: 約6時間
+        - axis: 費用
+          cells:
+            - label: 約9ドル
+            - label: 約200ドル
+              emphasis: true
+        - axis: 報告された結果
+          cells:
+            - label: 中心機能が動かない
+            - label: 主要機能が動作
+
+  - sectionId: "codexは共通ランタイムをアプリやapiへ広げる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Codex App ServerがCLI・IDE・アプリを共通化し、Agents APIが同じハーネスをマネージドサービスとして外に出す。"
+    spec:
+      type: sequence
+      title: 端末機能から呼び出し基盤へ
+      mode: steps
+      items:
+        - label: 複数画面
+          detail: CLI・IDE・アプリ
+        - label: App Server
+          detail: 共通JSON-RPC
+        - label: 同一ハーネス
+          emphasis: true
+        - label: Agents API
+          detail: マネージド運用
+
+  - sectionId: "openhandsとpiは別の設計点を示す"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenHandsはCanvas・SDK・実行・サンドボックスを分け、Piは最小既定と拡張前提で権限を自前で絞る必要がある。"
+    spec:
+      type: comparison
+      title: 多機能一括か、小さく組み替えるか
+      sides:
+        - label: OpenHands
+        - label: Pi
+      rows:
+        - axis: 構成
+          cells:
+            - label: Canvas・SDK・Server群
+            - label: 小さな拡張可能ランタイム
+        - axis: 既定の計画・委譲
+          cells:
+            - label: 役割を製品で分離
+            - label: 標準では搭載しない
+        - axis: 権限・隔離
+          cells:
+            - label: Sandbox Serverで管理
+            - label: 別途サンドボックス要る
+              emphasis: true
+
+  - sectionId: "現実的な仕事ではモデルとハーネスの組み合わせが効く"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Harness-Benchでは同じハーネスが常に勝たず、平均点と全項目達成率はモデルと仕事で変わる。"
+    spec:
+      type: cards
+      title: 平均点と全要件充足は別物
+      items:
+        - label: モデルごとに最良構成が異なる
+        - label: 平均点が高い≠納品物完遂
+          emphasis: true
+        - label: 仕事の種類で有利なハーネスが変わる
+        - label: 全項目達成の重みで選ぶ
+
+  - sectionId: "swe-benchでは性能差よりコスト差が目立つという研究もある"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "SWE-bench再実行研究ではハーネスによる成功率差は揺れと区別しにくく、費用差は最大約3倍、復旧不足など設計ミスも損失要因となる。"
+    spec:
+      type: cards
+      title: 成功率より費用と設計ミスが目立つ
+      items:
+        - label: 性能差は再実行揺れと同程度
+        - label: ハーネス費用差は最大約3倍
+          emphasis: true
+        - label: 復旧不足は解ける課題も失う
+        - label: SWE-bench限定の比較
+
+  - sectionId: "二つの研究は異なる問いに答えている"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Harness-Benchは広い業務で納品物の充足を、SWE-bench研究は限定的コーディングで再実行再実行揺れと費用を測る。"
+    spec:
+      type: comparison
+      title: 一方だけを正解と読まない
+      sides:
+        - label: Harness-Bench
+        - label: SWE-bench研究
+      rows:
+        - axis: 比較の範囲
+          cells:
+            - label: 300課題・複数業務作業
+            - label: Verifiedのコード修正課題
+        - axis: 主な読み取り
+          cells:
+            - label: 完遂率・モデル×ハーネス
+            - label: 揺れ同程度・費用最大3倍
+        - axis: 注意点
+          cells:
+            - label: 採点と課題セット依存
+            - label: 限られたモデル比較
+              emphasis: true
+
+  - sectionId: "権限と検証はプロンプトの願いではなく実行規則にする"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "禁止の指示だけでは権限は絞られず、検証もテストだけでは受け入れ条件全体は保証されない。"
+    spec:
+      type: flow
+      title: 願いではなく実行規則で縛る
+      nodes:
+        - id: prompt
+          label: プロンプトで禁止
+        - id: mcp
+          label: MCP・ツール接続
+        - id: runtime
+          label: ランタイム権限
+          emphasis: true
+        - id: unit_test
+          label: テスト・型検査
+        - id: acceptance
+          label: 要件単位・実操作検証
+      edges:
+        - from: prompt
+          to: runtime
+        - from: mcp
+          to: runtime
+        - from: runtime
+          to: acceptance
+        - from: unit_test
+          to: acceptance

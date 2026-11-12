@@ -1,0 +1,148 @@
+version: 1
+sourceSha256: "d60c2b096eba0b96859f50f9c9350b3a75c46898d4231d0aa1a6a3363ef33086"
+visuals:
+  - sectionId: "第三の時代から-projects-へ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "2026年2月の第三の時代宣言から、長寿命作業単位としてSubscriptions付きProjectsへつながる。"
+    spec:
+      type: sequence
+      title: 宣言から長寿命ユニットへ
+      mode: timeline
+      items:
+        - label: 第三の時代
+        - label: クラウドVMとPR
+        - label: Projects公開
+          emphasis: true
+        - label: Subscriptions
+
+  - sectionId: "コーディネーターと実装エージェント"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "コーディネーターは計画と委譲でメインチャット、実装エージェントはブリーフと共有コンテキストのみ、ローカルは検証用。"
+    spec:
+      type: cards
+      title: 役割が窓を分ける
+      items:
+        - label: コーディネーター
+          detail: 計画・委譲・要約対象
+        - label: 実装エージェント
+          detail: ブリーフ＋共有のみ
+          emphasis: true
+        - label: ローカルエージェント
+          detail: 机上検証
+
+  - sectionId: "ロングコンテキストの維持-二層モデル"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "短期はコーディネーターチャット、長期は共有コンテキストとリポジトリ。実装エージェントは都度フレッシュな窓。"
+    spec:
+      type: hierarchy
+      title: チャットとファイルの二層
+      root:
+        label: ロングコンテキスト
+        children:
+          - label: 短期記憶
+            children:
+              - label: メインチャット
+          - label: 長期記憶
+            emphasis: true
+            children:
+              - label: 共有コンテキスト
+              - label: リポジトリ
+          - label: フレッシュ窓
+            children:
+              - label: 実装エージェント
+
+  - sectionId: "層3-実装エージェントのフレッシュコンテキスト"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "実装エージェントは親履歴を引き継がずブリーフと共有ノートのみ。兄弟間の直接通信はなくコーディネーターがハブ。"
+    spec:
+      type: interaction
+      title: 親履歴は渡らない
+      actors:
+        - id: coord
+          label: コーディネーター
+        - id: worker
+          label: 実装エージェント
+      steps:
+        - from: coord
+          to: worker
+          label: ブリーフと制約
+        - from: worker
+          to: coord
+          label: 完了サマリ
+        - from: coord
+          to: worker
+          label: 手戻りは再ブリーフ
+
+  - sectionId: "ハーネス層の最適化全エージェント共通"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "2026年9月の効率化ブログは、システムプロンプト約66%削減、静的ツール約60%削減、キャッシュミス約20%減などを公表している。"
+    spec:
+      type: chart
+      title: 静的コンテキストを先に削る
+      variant: bar
+      unit: "%"
+      values:
+        - label: システムプロンプト
+          value: 66
+          emphasis: true
+        - label: 静的ツール説明
+          value: 60
+        - label: キャッシュミス
+          value: 20
+        - label: cache-read
+          value: 1.6
+
+  - sectionId: "委譲によるコンテキスト隔離"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "委譲は親チャットを軽く保つ一方、子同士は文脈非共有のため重複探索や薄いブリーフが追加トークンになりうる。"
+    spec:
+      type: pros_cons
+      title: 委譲の利と弊
+      sides:
+        - label: メリット
+          items:
+            - label: 親がノイズ全文を抱えない
+            - label: 探索出力を子窓に閉じる
+        - label: デメリット
+          emphasis: true
+          items:
+            - label: 兄弟間で文脈共有なし
+            - label: 重複探索のコスト
+            - label: ブリーフ不足の手戻り
+
+  - sectionId: "projects-特有のコスト構造"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "並列エージェントは個別課金で広い初手はリポジトリ重複読みが線形に積む。狭いタスク・並列抑制・ノート固定が抑制策。"
+    spec:
+      type: sequence
+      title: 並列課金への防御線
+      mode: steps
+      items:
+        - label: タスクを狭く渡す
+        - label: ルールで並列抑制
+        - label: 小変更は単体Agent
+        - label: 重作業は子へ委譲
+        - label: 手順を共有ノート固定
+          emphasis: true
+
+  - sectionId: "限界リスク未公開部分"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "要約の不可逆性、ブリーフ品質依存、使用量の見えにくさ、共有ストア肥大、注入方式の未公開が主要リスク。"
+    spec:
+      type: cards
+      title: 長期運用の五つの穴
+      items:
+        - label: 要約の不可逆性
+        - label: ブリーフがボトルネック
+          emphasis: true
+        - label: 使用量が見えにくい
+        - label: 共有ストア肥大
+        - label: 注入タイミング未公開

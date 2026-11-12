@@ -1,0 +1,167 @@
+version: 1
+sourceSha256: "ca3c16676312a3f76d754934c564d608de25537a435d8c9818797b5a11ad54cb"
+visuals:
+  - sectionId: "プロセス対技法の対比"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "個別技法は値の試し方、VSTePは何をなぜテストするかと観点図・フレームで意図を固定する設計空間を先に整える。"
+    spec:
+      type: comparison
+      title: 技法の前に、観点の設計空間
+      sides:
+        - label: 個別技法
+        - label: VSTeP
+          emphasis: true
+      rows:
+        - axis: 主な問い
+          cells:
+            - label: どの値を試すか
+            - label: 何を・なぜテストするか
+        - axis: 典型成果物
+          cells:
+            - label: 条件と期待結果の表
+            - label: 観点図・コンテナ・フレーム
+        - axis: 抜け漏れ
+          cells:
+            - label: 観点欠如は検出不能
+            - label: 観点ツリーとMECE
+        - axis: チーム共有
+          cells:
+            - label: 表の列で足りる場合も
+            - label: 図とフレーム名で意図固定
+
+  - sectionId: "ソフトウェア開発工程との平行"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "いきなりケース表はいきなりコーディングと同型で、要求から実装まで開発工程と並行する四段がある。"
+    spec:
+      type: sequence
+      title: ケース一行の背後にモデルがあるか
+      mode: steps
+      items:
+        - label: テスト要求分析
+          detail: 観点図
+        - label: テストアーキテクチャ
+          detail: コンテナ・フレーム
+        - label: テスト詳細設計
+          detail: ケース
+        - label: テスト実装
+          detail: 手順・自動化
+          emphasis: true
+
+  - sectionId: "テスト観点"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "テスト観点はケース意図の抽象化で、最下層のボトムビューポイントが詳細設計の条件・同値クラス粒度に相当する。"
+    spec:
+      type: hierarchy
+      title: 抽象観点からボトムへ降ろす
+      root:
+        label: テスト観点
+        children:
+          - label: 意図の抽象化
+            children:
+              - label: テストすべき側面
+          - label: ボトムビューポイント
+            emphasis: true
+            children:
+              - label: 条件・同値クラス
+
+  - sectionId: "ngtnotation-for-generic-testing"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "NGTは親子階層と関連線・ステレオタイプで観点ツリーを描き、同階層のMECE確認が初期ステップの意図だ。"
+    spec:
+      type: cards
+      title: 観点ツリーを描く記法
+      items:
+        - label: 親子の階層
+          detail: 詳細化
+        - label: 関連線
+          detail: 組み合わせ関係
+        - label: ステレオタイプ
+          detail: "<<名称>>"
+        - label: MECE確認
+          emphasis: true
+
+  - sectionId: "テストコンテナとテストフレーム"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "テストベースから観点図を経てコンテナ分割とフレーム設計をし、詳細設計で技法を当てケースへ降ろして実装する。"
+    spec:
+      type: flow
+      title: 観点モデルからケースへ一本道
+      nodes:
+        - id: base
+          label: テストベース
+        - id: vp
+          label: 観点図
+        - id: tc
+          label: コンテナ分割
+        - id: tf
+          label: フレーム
+          emphasis: true
+        - id: td
+          label: 詳細設計
+        - id: case
+          label: ケース
+        - id: impl
+          label: 実装
+      edges:
+        - from: base
+          to: vp
+        - from: vp
+          to: tc
+        - from: tc
+          to: tf
+        - from: tf
+          to: td
+        - from: td
+          to: case
+        - from: case
+          to: impl
+
+  - sectionId: "テスト詳細設計と実装"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "フレームとボトムビューポイントに網羅基準を当て技法でケースを広げ、実装では集約とKDT・VKDT対応づけが述べられる。"
+    spec:
+      type: sequence
+      title: フレームの骨格に値を充填
+      mode: steps
+      items:
+        - label: 網羅基準選択
+        - label: 技法でケース拡張
+        - label: 同一条件の集約
+        - label: KDT・VKDT対応
+          emphasis: true
+
+  - sectionId: "自動化の四世代とvkdt"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "自動化はC&RからKDT+MBTまで四段に分かれ、VKDTはVSTeP上で生成とKDT実行をつなぐが範囲の弁別が重要だ。"
+    spec:
+      type: sequence
+      title: 自動化は四段、止めどころが肝
+      mode: steps
+      items:
+        - label: キャプチャ＆リプレイ
+        - label: データ駆動
+        - label: キーワード駆動
+        - label: KDT+モデルベース
+          emphasis: true
+
+  - sectionId: "次に解く問いの補足"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "逆生成の機械ルールは未確認、コンテナと工数は事例で補強、VKDTは理想形だがDDTで足りる所にMBTはコストが跳ねる。"
+    spec:
+      type: cards
+      title: 本稿の外に残った三つの論点
+      items:
+        - label: 逆生成の限界
+          detail: 粒度のばらつき
+        - label: コンテナと工数
+          detail: 関係表の事例
+        - label: 自動化の止めどころ
+          emphasis: true

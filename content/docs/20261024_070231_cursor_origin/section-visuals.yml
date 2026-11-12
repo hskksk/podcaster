@@ -1,0 +1,167 @@
+version: 1
+sourceSha256: "a2084e107c4dcb01fbfa75521f31c20876681099e58b3c9cc7b985a892d9fb61"
+visuals:
+  - sectionId: "originはcursorの作業環境に組み込まれたgitフォージ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Originを使うと利用者とエージェントが同じGitフォージでリポジトリ作成・プッシュ・プルリクエストを行え、従来の外部ホスト読み込みから作業面が一体化する。"
+    spec:
+      type: interaction
+      title: フォージが作業面に入る
+      actors:
+        - id: user
+          label: 利用者
+        - id: origin
+          label: Origin
+        - id: agent
+          label: エージェント
+      steps:
+        - from: user
+          to: origin
+          label: 作成・プッシュ・PR
+        - from: agent
+          to: origin
+          label: 変更をプッシュ
+        - from: origin
+          to: user
+          label: Codebaseでレビュー
+
+  - sectionId: "既存リポジトリを残すかoriginへ移すかで正本が決まる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "GitHub同期ではGitHubが正本のままプッシュ先もGitHub、Origin新規作成ではOriginが正本となりプルリクエストもOrigin上で完結する。"
+    spec:
+      type: comparison
+      title: 正本の置き場で行き先が変わる
+      sides:
+        - label: GitHub同期
+        - label: Origin新規
+          emphasis: true
+      rows:
+        - axis: 正本
+          cells:
+            - label: GitHub
+            - label: Origin
+        - axis: プッシュ先
+          cells:
+            - label: GitHub
+            - label: Origin
+        - axis: プルリクエスト
+          cells:
+            - label: GitHub側に残る
+            - label: Originで完結
+        - axis: Issues・Actions
+          cells:
+            - label: 同期しない
+            - label: 別途確保が必要
+
+  - sectionId: "エージェントとレビューを同じリポジトリに接続する"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "プルリクエスト画面とクラウドエージェントが同一リポジトリに結びつき、プッシュやレビュー依頼で自動化を起動できるが、OriginアプリはOrigin正本のリポジトリに限られる。"
+    spec:
+      type: flow
+      title: 保存・レビュー・自動化が一本化
+      nodes:
+        - id: event
+          label: プッシュ・PR依頼
+        - id: auto
+          label: 自動化
+        - id: agent
+          label: クラウドエージェント
+        - id: pr
+          label: PRとレビュー
+          emphasis: true
+        - id: apps
+          label: Originアプリ
+      edges:
+        - from: event
+          to: auto
+        - from: auto
+          to: agent
+        - from: agent
+          to: pr
+        - from: apps
+          to: pr
+
+  - sectionId: "continuityはgit保存をエージェント負荷に合わせて拡張する設計"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Cursorの自社試験ではS3 Express構成で300プッシュ毎秒超、S3 Standard構成で最大120プッシュ毎秒を報告しており、いずれも第三者追試ではない。"
+    spec:
+      type: chart
+      title: 自社計測の書き込み上限
+      variant: bar
+      unit: プッシュ/秒
+      caption: Cursor公表の合成試験値
+      values:
+        - label: S3 Standard
+          value: 120
+        - label: S3 Express
+          value: 300
+          emphasis: true
+
+  - sectionId: "早期ベータの機能と残る判断材料"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "早期ベータではGitHubミラーでCursor上の操作を試せる一方、Originを正本にするとIssuesやActionsを別途確保し、Origin専用アプリを使うには正本移行が必要になる。"
+    spec:
+      type: pros_cons
+      title: 試用のしやすさと正本移行の柱
+      sides:
+        - label: 今できること
+          items:
+            - label: ミラーでCursor試用
+            - label: 基本のGitとレビュー
+            - label: 拡張アプリ基盤の整備
+        - label: 判断が要る点
+          emphasis: true
+          items:
+            - label: まだ早期ベータ
+            - label: Originアプリはミラー不可
+            - label: Issues・Actionsは別途
+            - label: 正本移行のコスト
+
+  - sectionId: "次に解くべき3つの問い"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "本番でのエージェント負荷性能、コード管理と移行条件、並行エージェント変更のレビュー・統合が採用判断の三本柱になる。"
+    spec:
+      type: cards
+      title: 採用前に残る三つの問い
+      items:
+        - label: 実運用性能
+          detail: 第三者未検証
+        - label: 管理と移行
+          detail: 正本の置き場
+        - label: エージェント統合
+          detail: 並行変更のレビュー
+          emphasis: true
+
+  - sectionId: "判断を左右する未確定点"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "性能・可用性、セキュリティとデータ管理、移行と互換性、複数エージェント向けレビューが、公開資料だけでは埋まらない未確定点として残る。"
+    spec:
+      type: cards
+      title: 契約と実績が要る四領域
+      items:
+        - label: 性能と可用性
+        - label: セキュリティとデータ
+        - label: 移行と互換性
+        - label: エージェント向けレビュー
+          emphasis: true
+
+  - sectionId: "次の調査課題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "次の調査はミラーと正本の差の比較、Continuity設計値と障害復旧実績の照合、複数エージェントレビューの効果測定の三順が推奨される。"
+    spec:
+      type: sequence
+      title: 調査は三幕で進める
+      mode: steps
+      items:
+        - label: ミラーと正本の差
+        - label: Continuity実績照合
+        - label: レビュー効果測定
+          emphasis: true
