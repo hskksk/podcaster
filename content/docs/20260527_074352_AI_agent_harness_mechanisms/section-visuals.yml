@@ -1,0 +1,148 @@
+version: 1
+sourceSha256: "22f1ec49a4bb9546ed798505fb45c42ffcdb681f0099b33efb4da36cbd8838a5"
+visuals:
+  - sectionId: "ハーネス機構の5本柱"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Context Assembly、Tool Integrity、Loop Discipline、Policy Enforcement、Context Lifecycleの五柱。"
+    spec:
+      type: cards
+      title: 実行ループを五面で締める
+      items:
+        - label: Context Assembly
+        - label: Tool Integrity
+        - label: Loop Discipline
+          emphasis: true
+        - label: Policy Enforcement
+        - label: Context Lifecycle
+
+  - sectionId: "3層スタックモデル"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Gatewayが組織横断ポリシー、Harnessが単一エージェントループ、その下FrameworkとModel。"
+    spec:
+      type: hierarchy
+      title: 組織ポリシーはGatewayへ
+      root:
+        label: Gateway
+        children:
+          - label: Harness
+            emphasis: true
+            children:
+              - label: Framework
+                children:
+                  - label: Model
+
+  - sectionId: "feedforward-と-feedbackguides-sensors"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "GuidesはRules・Skillsで行動前に注入、SensorsはHookとevaluatorで行動後に検証。GeneratorとValidatorは分離。"
+    spec:
+      type: comparison
+      title: 導くと測るを分ける
+      sides:
+        - label: Feedforward
+        - label: Feedback
+      rows:
+        - axis: 役割
+          cells:
+            - label: Guides
+            - label: Sensors
+        - axis: 機構
+          cells:
+            - label: Rules・Skills
+            - label: Hook・evaluator
+              emphasis: true
+        - axis: 設計
+          cells:
+            - label: 事前コンテキスト
+            - label: Generator≠Validator
+
+  - sectionId: "2-rules-instructions-files永続指示ファイル"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "AGENTS.mdがLinux Foundation標準、CLAUDE.md・cursor rules等がスコープ別にFeedforwardを供給。"
+    spec:
+      type: cards
+      title: 永続指示はファイルで層化
+      items:
+        - label: AGENTS.md
+          emphasis: true
+        - label: CLAUDE.md
+        - label: .cursor/rules
+        - label: SOUL/MEMORY
+
+  - sectionId: "4-subagents-multi-agent-orchestration委譲分離"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "調査は読取専用サブエージェントへ委譲し、親が統合。コンテキスト分離でトークンと誤爆を抑える。"
+    spec:
+      type: interaction
+      title: 委譲はコンテキスト分離が本体
+      actors:
+        - id: parent
+          label: 親
+        - id: sub
+          label: サブエージェント
+      steps:
+        - from: parent
+          to: sub
+          label: 読取専用調査
+        - from: sub
+          to: parent
+          label: 結果統合
+
+  - sectionId: "6-sandbox-permission-tool-governance"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "PreToolUseで許可、サンドボックスで実行隔離、ツールスキーマ検証と動的スコープで予算を絞る。"
+    spec:
+      type: sequence
+      title: 副作用前に物理ゲート
+      mode: steps
+      items:
+        - label: スキーマ検証
+        - label: PreToolUse
+          emphasis: true
+        - label: sandbox実行
+        - label: PostToolUse
+
+  - sectionId: "8-verification-loops-evaluators検証ループ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Stop Hookでテスト、独立evaluatorサブエージェントで自己評価バイアスを避け、失敗時だけ詳細出力。"
+    spec:
+      type: flow
+      title: 成功は静か、失敗は verbose
+      nodes:
+        - id: gen
+          label: Generator
+        - id: eval
+          label: Evaluator
+          emphasis: true
+        - id: pass
+          label: 成功・無出力
+        - id: fail
+          label: 詳細フィードバック
+      edges:
+        - from: gen
+          to: eval
+        - from: eval
+          to: pass
+        - from: eval
+          to: fail
+
+  - sectionId: "設計原則まとめ実践的チェックリスト"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Ratchet、Guides before Sensors、MechanismとContent分離、FS memory、Progressive disclosure等九原則。"
+    spec:
+      type: cards
+      title: 失敗をルールとHookへ昇格
+      items:
+        - label: Ratchet
+          emphasis: true
+        - label: Guides before Sensors
+        - label: Mechanism≠Content
+        - label: FS as memory
+        - label: Progressive disclosure

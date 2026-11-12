@@ -1,0 +1,138 @@
+version: 1
+sourceSha256: "da87bec366c65f0aabf350764542d26ebef9cd4bc8c720735c459bc5156bc814"
+visuals:
+  - sectionId: "21-組み立てパイプライン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "パラメータ収集、フック、セクション描画、bootstrap注入、合成の五段でpure rendererが組み立てる。"
+    spec:
+      type: sequence
+      title: rendererはconfigを読まない
+      mode: steps
+      items:
+        - label: パラメータ収集
+        - label: プロンプトフック
+        - label: セクション描画
+          emphasis: true
+        - label: bootstrap注入
+        - label: 最終合成
+
+  - sectionId: "22-固定セクション構成-モード"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "fullはIdentityからRuntimeまで固定列、minimalはサブエージェント向けにMemory等を落とす。"
+    spec:
+      type: cards
+      title: モードでセクションを間引く
+      items:
+        - label: Identity
+        - label: Tooling
+        - label: Safety
+        - label: Skills
+        - label: Project Context
+          emphasis: true
+        - label: minimal省略
+
+  - sectionId: "24-safety-セクションの哲学"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Safety文言は助言的。強制はtool policy・exec承認・sandbox・allowlistが担う二層。"
+    spec:
+      type: flow
+      title: プロンプトは導くだけ
+      nodes:
+        - id: prompt
+          label: Safety助言
+        - id: policy
+          label: tool policy
+          emphasis: true
+        - id: exec
+          label: 実行承認
+        - id: sand
+          label: sandbox
+      edges:
+        - from: prompt
+          to: policy
+        - from: policy
+          to: exec
+        - from: exec
+          to: sand
+
+  - sectionId: "32-xml-構造化skills-カタログ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "available_skillsをXMLで注入しカタログと本文を分離、トークンは決定的式で見積もる。"
+    spec:
+      type: hierarchy
+      title: カタログだけ先に載せる
+      root:
+        label: Skills XML
+        children:
+          - label: name
+          - label: description
+          - label: location
+            emphasis: true
+            children:
+              - label: SKILL.md遅延読込
+
+  - sectionId: "33-遅延読み込みlazy-skill-loading"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "起動時はカタログのみ、実行時にreadでSKILL.md全文を取り込みbase promptを小さく保つ。"
+    spec:
+      type: sequence
+      title: 使うskillだけ全文化
+      mode: steps
+      items:
+        - label: カタログ注入
+        - label: モデルが選択
+        - label: readで全文
+          emphasis: true
+
+  - sectionId: "35-サブエージェント委譲プロンプト"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "重い調査はsessions_spawnで委譲し、親は統合責任・短い返信・silent replyトークン運用。"
+    spec:
+      type: interaction
+      title: 親は統合、子は調査
+      actors:
+        - id: parent
+          label: 親エージェント
+        - id: child
+          label: サブエージェント
+      steps:
+        - from: parent
+          to: child
+          label: spawn委譲
+        - from: child
+          to: parent
+          label: 結果返却
+
+  - sectionId: "51-キャッシュ境界cache-boundary"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "時刻文字列を避けタイムゾーンのみ載せ、固定prefixとスナップショットでキャッシュ安定と回帰を両立。"
+    spec:
+      type: cards
+      title: 変わる値を末尾へ
+      items:
+        - label: TZのみ記載
+        - label: stablePrefix
+          emphasis: true
+        - label: prompt snapshots
+          detail: 回帰テスト
+
+  - sectionId: "53-compaction-と-context-engine"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "compaction前memory flush、context-engineプラグインのsystemPromptAdditionで圧縮と追加を制御。"
+    spec:
+      type: sequence
+      title: 圧縮前に記憶を逃がす
+      mode: steps
+      items:
+        - label: memory flush
+        - label: compaction
+          emphasis: true
+        - label: context-engine追加

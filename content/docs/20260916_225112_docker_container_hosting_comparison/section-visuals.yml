@@ -1,0 +1,169 @@
+version: 1
+sourceSha256: "de49b3cf72882778fea542c83b5263106cc7c794c74931563b97030d733952ce"
+visuals:
+  - sectionId: "ホスティング方式の4分類"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DockerホスティングはマネージドPaaS、サーバーレスコンテナ、VPSとオーケスト補助、素のVPSとComposeの四類型に分かれ、担う作業と典型コストが異なる。"
+    spec:
+      type: cards
+      title: 安さは方式で決まる
+      items:
+        - label: マネージドPaaS
+          detail: イメージと設定、月5〜40ドル帯
+        - label: サーバーレスコンテナ
+          detail: 低トラフィックは安い、常時は変動
+        - label: VPS＋補助ツール
+          detail: VPS代と自分の運用工数
+          emphasis: true
+        - label: 素VPS＋Compose
+          detail: 最安インフラ、工数最大
+
+  - sectionId: "課金の落とし穴"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "安い見積もりはEgress、スリープ、マネージドPostgres、IPv4、PaaSプラン料などの隠れコストで跳ね上がる。"
+    spec:
+      type: cards
+      title: 月額以外が効く
+      items:
+        - label: 下り転送
+          detail: 地域で単価差
+        - label: スリープと最小インスタンス
+          detail: 無料枠はアイドルで停止
+        - label: マネージドDB
+          detail: 自前Postgresより高額になり得る
+        - label: 専用IPv4
+          detail: 月額固定が上乗せ
+
+  - sectionId: "コスト比較表小規模web-db同居常時稼働単一リージョン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "常時稼働の小規模WebとDB同居では、VPS自前が数百円帯、PaaSはFly shared-cpuやRailway Renderが数ドル級が現実的下限になる。"
+    spec:
+      type: comparison
+      title: 同一ワークロードで帯が分かれる
+      sides:
+        - label: 最安帯
+        - label: 運用丸投げ帯
+          emphasis: true
+      rows:
+        - axis: VPS自前
+          cells:
+            - label: 月数百円〜数ドル
+            - label: 自分でパッチ
+        - axis: Fly shared-cpu
+          cells:
+            - label: 月約2〜6ドル
+            - label: PaaS下限の一つ
+        - axis: Railway Render
+          cells:
+            - label: 月約6〜15ドル
+            - label: 体験と自動化を購入
+
+  - sectionId: "選定フローチャート意思決定"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "選定は日本リージョン要否、DBマネージド性、運用工数許容、常時稼働かスケール-to-zeroかで分岐する。"
+    spec:
+      type: flow
+      title: 安さだけでは決まらない
+      nodes:
+        - id: need
+          label: レイテンシと請求
+        - id: ops
+          label: 運用工数許容
+          emphasis: true
+        - id: db
+          label: DBを誰が守るか
+        - id: always
+          label: 常時稼働かスリープ可
+        - id: pick
+          label: PaaSかVPSか
+      edges:
+        - from: need
+          to: pick
+        - from: ops
+          to: pick
+        - from: db
+          to: pick
+        - from: always
+          to: pick
+
+  - sectionId: "セルフホストpaas三強dokku-coolify-dokploy"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "VPS上ではDokku、Coolify、DokployがセルフホストPaaSの代表で、git pushデプロイとHTTPS代行の体験をMarkupなしで得る代わりにOSとDockerを自分で守る。"
+    spec:
+      type: comparison
+      title: PaaS体験をMarkupなしで
+      sides:
+        - label: セルフホストPaaS
+          emphasis: true
+        - label: マネージドPaaS
+      rows:
+        - axis: デプロイ体験
+          cells:
+            - label: git push相当
+            - label: ベンダーが代行
+        - axis: インフラ代
+          cells:
+            - label: VPSのみ
+            - label: プランと従量
+        - axis: 運用負荷
+          cells:
+            - label: OS更新と監視
+            - label: ベンダーSLO
+
+  - sectionId: "帯域egressシミュレーション"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "転送量が増えるとFlyやRender Railwayの地域別Egress単価が月額を上回り、CDNやTunnelで下げる判断が要る。"
+    spec:
+      type: flow
+      title: 転送量が月額を食う
+      nodes:
+        - id: traffic
+          label: 下り転送量
+        - id: region
+          label: リージョン単価
+        - id: bill
+          label: Egress課金
+          emphasis: true
+        - id: mitigate
+          label: CDNやTunnel
+      edges:
+        - from: traffic
+          to: bill
+        - from: region
+          to: bill
+        - from: bill
+          to: mitigate
+
+  - sectionId: "セキュリティと運用チェックリストvps-docker-共通"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "VPSとDocker共通でバックアップ、TLS更新、イメージ更新、監視、秘密情報の注入方法を決めないと安さが事故に化ける。"
+    spec:
+      type: cards
+      title: 安いほど運用が本体
+      items:
+        - label: バックアップと復旧
+        - label: TLSと証明書更新
+        - label: イメージとOSパッチ
+        - label: 監視とアラート
+
+  - sectionId: "マイグレーションの現実"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "PaaSからVPSへ、または逆への移行はDNS切替、永続ボリューム、DBダンプ、ダウンタイム許容の設計が必要で即日では終わらない。"
+    spec:
+      type: sequence
+      title: 移行は一晩で終わらない
+      mode: steps
+      items:
+        - label: ダンプとボリューム設計
+        - label: 並行稼働と検証
+        - label: DNSとTLS切替
+          emphasis: true
+        - label: ロールバック手順

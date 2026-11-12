@@ -1,0 +1,146 @@
+version: 1
+sourceSha256: "deaf42f81e3b397b15cf722a7917ff5f46626d10e7d106e741c1d4b9fe2e9fe2"
+visuals:
+  - sectionId: "古代帝国の興亡とシルクロードの形成"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ペルシア支配後にアレクサンドロスとクシャーナ朝がシルクロードの結節点を形作った。"
+    spec:
+      type: sequence
+      title: 帝国が道を結んだ
+      mode: timeline
+      items:
+        - label: ペルシア影響
+        - label: ヘレニズム
+        - label: クシャーナ朝
+          emphasis: true
+
+  - sectionId: "信仰の十字路ゾロアスター教仏教そして玄奘の旅"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ゾロアスター教・仏教・後のイスラムが重層的に積み重なった精神史。"
+    spec:
+      type: cards
+      title: 三つの信仰が交差する
+      items:
+        - label: ゾロアスター教
+          detail: 先住民の層
+        - label: 仏教
+          detail: クシャーナ経由
+        - label: 玄奘の記録
+          detail: 7世紀の越境
+          emphasis: true
+
+  - sectionId: "イスラムの到来とナーシルフスロウの変革"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ウマイヤ・アッバース征服後にサーマーン朝がペルシア文化とイスラムを融合した。"
+    spec:
+      type: flow
+      title: 征服のあとに融合が起きる
+      nodes:
+        - id: conquest
+          label: イスラム軍勢
+        - id: terrain
+          label: 険しい地形
+        - id: samanid
+          label: サーマーン朝
+          emphasis: true
+      edges:
+        - from: conquest
+          to: terrain
+        - from: terrain
+          to: samanid
+
+  - sectionId: "パミールハウスの宇宙論的象徴体系"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "パミールハウスは五本柱で宇宙の縮図として多層的象徴を担う。"
+    spec:
+      type: hierarchy
+      title: 住居は宇宙の模型
+      root:
+        label: パミールハウス
+        children:
+          - label: 五本の支柱
+            emphasis: true
+            children:
+              - label: 宇宙論的象徴
+          - label: ゾロアスター教
+          - label: イスマイール派
+
+  - sectionId: "中世の激動モンゴルの嵐からコーカンドハン国へ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "モンゴル侵攻後も小諸国は自治を保ちのちコーカンドと清朝が対峙した。"
+    spec:
+      type: sequence
+      title: 平原は壊れ山地は残る
+      mode: timeline
+      items:
+        - label: モンゴル侵攻
+        - label: 小諸国の自治
+        - label: ティムール
+        - label: コーカンドと清朝
+          emphasis: true
+
+  - sectionId: "19世紀のグレートゲームと国境の策定"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "英露の覇権争いがワハーン回廊の誕生と国境分断をもたらした。"
+    spec:
+      type: interaction
+      title: 大国が国境を刻む
+      actors:
+        - id: uk
+          label: イギリス帝国
+        - id: ru
+          label: ロシア帝国
+        - id: border
+          label: ワハーン回廊
+      steps:
+        - from: uk
+          to: border
+          label: インド防衛
+        - from: ru
+          to: border
+          label: 南進圧力
+        - from: border
+          to: uk
+          label: 分断と策定
+
+  - sectionId: "ソビエト時代近代化の光と沈黙の宗教"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "GBAO設立と投資で近代化が進んだ一方宗教は弾圧され強制移住があった。"
+    spec:
+      type: pros_cons
+      title: 近代化と宗教の沈黙
+      sides:
+        - label: 近代化
+          items:
+            - label: GBAO設立
+            - label: 社会主義投資
+            - label: インフラ整備
+        - label: 抑圧
+          emphasis: true
+          items:
+            - label: 宗教弾圧
+            - label: 強制移住
+            - label: 信仰の地下化
+
+  - sectionId: "現代の地政学中国の進出と2022年の衝撃"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "2011国境条約と2021-2022抗議・テロ掃討が中国影響の増大と絡む。"
+    spec:
+      type: cards
+      title: 21世紀は中国の影が濃い
+      items:
+        - label: 2011国境条約
+          detail: 土地割譲
+        - label: 中国進出
+          detail: インフラ投資
+        - label: 2021-2022
+          detail: 抗議と掃討作戦
+          emphasis: true

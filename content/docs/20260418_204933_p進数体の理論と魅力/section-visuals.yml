@@ -1,0 +1,155 @@
+version: 1
+sourceSha256: "b22ada10e85c975ad51cf718b9d2f708d842e74c3e7681f60362329bb5a2f5e6"
+visuals:
+  - sectionId: "p-進付値大きさの全く新しい定義"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "p-進絶対値は素因数pの冪だけを見る。有理数の大小とは別物で、近さの感覚が実数と真逆になる。"
+    spec:
+      type: comparison
+      title: 近さの物差しが実数と違う
+      sides:
+        - label: 実数
+        - label: p-進
+      rows:
+        - axis: 絶対値
+          cells:
+            - label: 全素因数
+            - label: 素数pだけ
+        - axis: 近さ
+          cells:
+            - label: 通常の距離
+            - label: pで割れるほど近い
+              emphasis: true
+
+  - sectionId: "p-進距離とその奇妙さ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "p-進距離は超度量不等式を満たし、三角形の両辺の和より内側が近いこともある。順序は定義できない。"
+    spec:
+      type: cards
+      title: 超距離が幾何を壊す
+      items:
+        - label: 超度量
+          detail: 強い三角形
+        - label: 奇妙な近接
+          detail: 内側が近い例
+          emphasis: true
+        - label: 順序なし
+          detail: 大小比較不可
+
+  - sectionId: "衝撃の等式-1-1-2-4-8-"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "2進体では-1が1+2+4+8+…として収束。p-進では項が0に収束すれば級数が収束する十分条件になる。"
+    spec:
+      type: sequence
+      title: 2進では-1が等比和になる
+      mode: steps
+      items:
+        - label: ℚ₂で
+          detail: -1=1+2+4+…
+          emphasis: true
+        - label: 実数では
+          detail: 発散
+        - label: 収束判定
+          detail: aₙ→0で足りる
+
+  - sectionId: "有理数の完備化有理数から-p-進数へ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "有理数にp-進距離を入れ完備化するとp-進数体が得られる。実数完備化とは別の世界ができる。"
+    spec:
+      type: flow
+      title: 別の距離で別の完備体
+      nodes:
+        - id: q
+          label: 有理数ℚ
+        - id: metric
+          label: p-進距離
+        - id: complete
+          label: 完備化
+        - id: qp
+          label: p-進数体ℚₚ
+          emphasis: true
+      edges:
+        - from: q
+          to: metric
+        - from: metric
+          to: complete
+        - from: complete
+          to: qp
+
+  - sectionId: "p-進整数環-ℤₚ-と木構造"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "p-進整数は球の集合として見られ、包含関係が木構造を作る。位数は連続的なイメージとは違う。"
+    spec:
+      type: hierarchy
+      title: 整数が球の入れ子になる
+      root:
+        label: ℤₚ
+        children:
+          - label: 単位球
+            children:
+              - label: 部分球
+              - label: 細分化
+          - label: 木の枝
+            emphasis: true
+
+  - sectionId: "ハッセ-ミンコフスキー定理"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ハッセ＝ミンコフスキー定理は大域的な解の有無が全てのpについての局所解と一致することを言う。"
+    spec:
+      type: flow
+      title: 大域はすべてのpの局所
+      nodes:
+        - id: global
+          label: 大域解
+        - id: local
+          label: 各pの局所
+          emphasis: true
+        - id: hasse
+          label: 一致条件
+      edges:
+        - from: local
+          to: hasse
+        - from: hasse
+          to: global
+
+  - sectionId: "ショルツェの革命"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ショルツェはパーフェクトイド空間でp進Hodge理論を再構成し、代数と幾何の境界を動かした。"
+    spec:
+      type: cards
+      title: 21世紀のp-進再構成
+      items:
+        - label: パーフェクトイド
+          detail: 新しい基盤
+          emphasis: true
+        - label: p-進Hodge
+          detail: 橋渡し
+        - label: 影響
+          detail: 数論幾何
+
+  - sectionId: "実数こそが例外"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "日常の実数は連続・順序付きだが、数学の標準的な局所体はp-進が大多数で実数の方が例外的だと述べる。"
+    spec:
+      type: matrix
+      title: 連続性の常識は少数派
+      xAxis:
+        low: 離散的
+        high: 連続的
+      yAxis:
+        low: 局所体
+        high: 実数感覚
+      items:
+        - label: p-進体系
+          quadrant: low-high
+          emphasis: true
+        - label: 実数ℝ
+          quadrant: high-high

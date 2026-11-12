@@ -1,0 +1,115 @@
+version: 1
+sourceSha256: "23aceb40e36c3f967eb3bc577dcbe9f8a0fb453e1de299e2b1d2f198e62b2ce8"
+visuals:
+  - sectionId: "3-4ステップ設計プロセスfour-step-dimensional-design-process"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Kimball の四段階は要件把握・粒度選定・ディメンション設計・ファクト設計の順である。"
+    spec:
+      type: sequence
+      title: 四段で星型へ落とす
+      mode: steps
+      items:
+        - label: 要件とデータ現実
+        - label: 粒度宣言
+        - label: ディメンション設計
+          emphasis: true
+        - label: ファクト設計
+
+  - sectionId: "加算的半加算的非加算的ファクトadditive-semi-additive-non-additive-facts"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "加算・半加算・非加算の三種で集計可否が異なり対応するファクト型を選ぶ。"
+    spec:
+      type: comparison
+      title: 集計ルールで型を分ける
+      sides:
+        - label: 加算的
+        - label: 非加算的
+          emphasis: true
+      rows:
+        - axis: 例
+          cells:
+            - label: 売上数量
+            - label: 比率・残高
+        - axis: 時間軸
+          cells:
+            - label: 全日加算可
+            - label: 期末値のみ
+        - axis: 半加算
+          cells:
+            - label: 一部次元で加算
+            - label: 口座残高等
+
+  - sectionId: "エンタープライズdwバスマトリクスenterprise-data-warehouse-bus-matrix"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "バスマトリクスはビジネスプロセスとコンフォームドディメンションの交差で統合計画を示す。"
+    spec:
+      type: matrix
+      title: プロセス×共通ディメンション
+      xAxis:
+        low: 部門局所
+        high: 全社共通
+      yAxis:
+        low: 単一プロセス
+        high: 多数プロセス
+      items:
+        - label: バスマトリクス
+          quadrant: high-high
+          emphasis: true
+        - label: 孤立マート
+          quadrant: low-low
+
+  - sectionId: "ディメンショナルモデリングの10の基本ルール"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "原子粒度・ビジネスプロセス中心・日付キー・サロゲートキー・コンフォームドディメンションなど十規則が一貫する。"
+    spec:
+      type: sequence
+      title: 十規則の骨格
+      mode: steps
+      items:
+        - label: 原子粒度を格納
+        - label: プロセス別ファクト
+        - label: 日付キー必須
+        - label: 粒度統一
+        - label: サロゲートキー
+        - label: コンフォームド
+          emphasis: true
+        - label: 要件と現実の均衡
+
+  - sectionId: "概要"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Kimball 技法はファクトとディメンションの星型で予測不能な分析要件に耐える。"
+    spec:
+      type: cards
+      title: 星型が分析の基本形
+      items:
+        - label: ファクト中心
+        - label: ディメンション文脈
+        - label: コンフォームド統合
+          emphasis: true
+        - label: SCD 技法群
+
+  - sectionId: "1-ビジネス要件とデータの現実性の把握gather-business-requirements-and-data-realities"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "四段階の第一歩はビジネス要件とソースデータの現実を揃えて粒度判断の土台を作る。"
+    spec:
+      type: flow
+      title: 要件と現実を先に合わせる
+      nodes:
+        - id: biz
+          label: ビジネス要件
+        - id: src
+          label: ソース現実
+        - id: grain
+          label: 粒度判断
+          emphasis: true
+      edges:
+        - from: biz
+          to: grain
+        - from: src
+          to: grain

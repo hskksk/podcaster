@@ -1,0 +1,151 @@
+version: 1
+sourceSha256: "225cd1dd148a06dac525b25973019abb5a19cceb301d383645d30eaac28e43b9"
+visuals:
+  - sectionId: "1-問題の本質なぜ矛盾重複が起きるか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "コピー増殖・責任曖昧・プロンプトドリフト・注入衝突・CLAUDE.md 肥大化が矛盾と重複を生む。"
+    spec:
+      type: cards
+      title: 複製と曖昧さが壊す
+      items:
+        - label: コピー増殖
+          detail: スキルごとに独立進化
+        - label: 責任範囲曖昧
+        - label: プロンプトドリフト
+          emphasis: true
+        - label: コンテキスト衝突
+        - label: CLAUDE.md 肥大化
+
+  - sectionId: "2-解決アーキテクチャ3層プロンプト構造"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Layer1 は CLAUDE.md 等のグローバル、Layer2 はエージェント固有、Layer3 はタスク呼び出し層である。"
+    spec:
+      type: sequence
+      title: 三層で注入順を固定
+      mode: timeline
+      items:
+        - label: Layer 1 グローバル
+          detail: CLAUDE.md 等
+          emphasis: true
+        - label: Layer 2 エージェント固有
+          detail: 拡張のみ
+        - label: Layer 3 タスク呼び出し
+          detail: 会話と委任
+
+  - sectionId: "claudemdに書くべきこと-vs-書かないこと公式ガイドライン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "コマンド・アーキ決定・gotcha は書き、コードで分かることやチュートリアルは CLAUDE.md に置かない。"
+    spec:
+      type: comparison
+      title: CLAUDE.md は短くポリシーだけ
+      sides:
+        - label: 書く
+        - label: 書かない
+          emphasis: true
+      rows:
+        - axis: コマンド
+          cells:
+            - label: 推測不能な手順
+            - label: 読めば分かること
+        - axis: スタイル
+          cells:
+            - label: デフォルトと異なる規約
+            - label: 標準言語慣習
+        - axis: 分量
+          cells:
+            - label: アーキ決定・gotcha
+            - label: 長いチュートリアル
+
+  - sectionId: "プロンプトレジストリパターン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ハードコードはドリフトを生み、中央レジストリのエイリアス差し替えで全エージェントをコード変更なし更新できる。"
+    spec:
+      type: flow
+      title: 中央版管理でドリフトを止める
+      nodes:
+        - id: hard
+          label: 各所ハードコード
+        - id: drift
+          label: ドリフト
+        - id: registry
+          label: プロンプトレジストリ
+          emphasis: true
+        - id: alias
+          label: production エイリアス
+        - id: agents
+          label: 全エージェント
+      edges:
+        - from: hard
+          to: drift
+        - from: registry
+          to: alias
+        - from: alias
+          to: agents
+          label: 実行時フェッチ
+
+  - sectionId: "ci評価ゲートの種類"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Exact match・LLM-as-judge・Regression diff・Red team の四種ゲートでマージ前にプロンプト品質を守る。"
+    spec:
+      type: cards
+      title: CI で四種ゲート
+      items:
+        - label: Exact match
+          detail: スキーマ検証
+        - label: LLM-as-judge
+        - label: Regression diff
+          emphasis: true
+        - label: Red team
+
+  - sectionId: "6-フレームワーク別の階層設計パターン比較"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Claude Code・OpenAI Agents・CrewAI・LangGraph・Google ADK でグローバル層とタスク層の載せ方が異なる。"
+    spec:
+      type: cards
+      title: 枠組みごとに層の置き場
+      items:
+        - label: Claude Code
+          detail: CLAUDE.md / agents
+        - label: OpenAI Agents SDK
+          detail: instructions
+        - label: CrewAI
+          detail: role・goal
+        - label: Google ADK
+          emphasis: true
+          detail: static_instruction
+
+  - sectionId: "8-anthropic公式推奨サブエージェント委任の4要素"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "委任プロンプトには Objective・Output format・Tool guidance・Task boundaries の四要素が必須である。"
+    spec:
+      type: sequence
+      title: 短い指示は四要素で補う
+      mode: steps
+      items:
+        - label: Objective
+        - label: Output format
+        - label: Tool guidance
+          emphasis: true
+        - label: Task boundaries
+
+  - sectionId: "phase-1即時実施ツール不要-構造分離"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "CLAUDE.md をポリシー宣言だけに短縮し詳細をスキルへ、hooks は自動チェックに回す。"
+    spec:
+      type: sequence
+      title: 肥大化した CLAUDE を分割
+      mode: funnel
+      items:
+        - label: 長大 CLAUDE.md
+        - label: ポリシー宣言のみ
+          emphasis: true
+        - label: スキルへ詳細委譲
+        - label: hooks で決定論

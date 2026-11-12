@@ -1,0 +1,159 @@
+version: 1
+sourceSha256: "6a528a713a00dbc9599f86dd2b85d54a43ce94131e67bbab8e81f78eba0e6151"
+visuals:
+  - sectionId: "背景戦後日本のスタートライン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "敗戦後はGHQ占領下で1947年憲法施行、1951年講和と1952年占領終了。朝鮮特需で1955年頃から年10%前後の成長が始まった。"
+    spec:
+      type: sequence
+      title: 講和から高度成長への助走
+      mode: timeline
+      items:
+        - label: "1947年"
+          detail: 日本国憲法施行
+        - label: "1951年"
+          detail: サンフランシスコ講和
+        - label: "1952年"
+          detail: 占領終了
+        - label: 朝鮮特需
+          detail: 成長の助走
+          emphasis: true
+
+  - sectionId: "日米安全保障条約とは"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "旧安保は米国防衛義務が曖昧だったが、新安保1960年は防衛義務の明文化、事前協議制、10年有効期限を導入した。"
+    spec:
+      type: comparison
+      title: 新安保は義務と事前協議を明文化
+      sides:
+        - label: 旧安保
+        - label: 新安保
+      rows:
+        - axis: 米国の義務
+          cells:
+            - label: 曖昧
+            - label: 防衛を明文化
+              emphasis: true
+        - axis: 協議
+          cells:
+            - label: 限定
+            - label: 事前協議制
+        - axis: 期限
+          cells:
+            - label: なし
+            - label: 10年と自動延長
+
+  - sectionId: "所得倍増計画とは"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "池田内閣は1960年12月に10年で所得2倍を掲げ、社会資本・教育・重化学の三柱で約7年で達成した。"
+    spec:
+      type: cards
+      title: 所得倍増の三本柱
+      items:
+        - label: 社会資本
+          detail: 道路・港湾・団地
+        - label: 人的能力
+          detail: 教育投資
+        - label: 重化学工業
+          detail: 太平洋ベルト
+          emphasis: true
+
+  - sectionId: "安保闘争1960年-デモが国会を包囲した日"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1960年5月19日の強行採決後、6月15日に樺美智子が圧死、6月19日に新安保が自然成立し岸内閣が総辞職した。"
+    spec:
+      type: sequence
+      title: 強行採決から自然成立へ
+      mode: timeline
+      items:
+        - label: "5月19日"
+          detail: 衆院強行採決
+        - label: "6月15日"
+          detail: 樺美智子の死
+          emphasis: true
+        - label: "6月19日"
+          detail: 新安保自然成立
+        - label: 岸辞任
+          detail: 内閣総辞職
+
+  - sectionId: "池田内閣と所得倍増計画1960年1964年-怒りから豊かさへ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "池田は政治から経済へ視線を移し所得倍増で成長。1968年GNPは西ドイツを抜き資本主義国第2位、三種の神器が普及した。"
+    spec:
+      type: flow
+      title: 安保の熱のあとに経済へ
+      nodes:
+        - id: struggle
+          label: 安保闘争
+        - id: ikeda
+          label: 池田内閣
+          emphasis: true
+        - id: plan
+          label: 所得倍増
+        - id: gnp
+          label: GNP世界第2
+      edges:
+        - from: struggle
+          to: ikeda
+        - from: ikeda
+          to: plan
+        - from: plan
+          to: gnp
+
+  - sectionId: "東京オリンピック1964年10月10日24日-復興の証明"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1964年東京五輪はアジア初の夏季大会で94カ国参加。首都高・モノレール・地下鉄などインフラ整備が費用の約3分の2を占めた。"
+    spec:
+      type: cards
+      title: 五輪はインフラで復興を示した
+      items:
+        - label: アジア初開催
+          detail: 94カ国参加
+        - label: 都市整備
+          detail: 高速道路・鉄道
+          emphasis: true
+        - label: 費用の内訳
+          detail: 約3分の2がインフラ
+
+  - sectionId: "重要年表"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1960年安保闘争と池田内閣、1964年新幹線開業と東京五輪、1968年GNPが西ドイツを上回る。"
+    spec:
+      type: sequence
+      title: 政治から五輪・成長へ
+      mode: timeline
+      items:
+        - label: "1960年"
+          detail: 安保闘争・池田内閣
+        - label: "1964年10月1日"
+          detail: 新幹線開業
+          emphasis: true
+        - label: "1964年10月10日"
+          detail: 五輪開幕
+        - label: "1968年"
+          detail: GNP西ドイツ超え
+
+  - sectionId: "中学受験頻出ポイント"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "樺美智子、池田勇人、1964年五輪、新幹線10月1日開業210km、三種の神器、1968年に追い抜いた西ドイツが頻出。"
+    spec:
+      type: cards
+      title: 年代と人名をセットで覚える
+      items:
+        - label: 安保闘争の象徴
+          detail: 樺美智子
+        - label: 所得倍増
+          detail: 池田勇人
+        - label: 新幹線
+          detail: "1964/10/1・210km"
+          emphasis: true
+        - label: 三種の神器
+          detail: TV・洗濯機・冷蔵庫

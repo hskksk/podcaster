@@ -1,0 +1,145 @@
+version: 1
+sourceSha256: "2253012efe5232ebe47c403cae1af794db865786ecbcbdb9e43ed572a3708cd8"
+visuals:
+  - sectionId: "核となる概念"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "停止時間・対数密度・パリティベクターが解析の共通語彙になる。"
+    spec:
+      type: cards
+      title: 三つの基本概念
+      items:
+        - label: 停止時間
+          detail: 1より小さくなるまで
+        - label: 対数密度
+          detail: タオ2019の枠
+        - label: パリティベクター
+          detail: 奇数列への還元
+          emphasis: true
+
+  - sectionId: "グラフ理論的アプローチ詳説"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "前向きグラフは出次数1で逆グラフは木構造としてコラッツ予想を言い換える。"
+    spec:
+      type: flow
+      title: 1への到達はグラフ問題
+      nodes:
+        - id: forward
+          label: 前向きグラフ
+        - id: n
+          label: 頂点 n
+        - id: one
+          label: 吸収状態 1
+          emphasis: true
+        - id: inverse
+          label: 逆グラフ木
+      edges:
+        - from: n
+          to: forward
+        - from: forward
+          to: one
+        - from: inverse
+          to: forward
+
+  - sectionId: "確率論的統計的アプローチ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "テラスはほぼ全整数が有限停止時間を持つと中心極限定理で示した部分結果。"
+    spec:
+      type: cards
+      title: 完全証明ではないが前進
+      items:
+        - label: テラス1976
+          detail: ほぼすべて有限
+        - label: 中心極限定理
+        - label: 統計的傾向
+          emphasis: true
+
+  - sectionId: "解析的アプローチタオの2019年の画期的結果"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "タオは対数密度の意味でほぼすべての軌道が所与時間内に低値へ落ちると証明した。"
+    spec:
+      type: sequence
+      title: 対数密度で大きな一歩
+      mode: steps
+      items:
+        - label: コラッツ写像
+        - label: 対数密度
+        - label: ほぼ全域
+        - label: 完全予想は未達
+          emphasis: true
+
+  - sectionId: "計算機科学的視点"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "検証範囲は2の68乗超まで拡大したが計算は証明に代わらない。"
+    spec:
+      type: chart
+      title: 検証は指数で伸びる
+      variant: line
+      unit: 指数
+      values:
+        - label: 歴史的検証
+          value: 20
+        - label: 2024時点
+          value: 68
+          emphasis: true
+        - label: 報告上限
+          value: 71
+
+  - sectionId: "問題の難しさの本質"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "局所ルールから大域挙動が予測できず代数構造が乏しいのが難しさの核。"
+    spec:
+      type: cards
+      title: 五つの障壁
+      items:
+        - label: 大域予測不可
+        - label: 代数構造の乏しさ
+        - label: 多スケール現象
+        - label: 既存手法の限界
+          emphasis: true
+
+  - sectionId: "動力学系エルゴード理論的アプローチ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "コラッツ写像を力学系としてエルゴード性で長期平均挙動を調べるアプローチ。"
+    spec:
+      type: flow
+      title: 平均挙動から入る
+      nodes:
+        - id: map
+          label: コラッツ写像
+        - id: iterate
+          label: 反復
+        - id: ergodic
+          label: エルゴード性
+          emphasis: true
+      edges:
+        - from: map
+          to: iterate
+        - from: iterate
+          to: ergodic
+
+  - sectionId: "最新動向未解決問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "部分結果は積み上がるが一般化や決定不能性への接続は未解決。"
+    spec:
+      type: pros_cons
+      title: 部分成功と未証明
+      sides:
+        - label: 積み上がり
+          items:
+            - label: タオの密度結果
+            - label: 計算検証拡大
+            - label: グラフ再定式化
+        - label: 未解決
+          emphasis: true
+          items:
+            - label: 一般化問題
+            - label: 完全証明
+            - label: 新不変量不足

@@ -1,0 +1,140 @@
+version: 1
+sourceSha256: "c41fd756e7311819c5efa5638a57a6a94922da1f2df66ed602befc862d8a238b"
+visuals:
+  - sectionId: "21-エージェント階層とモード"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "CommanderがルーティングしBrainstormer・Implementer・Reviewer等サブエージェントが専門タスクを分担。"
+    spec:
+      type: hierarchy
+      title: 粒度でエージェントを分岐
+      root:
+        label: Commander
+        emphasis: true
+        children:
+          - label: Brainstormer
+          - label: Implementer
+          - label: Reviewer
+          - label: Analysis
+
+  - sectionId: "23-commander-の-quick-modeタスク粒度によるプロンプト分岐"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Quick modeは短文指示と最小コンテキスト、通常はphase-based詳細プロンプトへ切り替える。"
+    spec:
+      type: comparison
+      title: 粒度がプロンプト厚さを決める
+      sides:
+        - label: Quick mode
+        - label: 通常モード
+      rows:
+        - axis: 指示
+          cells:
+            - label: 短文・即実行
+            - label: フェーズ手順
+        - axis: コンテキスト
+          cells:
+            - label: 最小
+            - label: フルspec
+              emphasis: true
+
+  - sectionId: "31-xml-タグによる構造化-system-prompt"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "role・constraints・outputをXMLタグで区切り、パースと差し替えを安定させる。"
+    spec:
+      type: cards
+      title: セクション境界を機械可読に
+      items:
+        - label: role
+        - label: constraints
+          emphasis: true
+        - label: output
+        - label: examples
+
+  - sectionId: "32-phase-based-processステップバイステップ指示"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "調査→計画→実装→検証のphaseを明示し、各段で完了条件と禁止行為を書く。"
+    spec:
+      type: sequence
+      title: 段ごとにゲートを置く
+      mode: steps
+      items:
+        - label: 調査
+        - label: 計画
+        - label: 実装
+          emphasis: true
+        - label: 検証
+
+  - sectionId: "39-mindmodel-2-phase-pipelinemm-orchestrator"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "MindModelを2フェーズで構築し、Plannerが穴埋め、Orchestratorが実行グラフを組む。"
+    spec:
+      type: flow
+      title: 設計モデルと実行を分離
+      nodes:
+        - id: mm
+          label: MindModel構築
+        - id: plan
+          label: Planner穴埋め
+        - id: orch
+          label: Orchestrator
+          emphasis: true
+        - id: run
+          label: 実行・検証
+      edges:
+        - from: mm
+          to: plan
+        - from: plan
+          to: orch
+        - from: orch
+          to: run
+
+  - sectionId: "43-ツール制限による-capability-gating"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "エージェントごとに許可ツールセットを切り、Reviewerはread中心、Implementerのみwriteを許す。"
+    spec:
+      type: cards
+      title: 権限はプロンプトよりツール列
+      items:
+        - label: エージェント別許可
+          emphasis: true
+        - label: 読取専用レビュー
+        - label: 書込は実装役のみ
+
+  - sectionId: "51-context-injector-hook"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "context-injectorがリポ状態・ledger・mindmodelを各ターンへ注入し、静的プロンプトを薄く保つ。"
+    spec:
+      type: interaction
+      title: 動的層はhookで足す
+      actors:
+        - id: hook
+          label: Hook
+        - id: agent
+          label: エージェント
+      steps:
+        - from: hook
+          to: agent
+          label: コンテキスト注入
+        - from: agent
+          to: hook
+          label: ターン開始
+
+  - sectionId: "52-ledger-loader-hook"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Continuity ledgerを構造化要約として読み込み、長セッションでも意図と未了タスクを復元。"
+    spec:
+      type: sequence
+      title: 要約を機械可読に
+      mode: steps
+      items:
+        - label: ledger生成
+        - label: loader hook
+          emphasis: true
+        - label: 次ターン復元

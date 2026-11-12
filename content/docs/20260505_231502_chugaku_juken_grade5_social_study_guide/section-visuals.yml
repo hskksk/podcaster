@@ -1,0 +1,148 @@
+version: 1
+sourceSha256: "b71200e7ba2dfce6faa6488a1c24bfdb08768519be10ae3f187d75cfa1aafa56"
+visuals:
+  - sectionId: "1サイクルでやること"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "インプット、想起、演習、修正、24〜72時間以内の再テストの五段で単元定着を回す。"
+    spec:
+      type: sequence
+      title: 読むより答えるを増やす
+      mode: steps
+      items:
+        - label: インプット
+          detail: テキスト・地図・年表
+        - label: 想起
+          detail: 見ないで書く
+          emphasis: true
+        - label: 演習
+          detail: 資料・記述
+        - label: 修正
+          detail: 理由つき再学習
+        - label: 再テスト
+          detail: 24〜72時間以内
+
+  - sectionId: "実際にどんなことをしている人がいるか実践パターン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "授業同日復習、白地図年表週次、口頭試問、すきまカード、生活接続の五パターンが家庭学習で共通する。"
+    spec:
+      type: cards
+      title: 暗記より接触頻度と説明
+      items:
+        - label: 同日復習
+          detail: 30〜60分
+        - label: 白地図・年表
+          detail: 毎週触る
+        - label: 口頭試問
+          detail: 筋道重視
+        - label: すきまカード
+          detail: 頻度を上げる
+        - label: 生活接続
+          detail: 具体化
+
+  - sectionId: "地理小5前半中盤の中心"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "位置確認から白地図・統計説明まで五手順で地形・産業・資料を因果で結ぶ。"
+    spec:
+      type: sequence
+      title: 場所から統計の理由へ
+      mode: steps
+      items:
+        - label: 位置確認
+        - label: 地形気候産業
+        - label: 白地図
+          emphasis: true
+        - label: 統計で理由
+        - label: 定番資料反復
+
+  - sectionId: "歴史小5後半の中心"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "年号順・因果説明・漢字正確性を軸に年表読み上げと白地図と同様の反復運用を回す。"
+    spec:
+      type: cards
+      title: 流れと因果を言語化する
+      items:
+        - label: 時代順
+          detail: 安定説明
+        - label: 因果
+          detail: 原因と結果
+        - label: 用語漢字
+          detail: 正確に書く
+        - label: 年表
+          detail: 読み上げ練習
+
+  - sectionId: "出題形式別の対策"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "空欄は手書き練習、正誤は訂正まで、資料は根拠言語化、記述は理由具体例結論の三テンプレ。"
+    spec:
+      type: cards
+      title: 形式ごとに一手追加する
+      items:
+        - label: 空欄補充
+          detail: 手書きセット
+        - label: 正誤選択
+          detail: 訂正まで
+        - label: 資料読取
+          detail: 根拠を言う
+        - label: 記述
+          detail: 理由・例・結論
+
+  - sectionId: "曜日別の具体的学習メニュー小5向け"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "平日は授業日から確認テスト対策まで短時間積み上げ、土日は資料総復習と弱点再演習に振る。"
+    spec:
+      type: sequence
+      title: 平日短時間・週末資料
+      mode: timeline
+      items:
+        - label: 授業日
+          detail: ノート・語句
+        - label: 翌々日
+          detail: 一問一答・地図
+        - label: 演習日
+          detail: 宿題30〜45分
+        - label: 土曜
+          detail: 資料総復習
+          emphasis: true
+        - label: 日曜
+          detail: 弱点のみ
+
+  - sectionId: "90日実行プラン小5社会の効率化テンプレ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "30日でルーティンと現状把握、60日で想起80%と誤答分類、90日で資料記述と横断演習へ移行。"
+    spec:
+      type: sequence
+      title: 90日で応用比率を上げる
+      mode: steps
+      items:
+        - label: 1〜30日
+          detail: 土台・現状把握
+        - label: 31〜60日
+          detail: 想起・誤答分類
+          emphasis: true
+        - label: 61〜90日
+          detail: 資料・横断演習
+
+  - sectionId: "おすすめ書籍目的別"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "基礎ドリル、頻出順、メモリーチェック、重大ニュースを目的別に選び塾教材との重複を避ける。"
+    spec:
+      type: cards
+      title: 1冊を三周する方が強い
+      caption: 塾教材が主・市販は補助
+      items:
+        - label: 基礎固め
+          detail: 見開きドリル
+        - label: 頻出整理
+          detail: 歴史順演習
+        - label: 抜け漏れ
+          detail: メモリーチェック
+        - label: 時事
+          detail: 重大ニュース系

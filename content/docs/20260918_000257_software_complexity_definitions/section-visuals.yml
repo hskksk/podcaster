@@ -1,0 +1,168 @@
+version: 1
+sourceSha256: "29ed86100bb278b01ea7b8e12a9b42539ffa29149104b3b2bd6e654fc9e84e8c"
+visuals:
+  - sectionId: "brooks-本質は絡み合った概念構造である"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Brooksの本質的困難は複雑性、適合性、変更性、無形性の四点で、概念的絡み合いが削れないとする。"
+    spec:
+      type: cards
+      title: 本質は概念の絡み合い
+      items:
+        - label: 複雑性
+          emphasis: true
+        - label: 適合性
+        - label: 変更性
+        - label: 無形性
+
+  - sectionId: "out-of-the-tar-pit-本質を利用者の問題に限り主因を状態と制御にする"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "MoseleyとMarksは残る複雑さの大半が事故的で、特にmutable stateと制御の組み合わせが認知負担を生むとする。"
+    spec:
+      type: comparison
+      title: 残りはまだ事故の側
+      sides:
+        - label: Brooks
+        - label: Tar Pit
+          emphasis: true
+      rows:
+        - axis: 本質の残り
+          cells:
+            - label: 要件に内在
+            - label: 見かけより事故的
+        - axis: 主因
+          cells:
+            - label: 概念の絡み
+            - label: 状態と制御
+        - axis: 対策の方向
+          cells:
+            - label: 銀の弾なし
+            - label: 状態の隔離
+
+  - sectionId: "hickey-単純は編まれていないこと簡単は手近なこと"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Hickeyは単純さは絡み合いが無いこと、簡単さは手近なことで、短期的な楽さが長期の複雑さを積むとする。"
+    spec:
+      type: comparison
+      title: 簡単と単純は逆方向
+      sides:
+        - label: 簡単さ
+        - label: 単純さ
+          emphasis: true
+      rows:
+        - axis: 時間軸
+          cells:
+            - label: 初期は速い
+            - label: 初期は学習要る
+        - axis: 長期
+          cells:
+            - label: 複雑さ累積
+            - label: 変更しやすい
+        - axis: 測るもの
+          cells:
+            - label: 手近さ
+            - label: 絡みの少なさ
+
+  - sectionId: "三人の関係"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Brooksが本質と事故を分け、Tar Pitが状態を主因に再定義し、Hickeyが絡み合いの語彙を足す。"
+    spec:
+      type: flow
+      title: 同じ語で三つの話
+      nodes:
+        - id: brooks
+          label: Brooks 1986
+        - id: tar
+          label: Tar Pit 2006
+        - id: hickey
+          label: Simple Made Easy
+          emphasis: true
+      edges:
+        - from: brooks
+          to: tar
+        - from: tar
+          to: hickey
+
+  - sectionId: "一緒に考える範囲の形式化"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "論点は本質と事故、状態と制御、簡単と単純、測定対象が仕様か実装か設計かで整理できる。"
+    spec:
+      type: matrix
+      title: 何の複雑さかを先に決める
+      xAxis:
+        low: 回避しにくい
+        high: 設計で減らせる
+      yAxis:
+        low: 要件側
+        high: 実装側
+      items:
+        - label: Brooks本質
+          quadrant: low-low
+        - label: Tar Pit状態
+          quadrant: high-high
+          emphasis: true
+        - label: Hickey絡み
+          quadrant: high-high
+
+  - sectionId: "計測可能な複雑さは定義が違う量を測っている"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "循環的複雑度や行数はBrooksやHickeyの定義と一致せず、同じ指標で三人を比較できない。"
+    spec:
+      type: pros_cons
+      title: メトリクスは定義を置換しない
+      sides:
+        - label: メトリクスの用途
+          items:
+            - label: 局所の分岐数
+            - label: 補助的理解
+        - label: 置換できない
+          emphasis: true
+          items:
+            - label: 本質と事故の区別
+            - label: 絡み合いの質
+
+  - sectionId: "例4-data-vault-のテーブル爆発"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Data VaultはJOINとテーブル増という症状的複雑さを生みうるが、それはBrooksの本質かHickeyの絡みか議論を分ける必要がある。"
+    spec:
+      type: flow
+      title: 症状と定義を混ぜない
+      nodes:
+        - id: symptom
+          label: テーブル爆発
+        - id: ask
+          label: どの定義か
+          emphasis: true
+        - id: choice
+          label: 対策の型が変わる
+      edges:
+        - from: symptom
+          to: ask
+        - from: ask
+          to: choice
+
+  - sectionId: "cynefin-の-complex-は別物である"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "CynefinのComplex領域は不可分性と創発の話で、Brooksの本質的複雑さとは同義ではない。"
+    spec:
+      type: comparison
+      title: 同じcomplexでも別概念
+      sides:
+        - label: Brooks本質
+        - label: Cynefin Complex
+      rows:
+        - axis: 焦点
+          cells:
+            - label: 仕様の困難
+            - label: 創発と実験
+        - axis: 対策
+          cells:
+            - label: 銀の弾なし
+            - label: プローブと反応

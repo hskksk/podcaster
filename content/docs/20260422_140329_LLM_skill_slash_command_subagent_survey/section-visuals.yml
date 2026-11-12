@@ -1,0 +1,155 @@
+version: 1
+sourceSha256: "59c8d571f5751461b555d00f01d5e13d30a15921607a4b43dfbc9c5198dceebe"
+visuals:
+  - sectionId: "背景歴史"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "commandsからAgent Skills標準へ統合しサブエージェントとAgent Teamsが登場した。"
+    spec:
+      type: sequence
+      title: 拡張機構が三層に分化
+      mode: timeline
+      items:
+        - label: commands
+        - label: Agent Skills標準
+        - label: サブエージェント
+        - label: Agent Teams
+          emphasis: true
+
+  - sectionId: "核となる概念llm-skillスキル"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "SKILL.mdはdescriptionだけ常駐し本文は呼び出し時にロードする段階的開示構造。"
+    spec:
+      type: hierarchy
+      title: 本文は呼ばれるまで待つ
+      root:
+        label: スキルパッケージ
+        children:
+          - label: SKILL.md
+            emphasis: true
+            children:
+              - label: フロントマター
+              - label: プレイブック本文
+          - label: examples
+          - label: scripts
+
+  - sectionId: "subagentサブエージェント詳解"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "サブエージェントは独立コンテキストで探索しサマリーだけ親に返す。"
+    spec:
+      type: comparison
+      title: 主会話を汚さない委任
+      sides:
+        - label: メインセッション
+        - label: サブエージェント
+      rows:
+        - axis: コンテキスト
+          cells:
+            - label: 会話を保持
+            - label: 独立ウィンドウ
+              emphasis: true
+        - axis: 大量読込
+          cells:
+            - label: 溢れやすい
+            - label: 隔離される
+        - axis: 戻り値
+          cells:
+            - label: —
+            - label: サマリーのみ
+
+  - sectionId: "agent-teamsエージェントチーム"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "複数のClaude Codeが独立コンテキストを持ちピアツーピアで協調する実験機能。"
+    spec:
+      type: cards
+      title: 単一委任を超える協調
+      items:
+        - label: 独立インスタンス
+          detail: 各々の文脈
+        - label: ピア通信
+          detail: 中央統制なし
+        - label: 実験段階
+          detail: Opus 4.6で公開
+          emphasis: true
+
+  - sectionId: "hooksフック詳解"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "イベントでシェル・プロンプト・エージェントを自動起動しワークフローを組み込む。"
+    spec:
+      type: flow
+      title: イベントが自動化の起点
+      nodes:
+        - id: event
+          label: フックイベント
+        - id: handler
+          label: ハンドラー
+          emphasis: true
+        - id: skill
+          label: スキル連携
+        - id: auto
+          label: 自動ワークフロー
+      edges:
+        - from: event
+          to: handler
+        - from: handler
+          to: skill
+        - from: skill
+          to: auto
+
+  - sectionId: "agent-skills-オープンスタンダード"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "agentskills.ioがCodex・Gemini CLI・Cursorなど複数ツールで共有される形式。"
+    spec:
+      type: cards
+      title: 一つのSKILL.mdを共有
+      items:
+        - label: agentskills.io
+          detail: 公開標準
+        - label: Claude Code
+        - label: Codex
+        - label: Gemini CLI
+        - label: Cursor
+          emphasis: true
+
+  - sectionId: "ビルトインスキルbundled-skills"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "simplify・batch・review・security-reviewなどプロンプトベースの同梱スキル群。"
+    spec:
+      type: cards
+      title: 同梱はプレイブック駆動
+      items:
+        - label: simplify
+          detail: 品質チェック
+        - label: batch
+          detail: 並列変更
+        - label: review
+          detail: コードレビュー
+        - label: security-review
+          detail: セキュリティ
+          emphasis: true
+
+  - sectionId: "最新動向未解決問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "標準化とエコシステム拡大が進む一方オーケストレーションと評価は未整備。"
+    spec:
+      type: pros_cons
+      title: 急成長と残る空白
+      sides:
+        - label: 進展
+          items:
+            - label: ホットリロード
+            - label: オープン標準
+            - label: 巨大エコシステム
+        - label: 未解決
+          emphasis: true
+          items:
+            - label: スキル選択精度
+            - label: チーム協調の成熟度
+            - label: 横断的ベンチ不足

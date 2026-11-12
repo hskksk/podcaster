@@ -1,0 +1,169 @@
+version: 1
+sourceSha256: "e2dc29308c89761a7d41d634d2bca5bfd3f72fe6500f5fbad9cba75707ca9785"
+visuals:
+  - sectionId: "出自と若年期"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "小普請組旗本の貧困家庭で剣術と蘭学を独学し私塾を開いた若年期。"
+    spec:
+      type: cards
+      title: 貧家から蘭学私塾へ
+      items:
+        - label: 小普請組旗本
+          detail: 41石・役職なし
+        - label: 直心影流
+          detail: 免許皆伝
+        - label: 蘭学私塾
+          detail: 赤坂に開設
+          emphasis: true
+
+  - sectionId: "ペリー来航と幕府への意見書"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "黒船来航後の意見書が海防・海軍創設の論旨で軍艦操練所への抜擢につながった。"
+    spec:
+      type: sequence
+      title: 意見書が出世の契機に
+      mode: steps
+      items:
+        - label: ペリー来航
+        - label: 意見書提出
+        - label: 海防・海軍を主張
+        - label: 軍艦操練所へ
+          emphasis: true
+
+  - sectionId: "咸臨丸と太平洋横断"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "咸臨丸は日本人のみの太平洋横断だが実指揮は水先案内人が担った側面もある。"
+    spec:
+      type: interaction
+      title: 初の太平洋横断航海
+      actors:
+        - id: kaishu
+          label: 勝海舟
+        - id: kanrin
+          label: 咸臨丸
+        - id: brooke
+          label: ブルック大尉
+      steps:
+        - from: kaishu
+          to: kanrin
+          label: 教授方頭取で乗船
+        - from: brooke
+          to: kanrin
+          label: 実航海指揮
+        - from: kanrin
+          to: kaishu
+          label: 海軍創設への足がかり
+
+  - sectionId: "坂本龍馬との出会いと神戸海軍操練所"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "暗殺目的の龍馬が弟子入りし、操練所は藩を超えて浪士も受け入れた。"
+    spec:
+      type: interaction
+      title: 暗殺が弟子入りに変わる
+      actors:
+        - id: ryoma
+          label: 坂本龍馬
+        - id: kaishu
+          label: 勝海舟
+        - id: school
+          label: 神戸海軍操練所
+      steps:
+        - from: ryoma
+          to: kaishu
+          label: 暗殺のつもりで訪問
+        - from: kaishu
+          to: ryoma
+          label: 見識に圧倒
+        - from: kaishu
+          to: school
+          label: 浪士も受け入れ
+
+  - sectionId: "江戸無血開城"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "西郷隆盛との会談で総攻撃を回避し江戸城を明け渡し100万都市を守った。"
+    spec:
+      type: interaction
+      title: 会談が総攻撃を止めた
+      actors:
+        - id: kaishu
+          label: 勝海舟
+        - id: saigo
+          label: 西郷隆盛
+        - id: edo
+          label: 江戸
+      steps:
+        - from: kaishu
+          to: saigo
+          label: 薩摩藩邸で会談
+        - from: saigo
+          to: edo
+          label: 総攻撃中止
+        - from: edo
+          to: kaishu
+          label: 無血開城
+
+  - sectionId: "明治政府での活動と徳川家への義理"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "新政府で初代海軍卿を務めつつ徳川慶喜の叙爵と西郷の名誉回復に働きかけた。"
+    spec:
+      type: flow
+      title: 勝者にも敗者にも義理
+      nodes:
+        - id: gov
+          label: 明治政府
+        - id: kaishu
+          label: 勝海舟
+          emphasis: true
+        - id: tokugawa
+          label: 徳川慶喜救済
+        - id: saigo
+          label: 西郷名誉回復
+      edges:
+        - from: gov
+          to: kaishu
+        - from: kaishu
+          to: tokugawa
+        - from: kaishu
+          to: saigo
+
+  - sectionId: "晩年と氷川清話"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "隠棲生活の談話が氷川清話として幕末真相と処世術を残した。"
+    spec:
+      type: cards
+      title: 語りが名著を生んだ
+      items:
+        - label: 赤坂氷川町
+          detail: 隠棲の邸
+        - label: 氷川清話
+          detail: 吉本襄が編纂
+          emphasis: true
+        - label: 誠の一字
+          detail: 処世の秘訣
+
+  - sectionId: "勝海舟という人間"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "幕府側ながら攘夷派を育て無血開城を実現し日清戦争には反対した現実主義者。"
+    spec:
+      type: pros_cons
+      title: 勝つより失わない
+      sides:
+        - label: 一貫した姿勢
+          items:
+            - label: 大局観と柔軟性
+            - label: 無血開城
+            - label: 日清戦争反対
+        - label: 複雑さ
+          emphasis: true
+          items:
+            - label: 幕府と浪士の橋渡し
+            - label: 敗者救済への偏り
+            - label: 咸臨丸神話化の議論

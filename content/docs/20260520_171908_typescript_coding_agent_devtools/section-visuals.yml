@@ -1,0 +1,130 @@
+version: 1
+sourceSha256: "28929541e2724a2de7df5e67d509ea20c8bc1b342158b65c859235cacae57960"
+visuals:
+  - sectionId: "コーディングエージェントとオーケストレーション"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenCode、omo、OpenClaw、Claude Code、Cursor、Codex、agents-cliが役割分担でエージェント基盤を構成。"
+    spec:
+      type: cards
+      title: 単体CLIから役割分担へ
+      items:
+        - label: OpenCode
+          detail: OSSエージェント
+        - label: omo
+          detail: マルチエージェント層
+          emphasis: true
+        - label: OpenClaw
+          detail: マルチチャネル
+        - label: 公式・IDE CLI
+          detail: Claude/Cursor/Codex
+
+  - sectionId: "biomeeslint-prettier-の一体化"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "BiomeはRust製でlint+format一本化、型推論lintとマルチファイル分析、biome.json一本設定。"
+    spec:
+      type: cards
+      title: エージェント回数に効く一体lint
+      items:
+        - label: Rust実装
+          detail: 高速
+        - label: 型推論lint
+          emphasis: true
+        - label: 500+ルール
+        - label: biome.json一本
+
+  - sectionId: "oxcoxlint-oxfmtoxidation-compiler-エコシステム"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "oxlintはCI早期、oxfmtはPrettier互換高速format、大規模リポはESLint最終ゲート併用。"
+    spec:
+      type: sequence
+      title: 速いlint→最終ESLint
+      mode: steps
+      items:
+        - label: oxlint
+          detail: CI前半
+        - label: oxfmt
+          detail: format高速
+        - label: ESLint
+          detail: 最終ゲート
+          emphasis: true
+
+  - sectionId: "lefthook並列-git-hooks"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Lefthookは並列pre-commit、glob除外、単一バイナリでBiome/Oxlintと相性良い。"
+    spec:
+      type: cards
+      title: モノレポでCIと同じゲート
+      items:
+        - label: 並列実行
+        - label: globフィルタ
+        - label: 単一バイナリ
+          emphasis: true
+
+  - sectionId: "mcp-とエージェント向けコンテキスト"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "MCPは選択的有効化、Repomixでリポパック、AGENTS.md標準とCLAUDE.md併用が増える。"
+    spec:
+      type: cards
+      title: コンテキストは圧縮と規約で
+      items:
+        - label: MCP
+          detail: トークン注意
+        - label: Repomix
+          detail: 1ファイル化
+        - label: AGENTS.md
+          emphasis: true
+        - label: CLAUDE.md
+          detail: ツリー走査
+
+  - sectionId: "事例1-biome-lefthook-pnpm-catalog中小中規模-ts-モノレポ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "mise固定→biome統一→lefthook pre-commit→catalogで依存定数化の四段セット。"
+    spec:
+      type: sequence
+      title: 人・エージェント・CIで同じ版
+      mode: steps
+      items:
+        - label: mise固定
+        - label: biome統一
+        - label: lefthook
+          emphasis: true
+        - label: pnpm catalog
+
+  - sectionId: "biome-を選ぶとき-避けるとき"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Biomeは新規TS・速度重視向き。深いESLintプラグイン依存やReact固有ルール全面移行は慎重。"
+    spec:
+      type: pros_cons
+      title: 速度とルール網羅のトレードオフ
+      sides:
+        - label: 選ぶ
+          items:
+            - label: 新規TSモノレポ
+            - label: エージェント高頻度check
+            - label: format+lint一本化
+        - label: 避ける
+          items:
+            - label: 特殊ESLint依存
+            - label: 段階移行未計画
+
+  - sectionId: "20252026-のトレンド"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Rust系lint/format、tsgo型check、MCP標準、Trunk Merge Queue、Socket系サプライチェーン監視が加速。"
+    spec:
+      type: cards
+      title: エージェント量産でゲート再設計
+      items:
+        - label: Rustツールチェーン
+        - label: tsgo型check
+        - label: MCP標準
+          emphasis: true
+        - label: Merge Queue
+        - label: サプライチェーン監視

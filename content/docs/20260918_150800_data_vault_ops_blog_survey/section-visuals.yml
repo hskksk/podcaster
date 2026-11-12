@@ -1,0 +1,144 @@
+version: 1
+sourceSha256: "3c2567c1e0c9ee0dacea120d347f8347fd9905e4846e84dc01bbce63c0177d5a"
+visuals:
+  - sectionId: "全体像"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "数年運用した現場は設計の正しさより層境界、二時刻、Link粒度、保守人数の四点を書く。"
+    spec:
+      type: cards
+      title: 運用知は図の外側にある
+      items:
+        - label: 層境界
+          emphasis: true
+        - label: 二つの時刻
+        - label: Link粒度
+        - label: 保守人数
+
+  - sectionId: "1-消費層は必須-raw-vault-を-bi-に直結しない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "dimensionalsとmartだけを前面に出し、Business Vaultはスパースに共通ロジックだけ載せる。"
+    spec:
+      type: hierarchy
+      title: 正しさと消費を層で契約
+      root:
+        label: データの旅
+        children:
+          - label: Raw Vault
+          - label: Business Vault
+          - label: Mart
+            emphasis: true
+
+  - sectionId: "2-硬いルールと軟いルール-境界は理論ではなく監査要件で決まる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "硬いルールは抽出とRaw自動化、軟いルールはBusiness Vaultで監査可能な変換として載せ、迷えばBVへ寄せる。"
+    spec:
+      type: comparison
+      title: 境界は監査から逆算
+      sides:
+        - label: 硬いルール
+        - label: 軟いルール
+          emphasis: true
+      rows:
+        - axis: 置き場所
+          cells:
+            - label: StagingとRaw
+            - label: Business Vault
+        - axis: 変更
+          cells:
+            - label: 自動化で固定
+            - label: 監査付き変更
+
+  - sectionId: "3-二重の時刻-ldts-と業務日付を混ぜると履歴が戻らない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "LDTSは到着の前進のみ、業務系列はSatelliteのeffectiveで組み立て、洗い替えソースは前段履歴が要る。"
+    spec:
+      type: sequence
+      mode: steps
+      title: 時刻を混ぜると履歴が死ぬ
+      items:
+        - label: LDTSは到着
+        - label: 業務日付はSatellite
+          emphasis: true
+        - label: 部分再構成の罠
+        - label: 前段スナップショット
+
+  - sectionId: "4-link-の粒度-分割するとソースになかった関係が生まれる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "UoWを破ったLink分割は直積関係を生み、ソース行を復元できる一本のLinkをRawに残す。"
+    spec:
+      type: flow
+      title: 復元できるLinkが先
+      nodes:
+        - id: src
+          label: ソース行
+        - id: uow
+          label: UoW Link
+          emphasis: true
+        - id: split
+          label: 分割Link
+        - id: bug
+          label: 偽の関係
+      edges:
+        - from: src
+          to: uow
+        - from: split
+          to: bug
+        - from: uow
+          to: split
+
+  - sectionId: "5-ハッシュ契約-一行の不一致が-join-を消す"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "アルゴリズム、列順、NULL、ソルトを揃え、hashed_columnsをCIで検証しないとJOINが音もなく切れる。"
+    spec:
+      type: cards
+      title: ハッシュは機械検証が本体
+      items:
+        - label: 列順とNULL処理
+        - label: バッチ共通LDTS
+        - label: CIで契約検証
+          emphasis: true
+
+  - sectionId: "6-欠損の表現とテスト-pitbridge-の失敗は無音で届く"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ゴーストとゼロキーは欠損JOIN用だが誤用は衝突を招き、PIT Bridge欠損はエラーにならずレポートに出る。"
+    spec:
+      type: pros_cons
+      title: 欠損は静かに届く
+      sides:
+        - label: 正しく使う
+          items:
+            - label: ゴーストとゼロキー
+            - label: 層別Criticalテスト
+        - label: 危険
+          emphasis: true
+          items:
+            - label: 無関係行の衝突
+            - label: PIT無音欠損
+
+  - sectionId: "7-継続と撤退-人数とソース数が手法の適否より先に効く"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ソースあたり約0.5人級の保守を下回るとVault本体をやめ考え方だけ残すか、10Xのように組織投資で継続する。"
+    spec:
+      type: comparison
+      title: 手法より人数×ソース
+      sides:
+        - label: 10X継続
+          emphasis: true
+        - label: 2022撤退
+      rows:
+        - axis: 規模
+          cells:
+            - label: 多ソース小売
+            - label: DE約0.6人
+        - axis: 収束
+          cells:
+            - label: 二段構え継続
+            - label: staging密結合

@@ -1,0 +1,155 @@
+version: 1
+sourceSha256: "f0731cf253f5b61655cfcf5c344dbe81d50368d39218d310a154c99b54679a7f"
+visuals:
+  - sectionId: "固定相場制と変動相場制"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ブレトンウッズ体制下は1ドル360円の固定相場が続き、1971年ニクソンショック後は為替が変動相場へ移った。"
+    spec:
+      type: comparison
+      title: ニクソンが固定を崩した
+      sides:
+        - label: 固定相場
+        - label: 変動相場
+      rows:
+        - axis: 円ドル
+          cells:
+            - label: 360円固定
+            - label: 市場で決まる
+              emphasis: true
+        - axis: きっかけ
+          cells:
+            - label: ブレトンウッズ
+            - label: ニクソンショック
+
+  - sectionId: "ニクソンショック1971年-揺れる国際通貨体制"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1971年8月ニクソン大統領が金ドル兌換停止と輸入附加税を宣言し、固定相場の時代が終わった。"
+    spec:
+      type: sequence
+      title: "1971年8月に体制が転換"
+      mode: timeline
+      items:
+        - label: 金ドル停止
+          detail: 兌換を中断
+          emphasis: true
+        - label: 附加税
+          detail: 輸入10%など
+        - label: 円フロート
+          detail: 変動相場へ
+
+  - sectionId: "沖縄返還1972年5月15日-27年ぶりの復帰"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "沖縄は1972年5月15日に日本へ返還。核兵器の持ち込みを非核三原則の下で禁止した。"
+    spec:
+      type: cards
+      title: 返還は非核の条件付き
+      items:
+        - label: 返還日
+          detail: "1972/5/15"
+          emphasis: true
+        - label: 占領期間
+          detail: 約27年
+        - label: 非核三原則
+          detail: 持込不・保有不・製造不
+
+  - sectionId: "田中角栄と日中国交正常化1972年-電撃外交"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1972年田中首相が北京訪問し日中国交正常化。日米協調を保ちながら中国とも関係を開いた。"
+    spec:
+      type: interaction
+      title: 東西をまたぐ電撃訪中
+      actors:
+        - id: tanaka
+          label: 田中角栄
+        - id: china
+          label: 中国
+        - id: us
+          label: 米国
+      steps:
+        - from: tanaka
+          to: china
+          label: "1972年訪中"
+        - from: tanaka
+          to: us
+          label: 日米協調維持
+
+  - sectionId: "第1次石油ショック1973年-高度成長の終焉"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1973年10月の第4次中東戦争を機にOPECが石油価格を引き上げ、日本は高度成長の終焉とインフレに直面した。"
+    spec:
+      type: flow
+      title: オイルが成長時代を終わらせた
+      nodes:
+        - id: war
+          label: 中東戦争
+        - id: opec
+          label: OPEC
+          emphasis: true
+        - id: price
+          label: 油価高騰
+        - id: end
+          label: 高度成長終焉
+      edges:
+        - from: war
+          to: opec
+        - from: opec
+          to: price
+        - from: price
+          to: end
+
+  - sectionId: "第2次石油ショック1979年1980年"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1979年イラン革命とイラン・イラク戦争で再び油価が上がり、1980年代は省エネと構造不況へ向かった。"
+    spec:
+      type: sequence
+      title: 二度目のショックは構造転換へ
+      mode: timeline
+      items:
+        - label: "1979年"
+          detail: イラン革命
+        - label: イラン・イラク
+          detail: 供給不安
+        - label: 油価再騰
+          detail: 第2次ショック
+          emphasis: true
+
+  - sectionId: "重要年表"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1971年ニクソンショック、1972年沖縄返還と日中国交、1973年第一次石油ショックが1970年代の軸。"
+    spec:
+      type: sequence
+      title: 1970年代三本柱の年代
+      mode: timeline
+      items:
+        - label: "1971"
+          detail: ニクソンショック
+        - label: "1972"
+          detail: 沖縄返還・日中国交
+          emphasis: true
+        - label: "1973"
+          detail: 第1次オイルショック
+
+  - sectionId: "中学受験頻出ポイント"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ニクソンショック1971年、沖縄返還1972年5月15日、第一次石油ショック1973年、田中訪中と非核三原則が頻出。"
+    spec:
+      type: cards
+      title: 年号三つを優先で
+      items:
+        - label: ニクソン
+          detail: "1971年"
+        - label: 沖縄返還
+          detail: "1972/5/15"
+          emphasis: true
+        - label: オイルショック
+          detail: "1973年"
+        - label: 非核三原則
+          detail: 持込・保有・製造不

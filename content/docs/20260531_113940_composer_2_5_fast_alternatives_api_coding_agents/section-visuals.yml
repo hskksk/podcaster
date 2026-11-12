@@ -1,0 +1,164 @@
+version: 1
+sourceSha256: "79e193cc8815f7d317fab22ade93b04d5f2c03b7b45fcd45dc7cbaad514845f2"
+visuals:
+  - sectionId: "cursor-sdkcomposer-25-を-cursor-外から使う唯一の公式経路"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Composer 2.5 Fast は Cursor SDK 経由でのみ公式 API として外部から呼べる。"
+    spec:
+      type: flow
+      title: 公式 API は SDK 一本
+      nodes:
+        - id: app
+          label: 外部アプリ
+        - id: sdk
+          label: Cursor SDK
+          emphasis: true
+        - id: composer
+          label: Composer 2.5
+        - id: cursor
+          label: Cursor ランタイム
+      edges:
+        - from: app
+          to: sdk
+        - from: sdk
+          to: composer
+        - from: composer
+          to: cursor
+
+  - sectionId: "意思決定フローチャート"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ロックイン可否・コスト・系譜・精度・セルフホストの順で DeepSeek・Kimi・Opus・Qwen 等へ分岐する。"
+    spec:
+      type: sequence
+      title: 制約から候補を絞る
+      mode: funnel
+      items:
+        - label: Cursor ロックイン可否
+        - label: 最低コスト API
+        - label: Composer 同系譜
+          emphasis: true
+        - label: 最高精度
+        - label: セルフホスト
+
+  - sectionId: "コスト比較表2026年5月代表的任务-100k-input-50k-output-tokens"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "代表タスク100K入50K出で MiMo と DeepSeek Flash が約0.02ドル、Opus 4.7 が約1.75ドルとなる。"
+    spec:
+      type: chart
+      title: 低コスト帯とフロンティアの差
+      variant: bar
+      unit: USD
+      values:
+        - label: MiMo-V2.5
+          value: 0.02
+          emphasis: true
+        - label: DeepSeek V4 Pro
+          value: 0.09
+        - label: Kimi K2.5
+          value: 0.19
+        - label: Claude Opus 4.7
+          value: 1.75
+
+  - sectionId: "主要プレイヤー"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Cursor・Kimi・DeepSeek・OpenCode・oh-my-openagent 等が Composer 代替の選択肢を構成する。"
+    spec:
+      type: cards
+      title: 公式・オープン・ルーターが並立
+      items:
+        - label: Cursor Composer
+          detail: SDK 限定 API
+        - label: Kimi Code CLI
+        - label: DeepSeek API
+          emphasis: true
+        - label: OpenCode
+        - label: Multi-Harness
+
+  - sectionId: "kimi-k25-の位置づけ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Kimi K2.5 は Composer 系譜の長期エージェント向けで API と Kimi Code CLI の両経路がある。"
+    spec:
+      type: comparison
+      title: 系譜と導線が Composer に近い
+      sides:
+        - label: Kimi K2.5
+          emphasis: true
+        - label: Composer 2.5
+      rows:
+        - axis: 系譜
+          cells:
+            - label: 長期エージェント志向
+            - label: Cursor 専用
+        - axis: API
+          cells:
+            - label: 一般 API 利用可
+            - label: Cursor のみ
+        - axis: CLI
+          cells:
+            - label: Kimi Code CLI
+            - label: IDE 統合
+
+  - sectionId: "エージェントフレームワーク比較"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenCode・Aider・Continue・Cursor Agent 等でハーネス深度とモデル自由度が異なる。"
+    spec:
+      type: matrix
+      title: 自由度と統合度で選ぶ
+      xAxis:
+        low: 薄いハーネス
+        high: 統合ハーネス
+      yAxis:
+        low: 単一モデル
+        high: マルチモデル
+      items:
+        - label: OpenCode
+          quadrant: high-high
+          emphasis: true
+        - label: Aider
+          quadrant: low-high
+        - label: Cursor Agent
+          quadrant: high-low
+
+  - sectionId: "推奨構成1-opencode-deepseek-v4-proコスト最優先api"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenCode に DeepSeek V4 Pro を載せる構成はコスト最優先の代表例である。"
+    spec:
+      type: cards
+      title: コスト最優先の定番
+      items:
+        - label: OpenCode 本体
+        - label: DeepSeek V4 Pro
+          emphasis: true
+        - label: API 課金最小化
+
+  - sectionId: "推奨構成4-マルチモデルルーティングoh-my-openagent-パターン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "oh-my-openagent は Category で意図別モデルをルーティングするマルチモデルパターンの代表である。"
+    spec:
+      type: flow
+      title: Category で用途別ルート
+      nodes:
+        - id: task
+          label: タスク意図
+        - id: omo
+          label: oh-my-openagent
+          emphasis: true
+        - id: cat
+          label: Category
+        - id: models
+          label: 複数モデル
+      edges:
+        - from: task
+          to: omo
+        - from: omo
+          to: cat
+        - from: cat
+          to: models

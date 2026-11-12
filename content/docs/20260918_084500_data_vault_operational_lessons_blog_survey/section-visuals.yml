@@ -1,0 +1,128 @@
+version: 1
+sourceSha256: "b697c3f259f03bbff8f0f95b7a6c265afa3d492edf1fd02053c57495e1c7edc9"
+visuals:
+  - sectionId: "構成"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "記事はInformation Mart出口、自動化と層別テスト、チーム規模とソース数の三柱で運用ブログを読む。"
+    spec:
+      type: sequence
+      mode: steps
+      title: 運用はこの三柱で読む
+      items:
+        - label: マート出口設計
+        - label: 自動化と層別テスト
+        - label: チームとソース数
+          emphasis: true
+
+  - sectionId: "information-mart-への出口設計"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Raw VaultをBIに直結せず、Business Vaultはスパースに、消費者の既定接続先はInformation Martとする。"
+    spec:
+      type: hierarchy
+      title: 触る界面はマートに固定
+      root:
+        label: 消費経路
+        children:
+          - label: Raw Vault
+            children:
+              - label: エンジニアのみ
+          - label: Business Vault
+            children:
+              - label: スパース共通ロジック
+          - label: Information Mart
+            emphasis: true
+
+  - sectionId: "自動化と層別テスト"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "insert-onlyでは上書き修復できないため、Hub順序、Satelliteタイムライン、PIT Bridgeを層別テストで止める。"
+    spec:
+      type: flow
+      title: 静かな腐敗を層で止める
+      nodes:
+        - id: stage
+          label: Staging
+        - id: raw
+          label: Rawロード
+        - id: hub
+          label: HubとLink
+          emphasis: true
+        - id: sat
+          label: Satellite
+        - id: mart
+          label: マート
+      edges:
+        - from: stage
+          to: raw
+        - from: raw
+          to: hub
+        - from: hub
+          to: sat
+        - from: sat
+          to: mart
+
+  - sectionId: "チーム規模とソース数"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "継続事例はペアモデリングとマート出口に投資し、撤退事例はDE不足でソース増に耐えられなかった。"
+    spec:
+      type: comparison
+      title: 同じ手法で曲線が分かれる
+      sides:
+        - label: 継続10X
+          emphasis: true
+        - label: Tonamel撤退
+      rows:
+        - axis: データ人数
+          cells:
+            - label: モデリング投資
+            - label: 実質DE不足
+        - axis: 出口
+          cells:
+            - label: mart必須
+            - label: staging密結合
+        - axis: ソース増
+          cells:
+            - label: 自動化と分割PR
+            - label: 保守爆発
+
+  - sectionId: "出口設計information-mart-business-vault"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "GrazianoやSynapse連載はBIはマート経由、BVはパワーユーザー向け、最初はSQLビューでmartを実装すると書く。"
+    spec:
+      type: cards
+      title: 公式もマートが終点
+      items:
+        - label: Rawは分析直結しない
+        - label: BVはスパース
+        - label: 最初はViewマート
+          emphasis: true
+
+  - sectionId: "自動化テスト履歴"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ハッシュ列順の不一致でJOINが壊れ、full-refreshで履歴整合が崩れるためCIと履歴再生手順が要る。"
+    spec:
+      type: cards
+      title: 契約と履歴が運用の本体
+      items:
+        - label: ハッシュ契約をCI
+        - label: Critical失敗で停止
+        - label: full-refresh計画
+          emphasis: true
+
+  - sectionId: "チームプロセス続行撤退"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "vertical slice、Three Amigos、steel threadが成功側に共通し、魔法の固定ではなく合意と反復が要る。"
+    spec:
+      type: cards
+      title: ツールより合意と縦切り
+      items:
+        - label: tracer bullet
+        - label: ペアモデリング
+        - label: DV単体では勝てない
+          emphasis: true

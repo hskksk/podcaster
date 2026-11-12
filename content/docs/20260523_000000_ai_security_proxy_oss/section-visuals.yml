@@ -1,0 +1,136 @@
+version: 1
+sourceSha256: "a7c9b7ec3b69f5988110c034ccc2de40be3881abec187b22970dae3134465d7f"
+visuals:
+  - sectionId: "owasp-llm-top-10-2025-攻撃の地図"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "プロンプト注入、機密漏洩、エージェント権限過多、ベクトル攻撃、誤情報、無制限消費など十項目が脅威地図。"
+    spec:
+      type: cards
+      title: エージェント化で攻撃面が増える
+      items:
+        - label: プロンプト注入
+          emphasis: true
+        - label: 機密漏洩
+        - label: 過剰権限
+        - label: ベクトルDB
+        - label: 誤情報
+        - label: 無制限消費
+
+  - sectionId: "aiセキュリティプロキシの4層モデル"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "トラフィック制御、コンテンツ検査、データ保護、セーフティ分類の四層でプロキシを構成。"
+    spec:
+      type: hierarchy
+      title: 入口から出口まで積層防御
+      root:
+        label: プロキシ
+        children:
+          - label: トラフィック制御
+            children:
+              - label: 認証・レート
+          - label: コンテンツ検査
+            emphasis: true
+          - label: データ保護
+          - label: セーフティ分類
+
+  - sectionId: "リクエストレスポンスのライフサイクル"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "認証・レート→入力検査→任意分類→LLM→出力検査の順で拒否・修正が挟まる。"
+    spec:
+      type: sequence
+      title: 有害ならプロバイダ前に止める
+      mode: steps
+      items:
+        - label: 認証・予算
+        - label: 入力検査
+          emphasis: true
+        - label: 安全分類
+        - label: LLM呼出
+        - label: 出力検査
+
+  - sectionId: "エージェント環境での追加レイヤー"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "外部コンテンツ経由の間接プロンプト注入にLlamaFirewall・Pipelock MCP・NeMo Execution Railsが対応。"
+    spec:
+      type: cards
+      title: ツール経路も検査対象
+      items:
+        - label: 間接注入
+          emphasis: true
+        - label: Agent Alignment
+        - label: MCPスキャン
+        - label: Execution Rails
+
+  - sectionId: "ツール比較マトリックス"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "APIプロキシ、ランタイムガードレール、エージェントFW、分類モデル、PII、レッドチームの六カテゴリ。"
+    spec:
+      type: cards
+      title: 用途でツール群を選ぶ
+      items:
+        - label: APIプロキシ
+        - label: ランタイムガード
+        - label: エージェントFW
+        - label: 分類モデル
+        - label: PII保護
+        - label: レッドチーム
+
+  - sectionId: "なぜプロキシでllmを守るのか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "アプリ直結ではキー散在・ポリシー分散・監査困難。プロキシで一元化し層を挟む。"
+    spec:
+      type: flow
+      title: 一箇所でポリシーを強制
+      nodes:
+        - id: apps
+          label: 各アプリ
+        - id: proxy
+          label: プロキシ
+          emphasis: true
+        - id: llm
+          label: LLM
+      edges:
+        - from: apps
+          to: proxy
+        - from: proxy
+          to: llm
+
+  - sectionId: "事例1-企業内チャットボットのセキュリティ強化"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "RAG接続チャットにプロキシでPIIマスク、注入検知、出力フィルタを挟み監査ログを残す。"
+    spec:
+      type: sequence
+      title: RAGでも出口入口を固定
+      mode: steps
+      items:
+        - label: 仮想キー
+        - label: 入力PII・注入
+          emphasis: true
+        - label: RAG検索
+        - label: 出力フィルタ
+        - label: 監査ログ
+
+  - sectionId: "最新動向未解決問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "エージェントTop10公開とOSS成熟は追い風。マルチベンダ統合コストと遅延トレードオフは未解決。"
+    spec:
+      type: pros_cons
+      title: 地図は整うが運用は重い
+      sides:
+        - label: 成熟
+          items:
+            - label: OWASPエージェント版
+            - label: OSS選択肢拡大
+        - label: 残課題
+          items:
+            - label: レイテンシ積み上げ
+            - label: 多層設定コスト
+            - label: ローカルLLM差

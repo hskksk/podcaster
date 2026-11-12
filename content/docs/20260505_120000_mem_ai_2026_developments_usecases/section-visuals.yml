@@ -1,0 +1,165 @@
+version: 1
+sourceSha256: "9aa8fe98c5c65d713edf4555f50cefc732aa729826a9b75d6d65cfaef620fbff"
+visuals:
+  - sectionId: "核となる概念"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "フォルダレス哲学・第二の脳・AI Thought Partnerの三概念がMem 2.0を定義する。"
+    spec:
+      type: cards
+      title: 整理はAIに任せる
+      items:
+        - label: フォルダレス
+          detail: 書くだけ
+        - label: セカンドブレイン
+          detail: PKMの省力化
+        - label: Thought Partner
+          detail: 一緒に考える
+          emphasis: true
+
+  - sectionId: "mem-20の主要機能20252026年"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Voice・Deep Search・Heads Up・Mem Chat・CollectionsがMem 2.0の柱。"
+    spec:
+      type: cards
+      title: 五機能が2.0を支える
+      items:
+        - label: Voice Mode
+          detail: 音声→構造化
+        - label: Deep Search
+          detail: 意味検索
+        - label: Heads Up
+          detail: 受動的提案
+        - label: Mem Chat
+          detail: 自分の文脈
+        - label: Collections
+          detail: AI自動分類
+          emphasis: true
+
+  - sectionId: "2026年の主要な進展"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "2026年3月にClaude Connectorで外部LLMがmem.aiノートをコンテキストに使える。"
+    spec:
+      type: interaction
+      title: ノートとLLMが一本化
+      actors:
+        - id: mem
+          label: mem.ai
+        - id: claude
+          label: Claude
+        - id: user
+          label: ユーザー
+      steps:
+        - from: user
+          to: claude
+          label: 会話
+        - from: claude
+          to: mem
+          label: ノート検索・保存
+        - from: mem
+          to: claude
+          label: 文脈提供
+
+  - sectionId: "詳細な仕組み技術的背景"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "セマンティック埋め込みとコンテキスト推論の二層で自動組織化する。"
+    spec:
+      type: flow
+      title: 二層AIが整理する
+      nodes:
+        - id: note
+          label: ノート
+        - id: embed
+          label: ベクトル埋め込み
+        - id: context
+          label: コンテキスト推論
+          emphasis: true
+        - id: surface
+          label: Heads Up等
+      edges:
+        - from: note
+          to: embed
+        - from: embed
+          to: context
+        - from: context
+          to: surface
+
+  - sectionId: "具体的なユースケース活用パターン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "創業者・フリーランサー・PM・日記など六類型の典型利用パターン。"
+    spec:
+      type: cards
+      title: 役割ごとに刺さる使い方
+      items:
+        - label: 創業者
+          detail: 会議ブリーフ
+        - label: フリーランサー
+          detail: クライアント集約
+        - label: クリエイター
+          detail: リサーチ再利用
+        - label: PM
+          detail: Collection連携
+          emphasis: true
+
+  - sectionId: "競合との比較"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Notionは手動構造化・MemはAI自動でReflectが近い価格帯の競合。"
+    spec:
+      type: matrix
+      title: 手動整理 × AI深度
+      xAxis:
+        low: 手動構造
+        high: AI自動
+      yAxis:
+        low: 個人PKM
+        high: チーム協業
+      items:
+        - label: mem.ai
+          quadrant: high-low
+          emphasis: true
+        - label: Notion
+          quadrant: low-high
+        - label: Reflect
+          quadrant: high-low
+        - label: Obsidian
+          quadrant: low-low
+
+  - sectionId: "最新動向と課題未解決問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "評価は回復したがAI精度・Android不在・チーム未対応が残る。"
+    spec:
+      type: pros_cons
+      title: 回復と残る摩擦
+      sides:
+        - label: 追い風
+          items:
+            - label: Mem 2.0安定化
+            - label: Claude連携
+            - label: ユーザー評価回復
+        - label: 課題
+          emphasis: true
+          items:
+            - label: AI精度のばらつき
+            - label: Android未提供
+            - label: チーム協業弱い
+
+  - sectionId: "背景歴史"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenAI Fundの2350万ドル調達後品質問題がありMem 2.0で作り直した。"
+    spec:
+      type: sequence
+      title: 資金と再設計の弧
+      mode: timeline
+      items:
+        - label: 2019創業
+        - label: 2022調達
+        - label: 品質苦難
+        - label: Mem 2.0再設計
+          emphasis: true
