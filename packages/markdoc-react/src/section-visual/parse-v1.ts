@@ -214,6 +214,7 @@ export function validateArticleVisualSpecV1(spec: unknown, errors: string[]): sp
       "actors",
       "steps",
       "sides",
+      "rows",
       "root",
       "nodes",
       "edges",
@@ -298,16 +299,43 @@ export function validateArticleVisualSpecV1(spec: unknown, errors: string[]): sp
           errors.push(`spec.sides[${si}]: must be object`);
           continue;
         }
-        assertNoUnknownKeys(side, new Set(["label", "emphasis", "items"]), `spec.sides[${si}]`, errors);
+        assertNoUnknownKeys(side, new Set(["label", "emphasis"]), `spec.sides[${si}]`, errors);
         assertString(side.label, `spec.sides[${si}].label`, errors, 120);
         assertBoolean(side.emphasis, `spec.sides[${si}].emphasis`, errors);
-        const items = side.items;
-        if (!Array.isArray(items) || items.length < 2 || items.length > 5) {
-          errors.push(`spec.sides[${si}].items: requires 2–5 items`);
+        if ("items" in side) {
+          errors.push(`spec.sides[${si}]: use spec.rows with axis + cells instead of side.items`);
+        }
+      }
+      const rows = spec.rows;
+      if (!Array.isArray(rows) || rows.length < 2 || rows.length > 5) {
+        errors.push("spec.rows: comparison requires 2–5 rows");
+        break;
+      }
+      const rowCells: { emphasis?: boolean }[][] = [];
+      for (const [ri, row] of rows.entries()) {
+        if (!isRecord(row)) {
+          errors.push(`spec.rows[${ri}]: must be object`);
           continue;
         }
-        items.forEach((it, i) => parseLabeledItem(it, `spec.sides[${si}].items[${i}]`, errors, {}));
+        assertNoUnknownKeys(row, new Set(["axis", "cells"]), `spec.rows[${ri}]`, errors);
+        assertString(row.axis, `spec.rows[${ri}].axis`, errors, 80);
+        const cells = row.cells;
+        if (!Array.isArray(cells) || cells.length !== 2) {
+          errors.push(`spec.rows[${ri}].cells: requires exactly 2 cells (one per side)`);
+          continue;
+        }
+        const parsedRow: { emphasis?: boolean }[] = [];
+        cells.forEach((cell, ci) => {
+          const item = parseLabeledItem(cell, `spec.rows[${ri}].cells[${ci}]`, errors, {});
+          if (item) parsedRow.push(item);
+        });
+        if (parsedRow.length === 2) rowCells.push(parsedRow);
+        if ("detail" in row) {
+          errors.push(`spec.rows[${ri}]: use axis for the comparison dimension, not detail`);
+        }
       }
+      const flat = rowCells.flat();
+      countEmphasis(flat, "spec.rows", errors);
       break;
     }
     case "hierarchy": {

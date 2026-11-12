@@ -248,21 +248,20 @@ type: comparison
 title: 常設権限を短命な能力へ置き換える
 sides:
   - label: 常設権限
-    items:
-      - label: 明示的に失効させるまで残る
-        detail: 有効期間
-      - label: 長期間悪用される
-        detail: 漏えい時
   - label: 短命な能力
     emphasis: true
-    items:
+rows:
+  - axis: 有効期間
+    cells:
+      - label: 明示的に失効させるまで残る
       - label: 操作に必要な時間だけ
-        detail: 有効期間
+  - axis: 漏えい時
+    cells:
+      - label: 長期間悪用される
       - label: 時間経過で使えなくなる
-        detail: 漏えい時
 ```
 
-`sides`は必ず2件とする。両側の`items`は**同じ行インデックス＝同じ比較軸**になるよう2〜5件を並べる。各行の比較軸名は、左右どちらかの `items[].detail` に短い語で書く（renderer が中央ピルに表示する）。
+`sides`は必ず2件（列見出しのみ）。比較本体は `rows`（2〜5件）で、各行に **`axis`**（中央ピルの比較軸）と **`cells`**（左右2セル、`sides` の順）を必ず書く。
 
 ### `hierarchy`
 

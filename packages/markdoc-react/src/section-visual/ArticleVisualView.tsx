@@ -147,7 +147,8 @@ function renderBody(spec: ArticleVisualSpecV1) {
     case 'comparison':
       return (
         <ComparisonBody
-          sides={spec.sides as { label: string; emphasis?: boolean; items: Item[] }[]}
+          sides={spec.sides as { label: string; emphasis?: boolean }[]}
+          rows={spec.rows as { axis: string; cells: Item[] }[]}
         />
       )
     case 'hierarchy':
@@ -337,10 +338,15 @@ function InteractionBody({
   )
 }
 
-function ComparisonBody({ sides }: { sides: { label: string; emphasis?: boolean; items: Item[] }[] }) {
+function ComparisonBody({
+  sides,
+  rows,
+}: {
+  sides: { label: string; emphasis?: boolean }[]
+  rows: { axis: string; cells: Item[] }[]
+}) {
   const [left, right] = sides
-  if (!left || !right) return null
-  const rows = Math.max(left.items.length, right.items.length, 0)
+  if (!left || !right || !rows.length) return null
 
   return (
     <div className="article-visual__comparison-board">
@@ -354,13 +360,12 @@ function ComparisonBody({ sides }: { sides: { label: string; emphasis?: boolean;
         {right.label}
       </div>
       <div className="article-visual__comparison-rows">
-        {Array.from({ length: rows }, (_, i) => {
-          const leftItem = left.items[i]
-          const rightItem = right.items[i]
-          const axis = leftItem?.detail?.trim() || rightItem?.detail?.trim()
+        {rows.map((row, i) => {
+          const leftItem = row.cells[0]
+          const rightItem = row.cells[1]
           return (
-            <div key={i} className="article-visual__comparison-row">
-              {axis ? <span className="article-visual__cmp-axis">{axis}</span> : null}
+            <div key={`${row.axis}-${i}`} className="article-visual__comparison-row">
+              <span className="article-visual__cmp-axis">{row.axis}</span>
               <div className="article-visual__cmp-cell" data-side="0" data-filled={leftItem ? true : undefined}>
                 {leftItem?.label ?? ''}
               </div>

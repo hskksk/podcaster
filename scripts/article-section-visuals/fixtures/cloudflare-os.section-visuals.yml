@@ -114,22 +114,21 @@ visuals:
       title: 称賛と懸念、二極化
       sides:
         - label: 称賛
-          items:
-            - label: Gatekeeper
-              detail: 基盤設計
-            - label: Gadget
-              detail: 製品像
-            - label: AI Gateway
-              detail: 導入・運用
         - label: 懸念
           emphasis: true
-          items:
+      rows:
+        - axis: 基盤設計
+          cells:
+            - label: Gatekeeper
             - label: 移植性
-              detail: 基盤設計
+        - axis: 製品像
+          cells:
+            - label: Gadget
             - label: 「OS」名称
-              detail: 製品像
+        - axis: 導入・運用
+          cells:
+            - label: AI Gateway
             - label: デプロイの壁
-              detail: 導入・運用
 
   - sectionId: "類似サービスとの比較軸"
     engine: article-visual

@@ -21,7 +21,7 @@
 | `cards` | 並列の要点 | `items` 2–6 |
 | `sequence` | 順序・段階 | `mode`: `steps` \| `timeline` \| `funnel`、`items` 3–7 |
 | `interaction` | 者間のやりとり | `actors` 2–4、`steps` 2–8 |
-| `comparison` | 二者比較 | `sides` 2 件、各 `items` 2–5。同じ行は同じ観点（`detail`＝中央の比較軸ラベル） |
+| `comparison` | 二者比較 | `sides` 2 件（列見出し）、`rows` 2–5（各 `axis` + `cells` 2 件） |
 | `hierarchy` | 包含・構成 | `root` ツリー、深さ 4・ノード計 12 まで |
 | `flow` | 因果・依存（DAG） | `nodes` 3–9、`edges` 2–12 |
 | `matrix` | 2 軸の位置づけ | `xAxis`/`yAxis` の `low`/`high`、`items[].quadrant` |
