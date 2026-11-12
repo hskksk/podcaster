@@ -1201,9 +1201,9 @@
 
   .article-visual__matrix-pill {
     max-width: calc(100% - 0.1rem);
-    padding: 0.22rem 0.48rem;
-    font-size: 0.64rem;
-    line-height: 1.2;
+    padding: 0.28rem 0.58rem;
+    font-size: 0.74rem;
+    line-height: 1.22;
     letter-spacing: 0;
   }
 
