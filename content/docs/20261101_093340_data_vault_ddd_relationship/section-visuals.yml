@@ -1,0 +1,172 @@
+version: 1
+sourceSha256: "c552b1576ea3d547642a3ddc3ce12c85196cb3f6bbf0d990c842a5e9d95ec0ef"
+visuals:
+  - sectionId: "全体像"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DDDが業務の意味と境界を整理し、Raw Data Vaultがソースの事実と履歴を統合し、Business Vaultが合意ルールを載せ、情報マートが利用者向けの形で提供する。"
+    spec:
+      type: flow
+      title: 意味を決め、事実を残し、使いやすく渡す
+      nodes:
+        - id: domain
+          label: 業務知識・用語
+        - id: ddd
+          label: DDD
+          emphasis: true
+        - id: raw
+          label: Raw Vault
+        - id: biz
+          label: Business Vault
+        - id: mart
+          label: 情報マート
+      edges:
+        - from: domain
+          to: ddd
+        - from: ddd
+          to: raw
+        - from: raw
+          to: biz
+        - from: biz
+          to: mart
+        - from: ddd
+          to: biz
+
+  - sectionId: "1-dddは業務の意味と境界を扱う"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DDDはユビキタス言語でチームとソフトを結び、境界づけられたコンテキストで用語の適用範囲を決め、Context Mapでコンテキスト間の依存を明示する。"
+    spec:
+      type: cards
+      title: 意味は境界の内側で決める
+      items:
+        - label: ユビキタス言語
+          detail: モデルに沿った共通語彙
+        - label: 境界づけられたコンテキスト
+          detail: 用語とモデルの有効範囲
+          emphasis: true
+        - label: Context Map
+          detail: コンテキスト間の依存と契約
+
+  - sectionId: "2-data-vaultは分析用の統合履歴層を扱う"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Data VaultはRaw層でHub・Link・Satelliteにキー・関係・属性履歴を記録し、Business Vaultと情報マートへ責務を分ける。"
+    spec:
+      type: hierarchy
+      title: 三構造が層を支える
+      root:
+        label: Data Vault
+        children:
+          - label: Raw Vault
+            emphasis: true
+            children:
+              - label: Hub
+              - label: Link
+              - label: Satellite
+          - label: Business Vault
+          - label: 情報マート
+
+  - sectionId: "3-dddの業務理解をdata-vaultの設計判断に使う"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DDDで明らかにした境界・Context Map・用語を、ビジネスキーとInformation Mapへつなぎ、分析モデル設計の判断材料にする。パターンの機械写しではない。"
+    spec:
+      type: flow
+      title: 業務理解が設計判断へ流れる
+      nodes:
+        - id: bc
+          label: 境界づけられたコンテキスト
+        - id: cmap
+          label: Context Map
+        - id: terms
+          label: 用語・ビジネスキー
+        - id: design
+          label: Hub/Link/Sat設計
+          emphasis: true
+      edges:
+        - from: bc
+          to: terms
+        - from: cmap
+          to: terms
+        - from: terms
+          to: design
+
+  - sectionId: "顧客の統合でどんな判断が要るか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "営業・請求・サポートの各IDの意味をコンテキストで確かめ、統合か分離かを決め、ソースキーをHubに載せ、名寄せはBusiness Vaultか情報マートで表す。"
+    spec:
+      type: sequence
+      title: 顧客統合は4つの判断
+      mode: steps
+      items:
+        - label: 各コンテキストの顧客定義
+        - label: 統合か分離か
+          emphasis: true
+        - label: Hubへソースキー記録
+        - label: Business Vaultで名寄せ
+
+  - sectionId: "4-dddとdata-vaultの対応を一対一にしない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "EntityとHub、AggregateとLink、Context MapとLink、状態変化とSatelliteは似て見えても、振る舞い・整合性・契約・イベント意味は同一視できない。"
+    spec:
+      type: comparison
+      title: 似た形でも責務は違う
+      sides:
+        - label: DDD
+        - label: Data Vault
+          emphasis: true
+      rows:
+        - axis: 識別と対象
+          cells:
+            - label: Entity
+            - label: Hub
+        - axis: 整合性境界
+          cells:
+            - label: Aggregate
+            - label: HubとLink
+        - axis: 関係の線
+          cells:
+            - label: Context Map
+            - label: Link
+        - axis: 時間と属性
+          cells:
+            - label: 状態変化
+            - label: Satellite
+
+  - sectionId: "6-適用範囲と代償を分けて考える"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Data Vaultは多ソース・履歴・監査で価値がある一方、JOIN増・学習コスト・情報マート整備が代償になる。変更コスト低下も無料ではない。"
+    spec:
+      type: pros_cons
+      title: 柔軟性の代わりに複雑さ
+      sides:
+        - label: 価値
+          items:
+            - label: 履歴再現と監査
+            - label: ソース追加の柔軟性
+            - label: 変更コストの抑制
+        - label: 代償
+          emphasis: true
+          items:
+            - label: JOINとテーブル増
+            - label: 学習と自動化コスト
+            - label: 説明の手間
+
+  - sectionId: "次に解くべき3つの問い"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "設計を進めるには、ビジネスキー統合の場所と合意、履歴とEvent Sourcingの使い分け、Data Mesh時の共有Vaultの責任配分の三問に答える必要がある。"
+    spec:
+      type: cards
+      title: 設計はこの三問から
+      items:
+        - label: キー統合の場所と所有者
+          detail: RawかBusinessか
+        - label: 履歴とイベントの表し方
+          detail: Satelliteだけでは足りない
+        - label: 共有Vaultの責任配分
+          detail: Meshと中央集約の均衡

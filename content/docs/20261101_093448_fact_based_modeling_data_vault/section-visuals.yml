@@ -1,0 +1,178 @@
+version: 1
+sourceSha256: "ef7a0352788d8521a25cbead34292c966f7a941ab4e3b98df3dda2799d72159d"
+visuals:
+  - sectionId: "顧客が注文したから始める"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "FBMでは列やエンティティより先に、確認できる具体例の事実を文にし、事実型と制約を取り出して例で検証する。"
+    spec:
+      type: sequence
+      title: 列の前に、確認できる事実
+      mode: steps
+      items:
+        - label: 具体例を文にする
+          detail: 顧客・注文・商品の実例
+        - label: 事実型を取り出す
+          emphasis: true
+        - label: 制約を明示する
+        - label: 例で正しさを点検する
+
+  - sectionId: "fomの系譜と表現の違い"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "事実指向はORM・NIAM・FCO-IM・FIMLなど複数の記法のまとまりで、Data Vault写像の前段として使えるものがある。"
+    spec:
+      type: cards
+      title: 一つのFOM、複数の言語
+      items:
+        - label: ORM
+          detail: 事実型と制約を例で検証
+        - label: NIAM
+          detail: 自然言語の情報分析系譜
+        - label: FCO-IM
+          detail: 業務の事実表現を結ぶ
+        - label: FIML / CQL
+          detail: 近自然言語で記述
+          emphasis: true
+
+  - sectionId: "二つのモデルが解く問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "FBMは事実と制約を細かく記録し、Data VaultはHub・Link・Satelliteへまとめて統合と履歴を支える。"
+    spec:
+      type: comparison
+      title: 意味を記録し、構造で統合する
+      sides:
+        - label: FBM
+        - label: Data Vault
+          emphasis: true
+      rows:
+        - axis: 役割
+          cells:
+            - label: 概念モデル
+              detail: どの事実が成立し制約は何か
+            - label: Data Vault
+              detail: 複数ソース統合と履歴保持
+        - axis: 基本形
+          cells:
+            - label: 事実型と制約
+            - label: Hub・Link・Satellite
+              emphasis: true
+        - axis: 接続
+          cells:
+            - label: 業務意味の明示
+            - label: 意味を保ったまま物理化
+
+  - sectionId: "同じ注文データを分けて表す"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "注文例では顧客・注文・商品がHub候補で、顧客と注文はLink、数量や説明はSatelliteに置かれるが粒度は一意に決まらない。"
+    spec:
+      type: hierarchy
+      title: 同じ注文、三層に割る
+      root:
+        label: 注文の業務事実
+        children:
+          - label: Hub
+            children:
+              - label: 顧客
+              - label: 注文
+              - label: 商品
+          - label: Link
+            children:
+              - label: 顧客が注文
+          - label: Satellite
+            emphasis: true
+            children:
+              - label: 数量・価格
+              - label: 商品説明
+
+  - sectionId: "ツールで変換規則を実行する"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "FactilやActiveFactsは事実ベースのモデルからData Vaultなど複合スキーマへ写す変換例を公開している。"
+    spec:
+      type: flow
+      title: 概念モデルからSQLへ
+      nodes:
+        - id: model
+          label: FBMで記述
+        - id: annotate
+          label: 注記で指示
+        - id: compose
+          label: 構成器が写像
+          emphasis: true
+        - id: dv
+          label: Data Vault SQL
+      edges:
+        - from: model
+          to: annotate
+        - from: annotate
+          to: compose
+        - from: compose
+          to: dv
+
+  - sectionId: "自動化しても業務判断は残る"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "コード生成後も、粒度・キー・イベントか業務オブジェクトかの分類はデータ担当と業務担当の共同判断が要る。"
+    spec:
+      type: interaction
+      title: 自動化の外に残る合意
+      actors:
+        - id: data
+          label: データ担当
+        - id: domain
+          label: 業務担当
+      steps:
+        - from: data
+          to: domain
+          label: 具体例と用語をそろえる
+        - from: domain
+          to: data
+          label: 粒度とキーを確認する
+        - from: data
+          to: domain
+          label: HubかLinkか分類を提案
+        - from: domain
+          to: data
+          label: 利用目的で妥当性を判断
+
+  - sectionId: "利点と注意点"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "FBMとData Vault連携は対話・意味保持・複数出力に利点がある一方、用語合意・図の肥大・変換制約・別途設計が残る。"
+    spec:
+      type: pros_cons
+      title: 接続の利得と手残り
+      sides:
+        - label: 得られるもの
+          items:
+            - label: 業務との対話
+            - label: 意味の保持
+            - label: モデルの再利用
+            - label: 変更への対応
+        - label: 注意点
+          emphasis: true
+          items:
+            - label: 用語合意の工数
+            - label: 全体像の見えにくさ
+            - label: 変換規則の差
+            - label: 設計とロードは別途
+
+  - sectionId: "次に解くべき3つの問い"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "残る論点は導入ポイント、粒度レビューの再現性、生成の効果測定の三つで、粒度から調査するのが切り分けに有効。"
+    spec:
+      type: cards
+      title: 次に潰す三問
+      caption: 第2問から着手が推奨される
+      items:
+        - label: 導入の起点
+          detail: 既存DVへの組み込み
+        - label: 粒度のレビュー
+          emphasis: true
+          detail: Link分解の再現性
+        - label: 生成の効果
+          detail: 手作業との比較指標

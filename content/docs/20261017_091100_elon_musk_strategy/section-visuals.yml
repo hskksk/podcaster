@@ -1,0 +1,154 @@
+version: 1
+sourceSha256: "1d40f421b466b03be41c78e062211b3b6ba737a46c7c0315cd3fcd237d82a149"
+visuals:
+  - sectionId: "戦略の地図四つの層"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "使命・思考・設計・時間の四層が上から下へつながり、時間層の実績と反証が思考層へ戻ると本文は整理する。"
+    spec:
+      type: sequence
+      title: 四層が、上から下へ効く
+      mode: steps
+      caption: 下からは反証と生産実績が思考層へ戻る
+      items:
+        - label: 使命層
+        - label: 思考層
+        - label: 設計層
+        - label: 時間層
+          emphasis: true
+
+  - sectionId: "六段階の科学的方法"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "難問では問い・証拠・公理・整合性判断・反証探索・確信更新の六段を踏む自己更新型の意思決定ループとして語られる。"
+    spec:
+      type: sequence
+      title: 六段で、確率を更新する
+      mode: steps
+      items:
+        - label: 問いを立てる
+        - label: 証拠を集める
+        - label: 公理と確率
+        - label: 整合性で結論
+        - label: 反証を探す
+        - label: 確信を強める
+          emphasis: true
+
+  - sectionId: "五段階アルゴリズムと順序の教訓"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "要件の疑義化、削除、簡素化、加速、自動化の順を守らないと逆走し、存在すべきでない工程の最適化や早すぎる自動化につながる。"
+    spec:
+      type: sequence
+      title: 削除の前に、疑う
+      mode: steps
+      items:
+        - label: 要件を疑う
+        - label: 削除する
+          emphasis: true
+        - label: 簡素化する
+        - label: 加速する
+        - label: 自動化する
+
+  - sectionId: "垂直統合と機械を作る機械"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "類推型は設計・調達・組立の線形だが、マスク型は使命と物理から第一原理コスト、内製と工場設計、アルゴリズム削除へつながる。"
+    spec:
+      type: comparison
+      title: 律速を、内側へ引く
+      sides:
+        - label: 類推型産業
+        - label: マスク型
+      rows:
+        - axis: 起点
+          cells:
+            - label: 設計中心
+            - label: 使命と物理
+        - axis: コスト論
+          cells:
+            - label: 部品調達
+            - label: 第一原理コスト
+        - axis: 量産の焦点
+          cells:
+            - label: 組立
+            - label: 工場そのもの
+        - axis: 改善レバー
+          cells:
+            - label: サプライヤー改善
+            - label: アルゴリズムで削除
+              emphasis: true
+
+  - sectionId: "攻めた期限と指数関数"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "内部期限は50パーセンタイルで攻め、律速要因だけに時間を集中し、対外コミットとは区別する時間層の型が繰り返し説明される。"
+    spec:
+      type: cards
+      title: 期限は、律速を殴る道具
+      items:
+        - label: 50%で攻める
+        - label: 律速一点に集中
+          emphasis: true
+        - label: 内外の期限を分ける
+        - label: マニアックな緊急感
+
+  - sectionId: "戦略として束ねると何が見えるか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "使命→第一原理→削除と内製→攻めた期限の四段が閉ループになり、固定費と仕様の堆積した産業ほど説明力が高いと本文は述べる。"
+    spec:
+      type: flow
+      title: 四段が、閉ループになる
+      nodes:
+        - id: m
+          label: 使命が領域定義
+        - id: t
+          label: 第一原理が慣習を疑う
+        - id: d
+          label: 削除と内製
+        - id: tm
+          label: 期限が速度を強制
+          emphasis: true
+      edges:
+        - from: m
+          to: t
+        - from: t
+          to: d
+        - from: d
+          to: tm
+
+  - sectionId: "一般組織への転用取り込むべき三つ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "一般組織への転用は削除の順序、イディオット指数による議論の切り口、必達とストレッチの二層目標に絞るのが安全側と本文は勧める。"
+    spec:
+      type: cards
+      title: 真似するなら、三つだけ
+      items:
+        - label: 削除の順序
+          detail: 最適化の前に疑う
+        - label: イディオット指数
+          detail: 材料差で議論開始
+        - label: 二層目標
+          detail: 必達とストレッチ
+          emphasis: true
+
+  - sectionId: "批判と留保戦略の裏側"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "文献は固定費産業への説明力を認めつつ、安全軽視・達成不能な期限圧・予測と実績のギャップを副作用として報じ、時間層だけの輸入は危険と警告する。"
+    spec:
+      type: pros_cons
+      title: 速度文化の、裏と表
+      sides:
+        - label: 読み取れる価値
+          items:
+            - label: 固定費産業への説明力
+            - label: コスト曲線と量産
+        - label: 批判と副作用
+          emphasis: true
+          items:
+            - label: 安全手順の軽視
+            - label: 達成不能な期限圧
+            - label: 予測と実績のギャップ

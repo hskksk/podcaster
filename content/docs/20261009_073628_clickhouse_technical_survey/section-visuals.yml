@@ -1,0 +1,187 @@
+version: 1
+sourceSha256: "ecfc0b087933154fb2fc37236709c9ee05ffac7045227e97fc85ff41a3535b5d"
+visuals:
+  - sectionId: "全体像-層で分けて捉える"
+    engine: article-visual
+    engineVersion: "1"
+    alt: ClickHouseはクエリ処理・ストレージ・統合の三層に加え、アクセス層でHTTPなど各プロトコルを受け付ける。
+    spec:
+      type: hierarchy
+      title: 速さは三層と入口で分かれる
+      root:
+        label: ClickHouse
+        children:
+          - label: アクセス層
+            children:
+              - label: セッションと各プロトコル
+          - label: クエリ処理層
+            emphasis: true
+            children:
+              - label: ベクトル化実行
+          - label: ストレージ層
+            children:
+              - label: MergeTree 系
+              - label: 特殊・仮想エンジン
+          - label: 統合層
+
+  - sectionId: "ストレージ-不変パーツとバックグラウンドマージ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: MergeTreeはINSERTごとに不変パーツを作り、背景マージでまとめる。更新はパーツ全体の書き換えになる。
+    spec:
+      type: sequence
+      title: 書き込みはパーツを積む
+      mode: steps
+      items:
+        - label: INSERT
+        - label: 不変パーツ作成
+          emphasis: true
+        - label: 背景マージ
+        - label: 更新はパーツ再書込
+
+  - sectionId: "スパース主キー索引とデータプルーニング"
+    engine: article-visual
+    engineVersion: "1"
+    alt: 主キーでソートしたデータに8192行ごとのスパース索引があり、グラニュール単位で読む量を絞る。
+    spec:
+      type: flow
+      title: 索引は行ではなく塊を飛ばす
+      nodes:
+        - id: filter
+          label: フィルタ条件
+        - id: sparse
+          label: スパース主キー索引
+          emphasis: true
+        - id: granule
+          label: グラニュール
+        - id: blocks
+          label: 圧縮列ブロック
+        - id: skip
+          label: 射影・スキップ索引
+      edges:
+        - from: filter
+          to: sparse
+        - from: sparse
+          to: granule
+        - from: granule
+          to: blocks
+        - from: filter
+          to: skip
+        - from: skip
+          to: granule
+
+  - sectionId: "ベクトル化実行と並列化"
+    engine: article-visual
+    engineVersion: "1"
+    alt: 演算はチャンク単位でSIMD処理し、コアごとの実行レーンとソート集約で並列化する。
+    spec:
+      type: sequence
+      title: 行単位ではなく束で叩く
+      mode: steps
+      items:
+        - label: チャンク単位演算
+        - label: SIMD 処理
+          emphasis: true
+        - label: 並列実行レーン
+        - label: ソート集約
+
+  - sectionId: "マージ時変換とマテリアライズドビュー"
+    engine: article-visual
+    engineVersion: "1"
+    alt: 増分マテリアライズドビューはINSERTをトリガに新ブロックだけ集計し、背景マージで状態を統合する。
+    spec:
+      type: flow
+      title: 取り込みとマージに計算を寄せる
+      nodes:
+        - id: insert
+          label: ソースへ INSERT
+        - id: imv
+          label: 増分マテリアライズドビュー
+          emphasis: true
+        - id: target
+          label: ターゲット表
+        - id: merge
+          label: 背景マージ
+        - id: agg
+          label: 集約マージ木
+      edges:
+        - from: insert
+          to: imv
+        - from: imv
+          to: target
+        - from: target
+          to: merge
+        - from: agg
+          to: merge
+
+  - sectionId: "分散構成とクラウド"
+    engine: article-visual
+    engineVersion: "1"
+    alt: シャーディングとReplicatedMergeTreeの横にKeeperが調整し、クラウドはSharedMergeTreeとShared Catalogでコンピュートを分離する。
+    spec:
+      type: flow
+      title: 単一ノードを横に伸ばす
+      nodes:
+        - id: shard
+          label: シャード
+        - id: dist
+          label: Distributed
+        - id: repl
+          label: ReplicatedMergeTree
+        - id: keeper
+          label: ClickHouse Keeper
+          emphasis: true
+        - id: smt
+          label: SharedMergeTree
+        - id: catalog
+          label: Shared Catalog
+      edges:
+        - from: shard
+          to: dist
+        - from: dist
+          to: repl
+        - from: repl
+          to: keeper
+        - from: smt
+          to: catalog
+        - from: catalog
+          to: keeper
+
+  - sectionId: "向くワークロード向かないワークロード"
+    engine: article-visual
+    engineVersion: "1"
+    alt: 大量集計・高並行ダッシュボード・ログには向く一方、点問い合わせ・高頻度更新・厳密OLTPには設計が合わない。
+    spec:
+      type: pros_cons
+      title: 読み込み特化の表裏
+      sides:
+        - label: 向く
+          items:
+            - label: 大量集計とレポート
+            - label: 高並行ダッシュボード
+            - label: ログと可観測性
+            - label: 時系列メトリクス
+        - label: 向かない
+          emphasis: true
+          items:
+            - label: 単行の点問い合わせ
+            - label: 高頻度の更新削除
+            - label: 厳密な OLTP
+            - label: 大規模スキーマ変更
+
+  - sectionId: "ベンチマークの読み方"
+    engine: article-visual
+    engineVersion: "1"
+    alt: ClickBenchでは単一ノードが43クエリ中32勝、クラウド2ノードは38勝と報告されている。
+    spec:
+      type: chart
+      title: 公開値は出発点にすぎない
+      caption: ClickBench 43クエリでの勝利数
+      variant: bar
+      unit: クエリ
+      values:
+        - label: 単一ノード
+          value: 32
+        - label: クラウド2ノード
+          value: 38
+          emphasis: true

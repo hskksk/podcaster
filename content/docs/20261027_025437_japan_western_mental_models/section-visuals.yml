@@ -1,0 +1,158 @@
+version: 1
+sourceSha256: "ec61ca0b4cc39aeb33f71869c6f56cb7a664b9da567ce0d5359ad1d46904ea06"
+visuals:
+  - sectionId: "共有図は比較の仮説を示す"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "共有図は事業ケーパビリティの下に日米西欧のアプローチ仮説を並べるが、認知研究から業務スタイルを直接導けないため、実測と仮説を分けて読む。"
+    spec:
+      type: flow
+      title: 入口は使えるが、直接は導けない
+      nodes:
+        - id: diagram
+          label: 共有比較図
+        - id: cognition
+          label: 注意・自己観の研究
+        - id: business
+          label: 業務スタイル仮説
+        - id: split
+          label: 実測と仮説を分ける
+          emphasis: true
+      edges:
+        - from: diagram
+          to: business
+        - from: cognition
+          to: split
+        - from: business
+          to: split
+
+  - sectionId: "研究が示す差は課題ごとに異なる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "注意・環境・自己観・集団関係・関係流動性の各研究は平均差や傾向を報告するが、国民性一枚岩や職場行動までは言えない。"
+    spec:
+      type: comparison
+      title: 報告できることと、越えられない線
+      sides:
+        - label: 研究の報告
+        - label: 言えないこと
+      rows:
+        - axis: 視覚的注意
+          cells:
+            - label: 背景への言及が多い傾向
+            - label: 常に全体主義とは言えない
+        - axis: 環境と注意
+          cells:
+            - label: 風景で注意の向きが変わる
+            - label: 国民性だけでは説明不可
+        - axis: 自己観
+          cells:
+            - label: 独立と協調の理論枠
+            - label: 二択で文化を分類できない
+        - axis: 関係流動性
+          cells:
+            - label: 自己開示と関連
+            - label: 国単位では職場を説明不可
+
+  - sectionId: "日本は集団主義米国は個人主義は測定次第で崩れる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "日米の集団・個人主義通念は30研究のレビューで一貫支持されず、測る課題次第で結論が変わり、西欧も単一の対照群ではない。"
+    spec:
+      type: flow
+      title: 通念は、測定で崩れる
+      nodes:
+        - id: stereotype
+          label: 日集団・米個人の通念
+        - id: review
+          label: 30研究のレビュー
+        - id: measure
+          label: 課題と尺度の選び方
+          emphasis: true
+        - id: we
+          label: 西欧も単一ではない
+      edges:
+        - from: stereotype
+          to: review
+        - from: review
+          to: measure
+        - from: measure
+          to: we
+
+  - sectionId: "コミュニケーションの国別ラベルも慎重に扱う"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "高・低コンテクストの国別ラベルは出発点にはなるが、尺度の不安定性や現場の関係・役職・慣行では個人の意図を誤る恐れがある。"
+    spec:
+      type: pros_cons
+      title: ラベルは仮説にとどめる
+      sides:
+        - label: 役に立つ面
+          items:
+            - label: 明示性の出発点
+            - label: 確認すべき仮説
+        - label: 慎重な理由
+          emphasis: true
+          items:
+            - label: 国別分類の不安定性
+            - label: 関係・役職が左右する
+            - label: 意図の取り違え
+
+  - sectionId: "比較図を業務に使うなら国籍ではなく行動を測る"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "図の国別スタイル仮説を国平均から個人へ当てると生態学的誤謬になり、現場の観察可能な問いに置き換えて比較する。"
+    spec:
+      type: sequence
+      title: 国籍ではなく、現場の行動を測る
+      mode: steps
+      items:
+        - label: 図の国別ラベル
+        - label: 生態学的誤謬の回避
+          emphasis: true
+        - label: 観察可能な問いへ
+        - label: 同役割で手順を比較
+
+  - sectionId: "文化比較の結果を読むための条件"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "文化比較を読むには参加者サンプル、測定同等性、再現研究の検出力、環境要因を確認し、国籍を個人や会社の能力へ置き換えない。"
+    spec:
+      type: cards
+      title: 平均値の前に、四つを確認
+      items:
+        - label: 誰を調べたか
+          detail: 大学生などへの偏り
+        - label: 尺度の同等性
+          detail: 翻訳だけでは不十分
+        - label: 検出力と設計
+          detail: 差なし≠差がない
+        - label: 環境・関係要因
+          emphasis: true
+
+  - sectionId: "次に検証すべき問い"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "次は同一業務での意思決定の再現、国籍と職場要因の分離、尺度の文化間同等性と個人差の確認が検証の柱になる。"
+    spec:
+      type: sequence
+      title: 現場で検証する三つの柱
+      mode: steps
+      items:
+        - label: 同一課題の意思決定
+        - label: 国と職場の分離
+        - label: 尺度の同等性
+          emphasis: true
+
+  - sectionId: "今回の調査で採用しなかった論点"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "国民文化の単一ランキング、高・低コンテクストによる業務指南、国別スコアの個人・組織への直当ては今回の根拠から外した。"
+    spec:
+      type: cards
+      title: 今回は根拠にしない三つ
+      items:
+        - label: 文化の数値ランキング
+        - label: 高低コンテクスト指南
+        - label: 国スコアの直当て
+          emphasis: true
