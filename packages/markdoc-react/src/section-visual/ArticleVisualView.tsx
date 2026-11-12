@@ -346,6 +346,7 @@ function InteractionBody({
 function ProsConsBody({ sides }: { sides: { label: string; emphasis?: boolean; items: Item[] }[] }) {
   const [left, right] = sides
   if (!left || !right) return null
+  const rowCount = Math.max(left.items.length, right.items.length, 0)
 
   return (
     <div className="article-visual__pros-cons-board">
@@ -358,29 +359,31 @@ function ProsConsBody({ sides }: { sides: { label: string; emphasis?: boolean; i
       <div className="article-visual__cmp-head" data-side="1" data-emphasis={right.emphasis || undefined}>
         {right.label}
       </div>
-      <div className="article-visual__pros-cons-columns">
-        <ul className="article-visual__pros-cons-col" data-side="0">
-          {left.items.map((item) => (
-            <li
-              key={item.label}
-              className="article-visual__pros-cons-item"
-              data-emphasis={item.emphasis || undefined}
-            >
-              {item.label}
-            </li>
-          ))}
-        </ul>
-        <ul className="article-visual__pros-cons-col" data-side="1">
-          {right.items.map((item) => (
-            <li
-              key={item.label}
-              className="article-visual__pros-cons-item"
-              data-emphasis={item.emphasis || undefined}
-            >
-              {item.label}
-            </li>
-          ))}
-        </ul>
+      <div className="article-visual__pros-cons-rows">
+        {Array.from({ length: rowCount }, (_, i) => {
+          const leftItem = left.items[i]
+          const rightItem = right.items[i]
+          return (
+            <div key={i} className="article-visual__pros-cons-row">
+              <div
+                className="article-visual__pros-cons-item"
+                data-side="0"
+                data-filled={leftItem ? true : undefined}
+                data-emphasis={leftItem?.emphasis || undefined}
+              >
+                {leftItem?.label ?? ''}
+              </div>
+              <div
+                className="article-visual__pros-cons-item"
+                data-side="1"
+                data-filled={rightItem ? true : undefined}
+                data-emphasis={rightItem?.emphasis || undefined}
+              >
+                {rightItem?.label ?? ''}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

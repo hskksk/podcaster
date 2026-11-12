@@ -179,11 +179,6 @@ html.dark .markdoc .article-visual {
 }
 
 /* Prose adds bullet padding on ul > li; reset on infographic tiles */
-.markdoc .article-visual ul.article-visual__pros-cons-col > li.article-visual__pros-cons-item {
-  margin-block: 0;
-  padding-inline-start: 0;
-}
-
 .markdoc .article-visual ul.article-visual__cards > li.article-visual__card {
   margin-block: 0;
   padding-inline: 1.1rem;

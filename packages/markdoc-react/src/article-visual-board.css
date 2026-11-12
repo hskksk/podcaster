@@ -473,18 +473,15 @@
   overflow: hidden;
 }
 
-.article-visual__pros-cons-columns {
+.article-visual__pros-cons-rows {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-.article-visual__pros-cons-col {
   display: flex;
   flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+}
+
+.article-visual__pros-cons-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
 
 .article-visual__pros-cons-item {
@@ -499,23 +496,33 @@
   color: #fff;
 }
 
-.article-visual__pros-cons-col[data-side='0'] .article-visual__pros-cons-item {
+.article-visual__pros-cons-item[data-side='0'][data-filled] {
   justify-content: flex-start;
   text-align: left;
   padding-right: 1.15rem;
   background: var(--av-blue);
 }
 
-.article-visual__pros-cons-col[data-side='1'] .article-visual__pros-cons-item {
+.article-visual__pros-cons-item[data-side='1'][data-filled] {
   justify-content: flex-end;
   text-align: right;
   padding-left: 1.15rem;
   background: var(--av-slate);
 }
 
-.article-visual__pros-cons-item[data-emphasis] {
+.article-visual__pros-cons-item[data-side='1'][data-emphasis] {
   color: var(--av-accent-fg);
   background: color-mix(in srgb, var(--av-accent) 88%, var(--av-slate));
+}
+
+.article-visual__pros-cons-item[data-side='0']:not([data-filled]) {
+  border-top: 1px solid color-mix(in srgb, #fff 35%, transparent);
+  background: color-mix(in srgb, var(--av-blue) 35%, var(--av-fill));
+}
+
+.article-visual__pros-cons-item[data-side='1']:not([data-filled]) {
+  border-top: 1px solid color-mix(in srgb, #fff 35%, transparent);
+  background: color-mix(in srgb, var(--av-slate) 35%, var(--av-fill));
 }
 
 /* comparison — split panel with center VS */
@@ -1338,17 +1345,17 @@
     font-size: 0.65rem;
   }
 
-  .article-visual__pros-cons-item {
+  .article-visual__pros-cons-item[data-filled] {
     min-height: 2.55rem;
     font-size: 0.78rem;
   }
 
-  .article-visual__pros-cons-col[data-side='0'] .article-visual__pros-cons-item {
+  .article-visual__pros-cons-item[data-side='0'][data-filled] {
     padding-right: 0.85rem;
     padding-left: 0.55rem;
   }
 
-  .article-visual__pros-cons-col[data-side='1'] .article-visual__pros-cons-item {
+  .article-visual__pros-cons-item[data-side='1'][data-filled] {
     padding-left: 0.85rem;
     padding-right: 0.55rem;
   }

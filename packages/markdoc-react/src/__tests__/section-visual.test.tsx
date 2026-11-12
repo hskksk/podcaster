@@ -23,6 +23,25 @@ describe('Article Visual engine', () => {
     expect(screen.getByText('Alpha')).toBeInTheDocument()
   })
 
+  it('renders a pros_cons spec', () => {
+    render(
+      <ArticleVisualView
+        alt="praise vs concern"
+        spec={{
+          type: 'pros_cons',
+          title: 'Split reaction',
+          sides: [
+            { label: 'Pros', items: [{ label: 'Good design' }, { label: 'Runs apps' }] },
+            { label: 'Cons', items: [{ label: 'Naming' }, { label: 'Lock-in' }] },
+          ],
+        }}
+      />,
+    )
+    expect(screen.getByText('Good design')).toBeInTheDocument()
+    expect(screen.getByText('Lock-in')).toBeInTheDocument()
+    expect(screen.getByText('VS')).toBeInTheDocument()
+  })
+
   it('falls back to alt when engine version is unsupported', () => {
     render(
       <SectionVisual
