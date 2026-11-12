@@ -6,7 +6,7 @@
 
 記事作成エージェントは本文完成後に構造化データを作り、記事と同じディレクトリのsidecarへ保存する。公開サイトはsidecarを読み、自前のArticle Visual engineで描画する。デスクトップでは本文横のsticky rail、狭い画面では該当セクション内に表示する。
 
-この設計の状態は**Proposed**である。既存の`treemap.yml`とMarkdoc本文の挙動は、実装が完了するまで変えない。
+この設計の状態は**In progress**である。既存の`treemap.yml`とMarkdoc本文の挙動は、描画実装が完了するまで変えない。podcaster 側の tooling と導入ステータスは [`scripts/article-section-visuals/README.md`](../../scripts/article-section-visuals/README.md) を参照する。engine 実装は monorepo 内 [`packages/markdoc-react`](../../packages/markdoc-react)（0.7.0）にあり、npm への publish 後は依存を workspace から切り替える。
 
 ## 解決する問題
 
@@ -160,7 +160,7 @@ envelopeは`spec`の内部を解釈も変換もしない。`article-visual`のpa
 | キー | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
 | `type` | enum | yes | 描く情報構造 |
-| `title` | string | yes | 図が伝える主張。見出しの転載ではなく結論を書く |
+| `title` | string | yes | **takeaway headline** — 図が伝える主張の一行。見出しの転載や節の要約文ではない |
 | `caption` | string | no | 図の読み方に必要な短い補足 |
 
 項目やノードでは次の共通語彙を使う。
@@ -248,21 +248,41 @@ type: comparison
 title: 常設権限を短命な能力へ置き換える
 sides:
   - label: 常設権限
-    items:
-      - label: 有効期間
-        detail: 明示的に失効させるまで残る
-      - label: 漏えい時
-        detail: 長期間悪用される
   - label: 短命な能力
     emphasis: true
-    items:
-      - label: 有効期間
-        detail: 操作に必要な時間だけ
-      - label: 漏えい時
-        detail: 時間経過で使えなくなる
+rows:
+  - axis: 有効期間
+    cells:
+      - label: 明示的に失効させるまで残る
+      - label: 操作に必要な時間だけ
+  - axis: 漏えい時
+    cells:
+      - label: 長期間悪用される
+      - label: 時間経過で使えなくなる
 ```
 
-`sides`は必ず2件とする。両側の`items`は同じ順序と観点で2〜5件を並べる。
+`sides`は必ず2件（列見出しのみ）。比較本体は `rows`（2〜5件）で、各行に **`axis`**（中央ピルの比較軸）と **`cells`**（左右2セル、`sides` の順）を必ず書く。
+
+### `pros_cons`
+
+称賛・懸念・賛否など、左右に**独立した要点リスト**を並べる。同行の対応関係は不要。
+
+```yaml
+type: pros_cons
+title: 称賛と懸念、二極化
+sides:
+  - label: 称賛
+    items:
+      - label: 筋のいい権限設計
+      - label: 動く社内アプリ
+  - label: 懸念
+    emphasis: true
+    items:
+      - label: 「OS」名の誤解
+      - label: Cloudflare依存
+```
+
+`sides`は2件、各 `items` は2〜5件（左右で件数が違ってよい）。`items[].label` は**評価の観点**を書き、製品名だけを置かない（名称そのものが論点のときは「〇〇名の誤解」など論点付きで）。
 
 ### `hierarchy`
 
@@ -361,7 +381,8 @@ values:
 | 順序を持たない並列の要点 | `cards` |
 | 順序・段階・時系列 | `sequence` |
 | 複数人物・システムのやりとり | `interaction` |
-| 二者比較・前後比較・トレードオフ | `comparison` |
+| 二者比較・前後比較・トレードオフ（同行に同じ軸） | `comparison` |
+| 称賛と懸念・賛否・二極化 | `pros_cons` |
 | 階層・包含・構成 | `hierarchy` |
 | 依存・因果・データ移動 | `flow` |
 | 2軸による位置づけ | `matrix` |

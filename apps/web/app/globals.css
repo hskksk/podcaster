@@ -112,11 +112,100 @@ body {
   --markdoc-surface: var(--color-muted);
 }
 
+.markdoc .article-visual {
+  --markdoc-accent: var(--color-accent);
+  --markdoc-bg: var(--color-bg);
+  --markdoc-fg: var(--color-fg);
+  --markdoc-muted: var(--color-muted-fg);
+  --markdoc-positive: #047857;
+  --markdoc-panel: var(--color-surface);
+  --markdoc-accent-fg: var(--color-accent-fg);
+  /* Infographic blues: GitHub-adjacent but tuned for stone theme */
+  --markdoc-av-blue: #2457d6;
+  --markdoc-av-blue-deep: color-mix(in srgb, var(--markdoc-av-blue) 78%, var(--color-fg));
+  --markdoc-av-slate: color-mix(in srgb, var(--color-fg) 72%, #394450);
+  --markdoc-av-line: color-mix(in srgb, var(--color-border) 75%, #94a3b8);
+  --markdoc-av-fill: color-mix(in srgb, var(--color-muted) 55%, var(--color-surface));
+  --markdoc-av-fill-blue: color-mix(in srgb, var(--markdoc-av-blue) 14%, var(--color-surface));
+  --markdoc-av-on-light: var(--color-fg);
+}
+
+html.dark .markdoc .article-visual {
+  --markdoc-av-blue: color-mix(in srgb, #5b8def 70%, var(--color-accent));
+  --markdoc-av-blue-deep: color-mix(in srgb, #3d6ec9 65%, var(--color-fg));
+  --markdoc-av-slate: color-mix(in srgb, var(--color-muted) 40%, var(--color-fg));
+  --markdoc-av-fill: color-mix(in srgb, var(--color-muted) 80%, var(--color-bg));
+  --markdoc-av-fill-blue: color-mix(in srgb, var(--markdoc-av-blue) 22%, var(--color-surface));
+  --markdoc-av-on-light: var(--color-fg);
+}
+
 /* Minimap: collapsible treemap above article (not a side column) */
 .article-minimap-layout.markdoc-reader {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+.article-minimap-layout__body-row {
+  display: block;
+  width: 100%;
+}
+
+/* Section visuals: inline below headings (all breakpoints; rail paused). */
+.article-section-visual-rail {
+  display: none;
+}
+
+.article-visual-host {
+  container-type: inline-size;
+  container-name: av-slot;
+}
+
+.article-section-visual-inline {
+  margin: 0.65rem 0 1.35rem;
+}
+
+.markdoc .markdoc-heading + .article-section-visual-inline {
+  margin-top: 0.5rem;
+}
+
+/* Tuck infographic title under prose rhythm (section heading is primary). */
+.markdoc .article-section-visual-inline .article-visual__title {
+  font-size: 1.15rem;
+}
+
+.markdoc .article-section-visual-inline .article-visual {
+  padding: 0.85rem 1rem 1rem;
+}
+
+/* Prose adds bullet padding on ul > li; reset on infographic tiles */
+.markdoc .article-visual ul.article-visual__pros-cons-list > li.article-visual__pros-cons-item {
+  margin-block: 0;
+  padding-inline-start: 0;
+  list-style: none;
+}
+
+.markdoc .article-visual ul.article-visual__cards > li.article-visual__card {
+  margin-block: 0;
+  padding-inline: 1.1rem;
+  padding-inline-start: 1.1rem;
+  text-align: center;
+}
+
+.markdoc .article-visual ul.article-visual__hierarchy-columns > li.article-visual__hierarchy-col,
+.markdoc .article-visual ul.article-visual__hierarchy-leaves > li.article-visual__hierarchy-leaf {
+  margin-block: 0;
+  padding-inline-start: 0;
+  text-align: center;
+}
+
+.markdoc .article-visual ul.article-visual__hierarchy-leaves > li.article-visual__hierarchy-leaf {
+  padding-inline-end: 0;
+}
+
+.markdoc .article-visual .article-visual__hierarchy-pillar,
+.markdoc .article-visual .article-visual__hierarchy-leaf {
+  text-align: center;
 }
 
 .article-minimap-layout.markdoc-reader .markdoc-reader__main {

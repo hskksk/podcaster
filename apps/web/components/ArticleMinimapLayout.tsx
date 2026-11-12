@@ -6,6 +6,8 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { parseFrontmatter } from "../../../scripts/lib/mdoc";
 import { useTheme } from "./ThemeProvider";
 import type { TreemapSidecarContent } from "../lib/site/treemap-labels-types";
+import type { SectionVisualsContent } from "../lib/site/section-visuals-types";
+import { SectionVisualsProvider } from "./SectionVisualsProvider";
 import { useTreemapDesignWidth } from "./useTreemapDesignWidth";
 import { createStaticTreemapAi } from "../lib/treemap/createStaticTreemapAi";
 import { useTreemapSidecarTitleOverrides } from "./useTreemapSidecarLabels";
@@ -14,6 +16,7 @@ import { useTreemapTileExpand } from "./useTreemapTileExpand";
 export function ArticleMinimapLayout(props: {
   source: string;
   treemapSidecar?: TreemapSidecarContent | null;
+  sectionVisuals?: SectionVisualsContent | null;
   /** Pagefind filter value for `site`, so podcast search stays on podcast pages. */
   pagefindSite?: string;
   children: ReactNode;
@@ -74,7 +77,7 @@ export function ArticleMinimapLayout(props: {
 
   return (
     <div
-      className="markdoc-reader article-minimap-layout mx-auto w-full min-w-0 max-w-3xl"
+      className="markdoc-reader article-minimap-layout article-minimap-layout--section-visuals-inline mx-auto w-full min-w-0 max-w-3xl"
       data-minimap-variant="treemap"
       data-minimap-collapsed={mobileMinimapCollapsed ? "true" : undefined}
     >
@@ -109,14 +112,18 @@ export function ArticleMinimapLayout(props: {
           />
         </div>
       </div>
-      <article
-        ref={scrollRef}
-        className="markdoc-reader__main mx-auto w-full min-w-0 max-w-3xl"
-        data-pagefind-body
-        data-pagefind-filter={props.pagefindSite ? `site:${props.pagefindSite}` : undefined}
-      >
-        {props.children}
-      </article>
+      <div className="article-minimap-layout__body-row">
+        <article
+          ref={scrollRef}
+          className="markdoc-reader__main mx-auto w-full min-w-0 max-w-3xl"
+          data-pagefind-body
+          data-pagefind-filter={props.pagefindSite ? `site:${props.pagefindSite}` : undefined}
+        >
+          <SectionVisualsProvider visuals={props.sectionVisuals ?? null}>
+            {props.children}
+          </SectionVisualsProvider>
+        </article>
+      </div>
     </div>
   );
 }

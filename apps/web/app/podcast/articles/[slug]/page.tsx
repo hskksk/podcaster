@@ -14,6 +14,7 @@ import { EpisodePlayer } from "../../../../components/EpisodePlayer";
 import { ReadingProgress } from "../../../../components/ReadingProgress";
 import { loadPublicDoc, loadPublicDocs } from "../../../../lib/site/docs";
 import { loadTreemapSidecar } from "../../../../lib/site/treemap-labels";
+import { loadSectionVisualsSidecar } from "../../../../lib/site/section-visuals";
 import { MarkdocArticleBody } from "../../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
 import { prepareMarkdoc } from "../../../../lib/markdoc";
@@ -76,7 +77,10 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   const coverImageUrl = imageForPublicDoc(imageMap, doc);
   const renderSource = mdocBodyForRender(doc.source, doc.title);
   const treemapSidecar = loadTreemapSidecar("docs", doc.dir, renderSource);
-  const { content } = prepareMarkdoc(renderSource);
+  const sectionVisuals = loadSectionVisualsSidecar("docs", doc.dir, renderSource);
+  const { content } = prepareMarkdoc(renderSource, {
+    sectionVisualIds: sectionVisuals ? Object.keys(sectionVisuals.bySectionId) : undefined,
+  });
   const { prev, next } = adjacentPublicDocs(slug);
   const rss = feedUrl();
 
@@ -111,6 +115,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
         <ArticleMinimapLayout
           source={renderSource}
           treemapSidecar={treemapSidecar}
+          sectionVisuals={sectionVisuals}
           pagefindSite="podcast"
         >
           <div className="markdoc">

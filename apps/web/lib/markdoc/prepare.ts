@@ -1,10 +1,11 @@
 import "server-only";
 
-import Markdoc, { type RenderableTreeNodes } from "@markdoc/markdoc";
+import Markdoc, { type RenderableTreeNode, type RenderableTreeNodes } from "@markdoc/markdoc";
 
 const { Tag } = Markdoc;
 import { parseFrontmatter } from "../../../../scripts/lib/mdoc";
 import markdocSchema from "../../markdoc/config";
+import { injectSectionVisualSlots } from "./inject-section-visuals";
 
 export type PreparedMarkdoc = {
   content: RenderableTreeNodes;
@@ -35,9 +36,16 @@ function serializeRenderable(node: RenderableTreeNodes): RenderableTreeNodes {
  * SSG embeds the tree in static HTML props — very long articles can produce a
  * larger payload than raw `source`; monitor if individual pages grow huge.
  */
-export function prepareMarkdoc(source: string): PreparedMarkdoc {
+export type PrepareMarkdocOptions = {
+  sectionVisualIds?: string[];
+};
+
+export function prepareMarkdoc(source: string, options?: PrepareMarkdocOptions): PreparedMarkdoc {
   const { body } = parseFrontmatter(source);
   const ast = Markdoc.parse(body);
-  const content = serializeRenderable(Markdoc.transform(ast, markdocSchema));
-  return { content };
+  let content: RenderableTreeNode = Markdoc.transform(ast, markdocSchema);
+  if (options?.sectionVisualIds?.length) {
+    content = injectSectionVisualSlots(content, options.sectionVisualIds);
+  }
+  return { content: serializeRenderable(content) };
 }

@@ -17,6 +17,7 @@ import { articleOpenGraph } from "../../../../lib/site/open-graph";
 import { MarkdocArticleBody } from "../../../../components/MarkdocArticleBody";
 import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
 import { loadTreemapSidecar } from "../../../../lib/site/treemap-labels";
+import { loadSectionVisualsSidecar } from "../../../../lib/site/section-visuals";
 import { prepareMarkdoc } from "../../../../lib/markdoc";
 import { textify } from "../../../../../../scripts/lib/mdoc";
 
@@ -67,7 +68,10 @@ export default async function PreviewWebClipPage({ params }: { params: Promise<P
   const clips = await loadPublicWebClipsForRequest();
   const renderSource = mdocBodyForRender(clip.source, clip.title);
   const treemapSidecar = loadTreemapSidecar("web-clips", clip.dir, renderSource);
-  const { content } = prepareMarkdoc(renderSource);
+  const sectionVisuals = loadSectionVisualsSidecar("web-clips", clip.dir, renderSource);
+  const { content } = prepareMarkdoc(renderSource, {
+    sectionVisualIds: sectionVisuals ? Object.keys(sectionVisuals.bySectionId) : undefined,
+  });
   const { prev, next } = await adjacentWebClipsForRequest(slug);
   const rss = feedUrl();
 
@@ -99,7 +103,7 @@ export default async function PreviewWebClipPage({ params }: { params: Promise<P
           />
         </div>
 
-        <ArticleMinimapLayout source={renderSource} treemapSidecar={treemapSidecar}>
+        <ArticleMinimapLayout source={renderSource} treemapSidecar={treemapSidecar} sectionVisuals={sectionVisuals}>
           <div className="markdoc">
             <MarkdocArticleBody content={content} />
           </div>
