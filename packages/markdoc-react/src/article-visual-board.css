@@ -550,8 +550,7 @@
 }
 
 .article-visual__pros-cons-list[data-side='1'] .article-visual__pros-cons-mark::before {
-  content: '✕';
-  color: #ffc9c4;
+  content: '❌';
 }
 
 /* comparison — split panel with center VS */
