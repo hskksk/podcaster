@@ -1,0 +1,176 @@
+version: 1
+sourceSha256: "9d347ee46b75a47a20b1088ceb096f7647412183f65573792dbdea105ad6c74a"
+visuals:
+  - sectionId: "背景歴史-文章を生成しないモデルがsystem-oneとして分けられた"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "LLMは文章をパースする結合点で壊れやすい。Jevは選択肢・段階・真偽を事前に固定し、確率つきの型つき答えだけを返す。生成を捨てて速度と費用は公式申告で2桁改善。"
+    spec:
+      type: sequence
+      title: 生成を捨て、型で返す
+      mode: steps
+      items:
+        - label: 文章を出すLLM
+          detail: パースが壊れやすい
+        - label: 答えの形を先に決める
+          emphasis: true
+        - label: 確率つきの数値だけ
+        - label: 速度・費用2桁改善
+
+  - sectionId: "リクエストと応答の最小例"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "呼び出し側が state と questions を System One API に POST すると、質問IDごとに Choice・Score・Noul の型つき答えが並ぶ。数値のまま if 文に直結しパース不要。"
+    spec:
+      type: interaction
+      title: 2部品入れ、型つきで返る
+      actors:
+        - id: caller
+          label: 呼び出し側
+        - id: api
+          label: System One API
+      steps:
+        - from: caller
+          to: api
+          label: state を載せる
+        - from: caller
+          to: api
+          label: questions を載せる
+        - from: api
+          to: caller
+          label: 型つき答えを返す
+
+  - sectionId: "型ごとの細かい違い"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Choice は候補選択と confidence、Score は段階の加重平均と confidence、Noul は真偽確率のみで confidence は付かない。"
+    spec:
+      type: cards
+      title: 選ぶ・測る・真偽で形が決まる
+      items:
+        - label: Choice
+          detail: 最大255候補
+        - label: Score
+          detail: 2〜10段階
+        - label: Noul
+          detail: 0〜1のみ
+          emphasis: true
+
+  - sectionId: "どの型をどんな場面に置くか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "同一 state に複数質問を並べる5パターン。fan-out、確信度ゲート、複合採点、検証カスケード、RAG絞り込み。"
+    spec:
+      type: cards
+      title: 1回の呼び出しで5形
+      items:
+        - label: fan-out
+          detail: 先に全部投げる
+        - label: 確信度ゲート
+          detail: 行動ごとに壁
+        - label: 複合採点
+          detail: 重みはコード
+        - label: 検証カスケード
+          detail: supported で公開
+        - label: reranking
+          detail: 断片を絞る
+          emphasis: true
+
+  - sectionId: "confidence-gated-routing-行動の重さで壁を変える"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "しきい値は行動ごと。confidence 0.5未満は人手、残高表示は低い壁、送金承認は0.85超のみ。日本語25件で0.6以上なら自動23件誤りゼロ。"
+    spec:
+      type: flow
+      title: 取り返しやすさで壁を変える
+      nodes:
+        - id: answer
+          label: Jevの応答
+        - id: low
+          label: 人手
+        - id: mid
+          label: 確認待ち
+        - id: high
+          label: 自動処理
+          emphasis: true
+      edges:
+        - from: answer
+          to: low
+          label: 低confidence
+        - from: answer
+          to: mid
+        - from: answer
+          to: high
+          label: 高confidence
+
+  - sectionId: "draft-verify-escalate-生成aiを検証結果で分岐させる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "下書きと根拠を state に入れ supported かを Choice で聞く。supported かつ confidence 0.8以上で公開、unsupported は上位モデルへ。50問で誤答ゼロ・0.012ドル。"
+    spec:
+      type: flow
+      title: 安い下書きをJevで止める
+      nodes:
+        - id: draft
+          label: LLM下書き
+        - id: jev
+          label: Jev検証
+          emphasis: true
+        - id: publish
+          label: 公開
+        - id: escalate
+          label: 上位モデル
+      edges:
+        - from: draft
+          to: jev
+        - from: jev
+          to: publish
+          label: supported
+        - from: jev
+          to: escalate
+          label: unsupported
+
+  - sectionId: "向いていない判断"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "大量・急場・客観判断には向き、生成・算術・日付比較には向かない。同じ入力の繰り返しや表記揺れ、数え上げは実測でも弱い。"
+    spec:
+      type: pros_cons
+      title: 判断は向く、生成と算術は外
+      sides:
+        - label: 向く
+          items:
+            - label: 大量の分類
+            - label: 急場の振り分け
+            - label: RAGの事前絞り込み
+        - label: 向かない
+          emphasis: true
+          items:
+            - label: 文章生成
+            - label: 数値・日付
+            - label: 要素の数え上げ
+            - label: 表記揺れの判別
+
+  - sectionId: "confidence-は分布の硬度"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "confidence は分布の尖りで正答率の保証ではない。Choice と Score に付き、Noul は真偽確率そのものが不確かさの指標。"
+    spec:
+      type: comparison
+      title: confidence は尖り、Noulは確率
+      sides:
+        - label: Choice / Score
+        - label: Noul
+      rows:
+        - axis: 付く指標
+          cells:
+            - label: confidence
+            - label: なし
+        - axis: 読み方
+          cells:
+            - label: 分布の硬度
+            - label: 0〜1の真偽寄り
+        - axis: しきい値
+          cells:
+            - label: 下側1本で人手
+            - label: 両側で真ん中を人手

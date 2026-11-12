@@ -1,0 +1,151 @@
+version: 1
+sourceSha256: "5b4357eaf257d8c9526f07fe58abe2289ffab84f7df21d60d87ee4efd91c41ca"
+visuals:
+  - sectionId: "背景歴史-5年で自動レビューは拡張から上位製品になり競争軸が点数から実運用へ移った"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "2025年4月の Copilot プレビューから2026年2月の Code Review Bench、4月の PR-Agent 移管、8月の agentic 化、9月の shell ツールまで、競争軸が検出点数から実 PR での採用へ移った。"
+    spec:
+      type: sequence
+      title: 競争軸は検出から実運用へ
+      mode: timeline
+      items:
+        - label: "2025-04 Copilot プレビュー"
+        - label: "2026-02 Code Review Bench"
+        - label: "2026-04 PR-Agent 移管"
+        - label: "2026-08 agentic 化"
+          emphasis: true
+        - label: "2026-09 shell・auto-resolve"
+
+  - sectionId: "1-実利用の首位は-action-ではなく-copilot-code-review-github-上のレビュー5件に1件"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Copilot code review は2026年3月時点で累計6,000万件超、GitHub 上レビューの20%超。agentic 化後は71%が actionable な指摘を1件以上含む。"
+    spec:
+      type: chart
+      title: レビューの71%に actionable 指摘
+      variant: bar
+      unit: "%"
+      values:
+        - label: actionable 指摘あり
+          value: 71
+          emphasis: true
+        - label: コメントなし
+          value: 29
+
+  - sectionId: "2-marketplace-アプリ型は-coderabbit-が先行-インストール32万件で他を離れる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "CodeRabbit は月額プランとファイル従量、PR-Agent は LLM API 維持費、reviewdog は導入追加費用ゼロ。"
+    spec:
+      type: comparison
+      title: 外部型は料金の形が違う
+      sides:
+        - label: CodeRabbit
+        - label: reviewdog
+      rows:
+        - axis: 月額
+          cells:
+            - label: "$24〜$72"
+            - label: "0"
+        - axis: 超過
+          cells:
+            - label: "$0.25/ファイル"
+            - label: "—"
+        - axis: 既契約時
+          cells:
+            - label: "0"
+            - label: "0"
+
+  - sectionId: "3-action-として配られる-ai-レビューは50未満で並ぶ-50-を超える-action-は確認できなかった"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "AI レビュー Action の上位は zai-code-review ★44、ai-code-review ★35、codepress-review ★19 で、いずれも★50未満。"
+    spec:
+      type: chart
+      title: AI レビュー Action は★50未満
+      variant: bar
+      unit: "stars"
+      values:
+        - label: zai-code-review
+          value: 44
+          emphasis: true
+        - label: ai-code-review
+          value: 35
+        - label: codepress-review
+          value: 19
+        - label: ai-code-reviewer
+          value: 6
+        - label: ai-pr-review
+          value: 4
+
+  - sectionId: "4-oss-の実装としては-pr-agent-一本が突出-13152-と-docker-1478万-pull-は他を離れる"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "PR-Agent の Docker pull は codiumai/pr-agent が12,626,940、pragent/pr-agent が2,118,665で、image 名の変遷を合わせ1,478万に達する。"
+    spec:
+      type: chart
+      title: Docker pull が stars より先に積み上がる
+      variant: bar
+      unit: "万 pull"
+      values:
+        - label: codiumai/pr-agent
+          value: 1262.7
+          emphasis: true
+        - label: pragent/pr-agent
+          value: 211.9
+
+  - sectionId: "5-pr-agent-は-2026年4月に-qodo-を離れた-有償版-qodo-と同じ実装ではなくなった"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "2026年4月の The-PR-Agent 移管後、Qodo 有償版 Exhaustive の F1 60.1 に対し OSS Qodo-Precise は55.4。移管前の比較値を移管後に当てはめない。"
+    spec:
+      type: comparison
+      title: 移管後は有償版と OSS で F1 が分れる
+      sides:
+        - label: Qodo Exhaustive（有償）
+        - label: Qodo-Precise（OSS）
+          emphasis: true
+      rows:
+        - axis: F1
+          cells:
+            - label: "60.1"
+            - label: "55.4"
+        - axis: free tier
+          cells:
+            - label: "—"
+            - label: "100行・1ファイル"
+
+  - sectionId: "6-ベンチマークの1位は2026年に4社で入れ替わる-5つの独立評価が示すのは順位の不安定さである"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Code Review Bench で2026年3月は CodeRabbit F1 51.2、3月25日 Cubic 61.8、7月 Greptile 60.8、9月 Cubic 65.7と首位が四度入れ替わった。"
+    spec:
+      type: sequence
+      title: 2026年に首位が四度入れ替わる
+      mode: timeline
+      items:
+        - label: "03-03 CodeRabbit 51.2"
+        - label: "03-25 Cubic 61.8"
+        - label: "07-30 Greptile 60.8"
+        - label: "09 Cubic 65.7"
+          emphasis: true
+
+  - sectionId: "7-実運用の差はツール選択より-pr-の大きさが支配する-15倍のf1差と92劣化が示すこと"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "合成ベンチ F1 0.847は実 PR で0.066へ落ち、diff 10行未満は0.657、150行超は0.043。ボトルネックはツールより PR サイド。"
+    spec:
+      type: chart
+      title: diff が大きいほど F1 が落ちる
+      variant: line
+      values:
+        - label: 合成ベンチ
+          value: 0.847
+        - label: diff 10行未満
+          value: 0.657
+          emphasis: true
+        - label: 実 PR
+          value: 0.066
+        - label: diff 150行超
+          value: 0.043

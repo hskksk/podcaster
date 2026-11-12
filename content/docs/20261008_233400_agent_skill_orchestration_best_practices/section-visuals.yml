@@ -1,0 +1,173 @@
+version: 1
+sourceSha256: "6d532ca445f77abc88e6a7e5a1a0818fa3493f35c136c5a198da46046a5c2223"
+visuals:
+  - sectionId: "スキルとオーケストレーターの担当を分ける"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "スキルは手順と検証、オーケストレーターは選定・依存順・統合、サブエージェントは委任実行を担い、スキル増だけでは連携は生まれない。"
+    spec:
+      type: cards
+      title: 連携は制御層で設計する
+      items:
+        - label: スキル
+          detail: 知識・手順・検証
+        - label: オーケストレーター
+          detail: 分解・依存・統合
+          emphasis: true
+        - label: サブエージェント
+          detail: 委任・独立コンテキスト
+
+  - sectionId: "直列分岐並列評価ループを使い分ける"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "直列・条件分岐・並列・オーケストレーターとワーカー・評価反復は、作業の依存関係とリスクに応じて使い分ける。"
+    spec:
+      type: cards
+      title: 依存関係がパターンを決める
+      caption: 簡単な作業は単一スキルで足りる
+      items:
+        - label: 直列
+          detail: 前段の結果が必須
+        - label: 条件分岐
+          detail: タスク種別でスキル変化
+        - label: 並列
+          detail: 依存なし・出力分離
+        - label: 中央分解
+          detail: 作業数が事前不明
+        - label: 評価反復
+          detail: 合格条件と上限
+
+  - sectionId: "1つのスキルを一貫した仕事の単位にする"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "常に必要な指示はSKILL.md、条件付き詳細はreferencesとassets、決定的処理はscriptsへ分け、深い参照階層は避ける。"
+    spec:
+      type: hierarchy
+      title: 本文は要点、詳細は参照へ
+      root:
+        label: スキルパッケージ
+        children:
+          - label: SKILL.md
+            emphasis: true
+            children:
+              - label: 必須手順
+          - label: references
+            children:
+              - label: 条件付き仕様
+          - label: scripts
+            children:
+              - label: 検証処理
+
+  - sectionId: "説明文をスキル選択のインターフェースとして扱う"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "説明文は検索とルーティング用で、境界と近接否定例を試し、訓練用と検証用クエリを分けて一般化を確かめる。"
+    spec:
+      type: sequence
+      title: 説明文は起動精度を測る
+      mode: steps
+      items:
+        - label: 能力と境界を明記
+        - label: 近接否定例を試す
+        - label: 起動率を記録
+        - label: 未使用クエリで検証
+          emphasis: true
+
+  - sectionId: "まず必要なスキルを絞り次に依存関係を組む"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "依頼を小タスクへ分解し各段に契約を置き、独立調査だけ並列化して統合後に執筆・検証へ進むDAGで受け渡しを示す。"
+    spec:
+      type: flow
+      title: 並列は独立調査だけ
+      nodes:
+        - id: request
+          label: 依頼
+        - id: official
+          label: 公式資料調査
+        - id: impl
+          label: 実装資料調査
+        - id: merge
+          label: 証拠の統合
+        - id: write
+          label: 執筆
+        - id: verify
+          label: 引用・出力検証
+        - id: out
+          label: 成果物
+          emphasis: true
+      edges:
+        - from: request
+          to: official
+        - from: request
+          to: impl
+        - from: official
+          to: merge
+        - from: impl
+          to: merge
+        - from: merge
+          to: write
+        - from: write
+          to: verify
+        - from: verify
+          to: out
+
+  - sectionId: "スキルサブエージェントワークフローの選択を区別する"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "分岐はルーティング、既知の順序はコード化ワークフロー、独立根拠は読み取り専用サブエージェントの並列、統合責任は一人に固定する。"
+    spec:
+      type: comparison
+      title: 経路ごとに統合者を一人に
+      sides:
+        - label: モデル任せ
+        - label: 決定的制御
+      rows:
+        - axis: 分岐
+          cells:
+            - label: ルーティング
+            - label: —
+        - axis: 順序と検証
+          cells:
+            - label: —
+            - label: 直列ワークフロー
+              emphasis: true
+        - axis: 独立調査
+          cells:
+            - label: —
+            - label: 並列サブエージェント
+
+  - sectionId: "過剰な合成が得とは限らない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "SkillsBenchでは厳選スキルで平均+16.2ポイント一方16課題で悪化。AgentSkillOSではDAG実行がフラット提示より高評価だが、全タスク共通ではない。"
+    spec:
+      type: pros_cons
+      title: 足すほど良いわけではない
+      sides:
+        - label: 得られること
+          items:
+            - label: 成功率+16.2pt
+              emphasis: true
+            - label: 焦点2〜3個が有利
+            - label: DAG実行が高評価
+        - label: リスク
+          items:
+            - label: 16課題で悪化
+            - label: ベンチ依存の観察
+            - label: 選択全体を測る必要
+
+  - sectionId: "効果を評価し改善する"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "同じ課題でスキルなし・単体・フラット複数・構造化連携を比べ、品質に加え誤起動・トークン・時間とトレースも記録する。"
+    spec:
+      type: sequence
+      title: 四条件で効果を切り分ける
+      mode: steps
+      items:
+        - label: スキルなし基準
+        - label: 関連スキル単体
+        - label: 複数をフラット利用
+        - label: 依存と検証ゲート明示
+          emphasis: true
