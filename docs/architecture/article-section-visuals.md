@@ -263,6 +263,27 @@ rows:
 
 `sides`は必ず2件（列見出しのみ）。比較本体は `rows`（2〜5件）で、各行に **`axis`**（中央ピルの比較軸）と **`cells`**（左右2セル、`sides` の順）を必ず書く。
 
+### `pros_cons`
+
+称賛・懸念・賛否など、左右に**独立した要点リスト**を並べる。同行の対応関係は不要。
+
+```yaml
+type: pros_cons
+title: 称賛と懸念、二極化
+sides:
+  - label: 称賛
+    items:
+      - label: 筋のいい権限設計
+      - label: 動く社内アプリ
+  - label: 懸念
+    emphasis: true
+    items:
+      - label: 「OS」名の誤解
+      - label: Cloudflare依存
+```
+
+`sides`は2件、各 `items` は2〜5件（左右で件数が違ってよい）。`items[].label` は**評価の観点**を書き、製品名だけを置かない（名称そのものが論点のときは「〇〇名の誤解」など論点付きで）。
+
 ### `hierarchy`
 
 包含・分類・構成要素を根から子へ示す。
@@ -360,7 +381,8 @@ values:
 | 順序を持たない並列の要点 | `cards` |
 | 順序・段階・時系列 | `sequence` |
 | 複数人物・システムのやりとり | `interaction` |
-| 二者比較・前後比較・トレードオフ | `comparison` |
+| 二者比較・前後比較・トレードオフ（同行に同じ軸） | `comparison` |
+| 称賛と懸念・賛否・二極化 | `pros_cons` |
 | 階層・包含・構成 | `hierarchy` |
 | 依存・因果・データ移動 | `flow` |
 | 2軸による位置づけ | `matrix` |

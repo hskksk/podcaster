@@ -108,27 +108,22 @@ visuals:
   - sectionId: "評判とコミュニティの反応"
     engine: article-visual
     engineVersion: "1"
-    alt: "同じ観点で見ると、称賛はGatekeeper・Gadget・AI Gatewayに、懸念は移植性・OS名称・導入摩擦に集まる。"
+    alt: "称賛は権限設計の筋・動く社内アプリ・推論の一本化に、懸念はOS名の誤解・プラットフォーム依存・導入摩擦に集まる。"
     spec:
-      type: comparison
+      type: pros_cons
       title: 称賛と懸念、二極化
       sides:
         - label: 称賛
+          items:
+            - label: 筋のいい権限設計
+            - label: 動く社内アプリ
+            - label: モデル固定を避けられる
         - label: 懸念
           emphasis: true
-      rows:
-        - axis: 基盤設計
-          cells:
-            - label: Gatekeeper
-            - label: 移植性
-        - axis: 製品像
-          cells:
-            - label: Gadget
-            - label: 「OS」名称
-        - axis: 導入・運用
-          cells:
-            - label: AI Gateway
-            - label: デプロイの壁
+          items:
+            - label: 「OS」名の誤解
+            - label: Cloudflare依存
+            - label: 導入の摩擦
 
   - sectionId: "類似サービスとの比較軸"
     engine: article-visual

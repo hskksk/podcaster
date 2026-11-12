@@ -8,6 +8,7 @@ const TYPE_LABELS: Record<string, string> = {
   sequence: 'sequence',
   interaction: 'interaction',
   comparison: 'comparison',
+  pros_cons: 'pros_cons',
   hierarchy: 'hierarchy',
   flow: 'flow',
   matrix: 'matrix',
@@ -150,6 +151,10 @@ function renderBody(spec: ArticleVisualSpecV1) {
           sides={spec.sides as { label: string; emphasis?: boolean }[]}
           rows={spec.rows as { axis: string; cells: Item[] }[]}
         />
+      )
+    case 'pros_cons':
+      return (
+        <ProsConsBody sides={spec.sides as { label: string; emphasis?: boolean; items: Item[] }[]} />
       )
     case 'hierarchy':
       return <HierarchyBody root={spec.root as Item & { children?: Item[] }} />
@@ -333,6 +338,49 @@ function InteractionBody({
             )
           })}
         </ol>
+      </div>
+    </div>
+  )
+}
+
+function ProsConsBody({ sides }: { sides: { label: string; emphasis?: boolean; items: Item[] }[] }) {
+  const [left, right] = sides
+  if (!left || !right) return null
+
+  return (
+    <div className="article-visual__pros-cons-board">
+      <span className="article-visual__comparison-vs" aria-hidden="true">
+        VS
+      </span>
+      <div className="article-visual__cmp-head" data-side="0" data-emphasis={left.emphasis || undefined}>
+        {left.label}
+      </div>
+      <div className="article-visual__cmp-head" data-side="1" data-emphasis={right.emphasis || undefined}>
+        {right.label}
+      </div>
+      <div className="article-visual__pros-cons-columns">
+        <ul className="article-visual__pros-cons-col" data-side="0">
+          {left.items.map((item) => (
+            <li
+              key={item.label}
+              className="article-visual__pros-cons-item"
+              data-emphasis={item.emphasis || undefined}
+            >
+              {item.label}
+            </li>
+          ))}
+        </ul>
+        <ul className="article-visual__pros-cons-col" data-side="1">
+          {right.items.map((item) => (
+            <li
+              key={item.label}
+              className="article-visual__pros-cons-item"
+              data-emphasis={item.emphasis || undefined}
+            >
+              {item.label}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   )

@@ -47,9 +47,9 @@ metadata:
 
 2. **候補の選定**（`references/selection.md`）: 内容のある H2 を基本。`TL;DR`・概要だけの導入・まとめ・出典・付録は原則除外。H3 は親 H2 の図では表えない独立した仕組み・比較・時系列だけ。
 
-3. **各候補**で主張を一つに絞り、本文の関係から `type` を一つ選ぶ（`references/type-map.md`）。`spec.title` は **takeaway headline**（図だけ見ても伝わる主張の一行。要約でも見出しコピーでもない）を短く書く。
+3. **各候補**で主張を一つに絞り、本文の関係から `type` を一つ選ぶ（`references/type-map.md`）。`spec.title` は **takeaway headline**（図だけ見ても伝わる主張の一行。要約でも見出しコピーでもない）を短く書く。称賛・懸念の二項は同期の軸がなくてもよいなら `pros_cons`（`references/pros-cons.md`）。
 
-4. **`spec` を書く**（`references/spec-v1.md`）。`engine: article-visual`、`engineVersion: "1"`。各 visual に根拠の一文 `alt`（スクリーンリーダー用）。
+4. **`spec` を書く**（`references/spec-v1.md`）。`engine: article-visual`、`engineVersion: "1"`。各 visual に根拠の一文 `alt`（スクリーンリーダー用）。`pros_cons` の `items[].label` は機能名ではなく**評価の観点**を書く。
 
 5. **envelope** を同ディレクトリの `section-visuals.yml` に保存:
 

@@ -8,6 +8,7 @@ export const SPEC_TYPES = [
   "sequence",
   "interaction",
   "comparison",
+  "pros_cons",
   "hierarchy",
   "flow",
   "matrix",
@@ -336,6 +337,34 @@ export function validateArticleVisualSpecV1(spec: unknown, errors: string[]): sp
       }
       const flat = rowCells.flat();
       countEmphasis(flat, "spec.rows", errors);
+      break;
+    }
+    case "pros_cons": {
+      const sides = spec.sides;
+      if (!Array.isArray(sides) || sides.length !== 2) {
+        errors.push("spec.sides: pros_cons requires exactly 2 sides");
+        break;
+      }
+      const allItems: { emphasis?: boolean }[] = [];
+      for (const [si, side] of sides.entries()) {
+        if (!isRecord(side)) {
+          errors.push(`spec.sides[${si}]: must be object`);
+          continue;
+        }
+        assertNoUnknownKeys(side, new Set(["label", "emphasis", "items"]), `spec.sides[${si}]`, errors);
+        assertString(side.label, `spec.sides[${si}].label`, errors, 120);
+        assertBoolean(side.emphasis, `spec.sides[${si}].emphasis`, errors);
+        const items = side.items;
+        if (!Array.isArray(items) || items.length < 2 || items.length > 5) {
+          errors.push(`spec.sides[${si}].items: requires 2–5 items`);
+          continue;
+        }
+        items.forEach((it, i) => {
+          const item = parseLabeledItem(it, `spec.sides[${si}].items[${i}]`, errors, {});
+          if (item) allItems.push(item);
+        });
+      }
+      countEmphasis(allItems, "spec.sides", errors);
       break;
     }
     case "hierarchy": {
