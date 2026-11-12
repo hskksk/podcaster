@@ -7,7 +7,7 @@
 | キー | 必須 | 説明 |
 | --- | --- | --- |
 | `type` | yes | 下表のいずれか |
-| `title` | yes | 図の結論（見出しの転載ではない） |
+| `title` | yes | **takeaway headline** — 図が伝える主張の一行（見出しの転載・節の要約文ではない） |
 | `caption` | no | 読み方の短い補足 |
 
 各 `label` は短い名詞句・動詞句。`detail` は一文以内。`emphasis` は 1 図につき最大 2 件。`icon` は任意（`person` `document` `database` `shield` `timer` `workspace` `service` `network` `chart` のみ）。

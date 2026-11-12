@@ -160,7 +160,7 @@ envelopeは`spec`の内部を解釈も変換もしない。`article-visual`のpa
 | キー | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
 | `type` | enum | yes | 描く情報構造 |
-| `title` | string | yes | 図が伝える主張。見出しの転載ではなく結論を書く |
+| `title` | string | yes | **takeaway headline** — 図が伝える主張の一行。見出しの転載や節の要約文ではない |
 | `caption` | string | no | 図の読み方に必要な短い補足 |
 
 項目やノードでは次の共通語彙を使う。

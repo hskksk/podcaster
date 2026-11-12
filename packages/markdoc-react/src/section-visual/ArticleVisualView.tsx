@@ -339,23 +339,41 @@ function ComparisonBody({ sides }: { sides: { label: string; emphasis?: boolean;
   const rows = Math.max(left.items.length, right.items.length, 0)
 
   return (
-    <div className="article-visual__comparison-grid">
-      <div className="article-visual__cmp-head" data-side="0">
+    <div className="article-visual__comparison-board">
+      <span className="article-visual__comparison-vs" aria-hidden="true">
+        VS
+      </span>
+      <div className="article-visual__cmp-head" data-side="0" data-emphasis={left.emphasis || undefined}>
         {left.label}
       </div>
-      <div className="article-visual__cmp-head" data-side="1">
+      <div className="article-visual__cmp-head" data-side="1" data-emphasis={right.emphasis || undefined}>
         {right.label}
       </div>
-      {Array.from({ length: rows }, (_, i) => (
-        <Fragment key={i}>
-          <div className="article-visual__cmp-cell" data-side="0" data-filled={left.items[i] ? true : undefined}>
-            {left.items[i]?.label ?? ''}
-          </div>
-          <div className="article-visual__cmp-cell" data-side="1" data-filled={right.items[i] ? true : undefined}>
-            {right.items[i]?.label ?? ''}
-          </div>
-        </Fragment>
-      ))}
+      {Array.from({ length: rows }, (_, i) => {
+        const leftItem = left.items[i]
+        const rightItem = right.items[i]
+        const axis = leftItem?.detail?.trim() || rightItem?.detail?.trim()
+        return (
+          <Fragment key={i}>
+            {axis ? (
+              <span className="article-visual__cmp-axis" style={{ '--cmp-row': i } as CSSProperties}>
+                {axis}
+              </span>
+            ) : null}
+            <div className="article-visual__cmp-cell" data-side="0" data-filled={leftItem ? true : undefined}>
+              {leftItem?.label ?? ''}
+            </div>
+            <div
+              className="article-visual__cmp-cell"
+              data-side="1"
+              data-filled={rightItem ? true : undefined}
+              data-emphasis={rightItem?.emphasis || undefined}
+            >
+              {rightItem?.label ?? ''}
+            </div>
+          </Fragment>
+        )
+      })}
     </div>
   )
 }

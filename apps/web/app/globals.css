@@ -193,6 +193,10 @@ html.dark .markdoc .article-visual {
   text-align: center;
 }
 
+.markdoc .article-visual ul.article-visual__hierarchy-leaves > li.article-visual__hierarchy-leaf {
+  padding-inline-end: 0;
+}
+
 .markdoc .article-visual .article-visual__hierarchy-pillar,
 .markdoc .article-visual .article-visual__hierarchy-leaf {
   text-align: center;
