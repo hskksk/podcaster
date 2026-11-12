@@ -1126,15 +1126,18 @@
 
 @container av-slot (min-width: 22rem) and (max-width: 32rem) {
   .article-visual__sequence--steps {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding-bottom: 0.2rem;
-    scrollbar-width: thin;
+    display: grid;
+    grid-template-columns: repeat(var(--av-steps, 4), minmax(0, 1fr));
+    overflow: visible;
   }
 
   .article-visual__sequence--steps .article-visual__seq-item {
-    flex: 0 0 4.25rem;
+    min-width: 0;
+    margin-left: -0.32rem;
+  }
+
+  .article-visual__sequence--steps .article-visual__seq-item:first-child {
+    margin-left: 0;
   }
 }
 
@@ -1214,30 +1217,36 @@
   }
 
   .article-visual__sequence--steps {
-    flex-direction: row;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: repeat(var(--av-steps, 4), minmax(0, 1fr));
     gap: 0;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding-bottom: 0.2rem;
-    scroll-snap-type: x proximity;
+    overflow: visible;
+    width: 100%;
   }
 
   .article-visual__sequence--steps .article-visual__seq-item {
-    flex: 0 0 46%;
-    min-width: 6.25rem;
-    min-height: 5rem;
-    margin-left: -0.4rem;
-    scroll-snap-align: start;
+    min-width: 0;
+    width: 100%;
+    min-height: 4.85rem;
+    margin-left: -0.28rem;
     clip-path: var(--av-chevron);
     border-radius: 0;
-    padding: 0.7rem 0.5rem 0.55rem 1rem;
+    padding: 0.65rem 0.35rem 0.5rem 0.85rem;
   }
 
   .article-visual__sequence--steps .article-visual__seq-item:first-child {
     margin-left: 0;
     clip-path: var(--av-chevron-first);
-    padding-left: 0.75rem;
+    padding-left: 0.65rem;
+  }
+
+  .article-visual__sequence--steps .article-visual__big-label {
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+  }
+
+  .article-visual__sequence--steps .article-visual__seq-index {
+    font-size: 1.15rem;
   }
 
   .article-visual__sequence--timeline .article-visual__seq-item {

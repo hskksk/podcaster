@@ -250,7 +250,11 @@ function SequenceBody({ mode, items }: { mode: string; items: Item[] }) {
   }
 
   return (
-    <ol className="article-visual__sequence article-visual__sequence--steps">
+    <ol
+      className="article-visual__sequence article-visual__sequence--steps"
+      data-step-count={items.length}
+      style={{ '--av-steps': items.length } as CSSProperties}
+    >
       {items.map((item, i) => (
         <li
           key={`${item.label}-${i}`}
