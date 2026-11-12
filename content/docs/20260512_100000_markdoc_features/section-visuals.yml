@@ -1,0 +1,110 @@
+version: 1
+sourceSha256: "4bfa21b07fb31bf0e8d30880295fd3949a6cf4493799986e2c22ef73e7f9e45e"
+visuals:
+  - sectionId: "核となる概念"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "タグで安全に拡張し、ノードでCommonMarkを扱い、スキーマが属性と子要素を検証する三柱。"
+    spec:
+      type: cards
+      title: データとして宣言する拡張
+      items:
+        - label: タグ
+          detail: 定義済み構文
+        - label: ノード
+          detail: 標準要素
+        - label: スキーマ
+          detail: 検証の基盤
+          emphasis: true
+
+  - sectionId: "詳細な仕組み理論"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "MarkdownをパースしてAST化し、スキーマで変換してからReactやHTMLへレンダリングする三段分離。"
+    spec:
+      type: sequence
+      title: ASTを挟んで柔軟に配信
+      mode: steps
+      items:
+        - label: Parse
+          detail: Markdown→AST
+        - label: Transform
+          detail: スキーマ適用
+          emphasis: true
+        - label: Render
+          detail: 出力形式
+
+  - sectionId: "独自構造の定義とバリデーション"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "属性型・children制約・validate関数でビルド時に構造とビジネスルールを静かに検証する。"
+    spec:
+      type: cards
+      title: 壊れにくさはスキーマで担保
+      items:
+        - label: 属性検証
+          detail: 型・正規表現
+        - label: 子要素制約
+          detail: ホワイトリスト
+        - label: validate関数
+          detail: 高度ルール
+
+  - sectionId: "mdxとの比較docs-as-data-vs-docs-as-code"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Markdocは宣言的データ・高セキュリティ・静的検証、MDXは命令的コード・柔軟だが実行時リスク。"
+    spec:
+      type: comparison
+      title: 大規模チームはデータ志向
+      sides:
+        - label: Markdoc
+        - label: MDX
+      rows:
+        - axis: 思想
+          cells:
+            - label: Docs as Data
+            - label: Docs as Code
+        - axis: セキュリティ
+          cells:
+            - label: JS非実行
+              emphasis: true
+            - label: JSX実行可
+        - axis: バリデーション
+          cells:
+            - label: スキーマ静的
+            - label: 実行時寄り
+        - axis: 向き
+          cells:
+            - label: 大規模・ライター
+            - label: 開発者中心
+
+  - sectionId: "具体例応用事例"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Stripe APIドキュメントの裏側と、ユーザー投稿Markdownの安全コンポーネント化にMarkdocが向く。"
+    spec:
+      type: cards
+      title: 実行コードなしでアプリ級体験
+      items:
+        - label: Stripe Docs
+          detail: タブ・個別化
+        - label: 投稿コンテンツ
+          detail: 安全レンダリング
+          emphasis: true
+
+  - sectionId: "最新動向未解決問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Next.js公式統合は進む一方、remark/rehypeほど巨大なエコシステムではない。"
+    spec:
+      type: pros_cons
+      title: 統合は進むがプラグインは限定的
+      sides:
+        - label: 追い風
+          items:
+            - label: Next公式統合
+            - label: 保守性・検証
+        - label: 課題
+          items:
+            - label: エコシステム規模
+            - label: 既存プラグイン流用

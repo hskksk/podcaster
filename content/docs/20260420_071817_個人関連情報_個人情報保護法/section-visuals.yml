@@ -1,0 +1,172 @@
+version: 1
+sourceSha256: "513a524f030fe54bac0a18c064e995952600d203f411f78b33f835cf50999727"
+visuals:
+  - sectionId: "2-個人関連情報の法的定義"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "個人関連情報は生存する個人に関し、個人情報・仮名加工・匿名加工のいずれにも当てはまらない情報として第2条7項に定義される。"
+    spec:
+      type: cards
+      title: 残余カテゴリとして置かれる
+      items:
+        - label: 生存する個人
+          detail: 死者は対象外
+        - label: 個人情報でない
+          detail: 単体で特定不可
+        - label: 加工情報でない
+          detail: 仮名・匿名以外
+          emphasis: true
+
+  - sectionId: "規制の背景dmp問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Cookieや閲覧履歴が第三者提供で会員情報と照合される抜け穴を塞ぐため、2022年改正で個人関連情報が新設された。"
+    spec:
+      type: flow
+      title: 照合で個人化する抜け穴を塞ぐ
+      nodes:
+        - id: cookie
+          label: Cookie等
+        - id: transfer
+          label: 第三者提供
+        - id: match
+          label: 会員DB照合
+          emphasis: true
+        - id: rule
+          label: 個人関連情報規制
+      edges:
+        - from: cookie
+          to: transfer
+        - from: transfer
+          to: match
+        - from: match
+          to: rule
+
+  - sectionId: "4つの情報カテゴリの比較"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "個人情報は規制最強。個人関連情報は第三者提供想定時に同意確認が中心で、自社内利用には規制が薄い。"
+    spec:
+      type: comparison
+      title: 個人関連は提供時に規制が効く
+      sides:
+        - label: 個人情報
+        - label: 個人関連情報
+      rows:
+        - axis: 規制強度
+          cells:
+            - label: 最強
+            - label: 提供時中心
+        - axis: 第三者提供
+          cells:
+            - label: 同意必要
+            - label: 想定時は確認
+              emphasis: true
+        - axis: 自社利用
+          cells:
+            - label: 目的制限あり
+            - label: 規制なし
+
+  - sectionId: "個人関連情報と外部送信規律の比較"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "個人関連情報は個保法2022年施行・個情委管轄・第三者提供でオプトイン。外部送信規律は通信法2023年施行・総務省管轄・通知公表が中心。"
+    spec:
+      type: comparison
+      title: 法律も同意の形も違う
+      sides:
+        - label: 個人関連情報
+        - label: 外部送信規律
+      rows:
+        - axis: 施行
+          cells:
+            - label: "2022/4/1"
+            - label: "2023/6/16"
+        - axis: 同意
+          cells:
+            - label: オプトイン
+              emphasis: true
+            - label: 通知が基本
+        - axis: 管轄
+          cells:
+            - label: 個情委
+            - label: 総務省
+
+  - sectionId: "提供先基準vs提供元基準"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "個人情報該当性は提供元の容易照合で判断。個人関連の第三者提供規制は提供先で個人データ取得が想定されるかが基準。"
+    spec:
+      type: comparison
+      title: 判断の矢印が逆向き
+      sides:
+        - label: 個人情報
+        - label: 第三者提供規制
+      rows:
+        - axis: 基準地点
+          cells:
+            - label: 提供元照合
+            - label: 提供先想定
+              emphasis: true
+        - axis: 典型誤解
+          cells:
+            - label: 元が匿名ならOK
+            - label: 先の取得想定で発動
+
+  - sectionId: "よくある間違い最重要チェックポイント"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "個人関連でも第三者提供に規制あり。ポリシー掲示だけでは不十分で、提供元にも確認・記録義務がある。"
+    spec:
+      type: pros_cons
+      title: よくある誤解と正しい線引き
+      sides:
+        - label: 誤解
+          items:
+            - label: 何でもOK
+            - label: 掲示で同意完了
+            - label: 先だけの問題
+        - label: 実務
+          items:
+            - label: 提供時に規制
+            - label: 積極的同意
+            - label: 元も確認義務
+
+  - sectionId: "キーポイント5箇条"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "残余カテゴリで規制は第三者提供がトリガー。想定は客観基準、オプトイン必要、提供元先双方に義務。"
+    spec:
+      type: cards
+      title: 五つで実務の芯を押さえる
+      items:
+        - label: 残余カテゴリ
+          detail: 三情報以外
+        - label: トリガー
+          detail: 第三者提供
+          emphasis: true
+        - label: 想定基準
+          detail: 客観も含む
+        - label: 同意
+          detail: オプトイン
+        - label: 双方義務
+          detail: 元・先ともに
+
+  - sectionId: "企業としての対応チェックリスト"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "提供先での個人データ化想定を確認・記録し、同意取得とポリシー整備、Cookie・タグの第三者提供判定を行う。"
+    spec:
+      type: sequence
+      title: 想定確認から記録・同意へ
+      mode: steps
+      items:
+        - label: 想定確認
+          detail: 提供先で個人化
+          emphasis: true
+        - label: 記録
+          detail: 提供元義務
+        - label: 同意
+          detail: オプトイン
+        - label: タグ点検
+          detail: 提供該当性

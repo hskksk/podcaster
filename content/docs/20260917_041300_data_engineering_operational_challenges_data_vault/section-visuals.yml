@@ -1,0 +1,156 @@
+version: 1
+sourceSha256: "d26eb126b8bc6f723ba0548ff601be16a1ac5ecd6d6888a030618bb8152b8feb"
+visuals:
+  - sectionId: "核となる概念運用課題の分類体系"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "運用課題はパイプライン信頼性、品質、スキーマ契約、遅延到着、履歴化、多ソース統合、リネージ、性能FinOps、組織、M&Aなどに分類される。"
+    spec:
+      type: cards
+      title: 設計図より運用が先
+      items:
+        - label: 信頼性と可観測性
+        - label: 品質と契約
+          emphasis: true
+        - label: 履歴と遅延到着
+        - label: 多ソースと組織
+
+  - sectionId: "data-vault-20-検証マトリクス"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "マトリクスは各運用課題に対しDV2.0が効きやすいか効きにくいかを示し、品質やFinOpsは別レイヤ投資が必要と書く。"
+    spec:
+      type: matrix
+      title: DVは銀の弾ではない
+      xAxis:
+        low: DV単体では弱い
+        high: DVが効きやすい
+      yAxis:
+        low: 影響小
+        high: 影響大
+      items:
+        - label: 多ソース統合
+          quadrant: high-high
+          emphasis: true
+        - label: データ品質本体
+          quadrant: low-high
+        - label: FinOps最適化
+          quadrant: low-high
+
+  - sectionId: "dv20-が特に効きやすい条件チェックリスト"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "多ソース、履歴監査、ソース変更へのadditive拡張、並列ロードが揃うとDV2.0の強みが出やすい。"
+    spec:
+      type: cards
+      title: この四つが揃うとDVが効く
+      items:
+        - label: 多ソース統合
+        - label: 履歴と監査
+        - label: additive拡張
+          emphasis: true
+        - label: 並列ロード
+
+  - sectionId: "dv20-単体では足りない運用投資並行必須"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "オブザーバビリティ、データ契約、品質ゲート、FinOps、組織的なデータ契約はDVと並行して投資しないと緑のパイプラインでも狂う。"
+    spec:
+      type: pros_cons
+      title: 統合層だけでは足りない
+      sides:
+        - label: DVが担う層
+          items:
+            - label: Raw統合履歴
+            - label: ソース変更耐性
+        - label: 別途必要
+          emphasis: true
+          items:
+            - label: 可観測性
+            - label: データ契約
+            - label: 品質とFinOps
+
+  - sectionId: "kimball-inmon-との運用比較検証の座標軸"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "運用比較では変更コスト、ソース追加、履歴再現、BI直結の楽さ、学習コストを軸にKimball、Inmon、DV2.0を座標づける。"
+    spec:
+      type: comparison
+      title: 運用座標で三手法を見る
+      sides:
+        - label: Kimball
+        - label: Data Vault 2.0
+          emphasis: true
+      rows:
+        - axis: ソース追加
+          cells:
+            - label: マート再設計が要る
+            - label: additive拡張
+        - axis: 履歴監査
+          cells:
+            - label: SCD運用負荷
+            - label: insert-only
+        - axis: 消費の簡単さ
+          cells:
+            - label: BIに直結しやすい
+            - label: マート出口必須
+
+  - sectionId: "インシデント類型-最初に疑う層ランブック向け"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "列リネームは契約層、数字の遅延はウォーターマーク、静かな狂いはPIT BridgeやSatelliteタイムラインを疑う。"
+    spec:
+      type: flow
+      title: 症状から層を当てる
+      nodes:
+        - id: rename
+          label: 列名変更
+        - id: late
+          label: 金曜数字が動く
+        - id: silent
+          label: レポートだけ狂う
+          emphasis: true
+      edges:
+        - from: rename
+          to: silent
+        - from: late
+          to: silent
+
+  - sectionId: "ケース-a-列リネームインシデントデータ契約なし"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "契約なしでソースが列名だけ変えると下流は静かに壊れ、DVの履歴は残っても意味がずれる。"
+    spec:
+      type: sequence
+      mode: steps
+      title: 契約なしは静かに壊れる
+      items:
+        - label: ソースが列リネーム
+        - label: パイプラインは成功
+        - label: ダッシュボードが狂う
+          emphasis: true
+
+  - sectionId: "なぜ運用課題の整理が-dwh-選定に効くか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DWH選定はモデル図より、日々のインシデント類型と誰が直すかの運用課題に照らすと誤選択を減らせる。"
+    spec:
+      type: flow
+      title: 選定は運用課題から逆算
+      nodes:
+        - id: incidents
+          label: 頻出インシデント
+        - id: classify
+          label: 課題分類
+          emphasis: true
+        - id: match
+          label: 手法とマトリクス
+        - id: invest
+          label: 並行投資の決定
+      edges:
+        - from: incidents
+          to: classify
+        - from: classify
+          to: match
+        - from: match
+          to: invest

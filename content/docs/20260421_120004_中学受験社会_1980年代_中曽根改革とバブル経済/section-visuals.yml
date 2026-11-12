@@ -1,0 +1,143 @@
+version: 1
+sourceSha256: "85f19a2ef81412d5bb7f506a89456ae520a490916f01f84a399b8a265206d5f3"
+visuals:
+  - sectionId: "三公社民営化"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1980年代に国鉄分割民営化、日本たばこ塩専売の民営化、電電公社のNTT分割が進んだ。"
+    spec:
+      type: cards
+      title: 三公社の民営化が柱
+      items:
+        - label: 国鉄
+          detail: JR分割
+          emphasis: true
+        - label: 専売公社
+          detail: JTへ
+        - label: 電電公社
+          detail: NTT誕生
+
+  - sectionId: "中曽根康弘内閣1982年1987年-行政改革の時代"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "中曽根内閣は行革推進と民営化、財政再建を掲げ、外相として新保守、後に総理として強いリーダーシップを発揮した。"
+    spec:
+      type: cards
+      title: 中曽根は行革と民営化の顔
+      items:
+        - label: 任期
+          detail: 1982〜1987
+        - label: 行革推進
+          detail: 行政改革
+          emphasis: true
+        - label: 財政再建
+          detail: 赤字縮小
+
+  - sectionId: "日米貿易摩擦-ジャパンバッシング"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "半導体・自動車を巡り日米摩擦が激化し、指名買い・ローカル買いを求めるジャパンバッシングが起きた。"
+    spec:
+      type: pros_cons
+      title: 輸出成功が摩擦を呼んだ
+      sides:
+        - label: 日本側
+          items:
+            - label: 自動車・半導体優位
+            - label: 黒字拡大
+        - label: 米国側
+          items:
+            - label: ジャパンバッシング
+              emphasis: true
+            - label: 市場開放要求
+
+  - sectionId: "プラザ合意1985年9月22日-人為的な円高"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1985年9月プラザ合意で主要国が協調介入し円高進行。輸出企業は苦境に、後にバブルへ資金が向かった。"
+    spec:
+      type: flow
+      title: 合意が円高と資金移動を生んだ
+      nodes:
+        - id: plaza
+          label: プラザ合意
+          emphasis: true
+        - id: yen
+          label: 円高
+        - id: export
+          label: 輸出打撃
+        - id: bubble
+          label: 資産バブル
+      edges:
+        - from: plaza
+          to: yen
+        - from: yen
+          to: export
+        - from: yen
+          to: bubble
+
+  - sectionId: "バブル経済1987年1991年-土地神話の狂宴"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "低金利と余剰資金で地価・株価が急騰し、バブル景気が1987年頃から頂点に。土地担保融資が拡大した。"
+    spec:
+      type: cards
+      title: 低金利が資産価格を煽った
+      items:
+        - label: 低金利
+          detail: 資金余り
+        - label: 地価株価
+          detail: 急騰
+          emphasis: true
+        - label: 土地担保
+          detail: 融資拡大
+
+  - sectionId: "バブル崩壊1990年"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1990年頃から株価・地価が下落しバブル崩壊。不良債権と長期不況が続いた。"
+    spec:
+      type: sequence
+      title: "1990年で神話は終わった"
+      mode: timeline
+      items:
+        - label: 株価急落
+          detail: バブル転換
+          emphasis: true
+        - label: 地価下落
+          detail: 担保目減り
+        - label: 不良債権
+          detail: 金融停滞
+
+  - sectionId: "重要年表"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1985年プラザ、1987年前後バブル頂、1990年崩壊が1980年代後半の流れ。"
+    spec:
+      type: sequence
+      title: プラザ→バブル→崩壊
+      mode: timeline
+      items:
+        - label: "1985"
+          detail: プラザ合意
+        - label: "1987〜"
+          detail: バブル頂
+          emphasis: true
+        - label: "1990"
+          detail: 崩壊開始
+
+  - sectionId: "中学受験頻出ポイント"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "三公社民営化、プラザ1985年9月22日、バブルと1990年崩壊、ジャパンバッシングが頻出。"
+    spec:
+      type: cards
+      title: 民営化とプラザの日付
+      items:
+        - label: 三公社
+          detail: 国鉄・専売・電電
+        - label: プラザ
+          detail: "1985/9/22"
+          emphasis: true
+        - label: バブル崩壊
+          detail: "1990年頃"

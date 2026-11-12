@@ -1,0 +1,153 @@
+version: 1
+sourceSha256: "a4cc07755e8a46ae176b390091b99cd5c90af2e00562751c25b1a89e267ec970"
+visuals:
+  - sectionId: "冷戦cold-warとは"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "第二次大戦後、米ソが直接戦争せずイデオロギーと代理戦争で対立する冷戦が45年続いた。"
+    spec:
+      type: interaction
+      title: 直接戦争せず世界を分けた
+      actors:
+        - id: us
+          label: 米国
+        - id: ussr
+          label: ソ連
+        - id: world
+          label: 各国
+      steps:
+        - from: us
+          to: world
+          label: 資本主義陣
+        - from: ussr
+          to: world
+          label: 社会主義陣
+        - from: us
+          to: ussr
+          label: 軍拡・代理戦争
+
+  - sectionId: "ベルリンの壁崩壊1989年11月9日-冷戦の終わり"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1989年11月9日ベルリンの壁が開放され、東西ドイツ統一とソ連崩壊へ向かう冷戦終結の象徴となった。"
+    spec:
+      type: sequence
+      title: "1989年11月9日が転換点"
+      mode: timeline
+      items:
+        - label: "1989/11/9"
+          detail: 壁の開放
+          emphasis: true
+        - label: 東西統一
+          detail: ドイツ再統一
+        - label: ソ連解体
+          detail: "1991年"
+
+  - sectionId: "ソ連解体1991年12月25日"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1991年12月25日ゴルバチョフが大統領辞任しソ連が解体。冷戦は事実上終わった。"
+    spec:
+      type: cards
+      title: クリスマスにソ連が消えた
+      items:
+        - label: 辞任
+          detail: ゴルバチョフ
+        - label: 日付
+          detail: "1991/12/25"
+          emphasis: true
+        - label: 結果
+          detail: 冷戦終結
+
+  - sectionId: "湾岸戦争1991年1月2月-日本の国際貢献が問われた"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1991年湾岸戦争で国連決議に基づく多国籍軍がイラクを退避。日本はPKO協力法議論へ向かった。"
+    spec:
+      type: flow
+      title: 湾岸がPKO議論を加速
+      nodes:
+        - id: gulf
+          label: 湾岸戦争
+          emphasis: true
+        - id: un
+          label: 国連決議
+        - id: japan
+          label: 日本の貢献論
+        - id: pko
+          label: PKO協力法へ
+      edges:
+        - from: gulf
+          to: un
+        - from: gulf
+          to: japan
+        - from: japan
+          to: pko
+
+  - sectionId: "pko協力法1992年と自衛隊カンボジア派遣"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1992年PKO協力法成立後、自衛隊がカンボジアへ初の海外派遣を行い、55年体制崩壊と並ぶ政治転換点となった。"
+    spec:
+      type: sequence
+      title: 法整備のあと初の派遣
+      mode: timeline
+      items:
+        - label: "1992年"
+          detail: PKO協力法
+          emphasis: true
+        - label: カンボジア
+          detail: 初の海外派遣
+        - label: 論点
+          detail: 海外貢献
+
+  - sectionId: "55年体制の崩壊1993年-38年ぶりの政権交代"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1993年非自民連立政権が誕生し、1955年以降の自民一党優位の55年体制が崩れた。"
+    spec:
+      type: cards
+      title: "38年ぶりの政権交代"
+      items:
+        - label: "1955年体制"
+          detail: 自民優位
+        - label: "1993年"
+          detail: 連立政権
+          emphasis: true
+        - label: 意味
+          detail: 一党優位終焉
+
+  - sectionId: "阪神淡路大震災1995年1月17日-安全神話の崩壊"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1995年1月17日未明の阪神淡路大震災で安全神話が崩れ、防災・救援体制の見直しが進んだ。"
+    spec:
+      type: cards
+      title: 安全神話が一度に崩れた
+      items:
+        - label: 日時
+          detail: "1995/1/17"
+          emphasis: true
+        - label: 被災
+          detail: 阪神淡路
+        - label: 教訓
+          detail: 防災体制見直し
+
+  - sectionId: "重要年表19891995年"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1989年壁崩壊、1991年湾岸とソ連解体、1993年55年体制崩壊、1995年阪神大震災が並ぶ。"
+    spec:
+      type: sequence
+      title: 激動の6年を一本に
+      mode: timeline
+      items:
+        - label: "1989"
+          detail: 壁崩壊
+        - label: "1991"
+          detail: 湾岸・ソ連終わり
+        - label: "1993"
+          detail: 政権交代
+        - label: "1995"
+          detail: 阪神大震災
+          emphasis: true

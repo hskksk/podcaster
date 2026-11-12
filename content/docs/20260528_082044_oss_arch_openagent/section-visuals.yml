@@ -1,0 +1,168 @@
+version: 1
+sourceSha256: "5fe0290eb648a12caa2be61afea043c5e4bf58e026b0ed811483bd9884afdf23"
+visuals:
+  - sectionId: "設計上の核心思想"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "単一バイナリ配布、Store を脳とし Provider を差し替え可能にし、エージェントループを可視化するプラットフォーム設計である。"
+    spec:
+      type: cards
+      title: プラットフォームとして自己完結
+      items:
+        - label: Single Binary First
+          detail: ランタイム不要で起動
+        - label: Store as Brain
+          emphasis: true
+          detail: 設定ハブ
+        - label: Provider Abstraction
+        - label: Transparent Agent Loop
+        - label: Platform not Plugin
+
+  - sectionId: "全体像go-バックエンド-react-フロントエンド"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "React が REST/SSE で Beego フィルタとコントローラを呼び、object・model・tool 層が XORM で DB に接続する。"
+    spec:
+      type: flow
+      title: UI と Go ドメインを分離
+      nodes:
+        - id: react
+          label: React SPA
+        - id: beego
+          label: Beego Filters
+        - id: api
+          label: ApiController
+          emphasis: true
+        - id: domain
+          label: object/model/tool
+        - id: db
+          label: XORM → DB
+      edges:
+        - from: react
+          to: beego
+          label: REST/SSE
+        - from: beego
+          to: api
+        - from: api
+          to: domain
+        - from: domain
+          to: db
+
+  - sectionId: "起動シーケンス"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "main.go は CLI 処理後 DB 接続・シード・ワーカー起動を経て Beego をポート14000で立ち上げる。"
+    spec:
+      type: sequence
+      title: 単一バイナリの起動順
+      mode: steps
+      items:
+        - label: CLI Early Dispatch
+        - label: DB Adapter
+        - label: テーブル作成とシード
+          emphasis: true
+        - label: ユーティリティ初期化
+        - label: バックグラウンドワーカー
+        - label: Beego Run 14000
+
+  - sectionId: "主要サブシステム"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Identity・Connectors・Knowledge Base・Core Chat・Agent Tools など八つのサブシステムが責務を分割する。"
+    spec:
+      type: cards
+      title: 八つの責務分割
+      items:
+        - label: Identity
+          detail: Casdoor SSO
+        - label: Connectors
+          detail: LLM/MCP 管理
+        - label: Knowledge Base
+          detail: RAG
+        - label: Core Chat
+          emphasis: true
+          detail: SSE エージェント
+        - label: Agent Tools
+        - label: Observability
+
+  - sectionId: "rag-パイプライン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Storage から Parsing・Splitting・Embedding・Indexing を経て Retrieval でベクトル検索する。"
+    spec:
+      type: sequence
+      title: 取り込みから検索まで六段
+      mode: steps
+      items:
+        - label: Storage
+        - label: Parsing
+        - label: Splitting
+        - label: Embedding
+        - label: Indexing
+          emphasis: true
+        - label: Retrieval
+
+  - sectionId: "チャットメッセージパイプライン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "POST add-message 後 SSE で Store 解決・課金 dry-run・RAG・ツール統合・LLM ループを走らせ UI 描画する。"
+    spec:
+      type: sequence
+      title: メッセージは SSE で段階実行
+      mode: timeline
+      items:
+        - label: add-message
+        - label: Store 解決
+        - label: 課金 dry-run
+        - label: RAG 検索
+        - label: ツール統合
+          emphasis: true
+        - label: LLM ループ
+        - label: Carrier で UI
+
+  - sectionId: "store-centric-configuration"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Store がモデル・プロンプト・RAG・ツールを束ね、Chat と Message がその上に乗る三層軸である。"
+    spec:
+      type: hierarchy
+      title: Store が AI 機能の軸
+      root:
+        label: Store
+        emphasis: true
+        children:
+          - label: モデル・プロンプト
+          - label: VectorStore
+          - label: ツールと Skills
+          - label: Chat
+            children:
+              - label: Message
+
+  - sectionId: "oh-my-openagent-との対比"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenAgent は Go 単一バイナリの自社ホスト基盤、oh-my-openagent は OpenCode 向け npm ハーネスで問題領域が異なる。"
+    spec:
+      type: comparison
+      title: 基盤とハーネスは別市場
+      sides:
+        - label: OpenAgent
+        - label: oh-my-openagent
+          emphasis: true
+      rows:
+        - axis: 位置づけ
+          cells:
+            - label: フルスタック基盤
+            - label: OpenCode ハーネス
+        - axis: 配布
+          cells:
+            - label: 単一バイナリ
+            - label: npm プラグイン
+        - axis: RAG
+          cells:
+            - label: 内蔵 Vector
+            - label: 外部 MCP 経由
+        - axis: ターゲット
+          cells:
+            - label: 組織 AI 基盤
+            - label: 開発者エージェント

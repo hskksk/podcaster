@@ -1,0 +1,150 @@
+version: 1
+sourceSha256: "833dd4db192c056a9cfbbde7ec0265f75b5e6798391281357fece782e55d8a60"
+visuals:
+  - sectionId: "なぜ今コーディングエージェントが熱いのか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "市場は2026年約85億ドルへ拡大見込み。米開発者の92%が利用し、41%のコードがAI生成、Cursor ARRは20億ドル規模と報じられる。"
+    spec:
+      type: cards
+      title: 採用と支出が同時に跳ねた
+      items:
+        - label: 市場
+          detail: 2026年約85億USD
+          emphasis: true
+        - label: 採用率
+          detail: 米国92%
+        - label: AI生成コード
+          detail: 全世界41%
+        - label: Cursor ARR
+          detail: 20億USD級
+
+  - sectionId: "第一世代20202022年コード補完の時代"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "第一世代は2020〜22年の補完型。CopilotがVS Codeに統合され次行予測が標準になり、自律動作はほぼなかった。"
+    spec:
+      type: sequence
+      title: 補完が先に標準を奪った
+      mode: steps
+      items:
+        - label: "2020〜22"
+          detail: コード補完期
+        - label: Copilot
+          detail: 2021年VS Code
+          emphasis: true
+        - label: 中心体験
+          detail: 次行予測
+
+  - sectionId: "第二世代20222024年対話型aiとideの統合"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "第二世代は2022〜24年。CursorのAI対話IDE、Aiderのターミナル、Clineのファイル操作がエージェント的動作を広げた。"
+    spec:
+      type: sequence
+      title: IDEと対話が次の層
+      mode: steps
+      items:
+        - label: "2022〜24"
+          detail: 対話統合期
+        - label: Cursor
+          detail: AI対話IDE
+        - label: Cline
+          detail: 操作・実行
+          emphasis: true
+
+  - sectionId: "第三世代20242026年完全自律エージェントの時代"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "第三世代は2024〜26年。DevinやBolt、Lovable、OpenCodeとvibe codingで自律・ブラウザ開発が急拡大。"
+    spec:
+      type: sequence
+      title: 自律とノーコードが面を広げた
+      mode: steps
+      items:
+        - label: Devin
+          detail: AIエンジニア
+        - label: Bolt/Lovable
+          detail: ブラウザビルド
+        - label: OpenCode
+          detail: ターミナル急伸
+          emphasis: true
+
+  - sectionId: "エージェント型-vs-補完型"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "補完型は次行予測で低遅延。エージェント型は指示から複数ファイル・コマンド・テストまで自律完了する。"
+    spec:
+      type: comparison
+      title: 予測かタスク完遂か
+      sides:
+        - label: 補完型
+        - label: エージェント型
+      rows:
+        - axis: 動き
+          cells:
+            - label: 次行予測
+            - label: タスク完遂
+              emphasis: true
+        - axis: 統合
+          cells:
+            - label: 低遅延・自然
+            - label: 多ファイル操作
+        - axis: 例
+          cells:
+            - label: Copilot
+            - label: Cline/Devin
+
+  - sectionId: "ツール利用tool-useとmcp"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "多くのエージェントがAnthropicのMCPを採用し、GitHubやDBなど外部ツールと連携。Cline等は3000超のサーバーに対応。"
+    spec:
+      type: flow
+      title: MCPがツール接続の共通語
+      nodes:
+        - id: agent
+          label: コーディングAgent
+        - id: mcp
+          label: MCP
+          emphasis: true
+        - id: tools
+          label: GitHub等
+      edges:
+        - from: agent
+          to: mcp
+        - from: mcp
+          to: tools
+
+  - sectionId: "ベンチマークswe-bench"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "SWE-benchはGitHub issue修正能力の標準。2026年時点でClaude Sonnet 4.6は72%超、商用ではCopilot Workspaceが55%と記載。"
+    spec:
+      type: chart
+      title: 研究用と商用で水準が違う
+      variant: bar
+      values:
+        - label: Claude 4.6
+          value: 72
+        - label: Mini-SWE
+          value: 74
+        - label: Copilot WS
+          value: 55
+
+  - sectionId: "課題1自律性と信頼性のトレードオフ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "完全自律は生産性を上げるが意図しない変更リスクも増す。Devinはハイプより低く、人間レビューは不可欠とされる。"
+    spec:
+      type: pros_cons
+      title: 自律性と信頼性は表裏
+      sides:
+        - label: 称賛
+          items:
+            - label: 生産性の向上
+            - label: タスク自動完遂
+        - label: 懸念
+          items:
+            - label: 破壊的変更リスク
+            - label: レビュー不可欠

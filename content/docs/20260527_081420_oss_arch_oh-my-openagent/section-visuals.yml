@@ -1,0 +1,174 @@
+version: 1
+sourceSha256: "07f5108edf9c5e51c08285a801f4acd2de641b61d0e2b4555d8455882eee8001"
+visuals:
+  - sectionId: "全体像opencode-プラグインとしての位置づけ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenCode Runtime がプラグイン API 経由で oh-my-openagent を呼び、下位に LLM プロバイダー・MCP・ローカルツールが接続される。"
+    spec:
+      type: flow
+      title: 本体は機構、中身はプラグイン
+      nodes:
+        - id: runtime
+          label: OpenCode Runtime
+        - id: plugin
+          label: oh-my-openagent
+          emphasis: true
+        - id: llm
+          label: LLM Providers
+        - id: mcp
+          label: MCP Servers
+        - id: local
+          label: Local Tools
+      edges:
+        - from: runtime
+          to: plugin
+          label: plugin API
+        - from: plugin
+          to: llm
+        - from: plugin
+          to: mcp
+        - from: plugin
+          to: local
+
+  - sectionId: "三層オーケストレーションplanning-execution-workers"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Planning に Prometheus 系、Execution に Sisyphus と Atlas、Workers に Junior と調査役が置かれ、Ultrawork は Planning を省略する。"
+    spec:
+      type: hierarchy
+      title: 計画・指揮・実装を層で分ける
+      root:
+        label: 三層オーケストレーション
+        children:
+          - label: Planning Layer
+            emphasis: true
+            children:
+              - label: Prometheus
+              - label: Metis
+              - label: Momus
+          - label: Execution Layer
+            children:
+              - label: Sisyphus
+              - label: Atlas
+              - label: Hephaestus
+          - label: Worker Layer
+            children:
+              - label: Sisyphus-Junior
+              - label: 調査役群
+
+  - sectionId: "初期化フロー7ステップ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "プラグイン起動は設定読込から Manager・Tool・Hook 合成を経て OpenCode 向けインターフェースを公開する。"
+    spec:
+      type: sequence
+      title: 起動時に合成してから公開
+      mode: steps
+      items:
+        - label: 設定コンテキスト初期化
+        - label: プラグイン設定読込
+          emphasis: true
+        - label: Manager 生成
+        - label: Tool 合成
+        - label: Hook 合成
+        - label: プラグイン IF 公開
+
+  - sectionId: "34-category-システムモデル名ではなく意図で委譲"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "delegate_task は ultrabrain や quick などのカテゴリーで委譲し、用途ごとにデフォルトモデルが解決される。"
+    spec:
+      type: flow
+      title: モデル名ではなく意図で選ぶ
+      nodes:
+        - id: task
+          label: 委譲タスク
+        - id: category
+          label: カテゴリー
+          emphasis: true
+        - id: resolve
+          label: 設定・候補列
+        - id: model
+          label: 実行モデル
+      edges:
+        - from: task
+          to: category
+        - from: category
+          to: resolve
+        - from: resolve
+          to: model
+
+  - sectionId: "team-modev40opt-in"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Team Mode は opt-in で最大8並列メンバーと team 系ツール12種、tmux 可視化と ~/.omo/teams 配下ストレージを持つ。"
+    spec:
+      type: cards
+      title: 単一委任からチームへ拡張
+      items:
+        - label: デフォルト OFF
+          detail: v4.0 で opt-in
+        - label: 最大8並列
+          detail: リード＋メンバー
+        - label: team ツール12種
+          detail: create・message 等
+        - label: tmux 可視化
+          emphasis: true
+        - label: 専用ストレージ
+          detail: ~/.omo/teams
+
+  - sectionId: "設計上の核心思想ultrawork-manifesto"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Ultrawork Manifesto は人間介入を失敗信号とみなし、区別不能なコードと検証済み出力を目指す。"
+    spec:
+      type: cards
+      title: 人間は意図だけ渡す
+      items:
+        - label: 介入は失敗信号
+        - label: 区別不能なコード
+        - label: トークンは許容
+        - label: 認知負荷を最小化
+          emphasis: true
+        - label: 予測可能な出力
+
+  - sectionId: "33-関心の分離planning-orchestration-execution"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Prometheus と Atlas はコードを書かず、Hephaestus と Junior が実装を担う。"
+    spec:
+      type: comparison
+      title: 層ごとにコードを書くか分ける
+      sides:
+        - label: 計画・指揮
+        - label: 実装ワーカー
+          emphasis: true
+      rows:
+        - axis: Prometheus
+          cells:
+            - label: 高次推論・計画 MD
+            - label: コードは書かない
+        - axis: Atlas
+          cells:
+            - label: 調整・検証のみ
+            - label: read/verify のみ
+        - axis: Junior 系
+          cells:
+            - label: 計画から委譲
+            - label: 忠実な実装
+
+  - sectionId: "31-ハーネス内容をプラグインに集約する設計"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenCode が拡張ポイントを提供し oh-my-openagent が Harness 層として五十種類超のポリシーを載せ、将来は Adapter ターゲットの一つとなる。"
+    spec:
+      type: sequence
+      title: 機構とハーネスを分離
+      mode: funnel
+      items:
+        - label: OpenCode 拡張点
+        - label: Harness 層に集約
+          emphasis: true
+        - label: 五十超の具体ポリシー
+        - label: 複数 Adapter へ展開

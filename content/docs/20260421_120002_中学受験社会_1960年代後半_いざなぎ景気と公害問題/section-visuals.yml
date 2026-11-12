@@ -1,0 +1,160 @@
+version: 1
+sourceSha256: "397f146a1c8b0d37bc7cecdb7e35d84b0231a52b1a938f1a7f61d6be0ec094d8"
+visuals:
+  - sectionId: "いざなぎ景気1965年11月1970年7月"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "いざなぎ景気は1965年11月から1970年7月まで57ヶ月、成長率11.8%。ベトナム特需・設備投資・消費拡大が要因。"
+    spec:
+      type: cards
+      title: 57ヶ月は特需と消費が押し上げた
+      items:
+        - label: 期間
+          detail: 57ヶ月
+          emphasis: true
+        - label: ベトナム特需
+          detail: 軍需・物資需要
+        - label: 設備投資
+          detail: 工場増設
+        - label: 消費拡大
+          detail: 3Cの普及
+
+  - sectionId: "3c新三種の神器"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "3Cはカラーテレビ、クーラー、自動車。1964年五輪でカラーが加速しカローラ等で大衆車時代が来た。"
+    spec:
+      type: cards
+      title: 頭文字Cの三つが象徴
+      items:
+        - label: Color
+          detail: カラーテレビ
+        - label: Cooler
+          detail: エアコン
+        - label: Car
+          detail: 自動車
+          emphasis: true
+
+  - sectionId: "四大公害病"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "水俣・新潟水俣は有機水銀、イタイイタイはカドミウム、四日市ぜんそくだけ大気の亜硫酸ガスが原因。"
+    spec:
+      type: comparison
+      title: 四つは物質と経路が違う
+      sides:
+        - label: 水質系
+        - label: 大気系
+      rows:
+        - axis: 水俣系
+          cells:
+            - label: 有機水銀・魚介
+            - label: ―
+        - axis: イタイイタイ
+          cells:
+            - label: カドミウム・米
+            - label: ―
+        - axis: 四日市
+          cells:
+            - label: ―
+            - label: 亜硫酸ガス
+              emphasis: true
+
+  - sectionId: "大阪万博1970年-高度成長の集大成"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1970年大阪万博は77カ国・来場約6421万人。月の石などが人気で、高度成長の到達点として示された。"
+    spec:
+      type: cards
+      title: 万博は成長の到達点だった
+      items:
+        - label: テーマ
+          detail: 人類の進歩と調和
+        - label: 参加
+          detail: 77カ国
+        - label: 来場者
+          detail: 約6421万人
+          emphasis: true
+        - label: 象徴展示
+          detail: 月の石
+
+  - sectionId: "公害対策の整備"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1967年公害対策基本法、1970年公害国会で14法整備、1971年環境庁設立、1974年公害健康被害補償法ができた。"
+    spec:
+      type: sequence
+      title: 裁判勝訴が法制化を急いだ
+      mode: timeline
+      items:
+        - label: "1967年"
+          detail: 公害対策基本法
+        - label: "1970年"
+          detail: 公害国会
+          emphasis: true
+        - label: "1971年"
+          detail: 環境庁設立
+        - label: "1974年"
+          detail: 補償法
+
+  - sectionId: "四大公害病の裁判一覧"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "新潟水俣1971年9月、四日市1972年7月、イタイイタイ1972年8月、熊本水俣1973年3月に患者側が勝訴した。"
+    spec:
+      type: sequence
+      title: 四大公害は1971〜73年に認定
+      mode: timeline
+      items:
+        - label: "1971/9"
+          detail: 新潟水俣
+        - label: "1972/7"
+          detail: 四日市
+        - label: "1972/8"
+          detail: イタイイタイ
+        - label: "1973/3"
+          detail: 熊本水俣
+          emphasis: true
+
+  - sectionId: "公害の発生-成長の代償"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "高度成長の裏でチッソがメチル水銀を海に排出し水俣病が発生。企業は因果を長く否定し1973年3月に全面勝訴した。"
+    spec:
+      type: flow
+      title: 成長の影が訴訟へ
+      nodes:
+        - id: growth
+          label: 高度成長
+        - id: dump
+          label: 未処理排水
+        - id: disease
+          label: 公害病
+          emphasis: true
+        - id: suit
+          label: "1973年勝訴"
+      edges:
+        - from: growth
+          to: dump
+        - from: dump
+          to: disease
+        - from: disease
+          to: suit
+
+  - sectionId: "中学受験頻出ポイント"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "イタイイタイはカドミウム、大気汚染は四日市だけ、環境庁1971年、いざなぎ57ヶ月、3Cが頻出。"
+    spec:
+      type: cards
+      title: 物質と大気だけは混同注意
+      items:
+        - label: イタイイタイ
+          detail: カドミウム
+          emphasis: true
+        - label: 大気だけ
+          detail: 四日市ぜんそく
+        - label: 環境庁
+          detail: "1971年"
+        - label: いざなぎ
+          detail: 57ヶ月

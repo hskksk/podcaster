@@ -1,0 +1,171 @@
+version: 1
+sourceSha256: "d75b4d39a903ade916be1d2b4cb604c7289af960d1aaf0450df9a4d890dbdef1"
+visuals:
+  - sectionId: "進化の流れ構造化サマリー"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ヴェーダからウパニシャッド、沙門運動、学派制度化、論理精密化、近代再解釈へ六段階で進む。"
+    spec:
+      type: sequence
+      title: 救済課題が理論を磨いた
+      mode: timeline
+      items:
+        - label: ヴェーダ
+        - label: ウパニシャッド
+        - label: 沙門運動
+        - label: 学派制度化
+        - label: 論理精密化
+        - label: 近代再解釈
+          emphasis: true
+
+  - sectionId: "核となる概念"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "アースティカ・プラマーナ・アートマン・カルマ・空・多面的真理が横断軸となる。"
+    spec:
+      type: cards
+      title: 六つの横断概念
+      items:
+        - label: アースティカ
+          detail: 正統の軸
+        - label: プラマーナ
+          detail: 認識根拠
+        - label: アートマン
+          detail: 自己観
+        - label: カルマ
+          detail: 業と輪廻
+        - label: 空
+          detail: 縁起の帰結
+        - label: アネーカーンタ
+          detail: 多面的真理
+          emphasis: true
+
+  - sectionId: "学派横断の比較フレーム"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "自己観・認識正当化・解脱観の三軸で学派を横断比較できる。"
+    spec:
+      type: matrix
+      title: 三軸で学派を位置づける
+      xAxis:
+        low: 自己否定
+        high: 自己肯定
+      yAxis:
+        low: 実践偏重
+        high: 論理精密
+      items:
+        - label: 仏教無我
+          quadrant: low-high
+          emphasis: true
+        - label: ヴェーダーンタ
+          quadrant: high-low
+        - label: ニヤーヤ
+          quadrant: high-high
+        - label: アージュニャーナ
+          quadrant: low-low
+
+  - sectionId: "具体例応用事例"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ヨーガ心理学・多面的真理・誤謬管理・社会解放・縁起が現代適用例となる。"
+    spec:
+      type: cards
+      title: 古典が現代の手法になる
+      items:
+        - label: ヨーガ心理学
+          detail: 注意と身体統合
+        - label: 多面的真理
+          detail: 対話と共生
+        - label: ニヤーヤ誤謬
+          detail: 議論設計
+        - label: ナヴァヤーナ
+          detail: 社会解放
+        - label: 縁起
+          detail: 関係論的世界観
+          emphasis: true
+
+  - sectionId: "マイナー思想を学ぶ意義"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "順世派・アージーヴィカ・アージュニャーナの批判圧力が主流を洗練した。"
+    spec:
+      type: flow
+      title: 周縁批判が主流を鍛える
+      nodes:
+        - id: minor
+          label: マイナー思想
+        - id: critique
+          label: 懐疑・決定論・唯物
+          emphasis: true
+        - id: main
+          label: 主流学派
+        - id: refine
+          label: 理論の洗練
+      edges:
+        - from: minor
+          to: critique
+        - from: critique
+          to: main
+        - from: main
+          to: refine
+
+  - sectionId: "誤解されやすいポイント"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "空は虚無ではなく、インド哲学は高度な論理伝統を持つなど四つの誤解がある。"
+    spec:
+      type: pros_cons
+      title: よくある誤解と正しい見方
+      sides:
+        - label: よくある誤解
+          items:
+            - label: 空＝虚無
+            - label: 非論理的
+            - label: 実践未分化
+        - label: 本文の指摘
+          emphasis: true
+          items:
+            - label: 空は依存成立
+            - label: ニヤーヤ等の論理
+            - label: 実践と理論の両立
+
+  - sectionId: "最新動向未解決問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "分析哲学との再接続は進むが史料散逸と社会実装は未解決。"
+    spec:
+      type: pros_cons
+      title: 再接続と残る空白
+      sides:
+        - label: 進展
+          items:
+            - label: 形式意味論接続
+            - label: 比較の脱中心化
+        - label: 未解決
+          emphasis: true
+          items:
+            - label: 原典散逸
+            - label: AI倫理への接続
+            - label: 日本語日本語圏の導線不足
+
+  - sectionId: "日本人でも学ぶべき概念優先度つき"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "縁起・アネーカーンタ・プラマーナ・アヒンサーが最優先の実装向け概念。"
+    spec:
+      type: hierarchy
+      title: 優先度で学ぶ順序
+      root:
+        label: 学習優先度
+        children:
+          - label: 最優先
+            emphasis: true
+            children:
+              - label: 縁起
+              - label: 多面的真理
+          - label: 次点
+            children:
+              - label: 心の制御
+          - label: 玄人向け
+            children:
+              - label: 中観・唯識

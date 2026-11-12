@@ -1,0 +1,153 @@
+version: 1
+sourceSha256: "c76bcceca0e66103f3764d10cf90a508dc3caf0df04531b16e8e115ad64c228d"
+visuals:
+  - sectionId: "1-ワーキングコピーはコミットである"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Gitはステージングを経るがJujutsuは編集が常にワーキングコピーコミットに乗る。"
+    spec:
+      type: comparison
+      title: ステージングなしで常にコミット上
+      sides:
+        - label: Git
+        - label: Jujutsu
+      rows:
+        - axis: 編集の先
+          cells:
+            - label: ワーキングツリー
+            - label: ワーキングコピーコミット
+              emphasis: true
+        - axis: 記録まで
+          cells:
+            - label: git add が必要
+            - label: 自動記録
+        - axis: 確定
+          cells:
+            - label: git commit
+            - label: jj describe と jj new
+
+  - sectionId: "2-change-id-と-commit-id-の区別"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Change IDは誕生時に不変でリベース後も同じ変更を追える。Commit IDは内容で変わる。"
+    spec:
+      type: cards
+      title: 変更はIDで追跡する
+      items:
+        - label: Change ID
+          detail: 内容を変えても不変
+          emphasis: true
+        - label: Commit ID
+          detail: Git互換の内容ハッシュ
+
+  - sectionId: "4-ファーストクラスのコンフリクト"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "コンフリクトをコミットとして保存し作業を止めず後でjj resolveできる。"
+    spec:
+      type: flow
+      title: コンフリクトでも作業は続く
+      nodes:
+        - id: merge
+          label: マージ
+        - id: conflict
+          label: コンフリクトコミット
+          emphasis: true
+        - id: work
+          label: 別作業継続
+        - id: resolve
+          label: jj resolve
+      edges:
+        - from: merge
+          to: conflict
+        - from: conflict
+          to: work
+        - from: work
+          to: resolve
+
+  - sectionId: "5-オペレーションログ操作履歴"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "jj op logに全操作が記録されjj undoとjj op restoreで復元できる。"
+    spec:
+      type: sequence
+      title: 操作ごとに取り消せる
+      mode: steps
+      items:
+        - label: 操作実行
+        - label: op log 記録
+        - label: jj undo
+        - label: op restore
+          emphasis: true
+
+  - sectionId: "自動リベース"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "祖先コミットを直すと子孫が自動リベースされコンフリクト解消も伝播する。"
+    spec:
+      type: flow
+      title: 修正が子孫へ透過的に伝わる
+      nodes:
+        - id: edit
+          label: 祖先を修正
+        - id: rebase
+          label: 子孫自動リベース
+          emphasis: true
+        - id: propagate
+          label: 解消の伝播
+      edges:
+        - from: edit
+          to: rebase
+        - from: rebase
+          to: propagate
+
+  - sectionId: "基本的なワークフロー"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "jj git init --colocateで共存しdescribeとnewで変更を積む基本流れ。"
+    spec:
+      type: sequence
+      title: 既存Gitの上に載せる
+      mode: steps
+      items:
+        - label: jj git init
+        - label: jj status
+        - label: jj describe
+        - label: jj new
+          emphasis: true
+
+  - sectionId: "squash-ワークフロー"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "まず書いてからsquash・split・absorbでコミットを後から整形する。"
+    spec:
+      type: sequence
+      title: 書いてから分割する
+      mode: steps
+      items:
+        - label: ざっくりコミット
+        - label: 変更が自動蓄積
+        - label: jj squash
+        - label: jj split
+        - label: jj absorb
+          emphasis: true
+
+  - sectionId: "最新動向未解決問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "v0.40リリースとGoogle採用が進む一方ドキュメントとエコシステムは未成熟。"
+    spec:
+      type: pros_cons
+      title: 注目と残る課題
+      sides:
+        - label: 進展
+          items:
+            - label: Google内採用
+            - label: Git互換共存
+            - label: 活発なリリース
+        - label: 未解決
+          emphasis: true
+          items:
+            - label: エコシステムの若さ
+            - label: 学習コスト
+            - label: 周辺ツール不足

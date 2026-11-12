@@ -1,0 +1,126 @@
+version: 1
+sourceSha256: "9b3fe9e9ad55d56102f9cb6dfb41fb04eae2c69eeac9a669a9f08a4d55dd99ed"
+visuals:
+  - sectionId: "背景歴史linstedt-が見ていた進化の連鎖"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Linstedtは3NF EDW、コンフォームドマート、スタースキーマ拡張の痛点を経てData Vaultを位置づけた。"
+    spec:
+      type: sequence
+      mode: timeline
+      title: 痛点の連鎖がDVを生んだ
+      items:
+        - label: 3NF EDWの限界
+        - label: コンフォームドマート
+        - label: スター拡張の痛点
+        - label: Data Vault提示
+          emphasis: true
+
+  - sectionId: "2-3nf-を-edw-に使ったときの具体的痛点22"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "3NFをEDWに直載せすると結合爆発、変更波及、ロード順序依存が運用を重くする。"
+    spec:
+      type: cards
+      title: 3NF EDWの運用痛点
+      items:
+        - label: 結合と変更波及
+        - label: ロード順序依存
+          emphasis: true
+        - label: 解釈のズレ
+
+  - sectionId: "6-複雑性の三領域12920-へのdivide-and-conquer"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DV2.0原典は複雑性をデータ、プロセス、組織の三領域に分け、分割統治で扱うと述べる。"
+    spec:
+      type: cards
+      title: 複雑さは三領域に分ける
+      items:
+        - label: データ複雑性
+        - label: プロセス複雑性
+        - label: 組織複雑性
+          emphasis: true
+
+  - sectionId: "10-と-20-の対応関係課題設計原理マップ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "TDAN 1.0の課題はDV2.0書籍でスケール、方法論、ビッグデータ、性能へ射程が広がった対応関係に整理される。"
+    spec:
+      type: flow
+      title: 1.0の問いが2.0で拡張
+      nodes:
+        - id: dv10
+          label: DV 1.0課題
+        - id: model
+          label: Hub Link Satellite
+        - id: dv20
+          label: DV 2.0射程
+          emphasis: true
+        - id: method
+          label: 方法論と標準
+      edges:
+        - from: dv10
+          to: model
+        - from: model
+          to: dv20
+        - from: dv20
+          to: method
+
+  - sectionId: "data-vault-10"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DV 1.0はOLTP流用、3NF痛点、スター拡張、ロード時問題などを原論文で列挙した。"
+    spec:
+      type: cards
+      title: 1.0原論文の問題意識
+      items:
+        - label: OLTP手法の流用
+        - label: 3NF EDW痛点
+        - label: スター拡張の限界
+        - label: ロード時問題
+
+  - sectionId: "data-vault-20"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DV 2.0書籍は典型失敗、二層真実、スケール、ビッグデータ、性能、ウォーターフォールBIへ射程を広げた。"
+    spec:
+      type: cards
+      title: 2.0は失敗パターンまで射程
+      items:
+        - label: 四層標準と失敗
+        - label: EDWと真実の二層
+        - label: スケールとV²
+          emphasis: true
+        - label: 変更耐性
+
+  - sectionId: "原論文を読む際の注意"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "原典は製品名や現行クラウド用語が無く、Hub-Link-Satelliteの意図と当時のDWH文脈で読む必要がある。"
+    spec:
+      type: pros_cons
+      title: 原典は時代文脈が要る
+      sides:
+        - label: 読む価値
+          items:
+            - label: 問題意識の出発点
+            - label: 設計原理の根拠
+        - label: そのまま適用しない
+          emphasis: true
+          items:
+            - label: 用語と製品の乖離
+            - label: 現行ツール前提なし
+
+  - sectionId: "最新動向未解決問題原典が示唆した限界"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "原典は自動化不足、消費層の複雑さ、組織成熟度の問いを残し、2020年代も完全解決とは書かない。"
+    spec:
+      type: cards
+      title: 原典が残した未解決
+      items:
+        - label: 自動化と標準化
+        - label: 消費者向けの単純さ
+        - label: 組織成熟度
+          emphasis: true

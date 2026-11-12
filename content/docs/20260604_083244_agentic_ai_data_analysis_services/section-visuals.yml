@@ -1,0 +1,138 @@
+version: 1
+sourceSha256: "43afe3475daa4f218392cc4a6edb9f6958e86e59c31fe2603c74afc077c794b5"
+visuals:
+  - sectionId: "4段階モデル成熟度の見方"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "L1 対話から L4 の自律監視・配信まで四段階でエージェント分析の成熟度を見る。"
+    spec:
+      type: sequence
+      title: 対話から自律配信へ
+      mode: timeline
+      items:
+        - label: L1 Chat-with-Data
+        - label: L2 NL-to-SQL
+        - label: L3 Investigative Agent
+          emphasis: true
+        - label: L4 Agentic Intelligence
+
+  - sectionId: "機能比較マトリクス20252026時点の公称機能"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ガバナンス・RCA・自律監視・混合データなどを各サービス公称で比較するマトリクスである。"
+    spec:
+      type: cards
+      title: 公称機能で横並び比較
+      items:
+        - label: ガバナンス付き SQL
+        - label: 多段 RCA
+        - label: 24/7 監視
+          emphasis: true
+        - label: 混合データソース
+        - label: ナラティブ配信
+        - label: グレーディング
+
+  - sectionId: "選定導入の実務ガイド"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "成熟度・データ所在・ガバナンス・コストの四軸で PoC から本番展開を進める。"
+    spec:
+      type: sequence
+      title: 四軸で PoC から本番へ
+      mode: steps
+      items:
+        - label: 成熟度レベル確認
+        - label: データ所在と接続
+        - label: ガバナンス要件
+          emphasis: true
+        - label: コスト試算
+        - label: 本番展開
+
+  - sectionId: "未解決問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "幻覚・再現性・ガバナンス責任分界・混合データ精度が未解決の主要論点である。"
+    spec:
+      type: pros_cons
+      title: 期待と油断のギャップ
+      sides:
+        - label: 期待
+          items:
+            - label: 自律調査の省力化
+            - label: ナラティブ洞察
+        - label: 未解決
+          emphasis: true
+          items:
+            - label: 数値幻覚
+            - label: 再現性不足
+            - label: 責任分界曖昧
+            - label: 混合データ精度
+
+  - sectionId: "第3世代マルチステップ調査エージェント2025"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "第3世代はユーザー起点の多段調査で Tellius Agent Mode や Spotter Research が代表例である。"
+    spec:
+      type: flow
+      title: 単発質問を超えた多段調査
+      nodes:
+        - id: user
+          label: ユーザー起点
+        - id: plan
+          label: 調査計画
+        - id: steps
+          label: 多段ステップ
+          emphasis: true
+        - id: story
+          label: ナラティブ出力
+      edges:
+        - from: user
+          to: plan
+        - from: plan
+          to: steps
+        - from: steps
+          to: story
+
+  - sectionId: "製品深掘りamity型に近い5サービス"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Amity 型に近い五サービスが分析＋推奨の L3 付近に位置づけられる。"
+    spec:
+      type: cards
+      title: Amity 型の五人組
+      items:
+        - label: Tellius
+        - label: WisdomAI
+        - label: Genie
+          emphasis: true
+        - label: Spotter
+        - label: 類似分析エージェント
+
+  - sectionId: "エンタープライズ向けプラットフォーム"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Snowflake・Databricks・Power BI 等エンタープライズ基盤がガバナンス付きエージェント分析を提供する。"
+    spec:
+      type: hierarchy
+      title: 基盤がエージェント層を載せる
+      root:
+        label: エンタープライズ基盤
+        emphasis: true
+        children:
+          - label: データレイク/warehouse
+          - label: ガバナンス
+          - label: Copilot/Genie 層
+
+  - sectionId: "概要"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "エージェント型データ分析はチャット SQL から自律調査へ成熟し、製品選定は L レベルとガバナンスで分岐する。"
+    spec:
+      type: cards
+      title: 分析エージェント市場の地図
+      items:
+        - label: L1–L4 成熟度
+        - label: 消費者 vs 企業
+        - label: ガバナンス必須
+          emphasis: true
+        - label: 混合データ課題

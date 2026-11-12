@@ -1,0 +1,165 @@
+version: 1
+sourceSha256: "01c7395734130274d7ee371b2f5a1ad82fa4a26c0a525f1c3b56b4ae11d5ce95"
+visuals:
+  - sectionId: "分析対象6つの失敗作戦"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ノモンハンから沖縄戦まで六作戦で目的曖昧・情報軽視・学習不全が繰り返される。"
+    spec:
+      type: sequence
+      title: 同じ失敗が戦域をまたぐ
+      mode: timeline
+      items:
+        - label: ノモンハン
+          detail: 独断拡大
+        - label: ミッドウェー
+          detail: 目的不一致
+        - label: ガダルカナル
+          detail: 兵力過小評価
+        - label: インパール
+          detail: 補給無視
+        - label: レイテ
+          detail: 誤報受容
+        - label: 沖縄
+          detail: 方針不統一
+          emphasis: true
+
+  - sectionId: "核となる概念失敗の6大要因"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "戦略目的曖昧、空気意思決定、学習欠如、情報軽視、セクショナリズム、責任回避の六要因。"
+    spec:
+      type: cards
+      title: 組織が一体行動できない構造
+      items:
+        - label: 目的曖昧
+          emphasis: true
+        - label: 空気支配
+        - label: 学習不全
+        - label: 情報軽視
+        - label: 縦割り統合失敗
+        - label: 責任回避
+
+  - sectionId: "3-学習能力の欠如シングルループ学習の罠"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "日本軍は手順だけ直すシングルループ、米軍は前提を問い直すダブルループで戦術を進化させた。"
+    spec:
+      type: comparison
+      title: 前提を変えられないと反復失敗
+      sides:
+        - label: 日本軍
+        - label: 米軍
+      rows:
+        - axis: 学習様式
+          cells:
+            - label: シングルループ
+            - label: ダブルループ
+              emphasis: true
+        - axis: 失敗の扱い
+          cells:
+            - label: 同戦法の反復
+            - label: 前提の再定義
+        - axis: 例
+          cells:
+            - label: 戦法を繰返し
+            - label: レーダー戦術化
+
+  - sectionId: "日本軍の戦略策定プロセス帰納的戦略の罠"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "日本軍は現場積上げの帰納・楽観的情報・属人統合、米軍は目的から演繹・分析・権限明確。"
+    spec:
+      type: comparison
+      title: 急変環境で帰納は破綻しやすい
+      sides:
+        - label: 日本軍
+        - label: 米軍
+      rows:
+        - axis: 策定
+          cells:
+            - label: 帰納的
+            - label: 演繹的
+        - axis: 情報
+          cells:
+            - label: 楽観バイアス
+            - label: 組織分析
+        - axis: 統合
+          cells:
+            - label: 属人ネットワーク
+            - label: 権限明確
+        - axis: 失敗
+          cells:
+            - label: 曖昧化
+            - label: 記録分析
+
+  - sectionId: "自己革新組織の要件"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "不均衡創造、現場自律、創造的破壊、異端共存、知識淘汰の五要件を日本軍は欠いた。"
+    spec:
+      type: cards
+      title: 過去成功に過剰適応しない
+      items:
+        - label: 不均衡創造
+        - label: 自律と分権
+        - label: 創造的破壊
+          emphasis: true
+        - label: 異端の取込
+        - label: 知識の淘汰
+
+  - sectionId: "一木支隊の悲劇戦力の逐次投入"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "900名対1万3000人への逐次投入が繰り返され、警告も空気で封じられた。"
+    spec:
+      type: flow
+      title: 情報なき投入が連鎖する
+      nodes:
+        - id: misread
+          label: 兵力過小評価
+        - id: first
+          label: 一木支隊投入
+          emphasis: true
+        - id: repeat
+          label: 同型再投入
+        - id: block
+          label: 警告封じ込め
+      edges:
+        - from: misread
+          to: first
+        - from: first
+          to: repeat
+        - from: repeat
+          to: block
+
+  - sectionId: "レーダー技術の扱いに見る学習能力の差"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "日本海軍は双眼鏡前提を捨てられず、米軍はレーダーで夜戦・索敵を組織的に進化させた。"
+    spec:
+      type: pros_cons
+      title: 技術水準より前提転換が差
+      sides:
+        - label: 米軍
+          items:
+            - label: レーダー積極活用
+            - label: 戦術組込
+        - label: 日本軍
+          items:
+            - label: 肉眼思想固着
+            - label: ダブルループ欠如
+              emphasis: true
+
+  - sectionId: "現代企業との対比"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "現代も目的不明・会議の空気・縦割り・失敗の曖昧化が日本軍と同型のリスクになる。"
+    spec:
+      type: cards
+      title: 六要因は企業にも転写される
+      items:
+        - label: KPI曖昧
+        - label: 反論できぬ空気
+        - label: 失敗を記録しない
+          emphasis: true

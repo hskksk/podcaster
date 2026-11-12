@@ -1,0 +1,157 @@
+version: 1
+sourceSha256: "4a6f4ab44670a46dc3bcc59691e5931363f70e2c6be62ab24f93a4e4da452942"
+visuals:
+  - sectionId: "2-seciモデル知識変換の4つのモード"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "暗黙知と形式知は共同化・表出化・連結化・内面化の四モードで螺旋的に変換される。"
+    spec:
+      type: sequence
+      title: 知識は四変換で螺旋する
+      mode: steps
+      items:
+        - label: 共同化
+          detail: 暗黙知→暗黙知
+        - label: 表出化
+          detail: 暗黙知→形式知
+          emphasis: true
+        - label: 連結化
+          detail: 形式知→形式知
+        - label: 内面化
+          detail: 形式知→暗黙知
+
+  - sectionId: "3-ba場の概念"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "場の四タイプは創発・対話・システム・実践の場としてSECIの各モードに対応する。"
+    spec:
+      type: cards
+      title: 文脈なく知識は動かない
+      items:
+        - label: 創発の場
+          detail: 共同化
+        - label: 対話の場
+          detail: 表出化
+        - label: システムの場
+          detail: 連結化
+        - label: 実践の場
+          detail: 内面化
+          emphasis: true
+
+  - sectionId: "4-ミドルアップダウン経営"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "中間管理職が知識ビジョンと現場の現実を結節点として架橋する。"
+    spec:
+      type: flow
+      title: ミドルが二層を結ぶ
+      nodes:
+        - id: vision
+          label: 知識ビジョン
+        - id: middle
+          label: ミドルマネジャー
+          emphasis: true
+        - id: field
+          label: 現場の現実
+        - id: concept
+          label: 新コンセプト
+      edges:
+        - from: vision
+          to: middle
+        - from: field
+          to: middle
+        - from: middle
+          to: concept
+
+  - sectionId: "5-ハイパーテキスト型組織"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "日常業務層・プロジェクト層・ナレッジベース層の三層を行き来する組織構造。"
+    spec:
+      type: hierarchy
+      title: 三層で日常と創造を両立
+      root:
+        label: ハイパーテキスト型組織
+        children:
+          - label: ビジネスシステム層
+            children:
+              - label: 日常業務
+          - label: プロジェクトチーム層
+            emphasis: true
+            children:
+              - label: 知識創造
+          - label: ナレッジベース層
+            children:
+              - label: 蓄積と再利用
+
+  - sectionId: "6-組織的知識創造の5つの条件"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "意図・自律・ゆらぎ・冗長性・必要多様性の五条件が組織的知識創造を支える。"
+    spec:
+      type: cards
+      title: 創造は五条件の上に成り立つ
+      items:
+        - label: 意図
+          detail: 知識ビジョン
+        - label: 自律性
+          detail: 予期せぬ知
+        - label: ゆらぎ
+          detail: 創造的カオス
+        - label: 冗長性
+          detail: 暗黙知の共有
+        - label: 必要多様性
+          detail: 環境と同程度
+          emphasis: true
+
+  - sectionId: "最新動向フロネシスの理論へ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ワイズカンパニーは知識創造から実践知フロネシスへ理論を拡張する。"
+    spec:
+      type: cards
+      title: 創造から実践知へ
+      items:
+        - label: ワイズカンパニー
+          detail: 知識創造の先
+        - label: フロネシス
+          detail: 状況判断の実践知
+          emphasis: true
+        - label: 直観の経営
+          detail: 現象学の応用
+
+  - sectionId: "批判課題学術的論争"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "日本中心主義・暗黙知の曖昧さ・SECIの線形性・実装困難・文脈軽視が主要な批判点。"
+    spec:
+      type: pros_cons
+      title: 理論の強みと論点
+      sides:
+        - label: 称賛側の射程
+          items:
+            - label: 暗黙知の可視化
+            - label: 日本企業事例の説明力
+            - label: 実務への転用
+        - label: 学術的批判
+          emphasis: true
+          items:
+            - label: 日本中心主義
+            - label: 暗黙知定義の曖昧さ
+            - label: SECIの線形性
+            - label: 実装の難しさ
+
+  - sectionId: "aiデジタル時代における知識創造理論の現代的意義"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "AIは連結化を加速し人間に暗黙知と表出化の役割が残る。"
+    spec:
+      type: sequence
+      title: AIは連結化を強化する
+      mode: steps
+      items:
+        - label: 暗黙知
+          emphasis: true
+        - label: 表出化
+        - label: 連結化とAI
+        - label: 内面化

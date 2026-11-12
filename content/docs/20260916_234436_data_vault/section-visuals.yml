@@ -1,0 +1,163 @@
+version: 1
+sourceSha256: "4d851499d1fd776e9a89343f700e4acf4ba711d3c6ab6b76206d18276c9f411a"
+visuals:
+  - sectionId: "inmon-と-kimball-の文脈"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Inmonは正規化中央EDWからマート派生、Kimballはスタースキーマを積み上げ、Data Vaultはキーと属性を分離して上流変更の影響をRawから切り離す。"
+    spec:
+      type: comparison
+      title: 三系譜は変更容易性が違う
+      sides:
+        - label: Kimball
+        - label: Data Vault
+          emphasis: true
+      rows:
+        - axis: 形
+          cells:
+            - label: スタースキーマ
+            - label: Hub Link Satellite
+        - axis: 強み
+          cells:
+            - label: Time-to-Value
+            - label: 履歴と多ソース
+        - axis: 弱み
+          cells:
+            - label: 上流変更に弱い場面
+            - label: JOINと学習コスト
+
+  - sectionId: "dv10-から-dv20-へ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DV2.0はハッシュキー、Hash Diff、RawとBusiness Vaultの分離、方法論と参照アーキテクチャをセットにし、モデル単体では成熟度が上がらないと述べる。"
+    spec:
+      type: cards
+      title: 2.0はモデルだけでは足りない
+      items:
+        - label: ハッシュキー並列ロード
+        - label: Hash Diff差分検出
+        - label: RawとBusiness分離
+          emphasis: true
+        - label: 方法論とアーキテクチャ
+
+  - sectionId: "hubハブ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Hubはビジネスキーの一意リストで記述属性を持たず、Hash Key、natural key、load_date、record_sourceが典型列となる。"
+    spec:
+      type: cards
+      title: Hubはキーの骨格だけ
+      items:
+        - label: ビジネスキー
+          emphasis: true
+        - label: Hash Key
+        - label: 初観測時刻
+        - label: レコードソース
+
+  - sectionId: "linkリンク"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "LinkはHub間の関係を表し、トランザクションやUoWを一本のLinkにまとめる判断が後続の整合に効く。"
+    spec:
+      type: flow
+      title: 関係はLinkに閉じる
+      nodes:
+        - id: hubs
+          label: 関連Hub
+        - id: link
+          label: Link
+          emphasis: true
+        - id: sat
+          label: 関係の属性Satellite
+      edges:
+        - from: hubs
+          to: link
+        - from: link
+          to: sat
+
+  - sectionId: "raw-vault-と-business-vault"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Raw Vaultはソースに忠実なinsert-only履歴、Business Vaultと情報マートへクレンジングとビジネスルールを押し出す。"
+    spec:
+      type: hierarchy
+      title: 正しさと意味は層で分ける
+      root:
+        label: Data Vault
+        children:
+          - label: Raw Vault
+            emphasis: true
+            children:
+              - label: 監査可能な統合
+          - label: Business Vault
+            children:
+              - label: ソフトルール
+          - label: 情報マート
+
+  - sectionId: "ハッシュキーと-hash-diff"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ハッシュキーは並列ロードと結合を支え、Hash DiffはSatelliteの属性変化だけを検出する。"
+    spec:
+      type: interaction
+      title: キーと差分は別契約
+      actors:
+        - id: src
+          label: ソース行
+        - id: hub
+          label: HubとLink
+          emphasis: true
+        - id: sat
+          label: Satellite
+      steps:
+        - from: src
+          to: hub
+          label: BKからHash Key
+        - from: src
+          to: hub
+          label: 属性からHash Diff
+        - from: hub
+          to: sat
+          label: 変化時のみ追加
+
+  - sectionId: "kimball-inmon-data-vault-の使い分け"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "多ソース履歴監査ではData Vault、部門BIの速さではKimball、企業統合の厳密さではInmonが向き、消費層は多くの場合マートが要る。"
+    spec:
+      type: matrix
+      title: 手法は用途で選ぶ
+      xAxis:
+        low: 単一ソース
+        high: 多ソース
+      yAxis:
+        low: 現点スナップショット
+        high: 履歴と監査
+      items:
+        - label: Kimballスター
+          quadrant: low-high
+        - label: Data Vault
+          quadrant: high-high
+          emphasis: true
+        - label: Inmon中央EDW
+          quadrant: high-high
+
+  - sectionId: "プラクティスとアンチパターン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Fake VaultやソースごとのHub乱立、Rawにソフトルールを混ぜることは避け、自動化と層別テストとマート出口が実務の前提になる。"
+    spec:
+      type: pros_cons
+      title: 拡張性の代償を見る
+      sides:
+        - label: 有効な条件
+          items:
+            - label: 多ソースと規制
+            - label: insert-only履歴
+            - label: 自動化とテスト
+        - label: 破綻しやすい点
+          emphasis: true
+          items:
+            - label: Fake Vault
+            - label: Raw直結BI
+            - label: 手書きロード

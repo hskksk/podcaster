@@ -1,0 +1,112 @@
+version: 1
+sourceSha256: "a6f42cca2849176eaa64d7d324cbe2f3956aa40252904baa5337897960261aed"
+visuals:
+  - sectionId: "全体像"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Brooksが本質と事故を分け、MoseleyとMarksが状態を主因に再定義し、Hickeyが単純と簡単を分けた三つの定義の経緯を述べる。"
+    spec:
+      type: sequence
+      mode: timeline
+      title: 三つの定義の年代順
+      items:
+        - label: Brooks 1986
+        - label: Tar Pit 2006
+        - label: Simple Made Easy 2011
+          emphasis: true
+
+  - sectionId: "1-brooks-の本質と事故-言語やツールが消せるのは事故の側だけ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "本質的困難は要件に内在し、事故的困難は言語やプロセスで減らせる。銀の弾は後者だけに効く。"
+    spec:
+      type: comparison
+      title: 道具が削れるのは事故だけ
+      sides:
+        - label: 本質
+        - label: 事故
+          emphasis: true
+      rows:
+        - axis: 源泉
+          cells:
+            - label: 要件と概念
+            - label: 実装プロセス
+        - axis: 道具の効き
+          cells:
+            - label: 限定的
+            - label: 大きい
+
+  - sectionId: "2-事故的複雑さの再定義-残る複雑さの大半はまだ事故である"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "mutable stateの組み合わせが認知負担の主因で、状態を減らすか隔離して機械検証するのが対策になる。"
+    spec:
+      type: cards
+      title: 状態が複雑さの源泉
+      items:
+        - label: 状態空間の爆発
+          emphasis: true
+        - label: 副作用の予測困難
+        - label: 隔離と参照透過性
+
+  - sectionId: "3-単純さと簡単さの区別-複雑さは絡み合いである"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "単純は絡みが無いこと、簡単は手近なことで、簡単を選ぶと長期に複雑さが累積する。"
+    spec:
+      type: comparison
+      title: 短期楽と長期単純は逆
+      sides:
+        - label: 簡単
+        - label: 単純
+          emphasis: true
+      rows:
+        - axis: 初期
+          cells:
+            - label: 速い
+            - label: 学習要る
+        - axis: 長期
+          cells:
+            - label: 累積する複雑さ
+            - label: 変更しやすい
+
+  - sectionId: "4-複雑さの定義が衝突する場所-同じ語で異なる話をしている"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Brooksは仕様、Tar Pitは状態、Hickeyは絡み合いを測り、同じ複雑さの語で三つの現象を指す。"
+    spec:
+      type: cards
+      title: 同じ語で三つの測定
+      items:
+        - label: Brooks要件
+        - label: Tar Pit状態
+        - label: Hickey絡み
+          emphasis: true
+
+  - sectionId: "5-三つの定義が生まれた背景-技術と問題の変化"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "1986は銀の弾期待、2006はOOと状態隠蔽、2011は動的言語で混ぜやすい設計が普及した背景がある。"
+    spec:
+      type: sequence
+      mode: timeline
+      title: 背景が定義を変えた
+      items:
+        - label: ソフトウェア危機
+        - label: OOと状態
+        - label: 動的言語と混在
+          emphasis: true
+
+  - sectionId: "まとめ-複雑さの三つの定義を使い分けるための5点"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "何を指すか確認し、本質範囲を明確にし、状態は設計で減らし、簡単と単純を分け、参照透過性を物差しにする。"
+    spec:
+      type: cards
+      title: 定義を先に揃える
+      items:
+        - label: 指している現象を確認
+        - label: 状態は設計問題
+        - label: 簡単と単純は別軸
+          emphasis: true
+        - label: 参照透過性

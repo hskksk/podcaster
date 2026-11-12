@@ -1,0 +1,137 @@
+version: 1
+sourceSha256: "a943244cc2c6f5d7edd7993fde720b0d9a88ab425501de1b3421786fe3853e1f"
+visuals:
+  - sectionId: "1-ピラミッド原則pyramid-principle"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ピラミッド原則は結論を頂に置き MECE で下位論点を支える。"
+    spec:
+      type: hierarchy
+      title: 結論が頂、根拠が下
+      root:
+        label: 結論
+        emphasis: true
+        children:
+          - label: 論点 A
+          - label: 論点 B
+          - label: 論点 C
+
+  - sectionId: "issue-tree書く前の思考の骨格"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Issue Tree は問いを MECE に分解し執筆前に漏れと重複を防ぐ。"
+    spec:
+      type: hierarchy
+      title: 問いを書く前に分解
+      root:
+        label: 主要問い
+        children:
+          - label: サブ問い 1
+          - label: サブ問い 2
+            children:
+              - label: 検証可能仮説
+
+  - sectionId: "フレームワーク対応表どの場面で何を使うか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "状況ごとにピラミッド・SCQA・Issue Tree・PREP など使い分ける。"
+    spec:
+      type: cards
+      title: 場面で型を選ぶ
+      items:
+        - label: ピラミッド
+          detail: 提案・説得
+        - label: SCQA
+          detail: 課題提起
+        - label: Issue Tree
+          emphasis: true
+          detail: 構造分析
+        - label: PREP
+          detail: 短文回答
+
+  - sectionId: "認知負荷の観点過多と散乱の診断"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "同時追跡概念が多い・見出しが要約でない・根拠階層が浅いと認知負荷が跳ね上がる。"
+    spec:
+      type: pros_cons
+      title: 読みにくさの典型症状
+      sides:
+        - label: 散乱の兆候
+          emphasis: true
+          items:
+            - label: 概念が同時に多すぎ
+            - label: 見出しが結論でない
+            - label: 根拠が並列だけ
+        - label: 直す手
+          items:
+            - label: 階層化と削減
+            - label: 付録へ退避
+
+  - sectionId: "ケース1散乱した-ai-リサーチレポートの再構成"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "散乱した AI レポートは結論一行・MECE 章立て・付録分離で再構成できる。"
+    spec:
+      type: sequence
+      title: 散乱稿を三手で整える
+      mode: steps
+      items:
+        - label: One-Sentence 結論
+        - label: MECE 章立て
+          emphasis: true
+        - label: 詳細を付録へ
+        - label: 見出しを結論化
+
+  - sectionId: "ai-リサーチレポート生成の構造的課題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "AI 生成稿は網羅偏重・根拠階層不足・So What 欠落が起きやすい。"
+    spec:
+      type: cards
+      title: 量は出るが筋が弱い
+      items:
+        - label: 網羅偏重
+        - label: 根拠が浅い
+        - label: So What 欠落
+          emphasis: true
+        - label: 見出しがラベル
+
+  - sectionId: "実践チェックリスト頭に入るレポートの10項目"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "One-Sentence・Standalone Summary・Titles Test など十項目で完成前に品質を確認する。"
+    spec:
+      type: sequence
+      title: 十項目中核を七手順
+      mode: steps
+      items:
+        - label: One-Sentence Test
+        - label: Standalone Summary
+        - label: Titles Test
+          emphasis: true
+        - label: MECE Check
+        - label: Rule of Three
+        - label: So What Check
+        - label: Cognitive Load Audit
+
+  - sectionId: "ピラミッド原則mecescqa"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "MECE と SCQA はピラミッド構造の補助として導入部と分解に使う。"
+    spec:
+      type: flow
+      title: SCQA で読者を乗せ MECE で分解
+      nodes:
+        - id: scqa
+          label: SCQA 導入
+        - id: concl
+          label: 頂上結論
+          emphasis: true
+        - id: mece
+          label: MECE 論点
+      edges:
+        - from: scqa
+          to: concl
+        - from: concl
+          to: mece

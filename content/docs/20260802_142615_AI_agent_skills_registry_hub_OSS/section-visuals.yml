@@ -1,0 +1,162 @@
+version: 1
+sourceSha256: "f031100b514cde9d7be1315ecf015ada9c2142adfdb6475ca64a22d4b43814b2"
+visuals:
+  - sectionId: "clawhub-と-openclaw-の関係図"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "開発者が SKILL を ClawHub に publish し OpenClaw が download して Messaging と連携する。"
+    spec:
+      type: flow
+      title: Registry が配布、Gateway が実行
+      nodes:
+        - id: dev
+          label: 開発者 SKILL
+        - id: hub
+          label: ClawHub
+          emphasis: true
+        - id: claw
+          label: OpenClaw Gateway
+        - id: msg
+          label: Messaging
+      edges:
+        - from: dev
+          to: hub
+          label: publish
+        - from: hub
+          to: claw
+          label: download
+        - from: claw
+          to: msg
+
+  - sectionId: "agent-skills-規格agentskillsio"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "agentskills.io の Agent Skills 規格は SKILL.md と frontmatter でクロスエージェント共有を定義する。"
+    spec:
+      type: cards
+      title: 規格は SKILL.md が中心
+      items:
+        - label: SKILL.md
+        - label: frontmatter
+        - label: skills-ref validate
+          emphasis: true
+        - label: クロスエージェント
+
+  - sectionId: "clawhub-互換セルフホスト-oss"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Hermit は Hosted・Proxy・Group の三 Repository で社内と ClawHub を一本化できる。"
+    spec:
+      type: hierarchy
+      title: セルフホストは三種リポジトリ
+      root:
+        label: Hermit Repository
+        children:
+          - label: Hosted
+            detail: 自社 first-party
+          - label: Proxy
+            emphasis: true
+            detail: upstream ミラー
+          - label: Group
+            detail: 統合読取
+
+  - sectionId: "エコシステムの整理どれを選ぶか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "OpenClaw 公開スキルは ClawHub、多エージェント Git 配布は skills.sh、private は skillhub や Hermit となる。"
+    spec:
+      type: cards
+      title: 目的でハブを選ぶ
+      items:
+        - label: ClawHub
+          detail: OpenClaw 公開
+        - label: skills.sh
+          detail: 70+ エージェント
+        - label: LiteLLM Gateway
+        - label: iflytek skillhub
+          emphasis: true
+          detail: private Registry
+        - label: Hermit
+          detail: Proxy 統合
+
+  - sectionId: "clawhub-vs-skillssh-の本質的差異"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ClawHub は中央 Registry の App Store 型、skills.sh は GitHub ソースの npm 型である。"
+    spec:
+      type: comparison
+      title: App Store 型 vs GitHub 型
+      sides:
+        - label: ClawHub
+        - label: skills.sh
+          emphasis: true
+      rows:
+        - axis: アーキ
+          cells:
+            - label: 中央 Registry
+            - label: GitHub がソース
+        - axis: バージョン
+          cells:
+            - label: semver と lock
+            - label: Git ref
+        - axis: 検索
+          cells:
+            - label: embedding 検索
+            - label: リーダーボード
+        - axis: セキュリティ
+          cells:
+            - label: モデレーション
+            - label: 利用者監査
+
+  - sectionId: "registry-エコシステムの爆発2026年1月"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "2026年1月以降 Registry 系 OSS とマーケットが一気に増えた。"
+    spec:
+      type: sequence
+      title: 2026年初に Registry 急増
+      mode: timeline
+      items:
+        - label: Agent Skills 規格
+        - label: ClawHub 普及
+        - label: skills.sh 台頭
+          emphasis: true
+        - label: 互換 OSS 乱立
+
+  - sectionId: "主要-ossサービス比較"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ClawHub・skills.sh・SkillsMP・LiteLLM Gateway 等が配布哲学と統制で異なる。"
+    spec:
+      type: matrix
+      title: 探索か統制かで四分
+      xAxis:
+        low: 探索中心
+        high: 統制中心
+      yAxis:
+        low: 単一エージェント
+        high: マルチエージェント
+      items:
+        - label: ClawHub
+          quadrant: low-low
+        - label: skills.sh
+          quadrant: high-high
+          emphasis: true
+        - label: SkillsMP
+          quadrant: low-high
+        - label: LiteLLM Gateway
+          quadrant: high-high
+
+  - sectionId: "概要"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Skills Registry は ClawHub と skills.sh を軸に規格準拠とセルフホストが並ぶ。"
+    spec:
+      type: cards
+      title: Hub 乱立時代の読み方
+      items:
+        - label: ClawHub 中心
+        - label: skills.sh 汎用
+        - label: agentskills.io 準拠
+          emphasis: true
+        - label: セルフホスト選択

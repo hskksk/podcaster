@@ -1,0 +1,160 @@
+version: 1
+sourceSha256: "1067365322dabbb0748922c8b4c429a42c982a74512d30cb6d4b1e7ec28263bb"
+visuals:
+  - sectionId: "背景歴史コンテキストに詰め込む時代の終わり"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "プロンプト直書きとAGENTS.mdがコンテキストを圧迫しスキルが段階的開示で解く。"
+    spec:
+      type: flow
+      title: 常時ロードから按需へ
+      nodes:
+        - id: prompt
+          label: プロンプト直書き
+        - id: agents
+          label: AGENTS.md常時
+        - id: bloat
+          label: 文脈圧迫
+        - id: skills
+          label: Agent Skills
+          emphasis: true
+      edges:
+        - from: prompt
+          to: bloat
+        - from: agents
+          to: bloat
+        - from: bloat
+          to: skills
+
+  - sectionId: "核となる概念"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "SKILL.mdはフロントマターと本文からなり任意のexamplesとscriptsを持つ。"
+    spec:
+      type: hierarchy
+      title: レシピはフォルダ単位
+      root:
+        label: スキルディレクトリ
+        children:
+          - label: SKILL.md
+            emphasis: true
+          - label: template.md
+          - label: examples
+          - label: scripts
+
+  - sectionId: "詳細な仕組みエコシステム"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "起動時は名前と説明だけロードし必要時に全文と動的コンテキスト注入を行う。"
+    spec:
+      type: sequence
+      title: 段階的開示が鍵
+      mode: steps
+      items:
+        - label: descriptionのみ常駐
+        - label: 関連と判断
+        - label: 全文ロード
+        - label: シェル注入
+          emphasis: true
+
+  - sectionId: "配布方法スキルを世界に届ける手段"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "GitHub・skills.sh・プラグイン・npm経由でスキルとサブエージェントを配布する。"
+    spec:
+      type: cards
+      title: 配布経路は複数ある
+      items:
+        - label: GitHub
+          detail: リポジトリ共有
+        - label: skills.sh
+          detail: ハブ検索
+        - label: プラグイン
+          detail: 名前空間付き
+        - label: awesome系
+          detail: キュレーション
+          emphasis: true
+
+  - sectionId: "配布とディスカバリーのエコシステム"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "VoltAgentの二大コレクションとccpi等が発見から導入までを支える。"
+    spec:
+      type: interaction
+      title: 発見からプロジェクトへ
+      actors:
+        - id: hub
+          label: ハブ・レジストリ
+        - id: dev
+          label: 開発者
+        - id: project
+          label: .claude/skills
+      steps:
+        - from: hub
+          to: dev
+          label: 検索・評価
+        - from: dev
+          to: project
+          label: 導入
+        - from: project
+          to: dev
+          label: 段階的ロード
+
+  - sectionId: "自分でスキルを作るためのベストプラクティス"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "descriptionで起動境界を明記し副作用はdisable-model-invocationで手動専用にする。"
+    spec:
+      type: sequence
+      title: 境界を先に設計する
+      mode: steps
+      items:
+        - label: 一タスクに絞る
+        - label: description最適化
+        - label: allowed-tools限定
+        - label: 副作用は手動専用
+          emphasis: true
+
+  - sectionId: "最新動向未解決問題"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "標準採用は広がるがバージョン管理・レビュー・セキュリティ監査は未成熟。"
+    spec:
+      type: pros_cons
+      title: 普及と運用のギャップ
+      sides:
+        - label: 追い風
+          items:
+            - label: オープン標準化
+            - label: 巨大コレクション
+            - label: 複数ハーネス対応
+        - label: 懸念
+          emphasis: true
+          items:
+            - label: スキル品質ばらつき
+            - label: サプライチェーン
+            - label: 評価指標不足
+
+  - sectionId: "実際に配布されている人気スキルサブエージェント集"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ドキュメント化・セキュリティ・デプロイ・テスト系のスキルと専門サブエージェントが人気。"
+    spec:
+      type: matrix
+      title: 用途別にスキルとサブエージェント
+      xAxis:
+        low: 軽量タスク
+        high: 重い調査
+      yAxis:
+        low: インライン
+        high: 独立コンテキスト
+      items:
+        - label: レビュースキル
+          quadrant: low-low
+        - label: Exploreサブエージェント
+          quadrant: high-high
+          emphasis: true
+        - label: セキュリティスキル
+          quadrant: low-high
+        - label: ドキュメントスキル
+          quadrant: low-low

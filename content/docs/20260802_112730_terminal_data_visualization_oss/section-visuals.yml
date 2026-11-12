@@ -1,0 +1,120 @@
+version: 1
+sourceSha256: "23b9e0b70255e602f5b5acb90ab8aeac52e87ed09e972c6ac032a74bcacec135"
+visuals:
+  - sectionId: "ツール選定ガイド用途別"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "SQL 一発は YouPlot、軽量棒は termgraph、Python 内本格は plotext など用途で第一候補が分かれる。"
+    spec:
+      type: cards
+      title: やることで第一候補が決まる
+      items:
+        - label: sql パイプ
+          detail: YouPlot
+          emphasis: true
+        - label: CSV 棒
+          detail: termgraph
+        - label: Python 内
+          detail: plotext
+        - label: Braille 散布
+          detail: plotille
+        - label: Node 折れ線
+          detail: asciichart
+        - label: アーキ図
+          detail: Mermaid CLI
+
+  - sectionId: "レシピ1-sql-棒グラフduckdb-youplot"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "DuckDB で集計した結果を YouPlot にパイプして棒グラフを stdout に出す。"
+    spec:
+      type: sequence
+      title: SQL から棒まで二段
+      mode: steps
+      items:
+        - label: DuckDB で集計
+        - label: CSV/TSV 出力
+        - label: YouPlot uplot
+          emphasis: true
+        - label: ターミナル描画
+
+  - sectionId: "youplot-のパイプライン設計"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "YouPlot は標準入力の表形式データを uplot サブコマンドで SVG/Braille へ変換する。"
+    spec:
+      type: flow
+      title: stdin 表をプロットへ
+      nodes:
+        - id: stdin
+          label: stdin 表
+        - id: youplot
+          label: YouPlot
+          emphasis: true
+        - id: uplot
+          label: uplot
+        - id: out
+          label: ターミナル出力
+      edges:
+        - from: stdin
+          to: youplot
+        - from: youplot
+          to: uplot
+        - from: uplot
+          to: out
+
+  - sectionId: "未解決限界"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ターミナル可視化は解像度・配色・日本語フォント・複雑レイアウトで限界がある。"
+    spec:
+      type: pros_cons
+      title: 速さと表現力のトレードオフ
+      sides:
+        - label: 利点
+          items:
+            - label: SSH 先で即表示
+            - label: パイプ連携
+            - label: 依存軽量
+        - label: 限界
+          emphasis: true
+          items:
+            - label: 解像度上限
+            - label: 色再現性
+            - label: 日本語折り返し
+            - label: 複雑レイアウト
+
+  - sectionId: "概要"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ターミナル OSS 可視化は YouPlot・plotext・asciichart 等が用途別に分担する。"
+    spec:
+      type: cards
+      title: パイプ中心の可視化群
+      items:
+        - label: YouPlot
+        - label: plotext
+        - label: termgraph
+        - label: asciigraph
+          emphasis: true
+
+  - sectionId: "plotext-バーキャンドルコード例"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "plotext は Python スクリプト内で matplotlib 風にバーやキャンドルを描ける。"
+    spec:
+      type: comparison
+      title: CLI 連携 vs スクリプト内
+      sides:
+        - label: YouPlot 系
+        - label: plotext
+          emphasis: true
+      rows:
+        - axis: 入力
+          cells:
+            - label: シェルパイプ
+            - label: Python 配列
+        - axis: グラフ種
+          cells:
+            - label: 統計中心
+            - label: バー・キャンドル

@@ -1,0 +1,152 @@
+version: 1
+sourceSha256: "3aa50f075604e70ceb1db1c2a8b3726964fcdcc2b48e1cf586c615ac920337e8"
+visuals:
+  - sectionId: "flow"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "FlowがDAGのルート、Stepが依存ノード、Runが1回の実行、Taskがworker単位、WorkerがEdgeで処理する。"
+    spec:
+      type: hierarchy
+      title: DAGの意図を型付きDSLで
+      root:
+        label: Flow
+        emphasis: true
+        children:
+          - label: Step
+            children:
+              - label: 依存と並列
+          - label: Run
+            children:
+              - label: 1回の実行
+          - label: Task
+            children:
+              - label: Workerが実行
+
+  - sectionId: "map-step"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Mapは配列要素ごとにタスク化し失敗要素だけリトライ。dependsOnは持てず前段でデータを埋める。"
+    spec:
+      type: cards
+      title: 要素単位リトライがAI向き
+      items:
+        - label: 並列タスク
+          detail: 配列長N
+        - label: 個別リトライ
+          emphasis: true
+        - label: dependsOn不可
+          detail: 前段で埋込
+        - label: Root/Dependent
+          detail: 2種のmap
+
+  - sectionId: "3層アーキテクチャ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "TypeScript DSLが意図、SQL Coreが状態機械、Workerがhandler実行だけを担い分離する。"
+    spec:
+      type: cards
+      title: オーケストレーションはPostgresへ
+      items:
+        - label: DSL層
+          detail: アプリRepo
+        - label: SQL Core
+          detail: 依存・task生成
+          emphasis: true
+        - label: Worker層
+          detail: Edge実行
+
+  - sectionId: "実行状態の流れ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "start_flowからrun・step_states作成、ready taskをpgmqへ、成功で後続ready、全leaf完了でrun完了。"
+    spec:
+      type: sequence
+      title: 状態はSQLで追える
+      mode: steps
+      items:
+        - label: start_flow
+        - label: step_states作成
+        - label: ready→enqueue
+          emphasis: true
+        - label: worker実行
+        - label: 後続ready
+        - label: run完了
+
+  - sectionId: "two-phase-polling"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "read_with_pollで予約しstart_tasksでstep_tasksをstartedへ原子的に移し、messageとDB状態を同期。"
+    spec:
+      type: sequence
+      title: 二段階でレースを避ける
+      mode: steps
+      items:
+        - label: pgmq予約
+        - label: start_tasks
+          emphasis: true
+        - label: handler実行
+
+  - sectionId: "基本-記事分析フロー"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "fetch後にchunks配列化、embeddingsをmap並列、要約と分類へとDAGで記事分析を組む例。"
+    spec:
+      type: flow
+      title: 取得から埋め込み並列へ
+      nodes:
+        - id: start
+          label: URL入力
+        - id: fetch
+          label: 本文取得
+        - id: chunks
+          label: チャンク配列
+        - id: embed
+          label: map埋め込み
+          emphasis: true
+        - id: out
+          label: 下流処理
+      edges:
+        - from: start
+          to: fetch
+        - from: fetch
+          to: chunks
+        - from: chunks
+          to: embed
+        - from: embed
+          to: out
+
+  - sectionId: "いいところ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "追加インフラ不要、状態がPostgres、型付きDSL、map粒度retry、Realtime購読、serverless前提設計。"
+    spec:
+      type: cards
+      title: Supabase内でDAG運用
+      items:
+        - label: 追加サーバ不要
+        - label: SQLで状態可視
+          emphasis: true
+        - label: 型推論DSL
+        - label: map単位retry
+        - label: Realtime進捗
+
+  - sectionId: "苦手なこと注意点"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "超長時間・timeout強制なし・RLS自前・本番shape immutable・DB負荷・人間承認系は向かない。"
+    spec:
+      type: pros_cons
+      title: DAGジョブ向き、耐久全部向きではない
+      sides:
+        - label: 向く用途
+          items:
+            - label: Edge分割処理
+            - label: AIパイプライン
+            - label: SQL監視運用
+        - label: 注意
+          items:
+            - label: 実行時間上限
+            - label: timeoutは可視化のみ
+            - label: 権限は利用者設計
+            - label: 本番shape固定
+            - label: Postgres負荷

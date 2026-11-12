@@ -1,0 +1,142 @@
+version: 1
+sourceSha256: "15ad04b1fa211ee5fa16a3b269ccc3387b073cd4205a3127afbfe019e61b47a5"
+visuals:
+  - sectionId: "核となる概念運用上の型"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "運用の型は層の境界、二つの時刻、Link粒度、保守できる人数の四点に集約される。"
+    spec:
+      type: cards
+      title: 設計図にない四つの軸
+      items:
+        - label: 層の境界
+          emphasis: true
+        - label: LDTSと業務日付
+        - label: Link粒度
+        - label: 保守できる人数
+
+  - sectionId: "2-消費層は必須-raw-vault-を-bi-に直結しない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "RawをBI直結するとJOIN推論が破綻し、TrustedデータだけVault経由にする濃淡運用が要る。"
+    spec:
+      type: flow
+      title: Rawは前面に出さない
+      nodes:
+        - id: raw
+          label: RawとBusiness
+        - id: trust
+          label: 信頼レベル
+          emphasis: true
+        - id: mart
+          label: MartとDimension
+        - id: bi
+          label: BI接続
+      edges:
+        - from: raw
+          to: trust
+        - from: trust
+          to: mart
+        - from: mart
+          to: bi
+
+  - sectionId: "4-履歴load-dateビジネス時刻-full-refresh-の現実"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "LDTSと業務時刻を混ぜると部分再構成でJoinが空になり、CDCのないソースは前段履歴が生命線になる。"
+    spec:
+      type: sequence
+      mode: steps
+      title: 二本の時刻を分ける
+      items:
+        - label: LDTSは到着
+        - label: 業務日付はSatellite
+          emphasis: true
+        - label: 片側だけ再構成が危険
+        - label: 前段スナップショット
+
+  - sectionId: "8-品質テスト-pitbridge-の失敗は無音"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "PITとBridgeの参照欠損はジョブ成功のままレポート欠損として現れるため層別Criticalテストが要る。"
+    spec:
+      type: pros_cons
+      title: 成功ログだけでは足りない
+      sides:
+        - label: 止められる失敗
+          items:
+            - label: Hub重複
+            - label: Satellite overlap
+        - label: 静かな失敗
+          emphasis: true
+          items:
+            - label: PIT参照欠損
+            - label: Bridge不整合
+
+  - sectionId: "9-組織スケール-続けるかやめるか段階導入か"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ソースあたりモデリング保守の暗黙前提を下回ると撤退か考え方だけ残す判断になり、全置換よりインターフェース維持移行が現実的。"
+    spec:
+      type: comparison
+      title: 人数×ソースが上限
+      sides:
+        - label: 段階導入
+          emphasis: true
+        - label: 全置換
+      rows:
+        - axis: リスク
+          cells:
+            - label: インターフェース維持
+            - label: 一括停止
+        - axis: 人数
+          cells:
+            - label: tracerで学習
+            - label: 同時多ソース
+
+  - sectionId: "サーベイ総括運用者が繰り返し書いている10原則"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "マート出口、硬軟境界、時刻二軸、Link復元性、ハッシュ契約、層別テスト、人数判断など十項目が反復する。"
+    spec:
+      type: cards
+      title: 現場は同じ十前後を繰り返す
+      items:
+        - label: マート必須
+        - label: 硬軟は監査で決める
+        - label: ハッシュはCI
+        - label: テストで下流停止
+          emphasis: true
+
+  - sectionId: "具体例ケーススタディ記事ベース"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "10X継続、Tonamel撤退、SafieのTableau依存反証などが同じ型の別座標として並ぶ。"
+    spec:
+      type: matrix
+      title: 成功と撤退は同じ格子
+      xAxis:
+        low: 小規模チーム
+        high: 投資あり
+      yAxis:
+        low: 出口なし
+        high: マート出口
+      items:
+        - label: 継続小売
+          quadrant: high-high
+          emphasis: true
+        - label: Tonamel撤退
+          quadrant: low-low
+
+  - sectionId: "最新動向未解決問題20242026"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "LLM補助モデリング、リアルタイム層、クラウドコスト、データ契約は運用記事でも未成熟として残る。"
+    spec:
+      type: cards
+      title: 2020年代も運用は未完了
+      items:
+        - label: AI支援の信頼性
+        - label: リアルタイムとの境界
+        - label: 契約と可観測性
+          emphasis: true

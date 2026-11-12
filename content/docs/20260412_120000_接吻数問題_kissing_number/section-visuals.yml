@@ -1,0 +1,166 @@
+version: 1
+sourceSha256: "ee813805b01bc16d337c4f002a898f7bfc0c417469749aa24f164d46489a0ec9"
+visuals:
+  - sectionId: "接吻数とは何か"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "n次元の接吻数は原点の単位球に接する単位球の最大個数。1次元2、2次元6、3次元12、8次元240、24次元196560が確定している。"
+    spec:
+      type: chart
+      title: 8次元と24次元だけ桁が跳ねる
+      variant: bar
+      values:
+        - label: 3次元
+          value: 12
+        - label: 4次元
+          value: 24
+        - label: 8次元
+          value: 240
+          emphasis: true
+        - label: 24次元
+          value: 196560
+          emphasis: true
+
+  - sectionId: "なぜ高次元では接吻数が大きくなるのか-空間の広がり方"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "高次元では単位球の体積が縮み球間の隙間が相対的に大きくなる一方、質量は球面付近に集中して配置の自由度が増す。"
+    spec:
+      type: flow
+      title: 隙間が広いのに決まるのは特別な次元だけ
+      nodes:
+        - id: volume
+          label: 体積が縮む
+        - id: gap
+          label: 隙間が広がる
+        - id: spike
+          label: 球面に質量集中
+        - id: puzzle
+          label: 接吻数は未確定が多い
+          emphasis: true
+      edges:
+        - from: volume
+          to: gap
+        - from: spike
+          to: gap
+        - from: gap
+          to: puzzle
+
+  - sectionId: "8次元と24次元が奇跡である理由"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "偶数ユニモジュラー格子は8の倍数の次元にだけ存在し、テータ関数が保型形式になるため8次元はE₈、24次元はリーチ格子に構造が絞られる。"
+    spec:
+      type: cards
+      title: 格子の制約が8と24を一意に近づける
+      items:
+        - label: 偶数ユニモジュラー
+          detail: 8の倍数の次元のみ
+        - label: 8次元
+          detail: E₈格子ひとつ
+          emphasis: true
+        - label: 24次元
+          detail: リーチ格子が最密
+          emphasis: true
+        - label: 保型形式
+          detail: テータが強く制約
+
+  - sectionId: "240という数の意味"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "E₈格子の最短ベクトルは240本で長さ√2。中心球から半径√2に240球を置く配置で8次元の接吻数240が実現する。"
+    spec:
+      type: interaction
+      title: 240本のルートが接吻配置を与える
+      actors:
+        - id: center
+          label: 中心球
+        - id: roots
+          label: E₈ルート
+        - id: kiss
+          label: 接触球群
+      steps:
+        - from: roots
+          to: kiss
+          label: 240本を半径√2に
+        - from: center
+          to: kiss
+          label: 単位球に接する
+
+  - sectionId: "196560-の内訳"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "リーチ格子の最短ベクトル196560本は型Iが1104、型IIが97152、型IIIが98304で、ゴレイ符号と対応する型II・IIIが大半を占める。"
+    spec:
+      type: chart
+      title: 型IIとIIIが196560の大半
+      variant: bar
+      values:
+        - label: 型I
+          value: 1104
+        - label: 型II
+          value: 97152
+          emphasis: true
+        - label: 型III
+          value: 98304
+          emphasis: true
+
+  - sectionId: "ヴィヤゾフスカの魔法の関数2016年"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ヴィヤゾフスカが保型形式でCohn-Elkiesの魔法の関数を構成し8次元最密充填を証明。1週間後に24次元へ拡張し2022年フィールズ賞を受賞。"
+    spec:
+      type: sequence
+      title: 魔法の関数が8次元と24次元を閉じた
+      mode: timeline
+      items:
+        - label: Cohn-Elkies枠組み
+          detail: 補助関数で上限
+        - label: "2016年3月"
+          detail: 8次元証明
+          emphasis: true
+        - label: 1週間後
+          detail: 24次元の共著
+        - label: "2022年"
+          detail: フィールズ賞
+
+  - sectionId: "なぜ-8-と-24-でぴったり合うのか"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "高次元の隙間の大きさ、偶数ユニモジュラー格子の自己双対性、保形形式の強い制約の三つが8次元と24次元で球配置がぴたり合う直感を説明する。"
+    spec:
+      type: cards
+      title: 「ちょうど」は三つの制約の重なり
+      items:
+        - label: 次元の呪いと恵み
+          detail: 隙間がちょうど
+        - label: 完全自己双対
+          detail: フーリエが自分自身
+        - label: 保型形式の制約
+          detail: 解がほぼ一意
+          emphasis: true
+
+  - sectionId: "怪物的月光monstrous-moonshine"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "モンスター群の表現次元196883とモジュラー函数jの係数196884が一致し、リーチ格子が24次元で怪物群とjを結ぶ怪物的月光理論へつながる。"
+    spec:
+      type: flow
+      title: 196884が24次元の橋になる
+      nodes:
+        - id: monster
+          label: モンスター群
+        - id: match
+          label: "196884一致"
+          emphasis: true
+        - id: jfunc
+          label: モジュラー函数j
+        - id: leech
+          label: リーチ格子
+      edges:
+        - from: monster
+          to: match
+        - from: jfunc
+          to: match
+        - from: leech
+          to: match
