@@ -927,6 +927,7 @@
 
 .article-visual__matrix-pill {
   display: inline-block;
+  box-sizing: border-box;
   width: fit-content;
   max-width: 100%;
   padding: 0.45rem 1rem;
@@ -936,6 +937,8 @@
   line-height: 1.25;
   letter-spacing: -0.01em;
   text-align: center;
+  overflow-wrap: anywhere;
+  hyphens: auto;
   color: var(--av-on-light);
   background: var(--av-panel);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--av-line) 35%, transparent);
@@ -1124,6 +1127,61 @@
   background: var(--av-fill);
 }
 
+/* Matrix: maximize quadrant area; shrink pills to axis scale on narrow slots */
+@container av-slot (max-width: 32rem) {
+  .article-visual__matrix-board {
+    padding: 1.25rem 0.1rem;
+  }
+
+  .article-visual__matrix-grid {
+    width: 100%;
+  }
+
+  .article-visual__matrix-cell {
+    min-height: 5.5rem;
+    padding: 0.45rem 0.28rem;
+  }
+
+  .article-visual__matrix-pill {
+    max-width: calc(100% - 0.1rem);
+    padding: 0.22rem 0.48rem;
+    font-size: 0.64rem;
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+
+  .article-visual__matrix-axis {
+    padding: 0.12rem 0.38rem;
+    font-size: 0.62rem;
+  }
+
+  .article-visual__matrix-axis--y-high {
+    top: 0.05rem;
+  }
+
+  .article-visual__matrix-axis--y-low {
+    bottom: 0.05rem;
+  }
+
+  .article-visual__matrix-axis--x-low {
+    left: 0;
+    max-width: 4.75rem;
+    white-space: normal;
+    text-wrap: balance;
+    line-height: 1.15;
+    text-align: center;
+  }
+
+  .article-visual__matrix-axis--x-high {
+    right: 0;
+    max-width: 4.75rem;
+    white-space: normal;
+    text-wrap: balance;
+    line-height: 1.15;
+    text-align: center;
+  }
+}
+
 @container av-slot (min-width: 22rem) and (max-width: 32rem) {
   .article-visual__sequence--steps {
     display: grid;
@@ -1290,24 +1348,6 @@
     align-items: flex-start;
   }
 
-  .article-visual__matrix-board {
-    padding: 1.85rem 2.25rem 1.85rem;
-  }
-
-  .article-visual__matrix-cell {
-    min-height: 4.75rem;
-    padding: 0.55rem;
-  }
-
-  .article-visual__matrix-pill {
-    font-size: 0.92rem;
-    padding: 0.4rem 0.75rem;
-  }
-
-  .article-visual__matrix-axis {
-    font-size: 0.64rem;
-    padding: 0.14rem 0.4rem;
-  }
 }
 
 @container av-slot (max-width: 18rem) {
