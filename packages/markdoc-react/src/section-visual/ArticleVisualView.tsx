@@ -526,8 +526,7 @@ function MatrixBody({
   }
 
   return (
-    <div className="article-visual__matrix">
-      <div className="article-visual__matrix-y-high">{yAxis.high}</div>
+    <div className="article-visual__matrix-board">
       <div className="article-visual__matrix-grid">
         {QUADRANT_ORDER.map((q) => (
           <div key={q} className={`article-visual__matrix-cell article-visual__matrix-cell--${q}`}>
@@ -539,13 +538,18 @@ function MatrixBody({
           </div>
         ))}
       </div>
-      <div className="article-visual__matrix-x">
-        <span>{xAxis.low}</span>
-        <span>{xAxis.high}</span>
-      </div>
-      <div className="article-visual__matrix-y-high" style={{ marginTop: '0.15rem' }}>
-        {yAxis.low}
-      </div>
+      <span className="article-visual__matrix-axis article-visual__matrix-axis--y-high">
+        {yAxis.high} ↑
+      </span>
+      <span className="article-visual__matrix-axis article-visual__matrix-axis--y-low">
+        {yAxis.low} ↓
+      </span>
+      <span className="article-visual__matrix-axis article-visual__matrix-axis--x-low">
+        ← {xAxis.low}
+      </span>
+      <span className="article-visual__matrix-axis article-visual__matrix-axis--x-high">
+        {xAxis.high} →
+      </span>
     </div>
   )
 }
