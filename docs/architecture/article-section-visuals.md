@@ -249,20 +249,20 @@ title: 常設権限を短命な能力へ置き換える
 sides:
   - label: 常設権限
     items:
-      - label: 有効期間
-        detail: 明示的に失効させるまで残る
-      - label: 漏えい時
-        detail: 長期間悪用される
+      - label: 明示的に失効させるまで残る
+        detail: 有効期間
+      - label: 長期間悪用される
+        detail: 漏えい時
   - label: 短命な能力
     emphasis: true
     items:
-      - label: 有効期間
-        detail: 操作に必要な時間だけ
-      - label: 漏えい時
-        detail: 時間経過で使えなくなる
+      - label: 操作に必要な時間だけ
+        detail: 有効期間
+      - label: 時間経過で使えなくなる
+        detail: 漏えい時
 ```
 
-`sides`は必ず2件とする。両側の`items`は同じ順序と観点で2〜5件を並べる。
+`sides`は必ず2件とする。両側の`items`は**同じ行インデックス＝同じ比較軸**になるよう2〜5件を並べる。各行の比較軸名は、左右どちらかの `items[].detail` に短い語で書く（renderer が中央ピルに表示する）。
 
 ### `hierarchy`
 

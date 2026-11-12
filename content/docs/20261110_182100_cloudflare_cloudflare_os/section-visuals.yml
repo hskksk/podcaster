@@ -108,7 +108,7 @@ visuals:
   - sectionId: "評判とコミュニティの反応"
     engine: article-visual
     engineVersion: "1"
-    alt: "称賛はGatekeeperとGadget、懸念はOSという名称とCloudflare依存・セットアップの壁に集まる。"
+    alt: "同じ観点で見ると、称賛はGatekeeper・Gadget・AI Gatewayに、懸念は移植性・OS名称・導入摩擦に集まる。"
     spec:
       type: comparison
       title: 称賛と懸念、二極化
@@ -116,12 +116,20 @@ visuals:
         - label: 称賛
           items:
             - label: Gatekeeper
+              detail: 基盤設計
             - label: Gadget
+              detail: 製品像
+            - label: AI Gateway
+              detail: 導入・運用
         - label: 懸念
           emphasis: true
           items:
-            - label: 「OS」名称
             - label: 移植性
+              detail: 基盤設計
+            - label: 「OS」名称
+              detail: 製品像
+            - label: デプロイの壁
+              detail: 導入・運用
 
   - sectionId: "類似サービスとの比較軸"
     engine: article-visual

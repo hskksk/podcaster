@@ -349,31 +349,29 @@ function ComparisonBody({ sides }: { sides: { label: string; emphasis?: boolean;
       <div className="article-visual__cmp-head" data-side="1" data-emphasis={right.emphasis || undefined}>
         {right.label}
       </div>
-      {Array.from({ length: rows }, (_, i) => {
-        const leftItem = left.items[i]
-        const rightItem = right.items[i]
-        const axis = leftItem?.detail?.trim() || rightItem?.detail?.trim()
-        return (
-          <Fragment key={i}>
-            {axis ? (
-              <span className="article-visual__cmp-axis" style={{ '--cmp-row': i } as CSSProperties}>
-                {axis}
-              </span>
-            ) : null}
-            <div className="article-visual__cmp-cell" data-side="0" data-filled={leftItem ? true : undefined}>
-              {leftItem?.label ?? ''}
+      <div className="article-visual__comparison-rows">
+        {Array.from({ length: rows }, (_, i) => {
+          const leftItem = left.items[i]
+          const rightItem = right.items[i]
+          const axis = leftItem?.detail?.trim() || rightItem?.detail?.trim()
+          return (
+            <div key={i} className="article-visual__comparison-row">
+              {axis ? <span className="article-visual__cmp-axis">{axis}</span> : null}
+              <div className="article-visual__cmp-cell" data-side="0" data-filled={leftItem ? true : undefined}>
+                {leftItem?.label ?? ''}
+              </div>
+              <div
+                className="article-visual__cmp-cell"
+                data-side="1"
+                data-filled={rightItem ? true : undefined}
+                data-emphasis={rightItem?.emphasis || undefined}
+              >
+                {rightItem?.label ?? ''}
+              </div>
             </div>
-            <div
-              className="article-visual__cmp-cell"
-              data-side="1"
-              data-filled={rightItem ? true : undefined}
-              data-emphasis={rightItem?.emphasis || undefined}
-            >
-              {rightItem?.label ?? ''}
-            </div>
-          </Fragment>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
