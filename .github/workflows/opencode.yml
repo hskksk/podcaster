@@ -35,6 +35,7 @@ jobs:
   opencode:
     permissions:
       id-token: write
+      contents: read
     uses: hskksk/gh-actions/.github/workflows/opencode.yml@v1
     secrets: inherit
     with:
