@@ -1,0 +1,284 @@
+---
+title: "Delta Sharing と Open Sharing / OpenSharing — 機能とよくあるQ&A"
+publishedAt: 2026-11-17
+podcast: queued
+legacyFilename: 20261117_095000_delta_sharing_opensharing.md
+---
+# Delta Sharing と Open Sharing / OpenSharing — 機能とよくあるQ&A
+
+## TL;DR
+
+- **Delta Sharing** はゼロコピーのオープンプロトコルで、2026年に **OpenSharing** として Linux Foundation 下へ移りつつ既存クライアント互換を保つ [1][2]。
+- Databricks 上では **Open Sharing（Databricks-to-Open）** と **Databricks-to-Databricks** の2経路があり、後者だけが notebook・volume・model・agent skill など非表形式アセットを共有可能である [3]。
+- 共有は **Share → Recipient → SELECT** で制御され、受信者は短命トークンまたは pre-signed URL 経由でストレージを読み取り専用参照する [3][4]。
+- 表形式は Delta／managed Iceberg が前提で、行・列制限は動的ビューが中心だが UC の mask や ABAC は経路ごとに制約が異なる [3][5]。
+- セットアップ自体は無料で、課金はクエリ実行・マテリアライズ・クロスリージョン egress など利用時に発生する [4][6]。
+
+## 概要
+
+データ連携でよくある手法は、SFTP やオブジェクトストレージへのファイル複製、メール添付である。コピーは鮮度のずれ、副本の増殖、長寿命資格情報の管理負荷を伴う。Databricks が推進する **Delta Sharing**（および後継の **OpenSharing**）は、プロバイダのストレージにデータを置いたまま、認可された受信者だけが最新版を読む **ゼロコピー** モデルを採用する [4][6]。
+
+本レポートの問いは「Delta Sharing・Open Sharing（Databricks 文脈の open 経路）・OpenSharing プロジェクトが何を指し、機能面で何ができて何ができないか」である。対象は Databricks 公式ドキュメント、OpenSharing 公式サイト、2025〜2026年の製品発表と FAQ ブログとする。Snowflake Secure Data Sharing や各クラウドネイティブ共有の詳細比較、自前 OpenSharing サーバーの構築手順は範囲外とする。
+
+調査範囲は 2026年11月時点の公開情報に限る。名称は文脈で意味が分かれるため、次節で地図を示す。
+
+## 名称の地図 — 三層を混同しない
+
+| 呼び方 | 何を指すか | 典型の利用者 |
+| --- | --- | --- |
+| **Delta Sharing** | 2020年頃からのオープンプロトコル名。`delta-io/delta-sharing` が参照実装 [7] | 文献・旧資料・互換クライアント |
+| **Open Sharing / Databricks-to-Open** | Databricks UC ワークスペースから **非 Databricks または UC 外** へ表形式を渡す経路。Bearer トークンまたは OIDC [3] | 外部パートナー、Spark／pandas／BI |
+| **OpenSharing** | (a) LF 配下の **Apache 2.0 仕様**、(b) Databricks 製品名（ドキュメント上 Delta Sharing の後継表記） [1][2][3] | プロトコル実装者／Databricks 利用者 |
+
+{% diagram type="mermaid" %}
+```mermaid
+flowchart TB
+  subgraph proto["プロトコル層"]
+    OS["OpenSharing 仕様<br/>（LF / GitHub）"]
+    DS["Delta Sharing 互換"]
+    OS --> DS
+  end
+  subgraph dbx["Databricks 実装"]
+    UC["Unity Catalog<br/>Share / Recipient"]
+    SRV["組み込み Sharing サーバ"]
+    UC --> SRV
+  end
+  subgraph routes["共有経路"]
+    D2D["Databricks-to-Databricks"]
+    D2O["Databricks-to-Open<br/>（Open Sharing）"]
+    OSS["自前 OSS サーバ"]
+  end
+  SRV --> D2D
+  SRV --> D2O
+  proto --> OSS
+```
+{% /diagram %}
+
+**OpenSharing は Delta Sharing の破壊的置換ではない。** 既存の Delta Sharing クライアントと統合はそのまま動き、`delta-io/delta-sharing` リポジトリも並行して残る [1]。仕様拡張では **Share → Schema → Asset** の階層と、Volume・AI model・Agent Skill など非表形式アセットがオープン仕様側にも載る方向である [1][2]。
+
+## 動作原理 — ゼロコピーと短命資格情報
+
+共有の論理モデルは次のとおりである [3][4]。
+
+1. **プロバイダ**が Unity Catalog で **Share**（読み取り専用アセットの束）を定義する。
+2. **Recipient**（組織単位の受信者オブジェクト）を作り、Share への `SELECT` を付与する。
+3. 受信者がクエリを発行すると、**Sharing サーバ** が UC の権限を確認し、オブジェクトストレージ上のファイルへ **短命の read 専用トークンまたは pre-signed URL** を発行する。
+4. 受信者の計算エンジンが **プロバイダのストレージから直接** Parquet／Delta ファイルを読む。データ全体のレプリカは必須ではない。
+
+プロバイダがテーブルを更新すると、受信側にも **ほぼリアルタイム** で反映される [3]。アクセスは TLS で保護され、プロバイダは `system.access.audit` などで参照を追跡できる [4][8]。
+
+同一 UC メタストアにぶら下がる複数ワークスペース間の共有は、OpenSharing を経由せず **Unity Catalog の通常権限** で足りる [3]。
+
+## 共有経路の4パターン
+
+Databricks ドキュメントが列挙する経路は次の4つである [3]。
+
+| 経路 | プロバイダ | 受信者 | 主な用途 |
+| --- | --- | --- | --- |
+| **Databricks-to-Databricks** | UC 有効 WS | 別メタストアの UC 有効 WS | 社内データメッシュ、マーケットプレイス、Clean Rooms |
+| **Databricks-to-Open** | UC 有効 WS | 任意（Spark、pandas、Power BI、Iceberg クライアント等） | 外部ベンダー・顧客への表形式配布 |
+| **自前 OSS Sharing サーバ** | 任意プラットフォーム | 任意 | Databricks 外からのプロバイダ実装 |
+| **SAP BDC Connector** | UC ↔ SAP BDC | 相互 | SAP データプロダクトのライブ参照 |
+
+アカウント内の **メタストア間共有は既定で有効** であり、他アカウントや非 Databricks 向けにはメタストアで OpenSharing を明示的に有効化する [3]。
+
+### セットアップの典型フロー（プロバイダ）
+
+1. メタストアで OpenSharing を有効化（アカウント内 D2D のみなら省略可）。
+2. Share を作成し、テーブル・ビュー等を追加。
+3. Recipient を作成（D2D なら sharing identifier、D2O なら Bearer 資格情報または OIDC 設定）。
+4. `GRANT SELECT ON SHARE TO RECIPIENT`。
+5. Beta 機能として **メール招待** でアクティベーションリンクを送る手もある（OIDC 非対応など制限あり）[3]。
+
+## Databricks-to-Databricks と Open Sharing の機能差
+
+実務で最初に確認すべきなのが、この差分である [3][5]。
+
+| 機能 | Databricks-to-Databricks | Databricks-to-Open（Open Sharing） |
+| --- | --- | --- |
+| 認証 | プラットフォーム側で自動。受信者トークン不要 | Bearer トークンまたは OIDC 連携 |
+| テーブル／パーティション／CDF | ○ | ○ |
+| ビュー・動的ビュー（行・列フィルタ） | ○ | ○（ビュー定義に制約） |
+| マテリアライズドビュー・ストリーミングテーブル | ○（2025 GA） | ○（クエリ経路によりプロバイダ側マテリアライズ） |
+| managed Iceberg・外国テーブル | ○ | ○（クライアント依存） |
+| Notebook | ○ | × |
+| Volume | ○ | × |
+| Unity Catalog Model | ○ | × |
+| Agent Skill | ○（Beta） | ×（仕様拡張で将来オープン側へ） |
+| メトリックビュー | ○（D2D のみ） | × |
+
+外部受信者は **Spark Structured Streaming** ソースとして共有テーブルを読め、**Delta time travel** も history 付き共有で利用できる [3]。Notebook は共有後も読み取り専用だが、受信 WS でクローンして編集・実行できる [3]。
+
+行・列制限は **動的ビュー** と `CURRENT_RECIPIENT()`、またはパーティションフィルタで行う。UC の **row filter・column mask をそのまま共有テーブルに載せることはできない** [5]。ABAC で保護したテーブルを Share に入れることは可能だが、**プロバイダ側 ABAC は受信者のアクセスを制限せず**、受信者はフルアクセスで見える。受信者側で別途 ABAC をかけられる（Beta）[9]。
+
+## 共有可能アセットとスキーマ単位のライフサイクル
+
+プロバイダが Share に載せられる主なアセットは次のとおりである [4][6]。
+
+- テーブル（パーティション単位の指定可）、ストリーミングテーブル、マテリアライズドビュー、メトリックビュー（D2D）
+- ビュー（動的ビュー含む）、managed Iceberg、外国スキーマ／テーブル
+- Volume、Notebook、Model、Agent Skill（多くは D2D）
+
+**スキーマ丸ごと共有** すると、含まれるオブジェクトと **後から追加される新規オブジェクト** が自動で受信者に見える [6]。Share は UC 上のセキュアブルオブジェクトであり、メタストアから Share を削除すると全受信者のアクセスが失われる [3]。
+
+OpenSharing 仕様の拡張では、表形式に加え **Volume・ML model・Agent Skill** を一つのデータプロダクトとして束ねる **Share → Schema → Asset** 階層がオープン仕様にも入る [1][2]。
+
+## セキュリティと監査
+
+Delta Sharing／OpenSharing は **ゼロトラスト・トークンベース** を謳う [4][6]。恒久パスワードを配布するのではなく、要求のたびに UC が権限を検証し、短命資格情報でストレージへ直通させる。
+
+| 観点 | 内容 |
+| --- | --- |
+| 転送 | TLS |
+| オブジェクトアクセス | pre-signed URL（短命・既に Share 権限がある相手のみ） |
+| D2O 認証 | Bearer（寿命・IP 制限・失効可能）または OIDC（Entra ID・Okta 等、GA）[10] |
+| 監査 | `system.access.audit` の `deltaSharingQueriedTable` 等 [5] |
+| 失効 | Share 単位・IP・Recipient 削除・トークン失効で段階的に遮断可能 [3] |
+
+pre-signed URL は「権限拡大」ではなく、既存の共有範囲内のファイルへのアクセス経路だと公式 FAQ は説明する [3]。
+
+## コネクタ・フォーマット・Iceberg 連携
+
+受信者はオープンコネクタから読める [4][6]。
+
+- Apache Spark、Python／pandas、Java
+- Power BI、Tableau、Excel
+- **Iceberg REST Catalog** クライアント（Snowflake、Trino 等への配信）
+
+表形式は **Delta または managed Iceberg** が前提である。Parquet からの変換は `CONVERT TO DELTA` で可能 [3]。UC 上の Iceberg テーブルは Delta Sharing 経由で Iceberg 互換エンジンへ渡せ、外国 Iceberg（Glue 等）を UC に登録してから Share に載せるパターンもある [6][11]。
+
+Delta Lake の高度機能（deletion vectors、column mapping、liquid clustering 等）は **コネクタと Runtime のバージョン行列** があり、Open 受信者は Spark／Python コネクタ 3.1+ などが目安となる [3]。
+
+2025年以降のロードマップ系機能として **Network Gateway**（ファイアウォール設定の簡素化）、**ABAC 付き Share**、**R2 経由のゼロ egress** 構成などが言及されている [11][12]。
+
+## ストリーミング・マテリアライズドビュー共有
+
+マテリアライズドビュー（MV）とストリーミングテーブル（ST）の共有は 2025 年に GA となった [9][13]。機能面の要点は次のとおりである [13]。
+
+- プロバイダは MV／ST 上に **カスタムビュー** を定義して共有できる（パートナーごとに見せる列を変える）。
+- 受信者は共有 MV／ST 上にビューを作ったり、**派生 MV／ST パイプライン** を組んだりできる（ゼロコピー前提）。
+- 複数共有 MV／ST の JOIN／UNION、ローカル MV／ST との結合が可能。
+- **Column mapping** によりプロバイダ側で列名を整理したうえで共有できる。
+
+ビュー／MV／ST については、受信者の計算タイプとアカウント関係により **プロバイダ側でマテリアライズ・フィルタ** が走る場合がある。Serverless や同一アカウントの非専有 Classic など条件下では受信者が基礎データへ直接アクセスできる [3]。**SecureConnect** 有効時は常にプロバイダ側マテリアライズになる [3]。
+
+## コスト構造
+
+公式の整理は次のとおりである [3][6]。
+
+- Share の **作成・設定自体に Delta Sharing 利用料はかからない**（クエリ時課金）[6]。
+- **コンピュート**：誰がクエリするか、D2D か D2O か、ビューか生テーブルかで **プロバイダ払い／受信者払い** が変わる。D2O コネクタ経由のフィルタ処理は多くの場合 **プロバイダの interactive serverless** に載る [3]。
+- **ストレージ／ネットワーク**：レプリケーションは必須ではない。**同一リージョンなら egress 無料**、クロスクラウド・リージョンはクラウド課金（R2 や SecureConnect で緩和）[3][6]。
+- **マテリアライズ**：外国テーブルや特定ビュー経路ではプロバイダストレージに一時副本が載る [3]。
+
+Billable usage 系のシステムテーブルで帰属を追える [3]。
+
+## OpenSharing と周辺プロダクト
+
+Databricks 上の OpenSharing は **Marketplace**（データプロダクト交換）と **Clean Rooms**（複数者でのプライバシー保護協業）の基盤でもある [3]。Delta Sharing から OpenSharing への改称は、エージェント向け **Agent Skill** 共有など AI ネイティブ拡張を含む [1][2]。
+
+**Lakeflow Connect** との棲み分けは「大量・低遅延・API 制限下の取り込み」が Connect、「副本を増やさず最新を読む」が OpenSharing である [3]。
+
+## よくあるQ&A
+
+### ブログ「Top 10 FAQ」（Delta Sharing、2025年10月）[6]
+
+| # | 質問 | 要点 |
+| --- | --- | --- |
+| 1 | Delta Sharing とは | ライブデータと AI アセットをクロスプラットフォーム共有するオープンプロトコル |
+| 2 | 何が違うか | コピー不要・オープン仕様・標準コネクタ |
+| 3 | Iceberg 対応か | 対応。UC 経由で Iceberg クライアントへ共有、外国 Iceberg の federate も可 |
+| 4 | 非 Databricks へ共有可能か | 可能（Open Sharing ＋ 各種コネクタ） |
+| 5 | 解決する課題 | 社内共有、B2B、データライセンス、SaaS 連携 |
+| 6 | SFTP 等との比較 | 副本・長寿命鍵・監査の弱点を置き換える |
+| 7 | 共有可能アセット | 表・ビュー・ST・MV・volume・notebook・model 等 |
+| 8 | 安全性 | 短命トークン／pre-signed URL、TLS、監査ログ |
+| 9 | コスト | セットアップ無料、利用時に compute／egress／（任意の）レプリカ storage |
+| 10 | 始めるには | D2D は双方 UC、D2O はプロバイダ UC とオープンコネクタ |
+
+### 公式ドキュメント「OpenSharing FAQs」抜粋 [3]
+
+| 質問 | 回答の要旨 |
+| --- | --- |
+| Unity Catalog は必須か | プロバイダ／受信者とも必須ではないが、UC 利用時に非表形式・ガバナンス・性能のメリットが大きい |
+| Databricks 顧客でなくてよいか | プロトコルはオープン。自前サーバ＋OSS コネクタで可能 |
+| egress は | 同一リージョン無料。跨ぎはクラウド課金。R2・SecureConnect で回避策 |
+| pre-signed URL は安全か | 短命で、既存 Share 権限の範囲内のみ |
+| Bearer トークンは | 寿命・ネットワーク制御・失効で運用。トークン不要なら D2D を選ぶ |
+| Lakeflow Connect との違い | 鮮度優先・副本抑制なら OpenSharing |
+
+### 運用でよく出る追加の問い
+
+| 質問 | 回答の要旨 |
+| --- | --- |
+| 受信者はデータを書き換えられるか | いいえ。読み取り専用（notebook はクローン後に編集可）[5] |
+| 誰がアクセスしたか分かるか | プロバイダは監査ログで追跡可能 [5] |
+| エクスポートとの違い | 副本を作らずライブ参照 [5] |
+| Delta Sharing と OpenSharing の関係 | 仕様進化。互換維持。製品 UI では OpenSharing 表記が増える [1] |
+| 「open sharing」と OpenSharing の違い | 前者は Databricks-to-Open **経路の通称**、後者は **プロトコル／製品名** でもある |
+
+## 制限と注意点
+
+公式が列挙する制限のうち、設計・運用に効くものを抜粋する [3]。
+
+**テーブル形式・機能**
+
+- 共有不可：`VOID` 列、collation 付き、row filter／column mask 付き、`SHALLOW CLONE`、liquid clustering のパーティションフィルタ併用など。
+- 動的ビューは Delta／外国テーブル／共有可能ビュー上のみ。
+
+**経路**
+
+- Notebook・Volume・Model・メトリックビューは **D2D のみ**（Open 経路には載せられない）。
+
+**運用**
+
+- 親カタログ／スキーマのカスケード削除は Share 保護をバイパスし、同名アセットを Share に戻せなくなる。
+- メール招待は OIDC・グループ SP・再送の制約あり。
+- 共有カタログの `information_schema` は、DESCRIBE 等までメタデータが古く見えることがある。
+
+**ストリーミング**
+
+- ストリーミングソース実行中の `responseFormat` 変更は非対応。
+
+## 次に解くべき3つの問い
+
+1. **自社の受信者が D2O のみか D2D も含むか** — ここで notebook／volume 共有の要否と認証方式（Bearer vs OIDC vs メール招待）が決まる。
+2. **共有対象が生テーブルかビュー／MV か** — マテリアライズと課金主体（プロバイダ interactive serverless vs 受信者 compute）が変わる [3]。
+3. **データ配置リージョンと egress** — 同一リージョンに寄せるか、R2／SecureConnect を使うかでランニングコストが大きく変わる [3][6]。
+
+## まとめ
+
+Delta Sharing は「ライブ・ゼロコピー・オープンコネクタ」を軸にした共有プロトコルであり、Databricks では Unity Catalog 上の Share／Recipient として実装される。Open Sharing（Databricks-to-Open）はそのうち外部向け表形式経路の名前であり、OpenSharing は 2026年以降そのプロトコルと製品の総称として AI アセットまで対象を広げている。機能選定では **D2D と D2O のアセット差分**、**ビュー系のマテリアライズと課金**、**ガバナンス（動的ビュー vs UC mask）** の3点を先に確定するのが実務的である。
+
+## 付録: 出典一覧
+
+[1] Databricks Blog, «From Delta Sharing to OpenSharing: what changed, what's next», 2026-06（OpenSharing 発表・互換性・LF 移管）, https://www.databricks.com/blog/delta-sharing-opensharing-what-changed-whats-next
+
+[2] OpenSharing 公式サイト, «The open sharing protocol», https://opensharing.io/
+
+[3] Databricks Documentation, «What is OpenSharing?», AWS 版（経路・FAQ・制限・コスト表）, https://docs.databricks.com/aws/en/opensharing/
+
+[4] Databricks Community / Answers 要約, «How does Delta Sharing work with Unity Catalog», https://answers.databricks.com/delta-sharing-work-unity-catalog
+
+[5] 同上 [4] および [3] の制限・ガバナンス節
+
+[6] Databricks Blog, «Delta Sharing Top 10 Frequently Asked Questions, Answered - Part 1», 2025-10-30, https://www.databricks.com/blog/delta-sharing-top-10-questions-answered-part-1
+
+[7] delta-io/delta-sharing GitHub リポジトリ, https://github.com/delta-io/delta-sharing
+
+[8] Databricks Blog, «How Delta Sharing Enables Secure End-to-End Collaboration»（セキュリティ深掘り、FAQ から参照）, https://www.databricks.com/（ブログ本文は [6] からリンク）
+
+[9] Databricks Release Notes, July 2025（MV/ST GA、ABAC Beta）, https://docs.databricks.com/aws/en/release-notes/product/2025/july
+
+[10] Databricks Blog, «Announcing OIDC Token Federation for Enhanced Delta Sharing Security», https://www.databricks.com/blog/announcing-oidc-token-federation-enhanced-delta-sharing-security
+
+[11] Databricks Blog, «What's New with Data Sharing and Collaboration - Summer 2025», https://www.databricks.com/blog/whats-new-data-sharing-and-collaboration-summer-2025
+
+[12] Databricks Blog, «Introducing OpenSharing: the Next Evolution of Delta Sharing for the Agentic Era», https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era
+
+[13] Databricks Blog, «Now GA: Share Materialized Views and Streaming Tables with Delta Sharing», https://www.databricks.com/blog/now-ga-share-materialized-views-and-streaming-tables-delta-sharing
+
+### 調査で採用しなかった枝
+
+- **Part 2 FAQ**：2025年10月時点で Databricks 公開の「Top 10 Part 2」は見つからず、Part 1 に全10問が収録されていると判断した [6]。
+- **PROTOCOL.md 全文**：GitHub 上の取得時点で本文が空に近く、仕様の細部は OpenSharing サイトと Databricks ドキュメントを優先した [7]。
