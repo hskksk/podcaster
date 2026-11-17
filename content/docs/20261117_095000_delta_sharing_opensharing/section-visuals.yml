@@ -1,0 +1,154 @@
+version: 1
+sourceSha256: "6bae96a3a7e73fecbb70318f301d966bdf1a9ff989c4555980d41fef6ad91437"
+visuals:
+  - sectionId: "名称の地図-三層を混同しない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Delta Sharingはプロトコル名、Open SharingはDatabricksの外部向け経路、OpenSharingはLinux Foundation仕様とDatabricks製品の両方を指す。"
+    spec:
+      type: cards
+      title: 同名でも層が三つある
+      items:
+        - label: Delta Sharing
+          detail: オープンプロトコルと参照実装
+        - label: Open Sharing
+          detail: Databricks-to-Openの表形式経路
+          emphasis: true
+        - label: OpenSharing
+          detail: LF仕様と製品実装の総称
+
+  - sectionId: "動作原理-ゼロコピーと短命資格情報"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "ShareとRecipientへのSELECTのあと、Sharingサーバが短命トークンを発行し、受信者がプロバイダストレージを直接読む。"
+    spec:
+      type: sequence
+      title: 副本なしでストレージ直読
+      mode: steps
+      items:
+        - label: Share定義
+          detail: UCで読み取り専用の束
+        - label: SELECT付与
+          detail: Recipientへ権限
+        - label: 権限確認
+          detail: サーバが短命資格情報
+          emphasis: true
+        - label: 直接読取
+          detail: ParquetとDeltaを参照
+
+  - sectionId: "共有経路の4パターン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Databricks-to-Databricks、Databricks-to-Open、自前OSSサーバ、SAP BDC Connectorの四経路がある。"
+    spec:
+      type: cards
+      title: 受信者の居場所で経路が分岐
+      caption: アカウント内メタストア間は既定で有効
+      items:
+        - label: Databricks-to-Databricks
+          detail: UC有効WS同士
+          emphasis: true
+        - label: Databricks-to-Open
+          detail: SparkやBIなど任意先
+        - label: 自前OSSサーバ
+          detail: Databricks外からも提供可
+        - label: SAP BDC Connector
+          detail: SAPデータのライブ参照
+
+  - sectionId: "セットアップの典型フロープロバイダ"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "メタストア有効化、Share作成、Recipient作成、GRANT SELECT、任意でメール招待。"
+    spec:
+      type: sequence
+      title: プロバイダは五手で共有開始
+      mode: funnel
+      items:
+        - label: OpenSharing有効化
+        - label: Shareにアセット追加
+        - label: Recipient作成
+          emphasis: true
+        - label: GRANT SELECT
+        - label: メール招待任意
+
+  - sectionId: "databricks-to-databricks-と-open-sharing-の機能差"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Notebook、Volume、Model、Agent SkillはDatabricks-to-Databricksのみ。Open Sharingは表とビュー中心。"
+    spec:
+      type: comparison
+      title: 非表形式はD2Dだけが載せられる
+      sides:
+        - label: Databricks-to-Databricks
+          emphasis: true
+        - label: Open Sharing
+      rows:
+        - axis: 認証
+          cells:
+            - label: プラットフォーム自動
+            - label: BearerかOIDC
+        - axis: 表とビュー
+          cells:
+            - label: 対応
+            - label: 対応
+        - axis: NotebookとVolume
+          cells:
+            - label: 共有可能
+            - label: 不可
+        - axis: ModelとAgent Skill
+          cells:
+            - label: 対応
+            - label: 不可
+
+  - sectionId: "共有可能アセットとスキーマ単位のライフサイクル"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "スキーマ共有で後追加オブジェクトも見える。OpenSharing仕様はShareからSchema、Assetへ階層を広げる。"
+    spec:
+      type: hierarchy
+      title: スキーマ単位で後追いも自動公開
+      root:
+        label: Share
+        emphasis: true
+        children:
+          - label: Schema
+            children:
+              - label: テーブルとビュー
+              - label: VolumeとModel
+          - label: 新規アセット
+            detail: 追加時も受信者へ反映
+
+  - sectionId: "セキュリティと監査"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "TLS、短命pre-signed URL、BearerまたはOIDC、system.access.auditで追跡、段階的失効が可能。"
+    spec:
+      type: cards
+      title: 恒久鍵を配らず都度検証する
+      items:
+        - label: TLS転送
+          icon: shield
+        - label: 短命URL
+          emphasis: true
+        - label: OIDC連携
+        - label: 監査ログ
+          icon: document
+        - label: 段階的失効
+
+  - sectionId: "コスト構造"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Share設定は無料。課金はコンピュート、egress、必要時のマテリアライズストレージ。"
+    spec:
+      type: cards
+      title: 設定無料、使った分だけ三層課金
+      items:
+        - label: 設定
+          detail: Share作成に追加料なし
+        - label: コンピュート
+          detail: 経路で払い手が変わる
+          emphasis: true
+        - label: egress
+          detail: 同一リージョンは無料
+        - label: マテリアライズ
+          detail: ビュー経路で副本が載る場合
