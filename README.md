@@ -460,21 +460,18 @@ Studio → Table Editor → `podcast_config` から直接編集できます。
 
 ## Claude Code スキル
 
-調査レポート用スキルは 2 つあり、しばらく併用する。どちらも `content/docs/`（Wiki 記事）に保存して PR を出し、既定は `podcast: none`（マージだけでは ingest / TTS は走らない）。
+調査レポート用スキルは `podcast-research`。`content/docs/`（Wiki 記事）に保存して PR を出し、既定は `podcast: queued`（main マージ後に ingest / TTS）。
 
 ```
 /podcast-research <テーマ>
-/podcast-research2 <テーマ>
 ```
 
-- `podcast-research`（`.claude/skills/podcast-research/SKILL.md`）: 概要→背景→核概念…のサーベイ型
-- `podcast-research2`（`.claude/skills/podcast-research2/SKILL.md`）: 調査は `how-to-survey`、構成は `survey-report`（Phase 1 探索 / Phase 2 検証、前・中・後重心、入門・実務・専門）に従う。指定がなければ入門。概要・歴史・図・主張数は固定しない。保存と PR だけこのリポジトリ向け
+- `podcast-research`（`.agents/skills/podcast-research/SKILL.md`）: 調査は `how-to-survey`、構成は `survey-report`（Phase 1 探索 / Phase 2 検証、前・中・後重心、入門・実務・専門）に従う。指定がなければ入門。保存・treemap・section-visuals・PR はこのリポジトリ向け
 
 例:
 
 ```
-/podcast-research Supabase の pgmq でバックグラウンドジョブを実装する方法
-/podcast-research2 モジュラー曲線と楕円曲線の関係
+/podcast-research モジュラー曲線と楕円曲線の関係
 ```
 
 スキル同士の呼び方は `skill-orchestration`（`hskksk/agent-skills` から import。`.agents/skills/skill-orchestration/SKILL.md`）に従う。呼び出し側は相手のファイルを指さない。

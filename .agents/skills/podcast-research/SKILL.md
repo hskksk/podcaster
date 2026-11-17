@@ -1,6 +1,6 @@
 ---
 name: podcast-research
-description: Research a topic deeply, save a Markdoc report to content/docs/ (wiki articles), and create a PR (podcast queued by default; ingest/TTS after merge). For Japanese prose, use the japanese-writing skill when installed.
+description: Research a topic with how-to-survey, structure it with survey-report (Phase, gravity, reader level), write a Japanese Markdoc report to content/docs/ (wiki), and create a PR (podcast queued by default; ingest/TTS after merge). For Japanese prose, use the japanese-writing skill when installed.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -8,6 +8,7 @@ allowed-tools:
   - WebFetch
   - Write
   - Read
+  - Bash(python3 *)
   - Bash(git checkout -b article/*)
   - Bash(git add content/docs/*)
   - Bash(git commit -m*)
@@ -15,17 +16,21 @@ allowed-tools:
   - Bash(gh pr create*)
 metadata:
   audience: podcast producers
+  source: how-to-survey + survey-report, plus Markdoc wiki save and PR
 ---
 
 ## What I do
 
-指定されたテーマについて深く調査し、ポッドキャスト台本生成用の詳細な Markdown レポートを作成します。
+指定されたテーマを深く調査し、ポッドキャスト台本のもとになる Markdoc レポートを書く。
 
-1. **多角的なリサーチ**: 概要・背景・詳細・最新動向・具体例・関連トピックを複数回のWeb検索で収集
-2. **レポート保存**: `content/docs/` に Markdoc (`index.mdoc`) として保存する（公開 Wiki / 旧 `articles/` 相当）
-3. **PR 作成**: origin/main ベースのブランチを作成して PR を出す（`podcast: queued` 既定。main マージ後に ingest / TTS）
+調査の進め方は **`how-to-survey`**、レポートの型は **`survey-report`** が正本である。このスキルは、その出力をこのリポジトリの Wiki に載せるところだけを持つ。
 
-**保存先の区別**: `content/web-clips/` は短い Web クリップ・クイックメモ用。本スキルのような **深い調査レポートは `content/docs/` に置く**（Keystatic の Wiki Documents）。
+1. **調べる**: `how-to-survey` の手順で問い、範囲、検索、出典を固める
+2. **構成して書く**: `survey-report` の手順で Phase、重心、読者レベルを選び、レポートにする
+3. **このリポジトリ向けに整える**: Markdoc、本文の字数上限、`content/docs/` への保存、PR（`podcast: queued` 既定。main マージ後に ingest / TTS）
+4. **日本語**: `japanese-writing` があれば執筆前と推敲前に読む
+
+**保存先の区別**: `content/web-clips/` は短い Web クリップ・クイックメモ用。本スキルのような**深い調査レポートは `content/docs/` に置く**（Keystatic の Wiki Documents）。
 
 ## When to use me
 
@@ -34,75 +39,59 @@ metadata:
 
 ## Instructions
 
-あなたはポッドキャスト制作用のリサーチエージェントです。
-以下の手順で指定テーマを徹底調査し、詳細な Markdown レポートを作成してください。
+あなたはポッドキャスト制作用のリサーチエージェントである。問いの立て方、検索、重心、見出し、出典、提出前テストは、下のスキルに書き写さず、そのファイルを読んで従う。
 
-### 日本語の執筆
+### 参照するスキル
 
-出力が日本語のとき、リポジトリに **`japanese-writing` スキル**があれば、本文を書き始める前と保存前の推敲でそのスキルを読み込み、手順に従う。なければ調査の正確さを優先する。
+| 参照 | 役割 | いつ読むか |
+|------|------|-----------|
+| `how-to-survey` | 問い、検索計画、Web 調査、調査の十分性 | **検索の前から調査の確認まで。** そのスキルの `SKILL.md` を読み、手順に従う |
+| `survey-report` | Phase、重心、読者レベル、構成、提出前の計測とチェック | **本文を書き始める前と提出前。** そのスキルの `SKILL.md` を読み、手順に従う |
+| `japanese-writing` | 日本語の語彙・文・推敲 | 出力が日本語のとき、執筆前と推敲前 |
+| `write-d2-diagram` | D2 の図 | D2 を使うとき |
+| `index.mdoc` を書き終えた直後 | `article-treemap-labels` | 同ディレクトリの `treemap.yml`（章マップ用ラベルとリンク） |
+| `treemap.yml` を書き終えた直後 | `article-section-visuals` | 同ディレクトリの `section-visuals.yml`（セクション図 sidecar。長文 Wiki 記事向け） |
 
-### ステップ 1: リサーチ計画
+`how-to-survey` と `survey-report` に同じ規則があるときは、レポートの形は `survey-report`、調査の実行は `how-to-survey` に従う。作業メモは完成原稿へ載せない。
 
-まずテーマを分析し、調査すべきサブトピックを列挙する（最低8〜12項目）。
-- 概要・定義・歴史的背景
-- 核となる概念・理論・仕組み
-- 具体例・応用事例
-- 重要人物・論文・文献
-- 最新の動向・未解決問題
-- 関連する隣接分野との接続
+### ステップ1: 調査
 
-### ステップ 2: 徹底的なWeb調査
+`how-to-survey` を読み、その手順どおりに調査メモと出典一覧を作る。進捗は都度報告する（「〇〇について調査中…」）。
 
-各サブトピックについてWebSearchとWebFetchを繰り返し実行する。
-- **検索は最低15回以上** 行い、日本語・英語の両方で検索する
-- 重要なページは WebFetch で全文取得して詳細を把握する
-- Wikipedia、arXiv、技術ブログ、公式ドキュメントなど複数ソースを参照する
-- 数式・アルゴリズム・定理は正確に記録する
+### ステップ2: 構成して書く
 
-### ステップ 3: Markdown レポート作成
+`survey-report` を読み、Phase、主重心、副重心、読者レベルを決めてから本文を書く。
 
-収集した情報を以下の構成で Markdown にまとめる。
+**このリポジトリだけの制約:**
 
-**目標文字数: 約2万字**（長すぎると生成音声が長くなりコスト増・品質劣化の原因となるため）
+- 出力言語はユーザーの指定がなければ日本語・常体。固有名、論文題、API、ファイルパスは原文のまま
+- **分量の上限は概要＋本文で2万字程度**（長いと生成音声が長くなり、コストと品質が落ちる）。付録に上限はない。下限はない。2万字に届かせるために主張を増やさない。余った材料は付録へ移す
+- 調査が十分かは `how-to-survey` の手順で判断する。字数では測らない
+- 作業語（「前重心」「中重心」「後重心」「価値の中心」「Phase 1」「Phase 2」など）や制作過程は本文へ出さない
+- `references/prose-style.md` は使わない
 
-```markdown
-# <テーマタイトル>
+#### Markdoc
 
-## 概要
-（テーマの全体像・重要性・なぜ面白いか）
+本文は Markdown でよい。数式は `$...$` / `$$`、または `{% math %}`。関係図やフローは `{% diagram type="mermaid" %}`。アーキテクチャ図などは `write-d2-diagram` に従い `{% diagram type="d2" %}` も可。注意書きは `{% callout type="note" %}`（Markdoc タグは `math` / `diagram` / `callout` / `podcastPlayer`）。`podcastPlayer` はスキルから埋め込まない。
 
-## 背景・歴史
-（どのような経緯で生まれ、発展してきたか）
+**`{% diagram %}` の中身は必ずフェンス付きコードブロックで包む。** 素の行で書くと Markdoc が改行を空白に潰し、Mermaid が構文エラーになって図が出ない。
 
-## 核となる概念
-### <概念1>
-### <概念2>
-...
-
-## 詳細な仕組み・理論
-（技術的・数学的な詳細。数式は LaTeX 記法で記述）
-
-## 具体例・応用事例
-（実際の例、ケーススタディ）
-
-## 重要人物・文献
-（関連する人物、論文、書籍）
-
-## 最新動向・未解決問題
-（現在進行形のトピック）
-
-## 関連トピック
-（隣接する概念・分野へのつながり）
-
-## 参考リンク
-（調査に使用したURL一覧）
+````markdown
+{% diagram type="mermaid" %}
+```mermaid
+flowchart TD
+  A["..."] --> B["..."]
 ```
+{% /diagram %}
+````
 
-### ステップ 4: content/docs/ に保存して PR を作成する
+### ステップ3: content/docs/ に保存して PR を作成する
 
-ユーザーの確認は不要。以下を順に実行する。
+ユーザーの確認は不要。提出前に `survey-report` の `SKILL.md` を読み、そこに書かれた計測とチェックに従う。計測コマンドは、そのスキルに書かれたものをそのまま使う。
 
-1. `content/docs/YYYYMMDD_HHMMSS_<テーマ>/index.mdoc` にレポートを保存する。先頭に YAML frontmatter を付ける（本文のプロスは Markdown のまま。数式は `$...$` / `$$` でよい）:
+**共通必須指標の未達をゼロにしてから進む。出力の数字を書き換えない。** 構成は機械判定だけで決めない。
+
+1. `content/docs/YYYYMMDD_HHMMSS_<テーマ>/index.mdoc` にレポートを保存する。先頭に YAML frontmatter:
 
    ```markdown
    ---
@@ -113,17 +102,26 @@ metadata:
    ---
    ```
 
-2. origin/main ベースの新しいブランチを作成してコミット:
+2. **章マップ sidecar（`treemap.yml`）**: 本文を保存したあと、**同じエージェント**が `article-treemap-labels` を読み、手順どおり `treemap.yml` を書く（サブエージェントに委譲しない）。構成と論旨は執筆直後の頭の中にあるので、ラベルと `links` / `chapterFlow` もここで一気に決める。`extract_nodes` → 執筆 → `validate_treemap` が通るまで直す。`scripts/article-treemap/_dev/` は使わない。設計の背景は `docs/architecture/article-treemap-labels.md`。
+
+3. **セクション図 sidecar（`section-visuals.yml`）**: `treemap.yml` の直後、**同じエージェント**が `article-section-visuals` を読み、手順どおり `section-visuals.yml` を書く（サブエージェントに委譲しない）。図に値がない短い節は付けない。`section-visuals:extract` → 執筆 → `section-visuals:validate` が通るまで直す。設計の背景は `docs/architecture/article-section-visuals.md`。
+
+4. origin/main ベースの新しいブランチを作成してコミット:
+
    ```bash
    SLUG="YYYYMMDD_HHMMSS_<topic-slug>"
    BRANCH="article/$SLUG"
    git checkout -b "$BRANCH" origin/main
-   git add "content/docs/$SLUG/index.mdoc"
+   git add "content/docs/$SLUG/index.mdoc" "content/docs/$SLUG/treemap.yml"
+   # section-visuals.yml を書いたときだけ追加:
+   git add "content/docs/$SLUG/section-visuals.yml"
    git commit -m "Add podcast research article: <テーマ>"
    git push -u origin "$BRANCH"
    ```
-3. PR を作成する:
+
+5. PR を作成する:
    - `gh` CLI が使える場合:
+
      ```bash
      gh pr create \
        --base main \
@@ -132,26 +130,19 @@ metadata:
 
 知識として content/docs（Wiki 記事）に入れます。main マージ後、Actions が `podcast: queued` を ingest し台本・音声を生成します。
 
-- ファイル: content/docs/$SLUG/index.mdoc
-- テーマ: <テーマ>"
+- ファイル: content/docs/\$SLUG/index.mdoc
+- テーマ: <テーマ>
+- スキル: podcast-research"
      ```
+
    - `gh` CLI が使えない場合: ブランチ名（`$BRANCH`）をユーザーに伝えて手動で PR 作成するよう案内する
-4. レポートの概要（見出し一覧と文字数）をユーザーに提示する
-5. 「`content/docs/` に保存して PR を作成しました。main にマージすると `podcast: queued` により ingest / TTS が走ります。」と伝える
 
-### Markdoc のコードブロック（AI 執筆向け）
-
-本文は Markdoc（`.mdoc`）としてビルドされる。**コードフェンスは原則「引用テキスト」**であり、言語ラベル `md` / `markdown` / `markdoc` / `mdoc` のブロック内の `{% タグ %}` はサイト側で**描画されない**（Markdoc 仕様の `process=false` 相当。詳細は `apps/web/markdoc/README.md`）。
-
-- **構文の例・他サイトの Markdoc ソースを載せる** → ` ```md ` または ` ```markdoc ` でよい（タグはそのままコード表示）
-- **このサイトで図や callout を出す** → フェンスの外で `{% diagram type="mermaid" %}` 等の登録タグを使い、中身は ` ```mermaid ` / ` ```d2 `
-- フェンス内のタグまで実行したい rare case のみ ` ```md {% process=true %} `（通常は使わない）
-- 本文中の生の `{% ... %}` はバッククォートで囲む（インラインタグとして解釈される）
+6. 完了メッセージはレポートとは別物。**選んだ Phase、読者の前提レベル、主重心とその理由**、価値の中心、見出し一覧、答えの一文、**計測の出力**、章マップラベル数の一行、セクション図を付けたときは visual 数の一行を示す。本文をチャットに貼らない
+7. 「`content/docs/` に保存して PR を作成しました。main にマージすると `podcast: queued` により ingest / TTS が走ります。」と伝える
 
 ### 注意事項
 
 - `content/docs/` ディレクトリは存在しない場合は作成する
-- ファイル名のテーマ部分はファイルシステムで安全な文字のみ使用する（スペースはアンダースコアに）
-- リサーチ中は進捗を都度報告する（「〇〇について調査中...」など）
-- 情報の信頼性が低い場合はその旨を明記する
+- ファイル名のテーマ部分はファイルシステムで安全な文字のみ（スペースはアンダースコア）
+- `md` / `markdoc` フェンス内の Markdoc タグは描画されない。図はフェンス外の `{% diagram %}` を使い、生のタグはバッククォートで囲む
 - 既定は `podcast: queued`。TTS を出したくないときだけユーザーが明示して `none` に変える

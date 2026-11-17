@@ -1,6 +1,6 @@
 ---
 name: article-section-visuals
-description: After index.mdoc exists, author section-visuals.yml (Article Visual spec v1 per section) from a section manifest and the article body. Use in the same run as the article author (e.g. podcast-research2 after treemap), not via a subagent. Returns section-visuals.yml next to the mdoc.
+description: After index.mdoc exists, author section-visuals.yml (Article Visual spec v1 per section) from a section manifest and the article body. Use in the same run as the article author (e.g. podcast-research after treemap), not via a subagent. Returns section-visuals.yml next to the mdoc.
 license: MIT
 compatibility: claude-code
 allowed-tools:

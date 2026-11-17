@@ -447,7 +447,7 @@ H3は、親H2の図では表現できない独立した仕組み・比較・時�
 
 スキルはArticle Visual specと検証コマンドだけを知る。React component名・CSS・SVG構造・`apps/web`の配置は記載しない。これにより、rendererを作り直してもspec v1を維持する限りスキルは変わらない。
 
-親の`podcast-research2`には、スキル名・呼ぶ時点・入力成果物・検証成功を次へ進む条件としてだけ記載する。specの全フィールドを親スキルへコピーしない。
+親の`podcast-research`には、スキル名・呼ぶ時点・入力成果物・検証成功を次へ進む条件としてだけ記載する。specの全フィールドを親スキルへコピーしない。
 
 ## specの正本と互換性
 
@@ -705,7 +705,7 @@ sidecarは信頼済みコードではなく、検証対象のcontent dataとし�
 3. sidecar型・loader・validator・repository check
 4. desktop railとmobile slot
 5. `article-section-visuals` skill
-6. `podcast-research2`からの呼び出し
+6. `podcast-research`からの呼び出し
 7. 一記事のpilot sidecar
 
 ## 導入順
@@ -715,7 +715,7 @@ sidecarは信頼済みコードではなく、検証対象のcontent dataとし�
 3. podcasterのloaderとresponsive layoutを実装し、手書きsidecarで確認する。
 4. validatorとrepository checkを追加する。
 5. `article-section-visuals`を追加し、Article Visual specを生成する。
-6. `podcast-research2`の記事完成後工程へ接続する。
+6. `podcast-research`の記事完成後工程へ接続する。
 7. pilot記事で手書き版とスキル生成版を比較し、文字量と項目数の上限を固定する。
 
 ## 受け入れ条件

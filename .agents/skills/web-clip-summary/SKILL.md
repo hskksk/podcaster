@@ -16,8 +16,8 @@ allowed-tools:
   - Bash(gh pr create*)
 metadata:
   audience: 自分のためにWebクリップを溜める人
-  related: podcast-research2
-  source: podcast-research2 の日本語作法と計測スクリプトを、要約という別の仕事に移したもの
+  related: podcast-research
+  source: podcast-research の日本語作法と計測スクリプトを、要約という別の仕事に移したもの
 ---
 
 ## What I do
@@ -36,7 +36,7 @@ URL を受け取り、元記事を取得して、`content/web-clips/` に日本�
 6. **逐語引用は3箇所まで**: 著者の言い回しそのものが情報になる文だけ引く
 7. **保存と PR**: `content/web-clips/` に `index.mdoc` を書き、origin/main ベースの PR を出す（`podcast: none`）
 
-**保存先の区別**: 自分で調べて書く深い調査レポートは `content/docs/`（`podcast-research2`）。**既にある一本の記事を読んで畳むのがこのスキル**で、行き先は `content/web-clips/` である。
+**保存先の区別**: 自分で調べて書く深い調査レポートは `content/docs/`（`podcast-research`）。**既にある一本の記事を読んで畳むのがこのスキル**で、行き先は `content/web-clips/` である。
 
 ## When to use me
 
@@ -95,7 +95,7 @@ WebFetch で全文を取る。取得に失敗したら、その旨を伝えて�
 
 **1〜3 が骨子である。ここが書けていないうちは 4 と 5 に進まない。** 落とすものの判断は骨子が決まってからでないとできない。`references/compression.md` の表を使う。
 
-必要なら周辺を1〜3回だけ検索してよい（記事の日付、著者、記事が引いている論文の実体）。**それ以上は調査であって要約ではない。** 深掘りしたくなったら `podcast-research2` に切り替えるようユーザーに勧める。
+必要なら周辺を1〜3回だけ検索してよい（記事の日付、著者、記事が引いている論文の実体）。**それ以上は調査であって要約ではない。** 深掘りしたくなったら `podcast-research` に切り替えるようユーザーに勧める。
 
 ### ステップ2: 分量を決める
 

@@ -17,7 +17,7 @@ content/docs/<slug>/
   treemap.yml     # 章マップ用ラベル + リンク（新規）
 ```
 
-`content/web-clips/` でも同じ名前を使える。長文 wiki（`podcast-research2`）では **必須**。短いクリップでは省略可。
+`content/web-clips/` でも同じ名前を使える。長文 wiki（`podcast-research`）では **必須**。短いクリップでは省略可。
 
 ## スキーマ（`treemap.yml`）
 
@@ -47,7 +47,7 @@ chapterFlow:
 
 ## ワークフロー
 
-1. 親スキル（例: `podcast-research2`）が `index.mdoc` を書き終える。
+1. 親スキル（例: `podcast-research`）が `index.mdoc` を書き終える。
 2. **同じ run の同じエージェント**が `article-treemap-labels` を読み、マニフェストと **本文**を見て `treemap.yml` を **書く**（`_dev` スクリプトは使わない）。
 3. `validate_treemap.ts` が通ったら PR（mdoc + yml を同コミット）。
 
@@ -63,4 +63,4 @@ chapterFlow:
 
 - スキル: `.agents/skills/article-treemap-labels/`
 - スクリプト: `scripts/article-treemap/README.md`（本番は `extract_nodes` / `validate_treemap` のみ）
-- 呼び出し: `.agents/skills/podcast-research2/SKILL.md` ステップ 3b
+- 呼び出し: `.agents/skills/podcast-research/SKILL.md` ステップ 3b

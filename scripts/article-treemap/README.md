@@ -11,4 +11,4 @@
 
 ## `_dev/` (local stubs only)
 
-Mechanical helpers for smoke tests or empty sidecars. **記事 PR・`podcast-research2` では使わない。** 要約や論理リンクの品質はスキル側の判断に任せる。
+Mechanical helpers for smoke tests or empty sidecars. **記事 PR・`podcast-research` では使わない。** 要約や論理リンクの品質はスキル側の判断に任せる。
