@@ -1,0 +1,182 @@
+version: 1
+sourceSha256: "6bae96a3a7e73fecbb70318f301d966bdf1a9ff989c4555980d41fef6ad91437"
+nodes:
+  i2:
+    title: "DeltaからOpenSharingへ"
+    subtitle: "ゼロコピーのオープンプロトコルがLinux Foundation下で拡張され、既存Delta Sharingクライアントとの互換が保たれる。"
+  i3:
+    title: "二つの共有経路"
+    subtitle: "Databricks上ではOpen SharingとDatabricks-to-Databricksがあり、notebookやvolumeなどは後者だけが扱える。"
+  i4:
+    title: "Shareと短命トークン"
+    subtitle: "ShareとRecipientへのSELECTで制御し、受信者はpre-signed URLなどでストレージを読み取り専用参照する。"
+  i5:
+    title: "表形式とガバナンス差"
+    subtitle: "Deltaやmanaged Icebergが前提で、行・列制限は動的ビューが中心。UCのmaskやABACは経路ごとに制約が違う。"
+  i6:
+    title: "セットアップと課金"
+    subtitle: "共有の設定自体は無料で、クエリ実行やマテリアライズ、クロスリージョンegressなど利用時に課金が発生する。"
+  p63:
+    title: "コピー連携の弱点"
+    subtitle: "SFTPやメール添付は副本と鮮度ずれ、長寿命鍵の管理負荷を生む。OpenSharing系はソースに置いたまま読む。"
+  p64:
+    title: "レポートの問いと範囲"
+    subtitle: "名称の整理と機能の可否が主題。Databricks公式・OpenSharingサイト・FAQを主源とし、他社製品の細比較は外す。"
+  p65:
+    title: "調査時点の明示"
+    subtitle: "2026年11月の公開情報に限る。次節でDelta Sharing、Open Sharing、OpenSharingの三層を地図化する。"
+  p66:
+    title: "三名称の対照表"
+    subtitle: "プロトコル名、Databricksの外部向け経路、Linux Foundation仕様と製品名が同じ語を別意味で使うため表で整理する。"
+  p67:
+    title: "図：プロトコルと経路"
+    subtitle: "仕様層、DatabricksのUC実装、D2D・D2O・自前OSSサーバの三経路がどう重なるかを示す。"
+  p68:
+    title: "互換を壊さない進化"
+    subtitle: "OpenSharingはDelta Sharingの破壊的置換ではなく、Share→Schema→AssetとAIアセットが仕様に載る方向だ。"
+  i12:
+    title: "サーバが権限を確認"
+    subtitle: "クエリ時にSharingサーバがUnity Catalogを見て、ストレージ用の短命read専用資格情報を発行する。"
+  i13:
+    title: "ストレージ直読"
+    subtitle: "受信側エンジンがプロバイダのParquetやDeltaファイルを直接読み、全体レプリは必須ではない。"
+  i18:
+    title: "Recipient作成の分岐"
+    subtitle: "D2Dならsharing identifier、D2OならBearerまたはOIDC。メール招待のBetaもあるがOIDCは対象外。"
+  p69:
+    title: "最初に見る機能差"
+    subtitle: "実務ではD2DとOpen Sharingで載せられるアセットと認証が変わるため、受信者の環境を先に確定する。"
+  p70:
+    title: "D2DとD2O対照表"
+    subtitle: "notebook・volume・modelはD2Dのみ。表・ビュー・MV・STは両方だがマテリアライズと課金主体が変わる。"
+  p71:
+    title: "ストリーミングと履歴"
+    subtitle: "外部受信者もStructured Streamingソースになり、history付き共有ならDelta time travelが使える。"
+  p72:
+    title: "動的ビューとABAC"
+    subtitle: "行・列は動的ビューとCURRENT_RECIPIENTが中心。ABAC付き共有は受信者側に別ポリシーをかけられるBeta。"
+  p73:
+    title: "ゼロトラスト共有"
+    subtitle: "恒久パスワード配布を避け、要求ごとに権限検証して短命トークンやpre-signed URLでオブジェクトへ通す。"
+  p74:
+    title: "監査と暗号化の表"
+    subtitle: "TLS転送、短命URL、Bearer寿命と失効、system.access.auditでの参照追跡を一覧で整理する。"
+  p75:
+    title: "pre-signedの意味"
+    subtitle: "権限を広げる仕組みではなく、既にShareで許されたファイルへの一時的アクセス経路として説明される。"
+  p76:
+    title: "MarketplaceとClean Rooms"
+    subtitle: "Databricks上のOpenSharingはデータプロダクト交換とプライバシー協業の基盤でもある。"
+  p77:
+    title: "Connectとの使い分け"
+    subtitle: "大量取り込みはLakeflow Connect、副本を増やさず最新を読むならOpenSharingを選ぶという整理。"
+  s45:
+    title: "運用の追加FAQ"
+    subtitle: "書き換え不可、監査可能、エクスポートとの違い、名称の混同など、ドキュメント外の現場質問を表で答える。"
+  ch58:
+    title: "選定の三つの軸"
+    subtitle: "D2DかD2Oか、生テーブルかビュー系か、egressとリージョン配置でコストと機能が決まると締める。"
+links:
+  - from: ch1
+    to: ch7
+    type: flow
+  - from: ch7
+    to: ch8
+    type: flow
+  - from: ch8
+    to: ch9
+    type: flow
+  - from: ch9
+    to: ch14
+    type: flow
+  - from: ch14
+    to: ch21
+    type: flow
+  - from: ch21
+    to: ch22
+    type: flow
+  - from: ch22
+    to: ch26
+    type: flow
+  - from: ch26
+    to: ch27
+    type: flow
+  - from: ch27
+    to: ch31
+    type: flow
+  - from: ch31
+    to: ch36
+    type: flow
+  - from: ch36
+    to: ch41
+    type: flow
+  - from: ch41
+    to: ch42
+    type: flow
+  - from: ch42
+    to: ch46
+    type: flow
+  - from: ch46
+    to: ch54
+    type: flow
+  - from: ch54
+    to: ch58
+    type: flow
+  - from: ch58
+    to: ch59
+    type: flow
+  - from: i2
+    to: p68
+    type: evidence
+    label: 詳述
+  - from: i3
+    to: p70
+    type: evidence
+  - from: i4
+    to: i12
+    type: evidence
+  - from: i12
+    to: i13
+    type: seq
+  - from: i13
+    to: ch9
+    type: ref
+  - from: p66
+    to: p67
+    type: seq
+  - from: p69
+    to: p70
+    type: evidence
+  - from: p70
+    to: p71
+    type: seq
+  - from: p71
+    to: p72
+    type: seq
+  - from: p73
+    to: p74
+    type: evidence
+  - from: ch42
+    to: s45
+    type: seq
+  - from: ch46
+    to: ch54
+    type: cause
+    label: 制限から問いへ
+chapterFlow:
+  - "要点から背景と調査範囲の概要へ下りる"
+  - "コピー連携の課題から用語の三層を整理する"
+  - "名称地図からゼロコピーの動作原理へ進む"
+  - "原理を四パターンの共有経路に具体化する"
+  - "経路の差分がD2DとOpen Sharingの機能表になる"
+  - "機能差の先に共有可能アセットの全体像がある"
+  - "アセットとセキュリティでガバナンスを固める"
+  - "コネクタとIcebergで受信側の選択肢を広げる"
+  - "ストリーミングとMV共有で鮮度運用を説明する"
+  - "課金表でマテリアライズとegressの主体を押さえる"
+  - "Marketplace文脈からFAQの実務回答へ入る"
+  - "Top10と公式FAQを表で横断参照できる"
+  - "よくある疑問の先に公式の制限一覧が続く"
+  - "制限を踏まえて次に決める三つの問いを示す"
+  - "三問の先に実務選定の軸で締める"
+  - "まとめから出典一覧へ根拠を辿れる"
