@@ -1,0 +1,80 @@
+version: 1
+sourceSha256: "6bae96a3a7e73fecbb70318f301d966bdf1a9ff989c4555980d41fef6ad91437"
+visuals:
+  - sectionId: "名称の地図-三層を混同しない"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Delta Sharing、Open Sharing、OpenSharing はプロトコル・Databricks経路・LF仕様で指す層が異なる。"
+    spec:
+      type: cards
+      title: 同じ語でも層が三つある
+      items:
+        - label: Delta Sharing
+          detail: オープンプロトコル名
+        - label: Open Sharing
+          detail: UC から外へ渡す経路
+        - label: OpenSharing
+          detail: LF 仕様と製品表記
+          emphasis: true
+
+  - sectionId: "動作原理-ゼロコピーと短命資格情報"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Share と Recipient を結び、Sharing サーバが短命トークンでストレージを直接読ませる。"
+    spec:
+      type: sequence
+      mode: steps
+      title: ゼロコピーは短命資格情報で閉じる
+      items:
+        - label: Share 定義
+          detail: 読み取り専用アセットの束
+        - label: Recipient 付与
+          detail: SELECT を組織単位で付ける
+        - label: 短命トークン発行
+          detail: ストレージへ直読み
+          emphasis: true
+        - label: 監査
+          detail: 参照はプロバイダ側で追跡
+
+  - sectionId: "共有経路の4パターン"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "Databricks-to-Databricks、Databricks-to-Open、自前 OSS、SAP BDC の四経路がある。"
+    spec:
+      type: cards
+      title: 共有は四つの典型経路
+      items:
+        - label: Databricks-to-Databricks
+          detail: UC 間のデータメッシュ
+        - label: Databricks-to-Open
+          detail: 外部 Spark・BI へ
+          emphasis: true
+        - label: 自前 OSS サーバ
+          detail: Databricks 外プロバイダ
+        - label: SAP BDC
+          detail: SAP データプロダクト
+
+  - sectionId: "databricks-to-databricks-と-open-sharing-の機能差"
+    engine: article-visual
+    engineVersion: "1"
+    alt: "D2D は notebook や Volume まで共有可能で、Open Sharing は表形式中心に制限がある。"
+    spec:
+      type: comparison
+      title: 表形式は両方、非表は D2D が担う
+      sides:
+        - label: Databricks-to-Databricks
+        - label: Databricks-to-Open
+      rows:
+        - axis: 認証
+          cells:
+            - label: プラットフォーム自動
+            - label: Bearer または OIDC
+        - axis: 表・ビュー・CDF
+          cells:
+            - label: 対応
+            - label: 対応
+        - axis: Notebook・Volume
+          cells:
+            - label: 共有可能
+              emphasis: true
+            - label: 非対応

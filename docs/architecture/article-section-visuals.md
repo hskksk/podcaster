@@ -84,7 +84,7 @@ content/docs/<slug>/
   section-visuals.yml
 ```
 
-長文Wiki記事では記事作成フローの対象とする。`content/web-clips/`は任意とし、初期実装では自動生成対象にしない。
+`content/web-clips/` でも同じ名前を使える。長文 wiki（`podcast-research`）では **`treemap.yml` と同様に必須**。短いクリップでは省略可。
 
 `treemap.yml`と`section-visuals.yml`は別ファイルにする。更新条件・読込先・表示責務が異なるため、一つのsidecarへ統合しない。
 
@@ -640,7 +640,7 @@ sidecarは信頼済みコードではなく、検証対象のcontent dataとし�
 
 ### repository check
 
-全`section-visuals.yml`を走査するcheck commandをCIと`pnpm typecheck`に含める。既存記事にsidecarがないことはエラーにしない。
+全 `section-visuals.yml` を走査する check command を CI と `pnpm typecheck` に含める。`content/docs/` で **`treemap.yml` があるのに `section-visuals.yml` がない** ディレクトリはエラーとする（`podcast-research` の三本セット）。treemap も section-visuals も無い既存記事はグランドファザー扱いとし、sidecar が無いこと自体はエラーにしない。
 
 ### markdoc-react
 

@@ -11,7 +11,7 @@
 | 3 | `apps/web` loader と responsive layout | **完了**（loader・rail・mobile slot） |
 | 4 | validator と repository check | **完了**（parser は markdoc-react `/section-visual` と共有） |
 | 5 | `article-section-visuals` スキル | `.agents/skills/article-section-visuals/` |
-| 6 | `podcast-research` 連携 | **完了**（treemap 直後のステップ） |
+| 6 | `podcast-research` 連携 | **完了**（treemap 直後のステップ。**treemap と同様に必須**） |
 | 7 | pilot 比較と上限固定 | スキル `references/limits.md` |
 
 Step 1 の fixture を記事横へ置くときは、次で検証する。
