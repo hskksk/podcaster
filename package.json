@@ -89,7 +89,7 @@
         "react": "^19.2.5",
         "remark-math": "^6.0.0",
         "remark-parse": "^11.0.0",
-        "smol-toml": "^1.6.1",
+        "smol-toml": "^1.9.0",
         "unified": "^11.0.5",
         "unist-util-visit": "^5.1.0",
         "unitex-kokic": "github:hskksk/UniTeX"
