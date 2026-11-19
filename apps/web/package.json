@@ -17,23 +17,23 @@
     "@hskksk/markdoc-react": "workspace:*",
     "@keystatic/core": "^0.6.9",
     "@keystatic/next": "^5.0.5",
-    "@markdoc/markdoc": "^0.5.9",
-    "@markdoc/next.js": "^0.5.0",
+    "@markdoc/markdoc": "^0.5.13",
+    "@markdoc/next.js": "^0.6.2",
     "@octokit/rest": "^22.0.1",
-    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.5",
     "@tailwindcss/typography": "^0.5.20",
     "@terrastruct/d2": "0.1.33",
     "@vercel/analytics": "^2.0.1",
     "clsx": "^2.1.1",
     "cookie": "^1.0.2",
     "js-yaml": "^4.3.2",
-    "lucide-react": "^1.48.0",
+    "lucide-react": "^1.73.0",
     "mermaid": "11",
     "next": "15.1.11",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
-    "shiki": "^4.4.3",
-    "tailwindcss": "^4.3.3"
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "shiki": "^4.6.0",
+    "tailwindcss": "^4.3.5"
   },
   "engines": {
     "node": "22.x"
@@ -41,10 +41,10 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.0.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "pagefind": "^1.5.2",
-    "postcss": "^8.5.28",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "pagefind": "^1.6.0",
+    "postcss": "^8.5.33",
     "typescript": "^5.7.0"
   }
 }
