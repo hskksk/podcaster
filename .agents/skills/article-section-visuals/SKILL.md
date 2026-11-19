@@ -1,6 +1,6 @@
 ---
 name: article-section-visuals
-description: After index.mdoc exists, author section-visuals.yml (Article Visual spec v1 per section) from a section manifest and the article body. Use in the same run as the article author (e.g. podcast-research2 after treemap), not via a subagent. Returns section-visuals.yml next to the mdoc.
+description: After index.mdoc exists, author section-visuals.yml (Article Visual spec v1 per section) from a section manifest and the article body. Use in the same run as the article author (e.g. podcast-research after treemap), not via a subagent. Returns section-visuals.yml next to the mdoc.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -18,10 +18,12 @@ metadata:
 
 ## When to use me
 
-- **記事を書いた同じエージェント**が `index.mdoc` を保存した直後（親スキルでは `treemap.yml` の直後）
+- **記事を書いた同じエージェント**が `index.mdoc` を保存した直後（親スキル `podcast-research` では **`treemap.yml` の直後・必須**）
 - ユーザーが既存記事のセクション図 sidecar だけ再生成を依頼したとき
 
-委譲しない。`web-clips` や短い clip は初期対象外（親が依頼したときだけ）。
+委譲しない: サブエージェント（Task）への丸投げは想定しない。セクションごとの takeaway は執筆直後の頭の中で決める。
+
+使わない: `content/web-clips/` の短い clip（親が明示したときだけ）。本文の調査・執筆そのもの（親スキルの前段）、PR 作成だけの依頼。
 
 ## What you must not do
 

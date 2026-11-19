@@ -1,6 +1,6 @@
 ---
 name: article-treemap-labels
-description: After an index.mdoc exists, author treemap.yml sidecar (tile labels plus inferred-style links between nodes) from a node manifest and the article body. Use in the same run as the article author (e.g. podcast-research2 step 3b), not via a subagent. Returns treemap.yml next to the mdoc.
+description: After an index.mdoc exists, author treemap.yml sidecar (tile labels plus inferred-style links between nodes) from a node manifest and the article body. Use in the same run as the article author (e.g. podcast-research step 3b), not via a subagent. Returns treemap.yml next to the mdoc.
 license: MIT
 compatibility: claude-code
 allowed-tools:
@@ -18,7 +18,7 @@ metadata:
 
 ## When to use me
 
-- **記事を書いた同じエージェント**が `index.mdoc` を保存した直後（`podcast-research2` のステップ 3 の一部）
+- **記事を書いた同じエージェント**が `index.mdoc` を保存した直後（`podcast-research` のステップ 3 の一部）
 - ユーザーが既存記事の章マップ sidecar だけ再生成を依頼したとき
 
 委譲しない: サブエージェント（Task）への丸投げは想定しない。要約とリンクは執筆時の文脈が要る。
