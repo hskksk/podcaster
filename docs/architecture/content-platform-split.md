@@ -1,6 +1,6 @@
 # コンテンツ / プラットフォーム分離設計
 
-> 日付: 2026-11-20  
+> 日付: 2026-11-21  
 > 前提: [pkm-migration.md](./pkm-migration.md) の「知識の正 = Git」「配信の正 = Supabase」は維持する。  
 > 変更点: **GitHub 上の知識ファイルは private リポに集約**し、**platform は public のまま**運用する。
 
@@ -15,64 +15,94 @@
 | **`hskksk/podcaster`** | **public** | 配信基盤（Supabase / Edge / pgflow）、公開サイト用 Next.js、MCP / ops、CLI・TUI、型・マイグレーション、**公開用の設計ドキュメント** |
 | **`hskksk/knowledge`**（新規・名称は確定前） | **private** | 知識の **正本**（Markdoc）、Keystatic が commit する先、ポッドキャスト `podcast: queued` の検知、`ingest:queued` の書き戻し、（将来）Zenn / note 向け export |
 
-命名: 本稿では private を **`hskksk/knowledge`** と呼ぶ。既存 **`hskksk/blog`** をベースに拡張してもよい（§6 参照）。
+命名: 本稿では private を **`hskksk/knowledge`** と呼ぶ。既存 **`hskksk/blog`** をベースに拡張してもよい（§4.2 参照）。
 
 ### 1.1 変えない原則
 
 - 配信パイプライン（ingest → domain events → jobs → RSS）は **platform + Supabase** のまま
 - ingest は **本文を POST** するだけ（Edge は Git を読まない）
-- web-clips → docs の昇格は **copy + `promotedTo`**（private 側でも `git mv` で履歴を切らない運用は同じ）
+- **notes の web-clips → content の ai-podcast**（または blog）への昇格は **copy + `promotedTo`**（`git mv` で履歴を切らない）
 - 公開サイトに載せる本文は **ビルド時にマークダウンを読む**（Vercel は platform デプロイ、本文は private をビルド時に取得）
+- **`content/`** = 公開・配信に載せうる完成物（サイト・ポッドキャスト・juken・ブログ）  
+- **`notes/`** = 非公開の下書き・クリップ・調査メモ（昇格するまで ingest / 公開一覧に出さない）
 
 ---
 
 ## 2. private: `hskksk/knowledge` のディレクトリ構成（目標）
 
-Keystatic・Capture・エージェントスキルが触るのは **`content/` 以下が主**。blog の下書き資産は **`draft/`** に隔離する。
+`content/` は **種類ごとの階層**に分ける。執筆中・クリップは **`notes/`**（旧案の `draft/` は使わない）。
 
 ```text
 knowledge/                          # private
-├── content/
-│   ├── docs/                       # 公開 wiki（調査レポート・長文ナレッジ）
+├── content/                        # 公開・配信に載せうる正本
+│   ├── ai-podcast/                 # AI ポッドキャスト用 wiki 記事（旧 content/docs）
 │   │   └── {slug}/
 │   │       ├── index.mdoc
 │   │       ├── treemap.yml         # 任意
 │   │       └── section-visuals.yml # 任意
-│   ├── web-clips/                  # クリップ・メモ（サイト上はゲート付き）
-│   │   └── {slug}/index.mdoc
-│   ├── blog/                       # 自分で書いたブログ（配信チャネル付き・新設）
+│   ├── juken/                      # 中学受験・ふしぎ旅（旧 chugaku-juken/）
+│   │   └── sapix/grade5-japanese-history/weeks/…
+│   ├── blog/                       # 自分で書いたブログ（Zenn / note 配信メタ付き・新設）
 │   │   └── {slug}/
 │   │       ├── index.mdoc
-│   │       └── *.png               # 対話形式など記事ローカル画像
+│   │       └── *.png
 │   └── keystatic-templates/        # Keystatic 新規エントリ用テンプレ
-│       ├── new-wiki/
-│       └── new-web-clip/
-├── chugaku-juken/                  # /juken 用（家庭内・限定公開想定）
-│   └── sapix/grade5-japanese-history/weeks/…
-├── draft/                          # 非公開・執筆中（Keystatic コレクション外）
-│   ├── blog/                       # hskksk/blog 由来
-│   │   ├── ideas/                  # 旧 ideas/
-│   │   ├── knowledges/             # 旧 knowledges/（調査メモの下書き）
-│   │   └── articles/               # 年別 + input/（起こし・素材のみ）
-│   └── ingest-queue/               # 任意: CLI 用スタッシュ（基本は frontmatter の queued のみ）
-├── .agents/skills/                 # 執筆・調査スキル（content を書く側）
-│   ├── podcast-research/
-│   ├── web-clip-summary/
-│   ├── japanese-writing/
-│   └── …                           # 公開してよいスキルは platform に symlink 用コピーを残すか skills.sh で同期
+│       ├── new-ai-podcast-article/
+│       ├── new-web-clip/
+│       └── new-blog/
+├── notes/                          # 非公開メモ（Keystatic の web-clips コレクションはここ）
+│   ├── ideas/                      # 記事アイデア・走り書き
+│   ├── knowledges/                 # 調査メモ（wiki 化前）
+│   ├── memos/                      # 一般メモ・ブログ起こし input 等
+│   └── web-clips/                  # URL クリップ・Capture 既定先（旧 content/web-clips）
+│       └── {slug}/index.mdoc
+├── .agents/skills/                 # 執筆・調査スキル
 ├── .github/workflows/
-│   ├── ingest-queued.yml           # 現 podcaster の ingest-queued を移設
-│   └── distribute-blog.yml         # 将来: Zenn / note export
-├── scripts/                        # content 専用の薄い層
-│   └── ingest-queued.ts            # platform の実装を npm 依存 or git subtree で再利用
-├── package.json                    # pnpm + tsx + ingest 用 env
-├── pnpm-lock.yaml
+│   ├── ingest-queued.yml
+│   └── distribute-blog.yml         # 将来
+├── scripts/
+├── package.json
 └── README.md
 ```
 
-### 2.1 `content/blog` の frontmatter（設計メモ）
+### 2.1 パスと platform の対応（実装時の定数）
 
-wiki（`docs`）と分離し、マルチ配信メタを載せる。
+| 論理名 | knowledge 上のパス | 公開サイト（想定） | ingest `podcast: queued` |
+|--------|-------------------|--------------------|---------------------------|
+| AI podcast 記事 | `content/ai-podcast/{slug}/index.mdoc` | `/podcast/articles/[slug]` | ✅ 対象 |
+| Juken 物語 | `content/juken/**.mdoc` | `/juken` | ❌ 対象外 |
+| Blog | `content/blog/{slug}/index.mdoc` | `/blog`（新設）など | 任意（frontmatter） |
+| Web clip | `notes/web-clips/{slug}/index.mdoc` | `/podcast/web-clips`（ゲート付き）または非掲載 | ❌ 既定 none |
+
+既存 DB の `content_path` は移行 PR で **`content/docs/…` → `content/ai-podcast/…`**、**`content/web-clips/…` → `notes/web-clips/…`** に一括リマップする（または ingest_meta で両方を OR）。新規は新パスのみ。
+
+### 2.2 Keystatic コレクション（案）
+
+| コレクション | `path` | 備考 |
+|--------------|--------|------|
+| AI Podcast Articles | `content/ai-podcast/*/` | 旧 `docs` |
+| Web Clips & Notes | `notes/web-clips/*/` | 旧 `content/web-clips` |
+| Blog Posts | `content/blog/*/` | 新設 |
+
+`ideas` / `knowledges` / `memos` は **コレクション外**（エージェント・エディタ直書き or 将来コレクション化）。
+
+### 2.3 ライフサイクル（更新）
+
+```text
+Capture / スキル
+    → notes/web-clips (podcast: none)
+            │ 整理・昇格（copy）
+            ▼
+    content/ai-podcast  or  content/blog (podcast: none | queued)
+            │ 明示 queued
+            ▼
+    ingest → Supabase → podcast: published
+```
+
+- `notes/knowledges` から調査レポートを出すとき: **`content/ai-podcast` に copy**（`promotedTo` は clips 側と同様のメタでよい）
+- `notes/ideas` / `notes/memos` からブログを出すとき: **`content/blog` に copy**
+
+### 2.4 `content/blog` の frontmatter（設計メモ）
 
 ```yaml
 ---
@@ -90,7 +120,7 @@ distribution:
 externalUrl:
   zenn: https://zenn.dev/…
   note: https://note.com/…
-sourcePath: draft/blog/articles/2025/…   # 任意: 昇格元
+sourcePath: notes/memos/…   # 任意: 昇格元
 ---
 ```
 
@@ -98,64 +128,37 @@ sourcePath: draft/blog/articles/2025/…   # 任意: 昇格元
 
 ## 3. public: `hskksk/podcaster` のディレクトリ構成（目標）
 
-**`content/` と `chugaku-juken/` はリポジトリから除く**（private 正本）。ビルド時に **git submodule** で取り込む。
+**知識ファイルはすべて submodule `knowledge/` 経由**。ルートの `content/`・`chugaku-juken/` は持たない。
 
 ```text
 podcaster/                          # public
 ├── .gitmodules                     # knowledge → 固定コミット SHA
-├── knowledge/                      # submodule（内容は §2・ビルド・CI が checkout）
-├── apps/
-│   ├── web/                        # 公開サイト + Keystatic UI（storage = private repo）
-│   ├── mcp/
-│   └── ops/
-├── packages/
-│   ├── markdoc-react/
-│   └── gemini-batch-tts/
-├── supabase/                       # migrations, functions, flows
-├── scripts/                        # CLI, TUI, deploy, ingest（ingest 本体は platform から実行可）
-├── docs/                           # アーキテクチャ（このファイル含む）
-├── infra/
-├── services/
-├── shared/
-├── public/                         # サイト静的アセット（カバー等）
-├── .agents/skills/                 # プラットフォーム・Supabase 系（content 非依存）
-├── .github/workflows/
-│   ├── deploy.yml                  # Edge / DB（従来どおり）
-│   ├── lint-pr.yml
-│   └── vercel-build.yml            # 任意: submodule 更新検知（プレビュー用）
-├── archive/                        # 歴史的スクリプト（温存）
-├── articles/                       # 空 or README のみ（レガシー URL 説明）
-├── inbox/                          # 空 or README のみ
-├── AGENTS.md, CLAUDE.md, README.md
-├── config.toml
-├── package.json
-└── pnpm-workspace.yaml
+├── knowledge/                      # submodule（§2 のツリー全体）
+├── apps/web/                       # SSG: content/ai-podcast, content/juken, content/blog
+├── …                               # §2 以前版と同様（supabase, scripts, docs, …）
 ```
 
 ### 3.1 ローカル開発
 
 ```bash
 git clone --recurse-submodules git@github.com:hskksk/podcaster.git
-# knowledge が最新なら:
-cd knowledge && git checkout main && git pull && cd ..
 ```
-
-環境変数（実装時）:
 
 | 変数 | 用途 |
 |------|------|
-| `CONTENT_ROOT` | 既定: `$REPO_ROOT/knowledge`（submodule）。`content/` の親 |
-| `KEYSTATIC_GITHUB_REPO` | 既定: `hskksk/knowledge`（Keystatic GitHub storage） |
+| `CONTENT_ROOT` | 既定: `$REPO_ROOT/knowledge` |
+| `KEYSTATIC_GITHUB_REPO` | 既定: `hskksk/knowledge` |
 
-`apps/web/lib/repo-root.ts` は **platform ルート** を返し、`content` は `path.join(CONTENT_ROOT, "content")` を読む形に変更する。
+読み取りパス（実装時）:
 
-### 3.2 Vercel（platform プロジェクト）
+- ポッドキャスト wiki: `path.join(CONTENT_ROOT, "content/ai-podcast")`
+- Juken: `path.join(CONTENT_ROOT, "content/juken")`
+- Web clips: `path.join(CONTENT_ROOT, "notes/web-clips")`
+- Blog: `path.join(CONTENT_ROOT, "content/blog")`
 
-- Root Directory: `apps/web`（現状維持）
-- Build: **submodule を有効化**（Project Settings → Git → Submodules）
-- Deploy Hook / production: **`knowledge` submodule のコミットを bump する PR** が platform の再ビルドを起こす（本文だけ変えたときも公開面を更新）
+### 3.2 Vercel
 
-Keystatic は **runtime で GitHub API 経由で private に commit** する。公開 HTML は **前回デプロイ時の submodule スナップショット** なので、記事を Keystatic で保存したあとも **submodule bump または再デプロイ** が必要（現行の「ビルド時静的」と同型）。
+ submodule 有効化・Keystatic の runtime commit 先は **private 全体**（`content/` と `notes/` の両方）。公開 HTML は submodule の **ビルド時スナップショット**（従来どおり）。
 
 ---
 
@@ -165,83 +168,68 @@ Keystatic は **runtime で GitHub API 経由で private に commit** する。�
 
 | 現行パス | 移行先 | 備考 |
 |----------|--------|------|
-| `content/docs/**` | `knowledge/content/docs/**` | 正本移動。platform から削除 |
-| `content/web-clips/**` | `knowledge/content/web-clips/**` | 同上 |
-| `content/keystatic-templates/**` | `knowledge/content/keystatic-templates/**` | Keystatic 新規作成 |
-| `chugaku-juken/**` | `knowledge/chugaku-juken/**` | `/juken` ビルドは submodule 経由 |
-| `.github/workflows/ingest-queued.yml` | `knowledge/.github/workflows/ingest-queued.yml` | Secrets を private に複製 |
-| `.agents/skills/{podcast-research,web-clip-summary,…}` | `knowledge/.agents/skills/` | 執筆系。platform には `skill-orchestration` 等の参照用を残す |
-| `scripts/ingest-queued.ts` | **共有** | Phase A: platform に残し knowledge CI から checkout 実行。Phase B: npm パッケージ化 |
-| `apps/web/keystatic.config.ts` | platform に残す | `githubRepo` / `path` を `hskksk/knowledge` に向ける |
-| `apps/web/**`（サイト） | platform | `loadPublicDocs` 等が `CONTENT_ROOT` を参照 |
-| `supabase/**`, `scripts/podcast-cli.ts`, `scripts/tui/**` | platform | 変更なし（TARGET=remote 既定） |
-| `archive/**`, 空の `articles/`, `inbox/` | platform | レガシー説明のみ |
-| `docs/architecture/*` | platform | 公開設計。本ファイルを正とする |
+| `content/docs/**` | `knowledge/content/ai-podcast/**` | ポッドキャスト wiki 正本 |
+| `content/web-clips/**` | `knowledge/notes/web-clips/**` | **content から notes へ** |
+| `content/keystatic-templates/**` | `knowledge/content/keystatic-templates/**` | テンプレ名を新コレクションに合わせる |
+| `chugaku-juken/**` | `knowledge/content/juken/**` | **`content/` 配下** |
+| `.github/workflows/ingest-queued.yml` | `knowledge/.github/workflows/` | 走査パスを `content/ai-podcast`（+ 任意 `content/blog`）に変更 |
+| 執筆系 `.agents/skills/` | `knowledge/.agents/skills/` | 保存先パスを新レイアウトに更新 |
+| `apps/web`, `scripts/ingest-queued.ts` 等 | platform | パス定数・Capture collection マッピングを追随 |
 
 ### 4.2 `hskksk/blog`（既存 private）
 
 | 現行パス | 移行先 | 備考 |
 |----------|--------|------|
-| `articles/**/YYYY.md`（公開済み） | `knowledge/content/blog/{slug}/index.mdoc` | `.md` → mdoc 変換、画像は slug 配下 |
-| `articles/**/input/**` | `knowledge/draft/blog/articles/…` | 公開パイプラインに混ぜない |
-| `ideas/**` | `knowledge/draft/blog/ideas/**` | |
-| `knowledges/**` | `knowledge/draft/blog/knowledges/**` | wiki 化したら `content/docs` へ copy-promote |
-| `styles/conversation_style/**` | 各 `content/blog/{slug}/` へコピー | 相対パスを記事ローカルに |
-| `scripts/new-article.sh`, LSP 設定 | `knowledge/draft/blog/` または `knowledge/scripts/` | |
-| `.github/workflows/*`（blog 固有） | 統合後は廃止 or knowledge にマージ | |
+| `articles/**/YYYY.md`（公開済み） | `knowledge/content/blog/{slug}/index.mdoc` | mdoc 化 |
+| `articles/**/input/**` | `knowledge/notes/memos/...` | 年別サブディレクトリは任意 |
+| `ideas/**` | `knowledge/notes/ideas/**` | |
+| `knowledges/**` | `knowledge/notes/knowledges/**` | wiki 化 → `content/ai-podcast` |
+| `styles/conversation_style/**` | 各 `content/blog/{slug}/` へ | |
+| リポ全体 | **`hskksk/knowledge` にマージ推奨** | blog 単体のまま submodule も可だが二重管理になりやすい |
 
-**リポジトリ統合方針（推奨）**: `hskksk/blog` を **`hskksk/knowledge` にリネーム / マージ** し、上記レイアウトに再配置。二重の private を避ける。
+### 4.3 Zenn / note（将来）
 
-### 4.3 Zenn / note（将来・別リポの可能性）
-
-| 成果物 | 置き場所 |
-|--------|----------|
-| Zenn 用 `articles/*.md` | **`hskksk/zenn-blog` 等の既存連携 repo**（private または public は Zenn 設定に従う） |
-| 生成物 | `knowledge` の CI が export commit。**正本は常に `content/blog/index.mdoc`** |
+正本は `content/blog/index.mdoc`。export CI は `knowledge` 上で動かす。
 
 ---
 
-## 5. コンポーネントと「どのリポが所有するか」
+## 5. コンポーネントと所有リポ
 
 | コンポーネント | 所有リポ | 接続 |
 |----------------|----------|------|
-| Keystatic 管理 UI | platform (`apps/web`) | GitHub App → **private** `content/**` に R/W |
-| Capture API | platform | 同上（commit 先だけ private） |
-| 公開サイト SSG | platform | ビルド時 `knowledge` submodule 読み取り |
-| `ingest:queued` CI | **private** | `content/**` の `podcast: queued` → platform の Supabase ingest URL |
-| Edge Functions / DB | platform + Supabase プロジェクト | 変更なし |
-| podcast-research PR | **private** | マージ先 `main` が `knowledge` |
-| platform 機能 PR | **public** | マージ先 `hskksk/podcaster` |
-| エージェントスキル（調査執筆） | **private** が正本 | public はドキュメント・CI 用スキルのみ |
+| Keystatic | platform UI | commit → `hskksk/knowledge`（`content/*` と `notes/web-clips`） |
+| Capture 既定 | platform | **`notes/web-clips`**（`collection: web-clips` は論理名のまま、物理パスだけ変更） |
+| `ingest:queued` CI | **private** | `content/ai-podcast/**`（+ `content/blog/**` で queued なら） |
+| 公開 SSG | platform | submodule の `content/ai-podcast`, `content/juken`, `content/blog` |
 
 ---
 
 ## 6. 移行フェーズ（PR 境界案）
 
 ```
-Phase S0  本設計の合意 + knowledge リポ作成（空の content/ 骨格）
-Phase S1  git filter-repo / git mv で podcaster の content + chugaku-juken を knowledge へ
-Phase S2  platform に submodule 追加、CONTENT_ROOT / Keystatic repo 向け先、Vercel submodule
-Phase S3  ingest-queued.yml を knowledge へ移設 + Secrets 複製
-Phase S4  blog → content/blog + draft/ 再配置（別 PR 可）
-Phase S5  blog frontmatter（channels）+ distribute workflow（Zenn から）
+Phase S0  knowledge リポ作成（§2 の空ディレクトリ）
+Phase S1  podcaster から ai-podcast / juken / notes/web-clips へ物理移動
+Phase S2  platform submodule + パス追随（web, scripts, ingest-queued, Capture）
+Phase S3  ingest-queued を knowledge へ + DB content_path バックフィル
+Phase S4  blog 統合 + notes/{ideas,knowledges,memos}
+Phase S5  blog 配信（channels）+ Zenn export
 ```
 
-S1 と S2 は **同じメンテナンスウィンドウ** で行うと、公開サイトが一時的に空になる時間を最短にできる。
+S1 と S2 は同一メンテナンスウィンドウ推奨。
 
 ---
 
-## 7. 未決定事項（確定すると実装に入れる）
+## 7. 未決定事項
 
 1. private リポ名: `knowledge` 新設 vs `blog` 拡張リネーム  
-2. `chugaku-juken` を `/juken` で公開し続けるか（private のまま submodule で十分か）  
-3. web-clips を production で GitHub OAuth ゲートするか（現状 middleware のままか）  
-4. ingest スクリプト共有: submodule 内に vendored copy vs `@podcaster/ingest-cli` パッケージ
+2. `notes/web-clips` を公開サイトにゲート付きで見せるか、昇格後は ai-podcast だけ見せるか  
+3. `memos/` の内部規約（ブログ `input/` をフラットにするか `memos/blog/YYYY/` とするか）  
+4. ingest スクリプト共有: vendored vs パッケージ
 
 ---
 
 ## 8. 関連ドキュメント
 
-- [pkm-migration.md](./pkm-migration.md) — 2 コレクション + podcast frontmatter（blog は §2.1 で拡張）
-- [pkm-next.md](./pkm-next.md) — 実装フェーズ（S0–S5 を追記予定）
-- [apps/web/README.md](../../apps/web/README.md) — Vercel / Keystatic（submodule 前提に更新予定）
+- [pkm-migration.md](./pkm-migration.md) — コレクション 2 つは **論理名**（wiki=ai-podcast、clips=notes/web-clips）として読み替え
+- [pkm-next.md](./pkm-next.md)
+- [chugaku-juken/README.md](../../chugaku-juken/README.md) — 移行後は `knowledge/content/juken/README.md` に追随
