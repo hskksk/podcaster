@@ -132,7 +132,7 @@ sourcePath: notes/memos/…   # 任意: 昇格元
 podcaster/                          # public（private への .gitmodules なし）
 ├── apps/web/                       # SSG: 作業コピー配下の content/ai-podcast 等
 ├── scripts/
-│   └── checkout-knowledge.ts       # KNOWLEDGE_* 環境変数で clone（実装予定）
+│   └── checkout-knowledge.ts       # KNOWLEDGE_* で shallow sparse clone
 ├── .gitignore                      # .knowledge-checkout/ など
 ├── knowledge.lock.json             # 任意: 本番ビルド用の固定 SHA（公開してよいメタのみ）
 └── …                               # supabase, docs, packages（従来どおり）
@@ -153,21 +153,38 @@ podcaster/                          # public（private への .gitmodules なし
 ```text
 deploy / vercel-build / pnpm web:dev（初回）
     │
-    ├─ KNOWLEDGE_GITHUB_REPO=hskksk/blog   # 後日 knowledges にリネーム後も env だけ更新
-    ├─ KNOWLEDGE_GITHUB_TOKEN=ghp_…        # read 専用（repo scope 最小）
-    ├─ KNOWLEDGE_GIT_REF=main | <sha>      # 既定 main。本番は lock の SHA を推奨
+    ├─ KNOWLEDGE_GITHUB_REPO=hskksk/blog
+    ├─ KNOWLEDGE_GITHUB_TOKEN=…（read 専用）
+    ├─ KNOWLEDGE_GIT_REF=main | <sha>      # 未設定時 knowledge.lock.json → main
     ▼
-git clone --depth 1 (or fetch sha) →  $REPO_ROOT/.knowledge-checkout/
+pnpm knowledge:checkout   # 既定: sparse + shallow + blob:none
     ▼
-CONTENT_ROOT=.knowledge-checkout   →  apps/web が SSG
+CONTENT_ROOT=.knowledge-checkout
 ```
+
+**転送量を抑える既定**（`scripts/checkout-knowledge.ts`）:
+
+| 手段 | 効果 |
+|------|------|
+| `--depth 1`（`KNOWLEDGE_DEPTH`） | 履歴なし。1 commit 分だけ |
+| `--filter=blob:none`（`KNOWLEDGE_FILTER_BLOBS=0` で OFF） | ツリー先まで blob を遅延取得し、sparse 外はほぼ取らない |
+| **sparse-checkout** | 既定は `content`, `styles`, `notes`。`.agents/`, `.github/`, 大きな `scripts/` は取得しない |
+| `KNOWLEDGE_INCLUDE_NOTES=0` | 公開ビルドだけなら `notes/` ごとスキップ（web-clips ルートを出さないとき） |
+| `KNOWLEDGE_SPARSE_PATHS` | カンマ区切りで上書き（例: `content/ai-podcast,content/juken` のみ） |
+| `KNOWLEDGE_CHECKOUT_METHOD=archive` | Git なし tarball 1 本（sparse 不可・リポ全体）。比較用 |
+
+ブランチ先頭ビルドは **sparse-shallow + blob:none** が一般に最小。SHA 固定ビルドも `fetch --depth 1 origin <sha>` で同様。
 
 | 変数 | 用途 |
 |------|------|
 | `KNOWLEDGE_GITHUB_REPO` | `owner/repo`（private 正本） |
 | `KNOWLEDGE_GITHUB_TOKEN` | clone 用。Vercel **Build**、GitHub Actions、ローカル `.env` |
-| `KNOWLEDGE_GIT_REF` | branch / tag / SHA。未設定時 `main` |
-| `CONTENT_ROOT` | 既定: `$REPO_ROOT/.knowledge-checkout`（clone 先） |
+| `KNOWLEDGE_GIT_REF` | branch / tag / SHA。未設定時 `knowledge.lock.json` または `main` |
+| `KNOWLEDGE_DEPTH` | 既定 `1` |
+| `KNOWLEDGE_FILTER_BLOBS` | 既定 ON（`0` で無効） |
+| `KNOWLEDGE_CHECKOUT_METHOD` | `sparse-shallow`（既定）\| `archive` |
+| `KNOWLEDGE_CHECKOUT_SKIP` | `1` でスキップ（fork CI 等） |
+| `CONTENT_ROOT` | 既定: `$REPO_ROOT/.knowledge-checkout` |
 | `KEYSTATIC_GITHUB_REPO` | Keystatic の commit 先（同上 `owner/repo`） |
 
 読み取りパス（`CONTENT_ROOT` 基準）:
