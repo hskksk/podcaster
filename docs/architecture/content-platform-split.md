@@ -126,37 +126,87 @@ sourcePath: notes/memos/…   # 任意: 昇格元
 
 ## 3. public: `hskksk/podcaster` のディレクトリ構成（目標）
 
-**知識ファイルはすべて submodule `knowledge/` 経由**。ルートの `content/`・`chugaku-juken/` は持たない。
+**public リポの Git 履歴に private への参照を残さない。** `content/`・`chugaku-juken/` は podcaster から削除し、本文は **ビルド／開発時に private を clone した作業コピー**だけを読む（submodule は使わない）。
 
 ```text
-podcaster/                          # public
-├── .gitmodules                     # knowledge → 固定コミット SHA
-├── knowledge/                      # submodule（§2 のツリー全体）
-├── apps/web/                       # SSG: content/ai-podcast, content/juken, content/blog
-├── …                               # §2 以前版と同様（supabase, scripts, docs, …）
+podcaster/                          # public（private への .gitmodules なし）
+├── apps/web/                       # SSG: 作業コピー配下の content/ai-podcast 等
+├── scripts/
+│   └── checkout-knowledge.ts       # KNOWLEDGE_* 環境変数で clone（実装予定）
+├── .gitignore                      # .knowledge-checkout/ など
+├── knowledge.lock.json             # 任意: 本番ビルド用の固定 SHA（公開してよいメタのみ）
+└── …                               # supabase, docs, packages（従来どおり）
 ```
 
-### 3.1 ローカル開発
+### 3.1 なぜ submodule にしないか
 
-```bash
-git clone --recurse-submodules git@github.com:hskksk/podcaster.git
+| submodule | シークレット付き checkout（採用） |
+|-----------|-----------------------------------|
+| `.gitmodules` に private URL が載る | public 側は **URL も SHA もコミットしない**（env + 任意 lock ファイル） |
+| fork / clone した第三者が private 参照にぶつかる | clone だけなら public 単体でビルド可能（中身空 or fixture） |
+| platform の PR と knowledge の SHA が連動 PR になる | デプロイは **Vercel の Secrets** と lock で再現 |
+
+**Keystatic / Capture** はもともと GitHub API で private に commit するので、**読む側も「ローカル作業ツリー」or API** で足り、submodule は必須ではない。
+
+### 3.2 Knowledge checkout（ビルド時・ローカル）
+
+```text
+deploy / vercel-build / pnpm web:dev（初回）
+    │
+    ├─ KNOWLEDGE_GITHUB_REPO=hskksk/blog   # 後日 knowledges にリネーム後も env だけ更新
+    ├─ KNOWLEDGE_GITHUB_TOKEN=ghp_…        # read 専用（repo scope 最小）
+    ├─ KNOWLEDGE_GIT_REF=main | <sha>      # 既定 main。本番は lock の SHA を推奨
+    ▼
+git clone --depth 1 (or fetch sha) →  $REPO_ROOT/.knowledge-checkout/
+    ▼
+CONTENT_ROOT=.knowledge-checkout   →  apps/web が SSG
 ```
 
 | 変数 | 用途 |
 |------|------|
-| `CONTENT_ROOT` | 既定: `$REPO_ROOT/knowledge` |
-| `KEYSTATIC_GITHUB_REPO` | 既定: `hskksk/knowledge` |
+| `KNOWLEDGE_GITHUB_REPO` | `owner/repo`（private 正本） |
+| `KNOWLEDGE_GITHUB_TOKEN` | clone 用。Vercel **Build**、GitHub Actions、ローカル `.env` |
+| `KNOWLEDGE_GIT_REF` | branch / tag / SHA。未設定時 `main` |
+| `CONTENT_ROOT` | 既定: `$REPO_ROOT/.knowledge-checkout`（clone 先） |
+| `KEYSTATIC_GITHUB_REPO` | Keystatic の commit 先（同上 `owner/repo`） |
 
-読み取りパス（実装時）:
+読み取りパス（`CONTENT_ROOT` 基準）:
 
-- ポッドキャスト wiki: `path.join(CONTENT_ROOT, "content/ai-podcast")`
-- Juken: `path.join(CONTENT_ROOT, "content/juken")`
-- Web clips / notes: `path.join(CONTENT_ROOT, "notes")`（`kind === web-clip` でフィルタ）
-- Blog: `path.join(CONTENT_ROOT, "content/blog")`
+- ポッドキャスト wiki: `content/ai-podcast`
+- Juken: `content/juken`
+- Notes / web-clips: `notes/`（`kind === web-clip` でフィルタ）
+- Blog: `content/blog`
 
-### 3.2 Vercel
+**`knowledge.lock.json`（任意）**: `{ "repo": "hskksk/blog", "sha": "abc123…" }` を public にコミットしてよい。中身はコミット ID のみ。更新は knowledge マージ後に bot または手動 PR。トークンは載せない。
 
- submodule 有効化・Keystatic の runtime commit 先は **private 全体**（`content/` と `notes/` の両方）。公開 HTML は submodule の **ビルド時スナップショット**（従来どおり）。
+### 3.3 Vercel
+
+1. **Build command の先頭**: `pnpm knowledge:checkout`（または `vercel-build` 内で実行）
+2. **Environment Variables（Build）**: `KNOWLEDGE_GITHUB_REPO`, `KNOWLEDGE_GITHUB_TOKEN`, 任意 `KNOWLEDGE_GIT_REF`
+3. **Submodule は無効のまま**
+
+Keystatic の runtime commit は引き続き **private リポ**へ。公開 HTML は **そのビルドで clone したスナップショット**（SSG）。
+
+### 3.4 ローカル開発
+
+```bash
+git clone git@github.com:hskksk/podcaster.git
+# .env に KNOWLEDGE_* を置く（README / .env.example に名前だけ記載）
+pnpm knowledge:checkout   # 実装後
+pnpm web:dev
+```
+
+トークンなしの OSS 参加者は checkout をスキップし、空の fixture で UI 開発する（文書化のみ）。
+
+### 3.5 本番を knowledge 更新に追随させる
+
+| 方式 | 内容 |
+|------|------|
+| **A. lock ファイル** | knowledge `main` の SHA を `knowledge.lock.json` に書く PR → podcaster マージ → Vercel 再デプロイ |
+| **B. Deploy Hook** | knowledge マージ時 workflow が Vercel hook を叩く。ビルドは常に `KNOWLEDGE_GIT_REF=main` の先頭 |
+| **C. 定期ビルド** | Vercel cron（運用簡単だが SHA 追跡が曖昧） |
+
+推奨: **本番は A（再現性）**、プレビューは **B または main 追従**。
 
 ---
 
@@ -199,7 +249,7 @@ git clone --recurse-submodules git@github.com:hskksk/podcaster.git
 | Keystatic | platform UI | commit → `hskksk/knowledge`（`content/*` と `notes/web-clips`） |
 | Capture 既定 | platform | **`notes/web-clips`**（`collection: web-clips` は論理名のまま、物理パスだけ変更） |
 | `ingest:queued` CI | **private** | `content/ai-podcast/**`（+ `content/blog/**` で queued なら） |
-| 公開 SSG | platform | submodule の `content/ai-podcast`, `content/juken`, `content/blog` |
+| 公開 SSG | platform | Build 時 `KNOWLEDGE_*` で clone した作業コピーを読む |
 
 ---
 
@@ -208,7 +258,7 @@ git clone --recurse-submodules git@github.com:hskksk/podcaster.git
 ```
 Phase S0  knowledge リポ作成（§2 の空ディレクトリ）
 Phase S1  podcaster から ai-podcast / juken / notes/web-clips へ物理移動
-Phase S2  platform submodule + パス追随（web, scripts, ingest-queued, Capture）
+Phase S2  knowledge checkout + パス追随（web, scripts, Capture）。Vercel Secrets
 Phase S3  ingest-queued を knowledge へ + DB content_path バックフィル
 Phase S4  blog 統合 + notes/{ideas,knowledges,memos}
 Phase S5  blog 配信（channels）+ Zenn export
