@@ -2,9 +2,9 @@
 
 > 日付: 2026-09-18（Phase 2–4 完了反映）  
 > 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
-> 設計の正: [pkm-migration.md](./pkm-migration.md)  
+> 設計の正: [pkm-migration.md](./pkm-migration.md)（リポ分離は [content-platform-split.md](./content-platform-split.md)）  
 > PKM スタック Phase 2–6。知識の正は Git + Markdoc。配信の正は Supabase。  
-> 次の実装: **Phase 5（MCP）**。
+> 次の実装: **Phase 5（MCP）**（並行: **S0–S5** コンテンツ private 化は split 設計に従う）。
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
 
