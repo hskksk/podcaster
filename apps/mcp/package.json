@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "fastmcp": "^4.20.13",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
