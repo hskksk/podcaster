@@ -13,9 +13,9 @@
 | リポジトリ | 可視性 | 役割 |
 |------------|--------|------|
 | **`hskksk/podcaster`** | **public** | 配信基盤（Supabase / Edge / pgflow）、公開サイト用 Next.js、MCP / ops、CLI・TUI、型・マイグレーション、**公開用の設計ドキュメント** |
-| **`hskksk/knowledge`**（新規・名称は確定前） | **private** | 知識の **正本**（Markdoc）、Keystatic が commit する先、ポッドキャスト `podcast: queued` の検知、`ingest:queued` の書き戻し、（将来）Zenn / note 向け export |
+| **`hskksk/knowledges`**（移行中は **`hskksk/blog`**） | **private** | 知識の **正本**（Markdoc）、Keystatic が commit する先、ポッドキャスト `podcast: queued` の検知、`ingest:queued` の書き戻し、（将来）Zenn / note 向け export |
 
-命名: 本稿では private を **`hskksk/knowledge`** と呼ぶ。既存 **`hskksk/blog`** をベースに拡張してもよい（§4.2 参照）。
+命名: GitHub リネームは後回し。**いまは `hskksk/blog` で `content/` + `notes/` を整備**し、完了後に `knowledges` へ改名する。
 
 ### 1.1 変えない原則
 
@@ -50,12 +50,10 @@ knowledge/                          # private
 │       ├── new-ai-podcast-article/
 │       ├── new-web-clip/
 │       └── new-blog/
-├── notes/                          # 非公開メモ（Keystatic の web-clips コレクションはここ）
-│   ├── ideas/                      # 記事アイデア・走り書き
-│   ├── knowledges/                 # 調査メモ（wiki 化前）
-│   ├── memos/                      # 一般メモ・ブログ起こし input 等
-│   └── web-clips/                  # URL クリップ・Capture 既定先（旧 content/web-clips）
-│       └── {slug}/index.mdoc
+├── notes/                          # 非公開メモ（**フラット**。サブフォルダなし）
+│   └── {slug}/
+│       ├── index.mdoc              # 既定。単体 .md も可
+│       └── …                       # 昇格前の添付（input 画像など）
 ├── .agents/skills/                 # 執筆・調査スキル
 ├── .github/workflows/
 │   ├── ingest-queued.yml
@@ -72,7 +70,7 @@ knowledge/                          # private
 | AI podcast 記事 | `content/ai-podcast/{slug}/index.mdoc` | `/podcast/articles/[slug]` | ✅ 対象 |
 | Juken 物語 | `content/juken/**.mdoc` | `/juken` | ❌ 対象外 |
 | Blog | `content/blog/{slug}/index.mdoc` | `/blog`（新設）など | 任意（frontmatter） |
-| Web clip | `notes/web-clips/{slug}/index.mdoc` | `/podcast/web-clips`（ゲート付き）または非掲載 | ❌ 既定 none |
+| Web clip | `notes/{slug}/index.mdoc`（`kind: web-clip`） | `/podcast/web-clips`（ゲート付き）または非掲載 | ❌ 既定 none |
 
 既存 DB の `content_path` は移行 PR で **`content/docs/…` → `content/ai-podcast/…`**、**`content/web-clips/…` → `notes/web-clips/…`** に一括リマップする（または ingest_meta で両方を OR）。新規は新パスのみ。
 
@@ -81,10 +79,10 @@ knowledge/                          # private
 | コレクション | `path` | 備考 |
 |--------------|--------|------|
 | AI Podcast Articles | `content/ai-podcast/*/` | 旧 `docs` |
-| Web Clips & Notes | `notes/web-clips/*/` | 旧 `content/web-clips` |
+| Notes（Web clip 含む） | `notes/*/` | `kind` + `tags` で分類。旧 `content/web-clips` も同階層 |
 | Blog Posts | `content/blog/*/` | 新設 |
 
-`ideas` / `knowledges` / `memos` は **コレクション外**（エージェント・エディタ直書き or 将来コレクション化）。
+`kind` 列挙例: `idea` \| `memo` \| `web-clip`。Capture 既定は `kind: web-clip`。
 
 ### 2.3 ライフサイクル（更新）
 
@@ -153,7 +151,7 @@ git clone --recurse-submodules git@github.com:hskksk/podcaster.git
 
 - ポッドキャスト wiki: `path.join(CONTENT_ROOT, "content/ai-podcast")`
 - Juken: `path.join(CONTENT_ROOT, "content/juken")`
-- Web clips: `path.join(CONTENT_ROOT, "notes/web-clips")`
+- Web clips / notes: `path.join(CONTENT_ROOT, "notes")`（`kind === web-clip` でフィルタ）
 - Blog: `path.join(CONTENT_ROOT, "content/blog")`
 
 ### 3.2 Vercel
@@ -169,7 +167,7 @@ git clone --recurse-submodules git@github.com:hskksk/podcaster.git
 | 現行パス | 移行先 | 備考 |
 |----------|--------|------|
 | `content/docs/**` | `knowledge/content/ai-podcast/**` | ポッドキャスト wiki 正本 |
-| `content/web-clips/**` | `knowledge/notes/web-clips/**` | **content から notes へ** |
+| `content/web-clips/**` | `knowledge/notes/{slug}/**` + `kind: web-clip` | **content から notes へ（フラット）** |
 | `content/keystatic-templates/**` | `knowledge/content/keystatic-templates/**` | テンプレ名を新コレクションに合わせる |
 | `chugaku-juken/**` | `knowledge/content/juken/**` | **`content/` 配下** |
 | `.github/workflows/ingest-queued.yml` | `knowledge/.github/workflows/` | 走査パスを `content/ai-podcast`（+ 任意 `content/blog`）に変更 |
@@ -182,8 +180,9 @@ git clone --recurse-submodules git@github.com:hskksk/podcaster.git
 |----------|--------|------|
 | `articles/**/YYYY.md`（公開済み） | `knowledge/content/blog/{slug}/index.mdoc` | mdoc 化 |
 | `articles/**/input/**` | `knowledge/notes/memos/...` | 年別サブディレクトリは任意 |
-| `ideas/**` | `knowledge/notes/ideas/**` | |
-| `knowledges/**` | `knowledge/notes/knowledges/**` | wiki 化 → `content/ai-podcast` |
+| `ideas/**` | `knowledge/notes/{slug}/` + `kind: idea` | |
+| `knowledges/**` | `knowledge/notes/{slug}/` + `tags: [survey, knowledge]` | wiki 化 → `content/ai-podcast` |
+| `articles/**/input/**` 等 | `knowledge/notes/{slug}/` + `kind: memo` | |
 | `styles/conversation_style/**` | 各 `content/blog/{slug}/` へ | |
 | リポ全体 | **`hskksk/knowledge` にマージ推奨** | blog 単体のまま submodule も可だが二重管理になりやすい |
 
@@ -222,8 +221,8 @@ S1 と S2 は同一メンテナンスウィンドウ推奨。
 ## 7. 未決定事項
 
 1. private リポ名: `knowledge` 新設 vs `blog` 拡張リネーム  
-2. `notes/web-clips` を公開サイトにゲート付きで見せるか、昇格後は ai-podcast だけ見せるか  
-3. `memos/` の内部規約（ブログ `input/` をフラットにするか `memos/blog/YYYY/` とするか）  
+2. `kind: web-clip` の notes を公開サイトにゲート付きで見せるか  
+3. `tags` の正規化（許可リストを CI に置くか）  
 4. ingest スクリプト共有: vendored vs パッケージ
 
 ---
