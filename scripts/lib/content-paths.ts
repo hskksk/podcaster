@@ -1,6 +1,7 @@
 /**
- * Knowledge corpus paths (private repo layout). Local dev may fall back to
- * legacy monorepo paths until podcaster content/ is removed.
+ * Knowledge corpus paths (private `hskksk/knowledges` layout).
+ * Read from CONTENT_ROOT / KEYSTATIC_LOCAL_BASE / `.knowledge-checkout` only —
+ * not from podcaster's in-repo `content/`.
  */
 
 import fs from "node:fs";
@@ -42,13 +43,7 @@ export function getContentRoot(): string {
   if (process.env.KEYSTATIC_LOCAL_BASE) {
     return path.resolve(process.env.KEYSTATIC_LOCAL_BASE);
   }
-  const mono = getMonorepoRoot();
-  const checkout = path.join(mono, ".knowledge-checkout");
-  if (fs.existsSync(path.join(checkout, AI_PODCAST_REL))) return checkout;
-  if (fs.existsSync(path.join(checkout, LEGACY_DOCS_REL))) return checkout;
-  if (fs.existsSync(path.join(mono, AI_PODCAST_REL))) return mono;
-  if (fs.existsSync(path.join(mono, LEGACY_DOCS_REL))) return mono;
-  return checkout;
+  return path.join(getMonorepoRoot(), ".knowledge-checkout");
 }
 
 export function aiPodcastDir(): string {
@@ -66,12 +61,7 @@ export function notesDir(): string {
 }
 
 export function jukenDir(): string {
-  const root = getContentRoot();
-  const next = path.join(root, JUKEN_REL);
-  if (fs.existsSync(next)) return next;
-  const legacy = path.join(getMonorepoRoot(), LEGACY_JUKEN_REL);
-  if (fs.existsSync(legacy)) return legacy;
-  return next;
+  return path.join(getContentRoot(), JUKEN_REL);
 }
 
 export function aiPodcastRelPrefix(): string {

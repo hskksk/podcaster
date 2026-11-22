@@ -24,7 +24,7 @@ export function githubRepo(): { owner: string; repo: string; ref: string } {
     process.env.KNOWLEDGE_GITHUB_REPO ||
     process.env.KEYSTATIC_GITHUB_REPO ||
     process.env.GITHUB_REPO ||
-    "hskksk/blog"
+    "hskksk/knowledges"
   ).trim();
   const [owner, repo] = spec.split("/");
   return {

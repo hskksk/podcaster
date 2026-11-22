@@ -18,7 +18,7 @@ export function keystaticGithubRepo(): string {
   return (
     process.env.KEYSTATIC_GITHUB_REPO?.trim() ||
     process.env.KNOWLEDGE_GITHUB_REPO?.trim() ||
-    "hskksk/blog"
+    "hskksk/knowledges"
   );
 }
 
