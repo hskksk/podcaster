@@ -172,6 +172,7 @@ export function imageForPublicDoc(
     doc.filename.split("/").pop(),
     doc.slug,
     doc.dir,
+    `content/ai-podcast/${doc.dir}/index.mdoc`,
     `content/docs/${doc.dir}/index.mdoc`,
     `title:${normalizeTitle(doc.title)}`,
   ];

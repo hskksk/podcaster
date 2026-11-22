@@ -13,9 +13,10 @@ import {
 } from "../lib/juken/lesson-meta";
 import { transformJukenBody } from "../lib/juken/markdoc-transform";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "../../..");
-const jukenRoot = path.join(repoRoot, "chugaku-juken");
+import { getMonorepoRoot, jukenDir } from "../../../scripts/lib/content-paths";
+
+const jukenRoot = jukenDir();
+const repoRoot = getMonorepoRoot();
 const WEEK_DIR = /^(\d{4}-\d{2}-\d{2})$/;
 
 type WeekBundle = {

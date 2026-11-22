@@ -27,7 +27,7 @@ export async function generateStaticParams() {
   const clips = loadPublicWebClips();
   if (clips.length === 0) {
     throw new Error(
-      `content/web-clips produced 0 clips at build (cwd=${process.cwd()}). ` +
+      `notes (web-clips) produced 0 clips at build (cwd=${process.cwd()}). ` +
         "The public site is statically generated like GitHub Pages; the monorepo content/ tree must be visible to `next build`.",
     );
   }

@@ -135,17 +135,33 @@ function checkoutArchive(opts: {
   rmSync(tarball, { force: true });
 }
 
+function checkoutRequired(): boolean {
+  if (process.env.KNOWLEDGE_CHECKOUT_SKIP === "1") return false;
+  if (process.env.KNOWLEDGE_CHECKOUT_REQUIRED === "1") return true;
+  return process.env.VERCEL === "1";
+}
+
+function failCheckout(message: string): never {
+  throw new Error(`[knowledge] ${message}`);
+}
+
 function main(): void {
   if (process.env.KNOWLEDGE_CHECKOUT_SKIP === "1") {
     console.log("[knowledge] KNOWLEDGE_CHECKOUT_SKIP=1 — skipping checkout");
     return;
   }
 
+  const required = checkoutRequired();
   const lock = readLock();
   let fullRepo: string;
   try {
     fullRepo = envRepo(lock);
   } catch {
+    if (required) {
+      failCheckout(
+        "KNOWLEDGE_GITHUB_REPO unset and knowledge.lock.json missing repo (required on Vercel)",
+      );
+    }
     console.warn("[knowledge] KNOWLEDGE_GITHUB_REPO unset — skipping checkout");
     return;
   }
@@ -154,6 +170,9 @@ function main(): void {
 
   const token = process.env.KNOWLEDGE_GITHUB_TOKEN?.trim();
   if (!token) {
+    if (required) {
+      failCheckout("KNOWLEDGE_GITHUB_TOKEN unset (required on Vercel / KNOWLEDGE_CHECKOUT_REQUIRED)");
+    }
     console.warn("[knowledge] KNOWLEDGE_GITHUB_TOKEN unset — skipping checkout");
     return;
   }

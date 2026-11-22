@@ -8,10 +8,7 @@ import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-
-function getRepoRoot(): string {
-  return resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-}
+import { aiPodcastDir, getMonorepoRoot, notesDir } from "../lib/content-paths.ts";
 
 function walkSidecars(root: string): string[] {
   const out: string[] = [];
@@ -42,8 +39,8 @@ function walkTreemapWithoutSectionVisuals(root: string): string[] {
   return missing;
 }
 
-const repo = getRepoRoot();
-const treemapMissingVisuals = walkTreemapWithoutSectionVisuals(join(repo, "content", "docs"));
+const repo = getMonorepoRoot();
+const treemapMissingVisuals = walkTreemapWithoutSectionVisuals(aiPodcastDir());
 if (treemapMissingVisuals.length > 0) {
   console.error(
     "section-visuals:check — treemap.yml without section-visuals.yml (required for podcast-research):",
@@ -54,10 +51,7 @@ if (treemapMissingVisuals.length > 0) {
   process.exit(1);
 }
 
-const paths = [
-  ...walkSidecars(join(repo, "content", "docs")),
-  ...walkSidecars(join(repo, "content", "web-clips")),
-];
+const paths = [...walkSidecars(aiPodcastDir()), ...walkSidecars(notesDir())];
 
 if (paths.length === 0) {
   console.log("section-visuals:check — no sidecars found (ok)");

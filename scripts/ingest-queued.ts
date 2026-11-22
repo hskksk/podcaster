@@ -11,6 +11,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
+import { queuedIngestWalkTargets } from "./lib/content-paths.ts";
 import { parseFrontmatter, parseTitleFromContent, setFrontmatterFields, textify } from "./lib/mdoc.ts";
 import { detectLocalStatus, detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
 
@@ -37,8 +38,9 @@ function walkQueued(root: string, prefix: string, out: QueuedFile[]): void {
 
 function collectQueued(): QueuedFile[] {
   const files: QueuedFile[] = [];
-  walkQueued(path.resolve("content/docs"), "content/docs", files);
-  walkQueued(path.resolve("content/web-clips"), "content/web-clips", files);
+  for (const { absDir, relPrefix } of queuedIngestWalkTargets()) {
+    walkQueued(absDir, relPrefix, files);
+  }
   return files;
 }
 

@@ -2,7 +2,7 @@ import "server-only";
 
 import fs from "node:fs";
 import path from "node:path";
-import { getRepoRoot } from "../repo-root";
+import { aiPodcastDir } from "../repo-root";
 import { publicDocFromMdocSource } from "./mdoc-public";
 
 export type PublicDoc = {
@@ -17,13 +17,13 @@ export type PublicDoc = {
 };
 
 function docsDir(): string {
-  return path.join(getRepoRoot(), "content", "docs");
+  return aiPodcastDir();
 }
 
 export function loadPublicDocs(): PublicDoc[] {
   const root = docsDir();
   if (!fs.existsSync(root)) {
-    console.warn(`[site] content/docs missing at ${root} (cwd=${process.cwd()})`);
+    console.warn(`[site] ai-podcast missing at ${root} (cwd=${process.cwd()})`);
     return [];
   }
   return fs

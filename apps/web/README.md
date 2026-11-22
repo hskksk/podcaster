@@ -21,11 +21,21 @@ pnpm web:dev
 
 - `/` は hskksk の入口
 - `/podcast` と `/podcast/articles/[slug]` は wiki とポッドキャスト。旧 `/`・`/articles/[slug]`・`/search`・`/web-clips` はここへリダイレクトする
-- `/juken` は `chugaku-juken/` の週次物語
+- `/juken` は private **`hskksk/knowledges`** の `content/juken/`
 
-`content/docs` と `chugaku-juken/` は Vercel の git clone に含まれているので `next build` から読める。サーバーレス関数に `content/` を同梱しない。Keystatic は GitHub storage のまま（管理画面にドキュメントがあっても、公開面はデプロイ時の Git スナップショット）。
+Markdoc 本文は **`pnpm knowledge:checkout`** でビルドマシンに取り込んだ `.knowledge-checkout/` から読む（`apps/web` の **prebuild** が Vercel でもこれを実行）。podcaster リポ内の `content/` は使わない。Keystatic / Capture の commit 先も `hskksk/knowledges`。
 
-記事本文は `@markdoc/next.js`（`mode: "static"`）と同じスキーマ（`apps/web/markdoc/`）で `@markdoc/markdoc` がコンパイルする。Keystatic の正本は `content/docs/{entry}/index.mdoc` なので、プラグインが要求する `app/**/*.mdoc` へは置かない（slug は `legacyFilename`、ディレクトリ名ではない）。
+記事本文は `@markdoc/next.js`（`mode: "static"`）と同じスキーマ（`apps/web/markdoc/`）でコンパイル。Keystatic の正本は `content/ai-podcast/{entry}/index.mdoc` と `notes/{entry}/index.mdoc`。
+
+### 初回だけ（knowledges 分割後のデプロイ）
+
+1. **Vercel → podcaster → Environment Variables（Build）**: `KNOWLEDGE_GITHUB_REPO=hskksk/knowledges`, `KNOWLEDGE_GITHUB_TOKEN`（knowledges の **read** のみ。clone 用）
+2. 同じ画面で **Install Command** がモノレポ用（例: `cd ../.. && pnpm install`）になっていること。Build Command は既定の `pnpm build`（`apps/web`）でよい — prebuild が checkout する
+3. **GitHub → Keystatic 用 App** → Repository access に **`hskksk/knowledges`** を追加（以前 podcaster だけなら要変更）
+4. **Vercel（Runtime, Production + Preview）**: 既存の `KEYSTATIC_*` に加え、任意で `KEYSTATIC_GITHUB_REPO=hskksk/knowledges`。Capture 用 `CAPTURE_GITHUB_TOKEN` は knowledges への **write**
+5. マージ後 Redeploy。ビルドログに `[knowledge] ok CONTENT_ROOT=...` が出れば読み取り OK
+
+詳細は [content-platform-split.md](../../docs/architecture/content-platform-split.md)。
 
 音声プレイヤーと記事挿絵（エピソード画像）も **ビルド時** に解決する（SSG）。画像はそのデプロイの `next build` 時点の DB/RSS スナップショット。追従には再デプロイが必要。
 
