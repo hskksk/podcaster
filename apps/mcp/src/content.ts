@@ -1,33 +1,36 @@
 import fs from "node:fs";
 import path from "node:path";
-
-const PATH_RE = /^content\/(docs|web-clips)\/[^/]+\/index\.mdoc$/;
+import {
+  AI_PODCAST_REL,
+  LEGACY_CLIPS_REL,
+  LEGACY_DOCS_REL,
+  NOTES_REL,
+  assertSafeKnowledgePath,
+  aiPodcastDir,
+  getContentRoot,
+  notesDir,
+} from "../../../scripts/lib/content-paths.js";
 
 export function assertSafeContentPath(rel: string): boolean {
-  if (rel.includes("..") || rel.includes("\\") || rel.includes("\0")) return false;
-  return PATH_RE.test(rel);
+  return assertSafeKnowledgePath(rel);
 }
 
 export function repoRoot(): string {
-  if (process.env.CONTENT_ROOT) return process.env.CONTENT_ROOT;
-  let dir = process.cwd();
-  for (let i = 0; i < 8; i++) {
-    if (fs.existsSync(path.join(dir, "pnpm-workspace.yaml"))) return dir;
-    if (fs.existsSync(path.join(dir, "content", "docs"))) return dir;
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return process.cwd();
+  return getContentRoot();
 }
 
 export function githubRepo(): { owner: string; repo: string; ref: string } {
-  const spec = (process.env.GITHUB_REPO || "hskksk/podcaster").trim();
+  const spec = (
+    process.env.KNOWLEDGE_GITHUB_REPO ||
+    process.env.KEYSTATIC_GITHUB_REPO ||
+    process.env.GITHUB_REPO ||
+    "hskksk/blog"
+  ).trim();
   const [owner, repo] = spec.split("/");
   return {
     owner: owner || "hskksk",
-    repo: repo || "podcaster",
-    ref: (process.env.GITHUB_REF || "main").trim(),
+    repo: repo || "blog",
+    ref: (process.env.KNOWLEDGE_GIT_REF || process.env.GITHUB_REF || "main").trim(),
   };
 }
 
@@ -40,7 +43,10 @@ export function hasGithubRead(): boolean {
 }
 
 export function hasLocalContent(): boolean {
-  return fs.existsSync(path.join(repoRoot(), "content", "docs"));
+  const root = getContentRoot();
+  return (
+    fs.existsSync(path.join(root, AI_PODCAST_REL)) || fs.existsSync(path.join(root, LEGACY_DOCS_REL))
+  );
 }
 
 async function githubGet(urlPath: string, accept: string): Promise<Response> {
@@ -61,23 +67,37 @@ async function githubGet(urlPath: string, accept: string): Promise<Response> {
   return res;
 }
 
+function listLocalPaths(): string[] {
+  const out: string[] = [];
+  const wikiDir = aiPodcastDir();
+  if (fs.existsSync(wikiDir)) {
+    const rel = wikiDir.replace(/\\/g, "/").endsWith(`/${AI_PODCAST_REL}`)
+      ? AI_PODCAST_REL
+      : LEGACY_DOCS_REL;
+    for (const ent of fs.readdirSync(wikiDir, { withFileTypes: true })) {
+      if (!ent.isDirectory()) continue;
+      const p = `${rel}/${ent.name}/index.mdoc`;
+      if (fs.existsSync(path.join(getContentRoot(), p))) out.push(p);
+    }
+  }
+  const clipRoot = notesDir();
+  if (fs.existsSync(clipRoot)) {
+    const rel = clipRoot.replace(/\\/g, "/").endsWith(`/${NOTES_REL}`) ? NOTES_REL : LEGACY_CLIPS_REL;
+    for (const ent of fs.readdirSync(clipRoot, { withFileTypes: true })) {
+      if (!ent.isDirectory()) continue;
+      const p = `${rel}/${ent.name}/index.mdoc`;
+      if (fs.existsSync(path.join(getContentRoot(), p))) out.push(p);
+    }
+  }
+  return out.sort();
+}
+
 export async function listMdocPaths(): Promise<string[]> {
   if (hasLocalContent()) {
-    const root = repoRoot();
-    const out: string[] = [];
-    for (const collection of ["docs", "web-clips"] as const) {
-      const dir = path.join(root, "content", collection);
-      if (!fs.existsSync(dir)) continue;
-      for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (!ent.isDirectory()) continue;
-        const rel = `content/${collection}/${ent.name}/index.mdoc`;
-        if (fs.existsSync(path.join(root, rel))) out.push(rel);
-      }
-    }
-    return out.sort();
+    return listLocalPaths();
   }
   if (!hasGithubRead()) {
-    throw new Error("No content/ checkout and GITHUB_READ_TOKEN is unset");
+    throw new Error("No knowledge checkout and GITHUB_READ_TOKEN is unset");
   }
   const { owner, repo, ref } = githubRepo();
   const res = await githubGet(
@@ -94,12 +114,12 @@ export async function listMdocPaths(): Promise<string[]> {
 export async function readMdoc(rel: string): Promise<string> {
   if (!assertSafeContentPath(rel)) throw new Error(`Refusing path: ${rel}`);
   if (hasLocalContent()) {
-    const full = path.join(repoRoot(), rel);
+    const full = path.join(getContentRoot(), rel);
     if (!fs.existsSync(full)) throw new Error(`Not found: ${rel}`);
     return fs.readFileSync(full, "utf8");
   }
   if (!hasGithubRead()) {
-    throw new Error("No content/ checkout and GITHUB_READ_TOKEN is unset");
+    throw new Error("No knowledge checkout and GITHUB_READ_TOKEN is unset");
   }
   const { owner, repo, ref } = githubRepo();
   const res = await githubGet(

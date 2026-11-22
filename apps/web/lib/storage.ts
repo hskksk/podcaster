@@ -13,4 +13,14 @@ export function isGithubStorage(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_VERCEL_ENV);
 }
 
-export const githubRepo = "hskksk/podcaster" as const;
+/** Keystatic + GitHub storage target (private knowledge repo). */
+export function keystaticGithubRepo(): string {
+  return (
+    process.env.KEYSTATIC_GITHUB_REPO?.trim() ||
+    process.env.KNOWLEDGE_GITHUB_REPO?.trim() ||
+    "hskksk/blog"
+  );
+}
+
+/** @deprecated use keystaticGithubRepo() */
+export const githubRepo = keystaticGithubRepo();

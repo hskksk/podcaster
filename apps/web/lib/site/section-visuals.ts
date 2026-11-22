@@ -11,7 +11,7 @@ import {
 } from "@hskksk/markdoc-react/section-visual";
 import { extractMinimapOutline } from "@hskksk/markdoc-react/server";
 import { parseFrontmatter } from "../../../../scripts/lib/mdoc";
-import { getRepoRoot } from "../repo-root";
+import { aiPodcastDir, notesDir } from "../repo-root";
 import type { SectionVisualEntry, SectionVisualsContent } from "./section-visuals-types";
 
 export type { SectionVisualEntry, SectionVisualsContent } from "./section-visuals-types";
@@ -33,7 +33,7 @@ function bodySha256(body: string): string {
 }
 
 function collectionRoot(collection: "docs" | "web-clips"): string {
-  return path.join(getRepoRoot(), "content", collection);
+  return collection === "docs" ? aiPodcastDir() : notesDir();
 }
 
 function shaCandidates(

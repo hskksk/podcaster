@@ -5,22 +5,27 @@ import path from "node:path";
 import { Octokit } from "@octokit/rest";
 import { createGitHubReader } from "@keystatic/core/reader/github";
 import config from "../../keystatic.config";
-import { getRepoRoot } from "../repo-root";
-import { githubRepo } from "../storage";
+import { aiPodcastDir, notesDir } from "../repo-root";
+import { keystaticGithubRepo } from "../storage";
 import { publicDocFromMdocSource, publicWebClipFromMdocSource } from "./mdoc-public";
 import type { PublicDoc } from "./docs";
 import type { PublicWebClip } from "./web-clips";
 
-const [owner, repo] = githubRepo.split("/") as [string, string];
+function repoSpec(): string {
+  return keystaticGithubRepo();
+}
+
+const [owner, repo] = repoSpec().split("/") as [string, string];
 
 function mdocPath(collection: "docs" | "webClips", entryDir: string): string {
-  const segment = collection === "docs" ? "docs" : "web-clips";
-  return `content/${segment}/${entryDir}/index.mdoc`;
+  return collection === "docs"
+    ? `content/ai-podcast/${entryDir}/index.mdoc`
+    : `notes/${entryDir}/index.mdoc`;
 }
 
 export function readLocalMdoc(collection: "docs" | "webClips", entryDir: string): string | null {
-  const segment = collection === "docs" ? "docs" : "web-clips";
-  const file = path.join(getRepoRoot(), "content", segment, entryDir, "index.mdoc");
+  const base = collection === "docs" ? aiPodcastDir() : notesDir();
+  const file = path.join(base, entryDir, "index.mdoc");
   if (!fs.existsSync(file)) return null;
   return fs.readFileSync(file, "utf8");
 }
@@ -47,7 +52,11 @@ export async function readMdocFromGithub(
 }
 
 async function listEntryDirs(collection: "docs" | "webClips", ref: string, token?: string): Promise<string[]> {
-  const reader = createGitHubReader(config, { repo: githubRepo, ref, token });
+  const reader = createGitHubReader(config, {
+    repo: repoSpec() as `${string}/${string}`,
+    ref,
+    token,
+  });
   const list =
     collection === "docs"
       ? await reader.collections.docs.all()

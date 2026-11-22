@@ -12,7 +12,7 @@ const server = new FastMCP({
 
 server.addTool({
   name: "search_docs",
-  description: "Search content/docs and content/web-clips Markdoc. Read-only.",
+  description: "Search content/ai-podcast and notes Markdoc. Read-only.",
   parameters: z.object({
     query: z.string().min(1).describe("Case-insensitive substring"),
   }),
@@ -33,16 +33,18 @@ server.addTool({
 
 server.addTool({
   name: "get_doc",
-  description: "Fetch one Markdoc file under content/docs or content/web-clips. Read-only.",
+  description: "Fetch one Markdoc file under content/ai-podcast or notes. Read-only.",
   parameters: z.object({
     path: z
       .string()
-      .describe("Repo-relative path, e.g. content/docs/{slug}/index.mdoc"),
+      .describe("Repo-relative path, e.g. content/ai-podcast/{slug}/index.mdoc"),
   }),
   annotations: { readOnlyHint: true },
   execute: async ({ path }) => {
     if (!assertSafeContentPath(path)) {
-      throw new Error("path must be content/docs/{slug}/index.mdoc or content/web-clips/{slug}/index.mdoc");
+      throw new Error(
+        "path must be content/ai-podcast|content/docs|notes|content/web-clips/{slug}/index.mdoc",
+      );
     }
     return await readMdoc(path);
   },
@@ -74,7 +76,9 @@ server.addTool({
   }),
   execute: async ({ path }) => {
     if (!assertSafeContentPath(path)) {
-      throw new Error("path must be content/docs/{slug}/index.mdoc or content/web-clips/{slug}/index.mdoc");
+      throw new Error(
+        "path must be content/ai-podcast|content/docs|notes|content/web-clips/{slug}/index.mdoc",
+      );
     }
     const result = await capturePatch(path, "queued");
     return JSON.stringify(result, null, 2);
