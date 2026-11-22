@@ -11,7 +11,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
-import { queuedIngestWalkTargets } from "./lib/content-paths.ts";
+import { getContentRoot, queuedIngestWalkTargets } from "./lib/content-paths.ts";
 import { parseFrontmatter, parseTitleFromContent, setFrontmatterFields, textify } from "./lib/mdoc.ts";
 import { detectLocalStatus, detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
 
@@ -59,7 +59,7 @@ function ingestEndpoint(): { url: string; authKey: string } {
 
 function markPublished(rel: string, raw: string, contentSha: string): void {
   const next = setFrontmatterFields(raw, { podcast: "published", contentSha });
-  writeFileSync(path.resolve(rel), next, "utf8");
+  writeFileSync(path.join(getContentRoot(), rel), next, "utf8");
 }
 
 /** CI: checkout is the push commit; after concurrency wait, main may be ahead. */

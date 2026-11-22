@@ -276,7 +276,7 @@ pnpm web:dev
 Phase S0  knowledge リポ作成（§2 の空ディレクトリ）
 Phase S1  podcaster から ai-podcast / juken / notes/web-clips へ物理移動
 Phase S2  knowledge checkout + パス追随（web, scripts, Capture）。Vercel Secrets
-Phase S3  ingest-queued を knowledge へ + DB content_path バックフィル
+Phase S3  ingest-queued を knowledges へ + DB content_path バックフィル（完了）
 Phase S4  blog 統合 + notes/{ideas,knowledges,memos}
 Phase S5  blog 配信（channels）+ Zenn export
 ```
