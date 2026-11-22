@@ -71,7 +71,7 @@
     "jsdom": "^27.4.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "semantic-release": "^25.0.9",
+    "semantic-release": "^26.0.1",
     "tsup": "^8.5.0",
     "typescript": "~5.9.3",
     "vitest": "^3.2.4"
