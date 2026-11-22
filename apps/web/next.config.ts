@@ -62,7 +62,7 @@ if (process.env.KEYSTATIC_STANDALONE === "1") {
   nextConfig.outputFileTracingRoot = repoRoot;
   nextConfig.outputFileTracingIncludes = {
     "/api/keystatic/[...params]": [
-      "../../content/**/*",
+      "../../.knowledge-checkout/**/*",
       "../../pnpm-workspace.yaml",
     ],
   };

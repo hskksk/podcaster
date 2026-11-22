@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Ingest every content docs/web-clips index.mdoc with podcast: queued, then write
+ * Ingest ai-podcast / notes index.mdoc with podcast: queued under CONTENT_ROOT, then write
  * podcast: published + contentSha in the same process (GitHub Actions commits).
  *
  * Does not bulk-queue existing web-clips. Capture defaults: docs queued, web-clips none.
@@ -152,7 +152,10 @@ for (const file of queued) {
 }
 
 if (written > 0 && process.env.INGEST_QUEUED_COMMIT === "1") {
-  execSync("git add content/docs content/web-clips", { stdio: "inherit" });
+  const adds = queuedIngestWalkTargets()
+    .map((t) => t.relPrefix)
+    .join(" ");
+  execSync(`git add ${adds}`, { stdio: "inherit" });
   const staged = execSync("git diff --cached --name-only", { encoding: "utf8" }).trim();
   if (staged) {
     execSync('git config user.name "github-actions[bot]"');

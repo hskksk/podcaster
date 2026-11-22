@@ -298,4 +298,4 @@ S1 と S2 は同一メンテナンスウィンドウ推奨。
 
 - [pkm-migration.md](./pkm-migration.md) — コレクション 2 つは **論理名**（wiki=ai-podcast、clips=notes/web-clips）として読み替え
 - [pkm-next.md](./pkm-next.md)
-- [chugaku-juken/README.md](../../chugaku-juken/README.md) — 移行後は `knowledge/content/juken/README.md` に追随
+- Juken README: `hskksk/knowledges` の `content/juken/README.md`

@@ -1,13 +1,8 @@
-# Phase 3: ingest content/** with podcast: queued, then write published.
-# Capture defaults: docs queued, web-clips none. Do not queue migrated web-clips in bulk.
+# Phase 3 (legacy on podcaster): moved to hskksk/knowledges — see S3 in content-platform-split.md.
+# Run manually after `pnpm knowledge:checkout` if needed until the knowledges workflow exists.
 name: Ingest queued podcasts
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "content/docs/**"
-      - "content/web-clips/**"
   workflow_dispatch:
 
 permissions:
@@ -35,11 +30,14 @@ jobs:
 
       - run: pnpm install
 
+      - name: Checkout knowledge corpus
+        env:
+          KNOWLEDGE_GITHUB_TOKEN: ${{ secrets.KNOWLEDGE_GITHUB_TOKEN }}
+        run: pnpm knowledge:checkout
+
       - uses: hskksk/gh-actions/actions/setup-supabase-cli@v1
         with:
           install: "false"
 
-      - name: Ingest queued files and write published
-        env:
-          INGEST_QUEUED_COMMIT: "1"
+      - name: Ingest queued files (no Git commit until knowledges workflow)
         run: pnpm ingest:queued
