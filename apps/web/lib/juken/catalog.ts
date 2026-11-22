@@ -14,6 +14,7 @@ import {
   type LessonMode,
   type WeekOutlineEntry,
 } from "./lesson-meta";
+import { DRILL_DIR_NAME } from "./kokugo-choice/load";
 import { jukenPlainTextFromTree } from "./plain-text";
 import { prepareJukenMarkdoc } from "./prepare";
 
@@ -194,6 +195,7 @@ function readCatalog(): JukenCourse[] {
   const courses: JukenCourse[] = [];
   for (const schoolDir of fs.readdirSync(root, { withFileTypes: true })) {
     if (!schoolDir.isDirectory() || !SEGMENT.test(schoolDir.name)) continue;
+    if (schoolDir.name === DRILL_DIR_NAME) continue;
     const schoolPath = path.join(root, schoolDir.name);
     for (const courseDir of fs.readdirSync(schoolPath, { withFileTypes: true })) {
       if (!courseDir.isDirectory() || !SEGMENT.test(courseDir.name)) continue;

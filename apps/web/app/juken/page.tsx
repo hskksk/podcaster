@@ -3,12 +3,16 @@ import { DayCards } from "../../components/juken/DayCards";
 import { JukenShell } from "../../components/juken/JukenShell";
 import { CHARACTERS } from "../../lib/juken/characters";
 import { courseKicker, formatWeekLabel, loadJukenCourses } from "../../lib/juken/catalog";
+import { loadKokugoChoiceSets } from "../../lib/juken/kokugo-choice/catalog";
+import { drillIndexHref } from "../../lib/juken/kokugo-choice/load";
 
 export const dynamic = "force-static";
 export const revalidate = false;
 
 export default function JukenHomePage() {
   const courses = loadJukenCourses();
+  const drillSets = loadKokugoChoiceSets();
+  const drillQuestionCount = drillSets.reduce((sum, set) => sum + set.questions.length, 0);
   const latest = courses
     .flatMap((course) => course.weeks.map((week) => ({ course, week })))
     .sort((a, b) => b.week.week.localeCompare(a.week.week))[0];
@@ -69,6 +73,25 @@ export default function JukenHomePage() {
             </Link>
           </div>
           <DayCards lessons={latest.week.lessons} />
+        </section>
+      ) : null}
+
+      {drillSets.length > 0 ? (
+        <section className="mb-12">
+          <h2 className="mb-4 text-xs font-black tracking-[0.14em] text-muted-fg">問題</h2>
+          <Link
+            href={drillIndexHref()}
+            className="block rounded-[var(--radius-card)] border border-border bg-surface p-5 no-underline shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] sm:p-6"
+          >
+            <span className="text-xs font-black text-accent">国語 · 消去法トレーニング</span>
+            <span className="mt-1 block font-serif text-2xl font-black text-fg">国語 選択肢問題</span>
+            <span className="mt-2 block max-w-2xl text-sm leading-relaxed text-muted-fg">
+              短い文章を読んで、まちがいの選択肢を消していきます。答え合わせでは、消す理由を本文の根拠つきで確かめられます。
+            </span>
+            <span className="mt-3 block text-sm font-bold text-muted-fg">
+              {drillSets.length} セット · {drillQuestionCount} 問
+            </span>
+          </Link>
         </section>
       ) : null}
 

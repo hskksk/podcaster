@@ -1,6 +1,6 @@
 # 中学受験向け教材
 
-家庭学習用の物語を置く場所です。公開サイトの `/juken`（ふしぎ旅）が、このツリーをそのまま読みます。
+家庭学習用の物語と問題を置く場所です。公開サイトの `/juken`（ふしぎ旅）が、このツリーをそのまま読みます。
 
 `content/docs/`（Wiki・Keystatic）や `content/web-clips/` とは別系統です。ポッドキャスト ingest の対象ではありません。
 
@@ -25,3 +25,13 @@
 曜日のパスは `mon` `tue` `wed` `thu` `fri` です。テーマはファイル名と見出しから取ります。
 
 他の塾・科目を足すときは、`sapix/` や `yotsuya/` の下にコースディレクトリを切り、`course.yml` と `weeks/` を置きます。
+
+## 国語 選択肢問題
+
+`kokugo-choice/` は、塾・コースの木とは別系統の問題集です。
+
+| パス | 内容 |
+|------|------|
+| `kokugo-choice/sets/<YYYY-MM-DD>-<NN>/qNN.json` | 1 問 1 ファイル。本文・設問・選択肢・正解・選択肢ごとの誤り分析 |
+
+公開 URL は `/juken/kokugo-choice`（セット一覧）と `/juken/kokugo-choice/<セットID>`（解答画面）です。作問と検証は `kokugo-choice-drill` スキル、形式のチェックは `pnpm juken:check-drills` です。

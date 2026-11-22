@@ -11,7 +11,8 @@
     "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
     "markdoc:check-config": "tsx scripts/markdoc-site-config-check.ts",
-    "markdoc:check-juken": "tsx scripts/juken-markdoc-check.ts"
+    "markdoc:check-juken": "tsx scripts/juken-markdoc-check.ts",
+    "juken:check-drills": "tsx scripts/juken-drills-check.ts"
   },
   "dependencies": {
     "@hskksk/markdoc-react": "workspace:*",
