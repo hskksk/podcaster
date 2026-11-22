@@ -30,6 +30,11 @@ jobs:
 
       - run: pnpm install
 
+      - name: Checkout knowledge corpus
+        env:
+          KNOWLEDGE_GITHUB_TOKEN: ${{ secrets.KNOWLEDGE_GITHUB_TOKEN }}
+        run: pnpm knowledge:checkout
+
       - run: pnpm typecheck
 
       - uses: hskksk/gh-actions/actions/setup-supabase-cli@v1
