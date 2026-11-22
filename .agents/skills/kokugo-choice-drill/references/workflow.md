@@ -34,6 +34,23 @@ chugaku-juken/kokugo-choice/sets/<YYYY-MM-DD>-<NN>/q01.json … qNN.json
 
 サイトの答え合わせは、`error_type` を短いラベル（言い過ぎ・部分ズレなど）にして、`defect` と `evidence` とともに各選択肢に出す。`evidence` は「本文で見る」で本文上に強調される。誤答タイプの集計・記録は行わない。
 
+## タグ分布の集計（作問前）
+
+```bash
+pnpm juken:drills-stats
+```
+
+既存セット全体について、次を数える。
+
+| 集計対象 | 使い方 |
+|----------|--------|
+| `genre` / `level` / `question_type` / `mode` | 出現が少ないタグを、新セットの割り当てで優先する（10 問セットは `workflow.md` の配分表と両方を見る） |
+| 正解位置（ア〜エ） | 偏っている位置は避け、足りない位置を割り当てる |
+| `theme` / `style` | 一覧に載っている題材・文体は使わない。近い題材も避ける |
+| ぬいぐるみ（ひとやすみの発言） | 発言が少ないキャラクターを、ひとやすみと応援の配役で優先する |
+
+レポート末尾に「次の作問で足りていないタグ」が出る。割り当て表を書いたあともう一度 `juken:drills-stats` を走らせ、意図と合っているか確かめてよい。
+
 ## チェック
 
 ```bash
@@ -43,7 +60,7 @@ pnpm juken:check-drills
 `pnpm typecheck` にも含まれる。エラーは公開ビルドも止める。
 
 - エラー: ひとやすみの対象の問題がない・`say` がない・一人称が「ぼく」「わたし」などになっている・キャラクター ID が不明、形式の誤り、`answer` と ○ の不一致、`evidence` が本文にない、傍線部が 1 か所でない、気持ちの設問に傍線部がない、`generate` の字数が範囲外、`source` と `mode` の不整合
-- 警告: 選択肢の長さの差が 1.3 倍超、`evidence` が 30 字超、正解位置の偏り、題材の重複
+- 警告: 選択肢の長さの差が 1.3 倍超、`evidence` が 30 字超、正解位置の偏り、題材・文体の重複、セット内の `question_type` 連続、ぬいぐるみの登場偏り
 
 警告は、直せるなら直す。このチェックは形式だけを見る。本文だけで正解が決まるかは検証プロンプトで確かめる。
 
@@ -87,15 +104,16 @@ pnpm juken:check-drills
 
 ## 手順
 
-1. 問題数と配分を決め、問ごとに genre・mode・level・question_type・answer_position・theme・style を割り当てる
-2. 既存セットの `theme` / `style` を確かめて、重複を避ける
-3. `references/author-prompt.md` に従って 1 問ずつ作る。一時ファイルに書き、`qNN.json` として保存する
-4. `pnpm juken:check-drills` を通す
-5. `references/verify-prompt.md` に従って、問題ごとに別コンテキストのサブエージェントで検証し、採否を決める
-6. 不採用の問題は直して再検証し、直らなければ作り直す
-7. ひとやすみを書く（`references/interlude.md`）
-8. セット全体を見直す: 配分、正解位置、題材の重なり、`level 3` と気持ちの問題の読み直し
-9. サイトで確かめる: `pnpm web:dev` を起動して `/juken/kokugo-choice/<セットID>` を開く
+1. `pnpm juken:drills-stats` で既存のタグ分布・題材・文体・ぬいぐるみの偏りを読む
+2. 問題数と配分を決め、問ごとに genre・mode・level・question_type・answer_position・theme・style を割り当てる。集計で少ないタグを増やす
+3. 既存セットの `theme` / `style` を確かめて、重複を避ける
+4. `references/author-prompt.md` に従って 1 問ずつ作る。一時ファイルに書き、`qNN.json` として保存する
+5. `pnpm juken:check-drills` を通す
+6. `references/verify-prompt.md` に従って、問題ごとに別コンテキストのサブエージェントで検証し、採否を決める
+7. 不採用の問題は直して再検証し、直らなければ作り直す
+8. ひとやすみを書く（`references/interlude.md`）。`juken:drills-stats` で少ないキャラクターを多めに出す
+9. セット全体を見直す: 配分、正解位置、題材の重なり、`level 3` と気持ちの問題の読み直し。必要ならもう一度 `juken:drills-stats`
+10. サイトで確かめる: `pnpm web:dev` を起動して `/juken/kokugo-choice/<セットID>` を開く
 
 ## 提示
 

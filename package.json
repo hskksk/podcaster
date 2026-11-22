@@ -47,6 +47,7 @@
         "markdoc:check-config": "pnpm --filter @podcaster/web markdoc:check-config",
         "markdoc:check-juken": "pnpm --filter @podcaster/web markdoc:check-juken",
         "juken:check-drills": "pnpm --filter @podcaster/web juken:check-drills",
+        "juken:drills-stats": "pnpm --filter @podcaster/web juken:drills-stats",
         "treemap:extract": "tsx scripts/article-treemap/extract_nodes.ts",
         "treemap:validate": "tsx scripts/article-treemap/validate_treemap.ts",
         "section-visuals:extract": "tsx scripts/article-section-visuals/extract_sections.ts",

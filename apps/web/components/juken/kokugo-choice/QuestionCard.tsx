@@ -7,6 +7,7 @@ import {
   CHOICE_IDS,
   ERROR_TYPE_LABELS,
   LEVEL_LABELS,
+  MODE_LABELS,
   type ChoiceId,
   type DrillQuestion,
 } from "../../../lib/juken/kokugo-choice/schema";
@@ -94,6 +95,7 @@ export function QuestionCard(props: {
         <span className="j-chip">{question.genre}</span>
         <span className="j-chip">{LEVEL_LABELS[question.level]}</span>
         <span className="j-chip">{question.questionType}</span>
+        <span className="j-chip">{MODE_LABELS[question.mode]}</span>
       </header>
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-7">

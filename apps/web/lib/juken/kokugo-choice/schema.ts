@@ -54,6 +54,11 @@ export const LEVEL_LABELS: Record<DrillLevel, string> = {
   3: "レベル3",
 };
 
+export const MODE_LABELS: Record<DrillMode, string> = {
+  generate: "自作",
+  excerpt: "抜粋",
+};
+
 export type ChoiceAnalysis = {
   correct: boolean;
   errorType: ErrorType | null;

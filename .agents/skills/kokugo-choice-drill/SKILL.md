@@ -36,14 +36,27 @@ metadata:
 
 ひとやすみの会話を書く前に、`sapix-grade5-history-weekly` スキルを読む。9 人のキャラクター設定と口調はそこに従う。歴史の授業としての構成の規則は、このスキルでは使わない。
 
+### タグ（各問題の JSON）
+
+| タグ | キー | 画面での表示 |
+|------|------|--------------|
+| ジャンル | `genre` | 説明文 / 随筆 / 小説 |
+| 難易度 | `level` | レベル1〜3 |
+| 設問の型 | `question_type` | 理由 / 気持ち / … |
+| 本文の出所 | `mode` | 自作 / 抜粋 |
+| 題材・文体 | `theme` / `style` | 一覧には出さない（作問メモ・重複回避用） |
+
+誤答タイプ（A〜M）は選択肢ごとに持つ。ユーザー回答の記録・集計はしない。
+
 ### 流れ
 
-1. **割り当てる**: 問題数・配分・各問の入力（genre / mode / level / question_type / answer_position / theme / style）を決める。既存セットの `theme` と `style` と重ならないようにする
+0. **分布を見る**: `pnpm juken:drills-stats` を実行し、リポジトリ全体のタグ出現回数と、題材・文体の一覧を読む。レポート末尾の「足りていないタグ」を、今回の割り当てで優先する
+1. **割り当てる**: 問題数・配分・各問の入力（genre / mode / level / question_type / answer_position / theme / style）を決める。集計で少ないタグを増やし、既存の `theme`・`style` と重ならない題材と文体にする。正解位置と `question_type` が連続しないようにする
 2. **作る**: 1 問ずつ `author-prompt.md` に従って JSON を書き、`qNN.json` に保存する。`excerpt` は青空文庫のファイルを取得して本文を取る
 3. **形式を確かめる**: `pnpm juken:check-drills`。エラーは直す。警告も直せるなら直す
 4. **別コンテキストで解かせる**: 問題ごとにサブエージェントを起動し、`passage`・`question`・`choices` だけを渡して `verify-prompt.md` のプロンプトで解かせる。答えと解説は渡さない。同じコンテキストで自分の問題を解き直して検証にしない
 5. **採否を決める**: `verify-prompt.md` の基準で採否を決める。不採用は直すか、作り直す
-6. **ひとやすみを書く**: 採用した問題が決まってから、`intro.mdoc` と `after-qNN.mdoc` を `references/interlude.md` に従って書く
+6. **ひとやすみを書く**: 採用した問題が決まってから、`intro.mdoc` と `after-qNN.mdoc` を `references/interlude.md` に従って書く。登場キャラクターは `juken:drills-stats` の「ぬいぐるみ」で少ない子を優先し、同じ子だけが続かないようにする
 7. **セットを見直す**: 配分、正解位置、題材の重なりを見る。`level 3` と気持ちの問題は、人が確認しやすいように提示で名指しする
 8. **サイトで確かめる**: `pnpm web:dev` で `/juken/kokugo-choice/<セットID>` を開き、選択、✕、答え合わせ、「本文で見る」、ひとやすみの表示が動くことを確かめる
 

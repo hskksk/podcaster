@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "markdoc:check-config": "tsx scripts/markdoc-site-config-check.ts",
     "markdoc:check-juken": "tsx scripts/juken-markdoc-check.ts",
-    "juken:check-drills": "tsx scripts/juken-drills-check.ts"
+    "juken:check-drills": "tsx scripts/juken-drills-check.ts",
+    "juken:drills-stats": "tsx scripts/juken-drills-stats.ts"
   },
   "dependencies": {
     "@hskksk/markdoc-react": "workspace:*",
