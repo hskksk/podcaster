@@ -33,5 +33,6 @@
 | パス | 内容 |
 |------|------|
 | `kokugo-choice/sets/<YYYY-MM-DD>-<NN>/qNN.json` | 1 問 1 ファイル。本文・設問・選択肢・正解・選択肢ごとの誤り分析 |
+| `kokugo-choice/sets/<YYYY-MM-DD>-<NN>/intro.mdoc`, `after-qNN.mdoc` | 問題のあいだの「ひとやすみ」。ぬいぐるみたちの会話（`scene` / `say`） |
 
 公開 URL は `/juken/kokugo-choice`（セット一覧）と `/juken/kokugo-choice/<セットID>`（解答画面）です。作問と検証は `kokugo-choice-drill` スキル、形式のチェックは `pnpm juken:check-drills` です。

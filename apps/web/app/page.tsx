@@ -3,6 +3,8 @@ import { Headphones } from "lucide-react";
 import { DayCards } from "../components/juken/DayCards";
 import { CHARACTERS } from "../lib/juken/characters";
 import { courseKicker, formatWeekLabel, loadJukenCourses } from "../lib/juken/catalog";
+import { loadKokugoChoiceSets } from "../lib/juken/kokugo-choice/catalog";
+import { drillIndexHref } from "../lib/juken/kokugo-choice/load";
 import { loadSiteConfig } from "../lib/site/config";
 import { loadPublicDocs } from "../lib/site/docs";
 import { articleHref } from "../lib/site/sanitize-content";
@@ -14,6 +16,8 @@ export default function PortalPage() {
   const cfg = loadSiteConfig();
   const docs = loadPublicDocs().slice(0, 3);
   const courses = loadJukenCourses();
+  const drillSets = loadKokugoChoiceSets();
+  const drillQuestionCount = drillSets.reduce((sum, set) => sum + set.questions.length, 0);
   const latest = courses
     .flatMap((course) => course.weeks.map((week) => ({ course, week })))
     .sort((a, b) => b.week.week.localeCompare(a.week.week))[0];
@@ -33,7 +37,7 @@ export default function PortalPage() {
             家で読む一週間。
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-fg sm:text-lg">
-            ポッドキャストと、中学受験の物語。入口はここです。
+            ポッドキャストと、中学受験の物語と国語の問題。入口はここです。
           </p>
         </section>
 
@@ -93,7 +97,7 @@ export default function PortalPage() {
               </Link>
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-fg sm:text-base">
-              ぬいぐるみたちが、週のテキストを会話で歩く。隔週で4匹ずつ登場します。
+              ぬいぐるみたちが、週のテキストを会話で歩く。隔週で4匹ずつ登場します。国語の選択肢問題も、みんなが応援します。
             </p>
             <ul className="mt-4 flex flex-wrap gap-2">
               {CHARACTERS.map((character) => (
@@ -109,13 +113,21 @@ export default function PortalPage() {
                 </li>
               ))}
             </ul>
-            <div className="pt-6">
+            <div className="flex flex-wrap items-center gap-3 pt-6">
               <Link
                 href={latest?.week.href ?? "/juken"}
                 className="inline-flex items-center rounded-full bg-accent px-5 py-2.5 text-sm font-black text-accent-fg no-underline transition hover:opacity-90"
               >
                 物語を開く
               </Link>
+              {drillSets.length > 0 ? (
+                <Link
+                  href={drillIndexHref()}
+                  className="inline-flex items-center rounded-full border border-accent px-5 py-2.5 text-sm font-black text-accent no-underline transition hover:bg-muted"
+                >
+                  国語の問題をとく
+                </Link>
+              ) : null}
             </div>
             {latest ? (
               <div className="mt-6">
@@ -132,6 +144,22 @@ export default function PortalPage() {
             ) : (
               <p className="mt-6 text-sm font-bold text-muted-fg">まだ物語がありません。</p>
             )}
+            {drillSets.length > 0 ? (
+              <Link
+                href={drillIndexHref()}
+                className="mt-6 flex items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-4 no-underline shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
+              >
+                <span className="j-stamp" aria-hidden>
+                  国
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-bold leading-snug text-fg">国語 選択肢問題</span>
+                  <span className="mt-0.5 block text-sm text-muted-fg">
+                    まちがいの選択肢を消していく練習 · {drillSets.length} セット · {drillQuestionCount} 問
+                  </span>
+                </span>
+              </Link>
+            ) : null}
           </article>
         </div>
       </main>

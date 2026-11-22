@@ -8,6 +8,7 @@ chugaku-juken/kokugo-choice/sets/<YYYY-MM-DD>-<NN>/q01.json … qNN.json
 
 - セット ID は作成日と、その日の通し番号（`2026-11-22-01`）。サイトの見出しは「2026年11月22日 第1回」になる
 - 1 問 1 ファイル。ファイル名は `q01.json` から連番。サイトはファイル名順に「問1、問2…」と出す
+- ひとやすみは `intro.mdoc`（最初の問題の前）と `after-q01.mdoc`（問1の後）の形。書き方は `references/interlude.md`
 - 塾・コースの木（`<塾>/<コース>/weeks/`）とは別系統。公開 URL は `/juken/kokugo-choice` と `/juken/kokugo-choice/<セットID>`
 - 追加のあとにサイト側の作業は要らない。ビルド時にディレクトリを読む
 
@@ -41,7 +42,7 @@ pnpm juken:check-drills
 
 `pnpm typecheck` にも含まれる。エラーは公開ビルドも止める。
 
-- エラー: 形式の誤り、`answer` と ○ の不一致、`evidence` が本文にない、傍線部が 1 か所でない、気持ちの設問に傍線部がない、`generate` の字数が範囲外、`source` と `mode` の不整合
+- エラー: ひとやすみの対象の問題がない・`say` がない・一人称が「ぼく」「わたし」などになっている・キャラクター ID が不明、形式の誤り、`answer` と ○ の不一致、`evidence` が本文にない、傍線部が 1 か所でない、気持ちの設問に傍線部がない、`generate` の字数が範囲外、`source` と `mode` の不整合
 - 警告: 選択肢の長さの差が 1.3 倍超、`evidence` が 30 字超、正解位置の偏り、題材の重複
 
 警告は、直せるなら直す。このチェックは形式だけを見る。本文だけで正解が決まるかは検証プロンプトで確かめる。
@@ -92,8 +93,9 @@ pnpm juken:check-drills
 4. `pnpm juken:check-drills` を通す
 5. `references/verify-prompt.md` に従って、問題ごとに別コンテキストのサブエージェントで検証し、採否を決める
 6. 不採用の問題は直して再検証し、直らなければ作り直す
-7. セット全体を見直す: 配分、正解位置、題材の重なり、`level 3` と気持ちの問題の読み直し
-8. サイトで確かめる: `pnpm web:dev` を起動して `/juken/kokugo-choice/<セットID>` を開く
+7. ひとやすみを書く（`references/interlude.md`）
+8. セット全体を見直す: 配分、正解位置、題材の重なり、`level 3` と気持ちの問題の読み直し
+9. サイトで確かめる: `pnpm web:dev` を起動して `/juken/kokugo-choice/<セットID>` を開く
 
 ## 提示
 

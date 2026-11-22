@@ -10,6 +10,8 @@ import {
   type ChoiceId,
   type DrillQuestion,
 } from "../../../lib/juken/kokugo-choice/schema";
+import { cheerFor } from "../../../lib/juken/kokugo-choice/cheers";
+import { CheerLine } from "./Cheering";
 import { PassageText } from "./PassageText";
 
 export type QuestionResult = "correct" | "wrong" | "skipped";
@@ -223,6 +225,7 @@ export function QuestionCard(props: {
           ) : (
             <div className="mt-4 space-y-4" aria-live="polite">
               <ResultBanner result={result} answer={question.answer} />
+              <CheerLine cheer={cheerFor(result, props.number - 1)} />
               <div className="rounded-2xl border border-border bg-muted/60 px-4 py-3">
                 <p className="flex items-center gap-1.5 text-xs font-black tracking-[0.1em] text-[var(--j-study)]">
                   <ListChecks className="size-4" />

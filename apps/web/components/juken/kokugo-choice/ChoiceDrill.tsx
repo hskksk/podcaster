@@ -2,8 +2,12 @@
 
 import { RotateCcw } from "lucide-react";
 import { useState } from "react";
+import type { RenderableTreeNodes } from "@markdoc/markdoc";
 import { cn } from "../../../lib/cn";
+import { finishCheer } from "../../../lib/juken/kokugo-choice/cheers";
 import type { DrillQuestion } from "../../../lib/juken/kokugo-choice/schema";
+import { CheerLine, PlayingCrew } from "./Cheering";
+import { Interlude } from "./Interlude";
 import { QuestionCard, type QuestionResult } from "./QuestionCard";
 
 const STATUS_LABEL: Record<QuestionResult | "todo", string> = {
@@ -13,8 +17,13 @@ const STATUS_LABEL: Record<QuestionResult | "todo", string> = {
   skipped: "答えを見た",
 };
 
-export function ChoiceDrill(props: { questions: DrillQuestion[] }) {
+export function ChoiceDrill(props: {
+  questions: DrillQuestion[];
+  interludes: { key: string; content: RenderableTreeNodes }[];
+}) {
   const { questions } = props;
+  const interlude = (key: string) => props.interludes.find((item) => item.key === key)?.content ?? null;
+  const intro = interlude("intro");
   const [results, setResults] = useState<Partial<Record<string, QuestionResult>>>({});
   const [epoch, setEpoch] = useState(0);
 
@@ -71,9 +80,16 @@ export function ChoiceDrill(props: { questions: DrillQuestion[] }) {
       </nav>
 
       <div className="space-y-6" key={epoch}>
-        {questions.map((question, index) => (
-          <QuestionCard key={question.id} question={question} number={index + 1} onResult={record} />
-        ))}
+        {intro ? <Interlude content={intro} /> : null}
+        {questions.map((question, index) => {
+          const after = interlude(question.id);
+          return (
+            <div key={question.id} className="space-y-6">
+              <QuestionCard question={question} number={index + 1} onResult={record} />
+              {after ? <Interlude content={after} /> : null}
+            </div>
+          );
+        })}
       </div>
 
       <section
@@ -89,12 +105,18 @@ export function ChoiceDrill(props: { questions: DrillQuestion[] }) {
             <p className="mt-2 text-sm text-muted-fg">
               まちがえた問題は「もう一度とく」で、消せなかった選択肢の理由をたしかめましょう。
             </p>
+            <div className="mx-auto mt-4 max-w-xl text-left">
+              <CheerLine cheer={finishCheer(correct, questions.length)} />
+            </div>
           </>
         ) : (
           <p className="text-sm font-bold text-muted-fg">
             あと {questions.length - done} 問。全部とくと、ここに結果が出ます。
           </p>
         )}
+        <div className="mt-5">
+          <PlayingCrew />
+        </div>
         <button
           type="button"
           onClick={restart}

@@ -842,6 +842,23 @@ html.dark .markdoc .article-visual {
   -webkit-box-decoration-break: clone;
 }
 
+@keyframes j-hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-0.55rem);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .j-hop {
+    animation: j-hop 1.6s ease-in-out infinite;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .j-day {
     transition: none;

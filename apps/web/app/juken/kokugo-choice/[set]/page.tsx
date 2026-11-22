@@ -41,7 +41,7 @@ export default async function KokugoChoiceSetPage({ params }: { params: Promise<
       <p className="mb-8 mt-3 max-w-2xl text-sm leading-relaxed text-muted-fg">
         本文を読み、選択肢を1つ選んで「答え合わせ」を押します。まちがいだと思う選択肢は、右の ✕ で消せます。
       </p>
-      <ChoiceDrill questions={set.questions} />
+      <ChoiceDrill questions={set.questions} interludes={set.interludes} />
     </JukenShell>
   );
 }
