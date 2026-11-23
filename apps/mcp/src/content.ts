@@ -22,7 +22,7 @@ export function repoRoot(): string {
 export function githubRepo(): { owner: string; repo: string; ref: string } {
   const spec = (
     process.env.KNOWLEDGE_GITHUB_REPO ||
-    process.env.KEYSTATIC_GITHUB_REPO ||
+    process.env.CAPTURE_GITHUB_REPO ||
     process.env.GITHUB_REPO ||
     "hskksk/knowledges"
   ).trim();

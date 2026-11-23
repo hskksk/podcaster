@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Type checking (no test suite — this is the primary correctness check)
 pnpm typecheck
 pnpm typecheck:web            # Next.js / Keystatic app
-pnpm web:dev                  # Keystatic admin at http://127.0.0.1:3000/keystatic
+pnpm web:dev                  # Next.js site at http://127.0.0.1:3000/
 pnpm capture --title ... --file ...   # POST /api/capture (Git only, no TTS)
 pnpm ingest:queued                    # ingest podcast: queued files (Phase 3)
 pnpm mcp                              # FastMCP stdio (search_docs / write_clip / queue_podcast)
