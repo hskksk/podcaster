@@ -185,7 +185,7 @@ CONTENT_ROOT=.knowledge-checkout
 | `KNOWLEDGE_CHECKOUT_METHOD` | `sparse-shallow`（既定）\| `archive` |
 | `KNOWLEDGE_CHECKOUT_SKIP` | `1` でスキップ（fork CI 等） |
 | `CONTENT_ROOT` | 既定: `$REPO_ROOT/.knowledge-checkout` |
-| `KEYSTATIC_GITHUB_REPO` | Keystatic の commit 先（同上 `owner/repo`） |
+| `CAPTURE_GITHUB_REPO` | Capture API の commit 先（未設定時 `KNOWLEDGE_GITHUB_REPO` と同じ） |
 
 読み取りパス（`CONTENT_ROOT` 基準）:
 
