@@ -1,0 +1,99 @@
+# Preview deploy for hskksk/knowledges pull requests (repository_dispatch).
+name: Knowledges PR → Vercel preview
+
+on:
+  repository_dispatch:
+    types: [knowledges-content-preview]
+
+concurrency:
+  group: knowledges-preview-${{ github.event.client_payload.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      KNOWLEDGE_GIT_REF: ${{ github.event.client_payload.sha }}
+      KNOWLEDGE_GITHUB_REPO: hskksk/knowledges
+      KNOWLEDGE_GITHUB_TOKEN: ${{ secrets.KNOWLEDGE_GITHUB_TOKEN }}
+      KNOWLEDGE_CHECKOUT_REQUIRED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Preview env
+        working-directory: apps/web
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build (KNOWLEDGE_GIT_REF = PR head)
+        working-directory: apps/web
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy prebuilt preview
+        id: deploy
+        working-directory: apps/web
+        run: |
+          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Preview URL: $url"
+
+      - name: Comment on knowledges pull request
+        if: github.event.client_payload.pr_number
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+          KNOWLEDGE_SHA: ${{ github.event.client_payload.sha }}
+          KNOWLEDGE_REF: ${{ github.event.client_payload.ref }}
+        with:
+          github-token: ${{ secrets.KNOWLEDGES_PR_COMMENT_TOKEN }}
+          script: |
+            const owner = "hskksk";
+            const repo = "knowledges";
+            const issue_number = Number(process.env.PR_NUMBER);
+            if (!issue_number) {
+              core.setFailed("Missing pr_number in client_payload");
+              return;
+            }
+            const marker = "<!-- vercel-preview-knowledges -->";
+            const body = [
+              marker,
+              "## Vercel Preview",
+              "",
+              "| | |",
+              "|---|---|",
+              `| **Preview** | ${process.env.PREVIEW_URL} |`,
+              `| **Knowledges ref** | \`${process.env.KNOWLEDGE_REF}\` @ \`${process.env.KNOWLEDGE_SHA?.slice(0, 7)}\` |`,
+              "",
+              "Built from podcaster `main` with `KNOWLEDGE_GIT_REF` set to this PR head.",
+            ].join("\n");
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find((c) => c.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
