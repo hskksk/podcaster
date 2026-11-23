@@ -220,7 +220,7 @@ pnpm web:dev
 | 方式 | 内容 |
 |------|------|
 | **A. lock ファイル** | knowledge `main` の SHA を `knowledge.lock.json` に書く PR → podcaster マージ → Vercel 再デプロイ |
-| **B. Deploy Hook** | knowledge マージ時 workflow が Vercel hook を叩く。ビルドは常に `KNOWLEDGE_GIT_REF=main` の先頭 |
+| **B. Deploy Hook（採用）** | knowledges `dispatch-podcaster-deploy.yml` が podcaster `repository_dispatch` → `knowledges-vercel-deploy.yml` → Hook（ingest とは別 workflow） |
 | **C. 定期ビルド** | Vercel cron（運用簡単だが SHA 追跡が曖昧） |
 
 推奨: **本番は A（再現性）**、プレビューは **B または main 追従**。
@@ -237,7 +237,7 @@ pnpm web:dev
 | `content/web-clips/**` | `knowledge/notes/{slug}/**` + `kind: web-clip` | **content から notes へ（フラット）** |
 | `content/keystatic-templates/**` | `knowledge/content/keystatic-templates/**` | テンプレ名を新コレクションに合わせる |
 | `chugaku-juken/**` | `knowledge/content/juken/**` | **`content/` 配下** |
-| `.github/workflows/ingest-queued.yml` | `knowledge/.github/workflows/` | 走査パスを `content/ai-podcast`（+ 任意 `content/blog`）に変更 |
+| `.github/workflows/ingest-queued.yml` | `knowledges/.github/workflows/` | ingest；`dispatch-podcaster-deploy.yml` が podcaster deploy を dispatch |
 | 執筆系 `.agents/skills/` | `knowledge/.agents/skills/` | 保存先パスを新レイアウトに更新 |
 | `apps/web`, `scripts/ingest-queued.ts` 等 | platform | パス定数・Capture collection マッピングを追随 |
 
@@ -276,7 +276,7 @@ pnpm web:dev
 Phase S0  knowledge リポ作成（§2 の空ディレクトリ）
 Phase S1  podcaster から ai-podcast / juken / notes/web-clips へ物理移動
 Phase S2  knowledge checkout + パス追随（web, scripts, Capture）。Vercel Secrets
-Phase S3  ingest-queued を knowledge へ + DB content_path バックフィル
+Phase S3  ingest-queued を knowledges へ + DB content_path バックフィル（完了）
 Phase S4  blog 統合 + notes/{ideas,knowledges,memos}
 Phase S5  blog 配信（channels）+ Zenn export
 ```
@@ -298,4 +298,4 @@ S1 と S2 は同一メンテナンスウィンドウ推奨。
 
 - [pkm-migration.md](./pkm-migration.md) — コレクション 2 つは **論理名**（wiki=ai-podcast、clips=notes/web-clips）として読み替え
 - [pkm-next.md](./pkm-next.md)
-- [chugaku-juken/README.md](../../chugaku-juken/README.md) — 移行後は `knowledge/content/juken/README.md` に追随
+- Juken README: `hskksk/knowledges` の `content/juken/README.md`

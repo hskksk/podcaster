@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
 import { parseFrontmatter } from "../../../../scripts/lib/mdoc";
-import { getRepoRoot } from "../repo-root";
+import { aiPodcastDir, notesDir } from "../repo-root";
 import type {
   TreemapLabels,
   TreemapLink,
@@ -34,7 +34,7 @@ function bodySha256(body: string): string {
 }
 
 function collectionRoot(collection: "docs" | "web-clips"): string {
-  return path.join(getRepoRoot(), "content", collection);
+  return collection === "docs" ? aiPodcastDir() : notesDir();
 }
 
 function shaCandidates(

@@ -4,11 +4,14 @@ import { markdocEditorOptions } from "./lib/keystatic/markdoc-options";
 import { parseSlugForSort } from "./lib/keystatic/slug-sort";
 import { markdocComponents, podcastSelectDocs, podcastSelectWebClips } from "./lib/markdoc-components";
 import { titleSlugField } from "./lib/slug";
-import { githubRepo, isGithubStorage } from "./lib/storage";
+import { isGithubStorage, keystaticGithubRepo } from "./lib/storage";
 
 function storage() {
   if (isGithubStorage()) {
-    return { kind: "github" as const, repo: githubRepo };
+    return {
+      kind: "github" as const,
+      repo: keystaticGithubRepo() as `${string}/${string}`,
+    };
   }
   return { kind: "local" as const };
 }
@@ -35,7 +38,7 @@ export default config({
     docs: collection({
       label: "Wiki",
       slugField: "title",
-      path: `content/docs/${"*"}/`,
+      path: `content/ai-podcast/${"*"}/`,
       format: { contentField: "content" },
       entryLayout: "content",
       columns: ["title", "podcast", "publishedAt"],
@@ -61,7 +64,7 @@ export default config({
     webClips: collection({
       label: "Web Clips",
       slugField: "title",
-      path: `content/web-clips/${"*"}/`,
+      path: `notes/${"*"}/`,
       format: { contentField: "content" },
       entryLayout: "content",
       columns: ["title", "podcast", "clippedAt"],

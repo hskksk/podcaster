@@ -1,9 +1,7 @@
 /**
- * Validate chugaku-juken/kokugo-choice question files (schema, 本文との照合, 形式ルール).
+ * Validate content/juken/kokugo-choice question files (schema, 本文との照合, 形式ルール).
  * Errors fail the check; warnings are printed only.
  */
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { CHARACTER_IDS } from "../lib/juken/characters";
 import { answerPositionCounts, loadDrillSets } from "../lib/juken/kokugo-choice/load";
 import {
@@ -11,10 +9,9 @@ import {
   tallyInterludeCharacters,
   tallyQuestions,
 } from "../lib/juken/kokugo-choice/stats";
+import { jukenDir } from "../../../scripts/lib/content-paths";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "../../..");
-const jukenRoot = path.join(repoRoot, "chugaku-juken");
+const jukenRoot = jukenDir();
 
 const { sets, problems } = loadDrillSets(jukenRoot);
 

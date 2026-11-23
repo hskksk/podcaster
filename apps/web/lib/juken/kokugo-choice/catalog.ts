@@ -1,16 +1,11 @@
 import "server-only";
 
-import path from "node:path";
-import { getRepoRoot } from "../../repo-root";
+import { jukenDir } from "../../repo-root";
 import { loadDrillSets, type DrillSet } from "./load";
-
-function jukenRoot(): string {
-  return path.join(getRepoRoot(), "chugaku-juken");
-}
 
 /** 形式に誤りのある問題が 1 つでもあれば、公開せずにビルドを止める。警告は表示だけ。 */
 export function loadKokugoChoiceSets(): DrillSet[] {
-  const { sets, problems } = loadDrillSets(jukenRoot());
+  const { sets, problems } = loadDrillSets(jukenDir());
   for (const problem of problems) {
     for (const warning of problem.warnings) console.warn(`[juken/kokugo-choice] ${problem.file}: ${warning}`);
   }

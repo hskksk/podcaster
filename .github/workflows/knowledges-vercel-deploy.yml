@@ -1,0 +1,44 @@
+# Triggered by hskksk/knowledges (repository_dispatch). Hits Vercel Deploy Hook.
+name: Knowledges → Vercel deploy
+
+on:
+  repository_dispatch:
+    types: [knowledges-content-updated]
+  workflow_dispatch:
+    inputs:
+      knowledge_sha:
+        description: knowledges commit SHA (optional; default KNOWLEDGE_GIT_REF / lock)
+        required: false
+        type: string
+
+jobs:
+  vercel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve knowledge ref
+        id: ref
+        run: |
+          SHA="${{ github.event.client_payload.sha || inputs.knowledge_sha }}"
+          if [ -n "$SHA" ]; then
+            echo "ref=$SHA" >> "$GITHUB_OUTPUT"
+            echo "Deploying site snapshot of knowledges @ $SHA"
+          else
+            echo "ref=" >> "$GITHUB_OUTPUT"
+            echo "Deploying site (Vercel KNOWLEDGE_GIT_REF / knowledge.lock.json)"
+          fi
+
+      - name: Vercel Deploy Hook
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+          KNOWLEDGE_SHA: ${{ steps.ref.outputs.ref }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "VERCEL_DEPLOY_HOOK_URL is not set" >&2
+            exit 1
+          fi
+          URL="$VERCEL_DEPLOY_HOOK_URL"
+          if [ -n "$KNOWLEDGE_SHA" ]; then
+            echo "Tip: set Vercel Build env KNOWLEDGE_GIT_REF=$KNOWLEDGE_SHA or bump knowledge.lock.json for pinned builds."
+            URL="${URL}?knowledge_sha=${KNOWLEDGE_SHA}"
+          fi
+          curl -fsS -X POST "$URL"

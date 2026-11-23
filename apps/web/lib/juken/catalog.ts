@@ -3,7 +3,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
-import { getRepoRoot } from "../repo-root";
+import { jukenDir } from "../repo-root";
 import {
   lessonModeLabel,
   parseLessonFile,
@@ -85,7 +85,7 @@ type CourseMeta = {
 };
 
 function jukenRoot(): string {
-  return path.join(getRepoRoot(), "chugaku-juken");
+  return jukenDir();
 }
 
 function clean(text: string): string {

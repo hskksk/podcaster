@@ -6,7 +6,7 @@ import { sayCharacterIdsInBody } from "../lesson-meta";
 import { transformJukenBody } from "../markdoc-transform";
 import { CHOICE_IDS, GENRES, LEVELS, lintQuestion, parseQuestion, type DrillQuestion, type Genre } from "./schema";
 
-/** `chugaku-juken/` 直下のディレクトリ名。塾・コースの木とは別系統なので、塾一覧からは除く。 */
+/** `content/juken/` 直下のディレクトリ名。塾・コースの木とは別系統なので、塾一覧からは除く。 */
 export const DRILL_DIR_NAME = "kokugo-choice";
 
 const SET_DIR = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})$/;

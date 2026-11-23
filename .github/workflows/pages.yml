@@ -8,7 +8,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "content/docs/**"
+      - "knowledge.lock.json"
       - "scripts/build-pages-redirects.ts"
       - "scripts/lib/**"
       - ".github/workflows/pages.yml"
@@ -36,6 +36,11 @@ jobs:
       - uses: hskksk/gh-actions/actions/setup-mise@v1
 
       - run: pnpm install
+
+      - name: Checkout knowledge corpus
+        env:
+          KNOWLEDGE_GITHUB_TOKEN: ${{ secrets.KNOWLEDGE_GITHUB_TOKEN }}
+        run: pnpm knowledge:checkout
 
       - name: Build redirect stubs
         run: pnpm web:build

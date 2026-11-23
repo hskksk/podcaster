@@ -1,14 +1,11 @@
 /**
  * 既存セットのタグ分布を集計し、新作問の割り当てに使うレポートを出す。
  */
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { loadDrillSets } from "../lib/juken/kokugo-choice/load";
 import { formatDrillStatsReport } from "../lib/juken/kokugo-choice/stats";
+import { jukenDir } from "../../../scripts/lib/content-paths";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "../../..");
-const jukenRoot = path.join(repoRoot, "chugaku-juken");
+const jukenRoot = jukenDir();
 
 const { sets, problems } = loadDrillSets(jukenRoot);
 for (const problem of problems) {
