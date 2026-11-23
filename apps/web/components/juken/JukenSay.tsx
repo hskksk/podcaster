@@ -25,7 +25,7 @@ export function JukenSay(props: {
           {speaker}
           {role ? <span className="j-role">{role}</span> : null}
         </p>
-        <p className="j-say">{props.children}</p>
+        <div className="j-say">{props.children}</div>
         {props.note ? <p className="j-note">{props.note}</p> : null}
       </div>
     </div>

@@ -26,7 +26,7 @@ export function JukenCrumbs(props: { items: { href?: string; label: string }[] }
 }
 
 export function JukenShell(props: {
-  variant?: "home" | "search" | "characters";
+  variant?: "home" | "search" | "characters" | "drill";
   hero?: ReactNode;
   children: ReactNode;
   width?: "wide" | "story";
@@ -59,6 +59,17 @@ export function JukenShell(props: {
               )}
             >
               物語
+            </Link>
+            <Link
+              href="/juken/kokugo-choice"
+              className={cn(
+                "rounded-full px-3 py-1.5 text-sm font-bold no-underline",
+                props.variant === "drill"
+                  ? "bg-muted text-fg"
+                  : "text-muted-fg hover:bg-muted hover:text-fg",
+              )}
+            >
+              国語問題
             </Link>
             <Link
               href="/juken/characters"
