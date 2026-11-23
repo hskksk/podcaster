@@ -17,6 +17,24 @@ pnpm web:dev
 
 モノレポなので、Vercel の Project Settings → Root Directory を **`apps/web`** にする（Import 画面の Edit でも可）。`rootDirectory` は vercel.json には書けない。
 
+### Hobby plan: 12 Serverless Functions max
+
+本番は **Vercel Hobby** を想定する。**1 デプロイあたり Serverless Functions は最大 12 個**（[Hobby の制限](https://vercel.com/docs/plans/hobby)）。超えるとデプロイが `No more than 12 Serverless Functions` で失敗する。
+
+静的に焼いたページ（SSG）は枠に含まれない。**枠を食う典型例**は次のとおり。
+
+- `app/**/route.ts` の Route Handler（例: `POST /api/capture` は 1 個）
+- リクエスト時レンダリングが必要な **動的ルート**（`[slug]` や `[set]` など。`force-static` で全パスをビルドできていれば静的になりやすいが、新しい動的セグメントを足すたびに要確認）
+- 以前は Keystatic（`/keystatic` + `/api/keystatic/*`）や draft preview（`/preview/*`）が複数枠を占めていたため、**ブラウザ CMS はデプロイから外している**
+
+新機能を足す前の習慣:
+
+1. 可能なら **SSG・静的** のままにする（この README の「公開ページはビルド時に…」方針）。
+2. `find apps/web/app -name route.ts` で Handler の本数を把握する。
+3. `pnpm --filter @podcaster/web build` のあと Vercel と同じビルドが通るか確認する。枠オーバーはビルド／デプロイログに出る。
+
+枠が足りないときの選択肢は、動的ルートの削減・プラン変更・別ホストへの API 切り出し。
+
 公開ページは **ビルド時に静的 HTML を焼く**（`force-static`）。
 
 - `/` は hskksk の入口
