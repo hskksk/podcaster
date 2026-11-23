@@ -34,6 +34,7 @@ Markdoc 本文は **`pnpm knowledge:checkout`** でビルドマシンに取り�
 3. **GitHub → Keystatic 用 App** → Repository access に **`hskksk/knowledges`** を追加（以前 podcaster だけなら要変更）
 4. **Vercel（Runtime, Production + Preview）**: 既存の `KEYSTATIC_*` に加え、任意で `KEYSTATIC_GITHUB_REPO=hskksk/knowledges`。Capture 用 `CAPTURE_GITHUB_TOKEN` は knowledges への **write**
 5. マージ後 Redeploy。ビルドログに `[knowledge] ok CONTENT_ROOT=...` が出れば読み取り OK
+6. **knowledges 記事 PR の Vercel プレビュー**（任意）: podcaster Actions に `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`（`apps/web` で `vercel link` 後の `.vercel/project.json`）と `KNOWLEDGES_PR_COMMENT_TOKEN`（knowledges への PR コメント用 PAT）
 
 詳細は [content-platform-split.md](../../docs/architecture/content-platform-split.md)。
 
