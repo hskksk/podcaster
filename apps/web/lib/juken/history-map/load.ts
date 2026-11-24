@@ -3,7 +3,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
-import { jukenDir } from "../../repo-root";
+import { historyMapGeoPath, jukenDir } from "../../repo-root";
 import { computeBoundaries } from "./boundaries";
 import type {
   HistoryEvent,
@@ -26,7 +26,11 @@ function readJson<T>(file: string): T {
 
 export function historyMapAvailable(): boolean {
   const root = bundleRoot();
-  return fs.existsSync(path.join(root, "events.json")) && fs.existsSync(path.join(root, "meta.yml"));
+  return (
+    fs.existsSync(path.join(root, "events.json")) &&
+    fs.existsSync(path.join(root, "meta.yml")) &&
+    fs.existsSync(historyMapGeoPath())
+  );
 }
 
 export function loadHistoryMapBundle(): HistoryMapBundle | null {
@@ -36,7 +40,7 @@ export function loadHistoryMapBundle(): HistoryMapBundle | null {
   const events = readJson<HistoryEvent[]>(path.join(root, "events.json"));
   const wars = readJson<Record<string, WarOverlay>>(path.join(root, "wars.json"));
   const taxonomy = readJson<HistoryMapTaxonomy>(path.join(root, "taxonomy.json"));
-  const geo = readJson<HistoryMapGeo>(path.join(root, "geo.json"));
+  const geo = readJson<HistoryMapGeo>(historyMapGeoPath());
   const boundaries = computeBoundaries(geo);
   return { meta, events, wars, taxonomy, geo, boundaries };
 }
