@@ -28,6 +28,17 @@ async function sleep(ms: number) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
+/** Strip Wikimedia extmetadata HTML for plain-text credits (CodeQL-safe). */
+function stripHtmlMetadata(raw: string): string {
+  let text = raw;
+  let prev = "";
+  while (text !== prev) {
+    prev = text;
+    text = text.replace(/<[^>]*>/g, "");
+  }
+  return text.replace(/[<>]/g, "").trim();
+}
+
 async function wikiThumb(title: string, lang: string): Promise<{
   thumb?: string;
   pageUrl?: string;
@@ -82,7 +93,7 @@ async function commonsLicense(imageTitle: string): Promise<{ license: string; cr
   const info = Object.values(data.query?.pages ?? {})[0]?.imageinfo?.[0];
   const meta = info?.extmetadata ?? {};
   const license = meta.LicenseShortName?.value ?? meta.License?.value ?? "See Wikimedia Commons";
-  const artist = meta.Artist?.value?.replace(/<[^>]+>/g, "").trim();
+  const artist = meta.Artist?.value ? stripHtmlMetadata(meta.Artist.value) : "";
   const credit = artist ? `${artist} / Wikimedia Commons` : `${imageTitle} / Wikimedia Commons`;
   const fileUrl =
     info?.url ??
