@@ -58,6 +58,12 @@ REGION_COLORS = {
 
 SKIP_LABELS = {"琵琶湖", "霞ヶ浦", "十和田湖", "海"}
 
+# Gokishichido.svg は本州以南が中心のため、旧 bundle の蝦夷地リングを経緯度から補う
+EZO_LAND_LNG_LAT = (
+    "140,41.5 140.4,42.3 140.4,43.2 141.2,43.2 141.7,44.4 141.9,45.4 "
+    "142.8,44.6 144.3,44 145.3,43.4 144,42.9 143.3,42 141.5,42.6 140.7,41.8"
+)
+
 
 def project(lng: float, lat: float) -> tuple[float, float]:
     return ((lng - 128.5) * 22, (45.8 - lat) * 26)
@@ -132,6 +138,15 @@ def main() -> None:
         reg = region_of.get(lab) or FILL_TO_REGION.get(fill)
         if reg:
             region_rings[reg].append(ring)
+
+    ezo_ring = " ".join(
+        f"{project(float(lng), float(lat))[0]:.1f},{project(float(lng), float(lat))[1]:.1f}"
+        for lng, lat in (pair.split(",") for pair in EZO_LAND_LNG_LAT.split())
+    )
+    if ezo_ring not in land:
+        land.append(ezo_ring)
+    if ezo_ring not in region_rings.get("蝦夷地", []):
+        region_rings.setdefault("蝦夷地", []).append(ezo_ring)
 
     out = {
         "land": land,

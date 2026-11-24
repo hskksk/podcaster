@@ -166,7 +166,7 @@ export function HistoryMapApp({ bundle }: Props) {
       region.rings.forEach((ring) => {
         const pts = (mapProjected ? mapSpacePolygons : landPolygons)([ring])[0];
         if (pts) {
-          s += `<polygon points="${pts}" fill="${region.color}" fill-opacity="0.82" stroke="none"/>`;
+          s += `<polygon class="hm-region" points="${pts}" style="fill:${region.color};fill-opacity:0.9"/>`;
         }
       });
     });
@@ -176,7 +176,7 @@ export function HistoryMapApp({ bundle }: Props) {
       s += landRings
         .map(
           (p) =>
-            `<polygon vector-effect="non-scaling-stroke" points="${p}" fill="none" stroke="var(--hm-coast)" stroke-width="1.25"/>`,
+            `<polygon class="hm-coast" vector-effect="non-scaling-stroke" points="${p}"/>`,
         )
         .join("");
     }

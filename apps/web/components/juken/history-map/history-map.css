@@ -47,6 +47,18 @@
   stroke-width: 1;
 }
 
+.history-map-app svg.hm-map--regions polygon.hm-region {
+  stroke: rgba(0 0 0 / 0.15);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.history-map-app svg.hm-map--regions polygon.hm-coast {
+  fill: none !important;
+  stroke: var(--hm-coast);
+  stroke-width: 1.25;
+}
+
 .history-map-app svg.hm-map text {
   fill: var(--hm-fg);
   font-size: 11px;
