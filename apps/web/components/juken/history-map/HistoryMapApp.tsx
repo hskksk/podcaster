@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { landPolygons, project } from "../../../lib/juken/history-map/geo";
 import { fieldValue, maskText, shuffleQuizFields, type QuizField } from "../../../lib/juken/history-map/quiz";
+import { QuizFieldValue } from "./QuizFieldValue";
+import { QuizModal } from "./QuizModal";
 import { currentEvent, eraLabel, laneName, visibleEvents } from "../../../lib/juken/history-map/selectors";
 import type { HistoryAxis, HistoryEvent, HistoryMapBundle } from "../../../lib/juken/history-map/types";
 import "./history-map.css";
@@ -34,6 +36,7 @@ export function HistoryMapApp({ bundle }: Props) {
   const [quizMode, setQuizMode] = useState(false);
   const [quizFields, setQuizFields] = useState<QuizField[]>(() => shuffleQuizFields(events.length));
   const [quizRevealed, setQuizRevealed] = useState<Set<number>>(() => new Set());
+  const [quizModal, setQuizModal] = useState<{ index: number; mode: "q" | "a" } | null>(null);
   const [bubble, setBubble] = useState<{ left: number; top: number; width: number } | null>(null);
   const [leaderHtml, setLeaderHtml] = useState("");
 
@@ -64,16 +67,9 @@ export function HistoryMapApp({ bundle }: Props) {
 
   const eventIndex = useCallback((e: HistoryEvent) => events.indexOf(e), [events]);
 
-  const quizDisplay = useCallback(
-    (e: HistoryEvent, field: QuizField, asTitle = false): string => {
-      const i = eventIndex(e);
-      const val = fieldValue(e, field);
-      if (!quizMode || quizRevealed.has(i) || quizFields[i] !== field) return val;
-      if (asTitle) return "？？？";
-      return val;
-    },
-    [eventIndex, quizFields, quizMode, quizRevealed],
-  );
+  const openQuiz = useCallback((index: number, mode: "q" | "a") => {
+    setQuizModal({ index, mode });
+  }, []);
 
   const qText = useCallback(
     (e: HistoryEvent, text: string) => {
@@ -362,6 +358,7 @@ export function HistoryMapApp({ bundle }: Props) {
       setQuizFields(shuffleQuizFields(events.length));
       setQuizRevealed(new Set());
     }
+    setQuizModal(null);
   };
 
   const axisButtons: { id: AxisView; label: string; color: string }[] = [
@@ -385,7 +382,21 @@ export function HistoryMapApp({ bundle }: Props) {
             <div className="hm-era-h">{eraName}</div>
             <div className="hm-col">
               {eraEvents.map((e) => (
-                <TimelineItem key={e.title + e.year} event={e} current={current} year={year} compact={false} axisColor={axisColor} onPick={pick} qv={quizDisplay} qt={qText} />
+                <TimelineItem
+                  key={e.title + e.year}
+                  event={e}
+                  eventIndex={eventIndex(e)}
+                  current={current}
+                  year={year}
+                  compact={false}
+                  axisColor={axisColor}
+                  onPick={pick}
+                  qt={qText}
+                  quizMode={quizMode}
+                  quizFields={quizFields}
+                  quizRevealed={quizRevealed}
+                  onOpenQuiz={openQuiz}
+                />
               ))}
             </div>
           </div>
@@ -410,13 +421,17 @@ export function HistoryMapApp({ bundle }: Props) {
                 <TimelineItem
                   key={e.title + e.year}
                   event={e}
+                  eventIndex={eventIndex(e)}
                   current={current}
                   year={year}
                   compact
                   axisColor={axisColor}
                   onPick={pick}
-                  qv={quizDisplay}
                   qt={qText}
+                  quizMode={quizMode}
+                  quizFields={quizFields}
+                  quizRevealed={quizRevealed}
+                  onOpenQuiz={openQuiz}
                   style={{ gridColumn: col, gridRow: row }}
                 />,
               ];
@@ -426,7 +441,16 @@ export function HistoryMapApp({ bundle }: Props) {
                   <div key={`${e.title}-detail`} className="hm-dt" style={{ gridColumn: col, gridRow: row }}>
                     {qText(e, e.body)}
                     <div className="hm-sm">
-                      📍{qText(e, e.place)}　👤{quizDisplay(e, "who")}
+                      📍{qText(e, e.place)}　👤
+                      <QuizFieldValue
+                        event={e}
+                        eventIndex={eventIndex(e)}
+                        field="who"
+                        quizMode={quizMode}
+                        quizField={quizFields[eventIndex(e)] ?? "t"}
+                        quizRevealed={quizRevealed.has(eventIndex(e))}
+                        onOpenQuiz={openQuiz}
+                      />
                     </div>
                   </div>,
                 );
@@ -438,7 +462,7 @@ export function HistoryMapApp({ bundle }: Props) {
         </div>
       );
     });
-  }, [axisColor, axisView, current, pick, qText, quizDisplay, taxonomy, visible, year]);
+  }, [axisColor, axisView, current, eventIndex, openQuiz, pick, qText, quizFields, quizMode, quizRevealed, taxonomy, visible, year]);
 
   return (
     <div className="history-map-app">
@@ -498,9 +522,36 @@ export function HistoryMapApp({ bundle }: Props) {
                     ×
                   </button>
                   <b>
-                    {quizDisplay(current, "y")}　{quizDisplay(current, "t")}
+                    <QuizFieldValue
+                      event={current}
+                      eventIndex={eventIndex(current)}
+                      field="y"
+                      quizMode={quizMode}
+                      quizField={quizFields[eventIndex(current)] ?? "t"}
+                      quizRevealed={quizRevealed.has(eventIndex(current))}
+                      onOpenQuiz={openQuiz}
+                    />{" "}
+                    <QuizFieldValue
+                      event={current}
+                      eventIndex={eventIndex(current)}
+                      field="t"
+                      quizMode={quizMode}
+                      quizField={quizFields[eventIndex(current)] ?? "t"}
+                      quizRevealed={quizRevealed.has(eventIndex(current))}
+                      onOpenQuiz={openQuiz}
+                    />
                   </b>
-                  <div className="hm-mut">{qText(current, current.who)}</div>
+                  <div className="hm-mut">
+                    <QuizFieldValue
+                      event={current}
+                      eventIndex={eventIndex(current)}
+                      field="who"
+                      quizMode={quizMode}
+                      quizField={quizFields[eventIndex(current)] ?? "t"}
+                      quizRevealed={quizRevealed.has(eventIndex(current))}
+                      onOpenQuiz={openQuiz}
+                    />
+                  </div>
                   <div>{qText(current, current.body)}</div>
                 </>
               ) : null}
@@ -564,30 +615,57 @@ export function HistoryMapApp({ bundle }: Props) {
               </span>
             ) : null}
           </div>
-          <EventDetailCard current={current} axisColor={axisColor} quizDisplay={quizDisplay} qText={qText} wars={wars} taxonomy={taxonomy} />
+          <EventDetailCard
+            current={current}
+            axisColor={axisColor}
+            qText={qText}
+            wars={wars}
+            taxonomy={taxonomy}
+            quizMode={quizMode}
+            quizFields={quizFields}
+            quizRevealed={quizRevealed}
+            eventIndex={eventIndex}
+            onOpenQuiz={openQuiz}
+          />
         </div>
         <aside className="hm-tl" ref={tlRef}>
           {timeline.length ? timeline : <div className="hm-mut">この条件の出来事はありません。</div>}
         </aside>
       </div>
+      <QuizModal
+        modal={quizModal}
+        events={events}
+        quizFields={quizFields}
+        quizRevealed={quizRevealed}
+        onClose={() => setQuizModal(null)}
+        onReveal={(i) => setQuizRevealed((prev) => new Set(prev).add(i))}
+        qText={qText}
+      />
     </div>
   );
 }
 
 function TimelineItem(props: {
   event: HistoryEvent;
+  eventIndex: number;
   current: HistoryEvent | null;
   year: number;
   compact: boolean;
   axisColor: (ax: HistoryAxis) => string;
   onPick: (e: HistoryEvent) => void;
-  qv: (e: HistoryEvent, f: QuizField) => string;
   qt: (e: HistoryEvent, t: string) => string;
+  quizMode: boolean;
+  quizFields: QuizField[];
+  quizRevealed: Set<number>;
+  onOpenQuiz: (index: number, mode: "q" | "a") => void;
   style?: CSSProperties;
 }) {
-  const { event: e, current, year, compact, axisColor, onPick, qv, qt, style } = props;
+  const { event: e, eventIndex: idx, current, year, compact, axisColor, onPick, qt, quizMode, quizFields, quizRevealed, onOpenQuiz, style } =
+    props;
   const col = axisColor(e.axis);
   const axLabel = e.axis === "s" || e.axis === "w" ? (e.axis === "s" ? "政治" : "戦い") : undefined;
+  const quizField = quizFields[idx] ?? "t";
+  const revealed = quizRevealed.has(idx);
   return (
     <button
       type="button"
@@ -595,7 +673,26 @@ function TimelineItem(props: {
       style={{ borderColor: col, ...style }}
       onClick={() => onPick(e)}
     >
-      <b>{qv(e, "y")}</b> {qv(e, "t")}
+      <b>
+        <QuizFieldValue
+          event={e}
+          eventIndex={idx}
+          field="y"
+          quizMode={quizMode}
+          quizField={quizField}
+          quizRevealed={revealed}
+          onOpenQuiz={onOpenQuiz}
+        />
+      </b>{" "}
+      <QuizFieldValue
+        event={e}
+        eventIndex={idx}
+        field="t"
+        quizMode={quizMode}
+        quizField={quizField}
+        quizRevealed={revealed}
+        onOpenQuiz={onOpenQuiz}
+      />
       <span className="hm-tg" style={{ background: col }}>
         {axLabel ?? taxonomyLabelFallback(e.axis)}
       </span>
@@ -605,7 +702,16 @@ function TimelineItem(props: {
         <>
           <div>{qt(e, e.body)}</div>
           <div className="hm-sm">
-            📍{qt(e, e.place)}　👤{qv(e, "who")}
+            📍{qt(e, e.place)}　👤
+            <QuizFieldValue
+              event={e}
+              eventIndex={idx}
+              field="who"
+              quizMode={quizMode}
+              quizField={quizField}
+              quizRevealed={revealed}
+              onOpenQuiz={onOpenQuiz}
+            />
           </div>
         </>
       )}
@@ -621,29 +727,63 @@ function taxonomyLabelFallback(ax: HistoryAxis): string {
 function EventDetailCard(props: {
   current: HistoryEvent | null;
   axisColor: (ax: HistoryAxis) => string;
-  quizDisplay: (e: HistoryEvent, f: QuizField) => string;
   qText: (e: HistoryEvent, t: string) => string;
   wars: HistoryMapBundle["wars"];
   taxonomy: HistoryMapBundle["taxonomy"];
+  quizMode: boolean;
+  quizFields: QuizField[];
+  quizRevealed: Set<number>;
+  eventIndex: (e: HistoryEvent) => number;
+  onOpenQuiz: (index: number, mode: "q" | "a") => void;
 }) {
-  const { current, axisColor, quizDisplay, qText, wars, taxonomy } = props;
+  const { current, axisColor, qText, wars, taxonomy, quizMode, quizFields, quizRevealed, eventIndex, onOpenQuiz } = props;
   if (!current) {
     return <div className="hm-card">この条件に合う出来事は、まだありません。スライダーを右へ動かそう。</div>;
   }
   const col = axisColor(current.axis);
-  const who = quizDisplay(current, "who");
+  const idx = eventIndex(current);
+  const quizField = quizFields[idx] ?? "t";
+  const revealed = quizRevealed.has(idx);
+  const showWhoInitial =
+    !quizMode || revealed || quizField !== "who" ? current.who[0] : "?";
   return (
     <div className="hm-card">
       <div className="hm-h">
         <div className="hm-av" style={{ background: col }}>
-          {who === current.who ? current.who[0] : "?"}
+          {showWhoInitial}
         </div>
         <div>
           <b>
-            {quizDisplay(current, "y")}　{quizDisplay(current, "t")}
+            <QuizFieldValue
+              event={current}
+              eventIndex={idx}
+              field="y"
+              quizMode={quizMode}
+              quizField={quizField}
+              quizRevealed={revealed}
+              onOpenQuiz={onOpenQuiz}
+            />{" "}
+            <QuizFieldValue
+              event={current}
+              eventIndex={idx}
+              field="t"
+              quizMode={quizMode}
+              quizField={quizField}
+              quizRevealed={revealed}
+              onOpenQuiz={onOpenQuiz}
+            />
           </b>
           <div className="hm-mut">
-            {qText(current, current.place)}　／　{who}
+            {qText(current, current.place)}　／　
+            <QuizFieldValue
+              event={current}
+              eventIndex={idx}
+              field="who"
+              quizMode={quizMode}
+              quizField={quizField}
+              quizRevealed={revealed}
+              onOpenQuiz={onOpenQuiz}
+            />
           </div>
         </div>
       </div>
