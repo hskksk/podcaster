@@ -202,8 +202,9 @@ CONTENT_ROOT=.knowledge-checkout
 1. **Build command の先頭**: `pnpm knowledge:checkout`（または `vercel-build` 内で実行）
 2. **Environment Variables（Build）**: `KNOWLEDGE_GITHUB_REPO`, `KNOWLEDGE_GITHUB_TOKEN`, 任意 `KNOWLEDGE_GIT_REF`
 3. **Submodule は無効のまま**
+4. **Hobby 上限**: 1 デプロイあたり **Serverless Functions は 12 個まで**。詳細と追加時の注意は [apps/web/README.md](../../apps/web/README.md#hobby-plan-12-serverless-functions-max)。
 
-Keystatic の runtime commit は引き続き **private リポ**へ。公開 HTML は **そのビルドで clone したスナップショット**（SSG）。
+Capture（`POST /api/capture`）の runtime commit は引き続き **private リポ**へ。公開 HTML は **そのビルドで clone したスナップショット**（SSG）。ブラウザ CMS（Keystatic）は podcaster デプロイに含めない。
 
 ### 3.4 ローカル開発
 
