@@ -30,14 +30,17 @@ function isWebClipEntry(source: string, usingLegacyDir: boolean): boolean {
   return Boolean(attrs.url?.trim());
 }
 
+let publicWebClipsCache: PublicWebClip[] | undefined;
+
 export function loadPublicWebClips(): PublicWebClip[] {
+  if (publicWebClipsCache) return publicWebClipsCache;
   const root = webClipsDir();
   if (!fs.existsSync(root)) {
     console.warn(`[site] notes missing at ${root} (cwd=${process.cwd()})`);
     return [];
   }
   const usingLegacyDir = root.replace(/\\/g, "/").endsWith(`/${LEGACY_CLIPS_REL}`);
-  return fs
+  publicWebClipsCache = fs
     .readdirSync(root, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => {
@@ -49,6 +52,7 @@ export function loadPublicWebClips(): PublicWebClip[] {
     })
     .filter((a): a is PublicWebClip => a !== null)
     .sort((a, b) => b.filename.localeCompare(a.filename, "en"));
+  return publicWebClipsCache;
 }
 
 export function loadPublicWebClip(slug: string): PublicWebClip | null {
