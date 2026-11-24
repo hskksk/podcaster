@@ -6,6 +6,7 @@
   --hm-sea: #dfeaf0;
   --hm-land: #e9dfc8;
   --hm-coast: #8a7d68;
+  --hm-reg-bd: #6b6356;
   --hm-bd: #d8cfbd;
   max-width: 1080px;
   margin-inline: auto;
@@ -19,6 +20,7 @@
   --hm-sea: #1f2b33;
   --hm-land: #3d3828;
   --hm-coast: #6e6556;
+  --hm-reg-bd: #9a8f7e;
   --hm-bd: #403c32;
 }
 
@@ -48,9 +50,7 @@
 }
 
 .history-map-app svg.hm-map--regions polygon.hm-region {
-  stroke: rgba(0 0 0 / 0.15);
-  stroke-width: 0.6;
-  vector-effect: non-scaling-stroke;
+  stroke: none;
 }
 
 .history-map-app svg.hm-map--regions polygon.hm-coast {

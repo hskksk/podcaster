@@ -5,6 +5,7 @@ import path from "node:path";
 import yaml from "js-yaml";
 import { jukenDir } from "../../repo-root";
 import { computeBoundaries } from "./boundaries";
+import { splitProjectedRing } from "./ring-sanitize";
 import type {
   HistoryEvent,
   HistoryFigure,
@@ -37,7 +38,17 @@ export function loadHistoryMapBundle(): HistoryMapBundle | null {
   const events = readJson<HistoryEvent[]>(path.join(root, "events.json"));
   const wars = readJson<Record<string, WarOverlay>>(path.join(root, "wars.json"));
   const taxonomy = readJson<HistoryMapTaxonomy>(path.join(root, "taxonomy.json"));
-  const geo = readJson<HistoryMapGeo>(path.join(root, "geo.json"));
+  let geo = readJson<HistoryMapGeo>(path.join(root, "geo.json"));
+  if (geo.regions?.length) {
+    geo = {
+      ...geo,
+      land: geo.land.flatMap((ring) => splitProjectedRing(ring)),
+      regions: geo.regions.map((r) => ({
+        ...r,
+        rings: r.rings.flatMap((ring) => splitProjectedRing(ring)),
+      })),
+    };
+  }
   const boundaries = computeBoundaries(geo);
   const figuresPath = path.join(root, "figures.json");
   const figures = fs.existsSync(figuresPath) ? readJson<Record<string, HistoryFigure>>(figuresPath) : {};

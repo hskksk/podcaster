@@ -182,9 +182,18 @@ export function HistoryMapApp({ bundle }: Props) {
     }
     const k = 390 / viewBox[2] >= 1.8;
     s += `<g clip-path="url(#hm-lc)">`;
-    if (k)
-      s += `<path d="${boundaries.provinceEdges}" fill="none" stroke="var(--hm-mut)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6" vector-effect="non-scaling-stroke"/>`;
-    s += `<path d="${boundaries.regionEdges}" fill="none" stroke="var(--hm-mut)" stroke-width="${k ? 2 : 1.5}" stroke-dasharray="7 3" opacity="0.8" vector-effect="non-scaling-stroke"/></g>`;
+    if (regionFills.length) {
+      s += `<path d="${boundaries.regionEdges}" fill="none" stroke="var(--hm-reg-bd)" stroke-width="1.25" vector-effect="non-scaling-stroke"/>`;
+      if (k) {
+        s += `<path d="${boundaries.provinceEdges}" fill="none" stroke="var(--hm-mut)" stroke-width="1" stroke-dasharray="3 3" opacity="0.55" vector-effect="non-scaling-stroke"/>`;
+      }
+    } else {
+      if (k) {
+        s += `<path d="${boundaries.provinceEdges}" fill="none" stroke="var(--hm-mut)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6" vector-effect="non-scaling-stroke"/>`;
+      }
+      s += `<path d="${boundaries.regionEdges}" fill="none" stroke="var(--hm-mut)" stroke-width="${k ? 2 : 1.5}" stroke-dasharray="7 3" opacity="0.8" vector-effect="non-scaling-stroke"/>`;
+    }
+    s += `</g>`;
     const labels = k ? boundaries.provinceLabels : boundaries.regionLabels;
     s += labels
       .map(

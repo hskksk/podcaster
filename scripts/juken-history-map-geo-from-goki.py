@@ -106,17 +106,28 @@ def main() -> None:
             coef_y[0] * x + coef_y[1] * y + coef_y[2],
         )
 
-    def sample_path(path, steps: int = 40) -> list[tuple[float, float]]:
+    def sample_subpath(sub, steps: int = 36) -> list[tuple[float, float]]:
         pts: list[tuple[float, float]] = []
+        if sub.length() < 1:
+            return pts
         for t in np.linspace(0, 1, steps):
-            z = path.point(t)
+            z = sub.point(t)
             mx, my = xform(z.real, z.imag)
             pts.append((round(mx, 1), round(my, 1)))
-        out = [pts[0]]
-        for pt in pts[1:]:
-            if pt != out[-1]:
+        out: list[tuple[float, float]] = []
+        for pt in pts:
+            if not out or pt != out[-1]:
                 out.append(pt)
         return out
+
+    def sample_path(path, steps: int = 36) -> list[list[tuple[float, float]]]:
+        """One SVG path may contain several islands (multiple moveto); sample each separately."""
+        rings: list[list[tuple[float, float]]] = []
+        for sub in path.continuous_subpaths():
+            ring = sample_subpath(sub, steps)
+            if len(ring) >= 4:
+                rings.append(ring)
+        return rings
 
     region_rings: dict[str, list[str]] = {k: [] for k in REGION_COLORS}
     land: list[str] = []
@@ -130,14 +141,12 @@ def main() -> None:
             continue
         if lab not in region_of and fill not in FILL_TO_REGION:
             continue
-        ring_pts = sample_path(p)
-        if len(ring_pts) < 4:
-            continue
-        ring = " ".join(f"{x},{y}" for x, y in ring_pts)
-        land.append(ring)
-        reg = region_of.get(lab) or FILL_TO_REGION.get(fill)
-        if reg:
-            region_rings[reg].append(ring)
+        for ring_pts in sample_path(p):
+            ring = " ".join(f"{x},{y}" for x, y in ring_pts)
+            land.append(ring)
+            reg = region_of.get(lab) or FILL_TO_REGION.get(fill)
+            if reg:
+                region_rings[reg].append(ring)
 
     ezo_ring = " ".join(
         f"{project(float(lng), float(lat))[0]:.1f},{project(float(lng), float(lat))[1]:.1f}"
