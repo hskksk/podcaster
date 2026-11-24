@@ -26,6 +26,7 @@ function clipHalfPlane(
   nx: number,
   ny: number,
   keepNear: number,
+  clipNeighbor: number,
 ): [number, number, number][] {
   const f = (q: [number, number, number]) => (q[0] - mx) * nx + (q[1] - my) * ny;
   const out: [number, number, number][] = [];
@@ -38,9 +39,9 @@ function clipHalfPlane(
     const iy = q[1] + (r[1] - q[1]) * t;
     if (fq <= keepNear) {
       out.push(q);
-      if (fr > keepNear) out.push([ix, iy, -1]);
+      if (fr > keepNear) out.push([ix, iy, clipNeighbor]);
     } else if (fr <= keepNear) {
-      out.push([ix, iy, q[2]]);
+      out.push([ix, iy, clipNeighbor]);
     }
   });
   return out;
@@ -82,7 +83,7 @@ export function computeBoundaries(geo: HistoryMapGeo): {
       const my = (a.p[1] + b.p[1]) / 2;
       const nx = b.p[0] - a.p[0];
       const ny = b.p[1] - a.p[1];
-      poly = clipHalfPlane(poly, mx, my, nx, ny, 0);
+      poly = clipHalfPlane(poly, mx, my, nx, ny, 0, j);
     });
     poly.forEach((q, k) => {
       const r = poly[(k + 1) % poly.length]!;

@@ -67,6 +67,7 @@ export function HistoryMapApp({ bundle }: Props) {
     setSelected(event);
     setYear(event.year);
     setHiddenBubble(false);
+    setManualMap(false);
   }, []);
 
   const eventIndex = useCallback((e: HistoryEvent) => events.indexOf(e), [events]);
