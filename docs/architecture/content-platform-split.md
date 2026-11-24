@@ -134,7 +134,7 @@ podcaster/                          # public（private への .gitmodules なし
 ├── scripts/
 │   └── checkout-knowledge.ts       # KNOWLEDGE_* で shallow sparse clone
 ├── .gitignore                      # .knowledge-checkout/ など
-├── knowledge.lock.json             # 任意: 本番ビルド用の固定 SHA（公開してよいメタのみ）
+├── knowledge.lock.json             # 任意: repo + 既定 ref（main）。SHA は載せない
 └── …                               # supabase, docs, packages（従来どおり）
 ```
 
@@ -142,9 +142,9 @@ podcaster/                          # public（private への .gitmodules なし
 
 | submodule | シークレット付き checkout（採用） |
 |-----------|-----------------------------------|
-| `.gitmodules` に private URL が載る | public 側は **URL も SHA もコミットしない**（env + 任意 lock ファイル） |
+| `.gitmodules` に private URL が載る | public 側は **URL もトークンもコミットしない**（env + 任意 lock の repo/ref） |
 | fork / clone した第三者が private 参照にぶつかる | clone だけなら public 単体でビルド可能（中身空 or fixture） |
-| platform の PR と knowledge の SHA が連動 PR になる | デプロイは **Vercel の Secrets** と lock で再現 |
+| platform の PR と knowledge の SHA が連動 PR になる | 本文追従は **Deploy Hook** で再ビルド。コミット固定は `KNOWLEDGE_GIT_REF` / `KNOWLEDGE_GIT_SHA` |
 
 **Keystatic / Capture** はもともと GitHub API で private に commit するので、**読む側も「ローカル作業ツリー」or API** で足り、submodule は必須ではない。
 
@@ -155,7 +155,7 @@ deploy / vercel-build / pnpm web:dev（初回）
     │
     ├─ KNOWLEDGE_GITHUB_REPO=hskksk/blog
     ├─ KNOWLEDGE_GITHUB_TOKEN=…（read 専用）
-    ├─ KNOWLEDGE_GIT_REF=main | <sha>      # 未設定時 knowledge.lock.json → main
+    ├─ KNOWLEDGE_GIT_REF=main              # 未設定時 lock.ref → main（SHA は env のみ）
     ▼
 pnpm knowledge:checkout   # 既定: sparse + shallow + blob:none
     ▼
@@ -179,7 +179,8 @@ CONTENT_ROOT=.knowledge-checkout
 |------|------|
 | `KNOWLEDGE_GITHUB_REPO` | `owner/repo`（private 正本） |
 | `KNOWLEDGE_GITHUB_TOKEN` | clone 用。Vercel **Build**、GitHub Actions、ローカル `.env` |
-| `KNOWLEDGE_GIT_REF` | branch / tag / SHA。未設定時 `knowledge.lock.json` または `main` |
+| `KNOWLEDGE_GIT_REF` | branch / tag / commit。未設定時 `knowledge.lock.json` の `ref` または `main` |
+| `KNOWLEDGE_GIT_SHA` | コミット固定のみ（`KNOWLEDGE_GIT_REF` より優先度は低い） |
 | `KNOWLEDGE_DEPTH` | 既定 `1` |
 | `KNOWLEDGE_FILTER_BLOBS` | 既定 ON（`0` で無効） |
 | `KNOWLEDGE_CHECKOUT_METHOD` | `sparse-shallow`（既定）\| `archive` |
@@ -194,7 +195,7 @@ CONTENT_ROOT=.knowledge-checkout
 - Notes / web-clips: `notes/`（`kind === web-clip` でフィルタ）
 - Blog: `content/blog`
 
-**`knowledge.lock.json`（任意）**: `{ "repo": "hskksk/blog", "sha": "abc123…" }` を public にコミットしてよい。中身はコミット ID のみ。更新は knowledge マージ後に bot または手動 PR。トークンは載せない。
+**`knowledge.lock.json`（任意）**: `{ "repo": "hskksk/knowledges", "ref": "main" }` のみ。`sha` は読まない（後方互換の残骸があれば警告）。特定コミットでビルドするときは Vercel Build の `KNOWLEDGE_GIT_REF` または `KNOWLEDGE_GIT_SHA`。
 
 ### 3.3 Vercel
 
@@ -219,11 +220,11 @@ pnpm web:dev
 
 | 方式 | 内容 |
 |------|------|
-| **A. lock ファイル** | knowledge `main` の SHA を `knowledge.lock.json` に書く PR → podcaster マージ → Vercel 再デプロイ |
-| **B. Deploy Hook（採用）** | knowledges `dispatch-podcaster-deploy.yml` が podcaster `repository_dispatch` → `knowledges-vercel-deploy.yml` → Hook（ingest とは別 workflow） |
-| **C. 定期ビルド** | Vercel cron（運用簡単だが SHA 追跡が曖昧） |
+| **A. 明示 SHA** | ビルド env に `KNOWLEDGE_GIT_REF` / `KNOWLEDGE_GIT_SHA`（再現ビルド・デバッグ用） |
+| **B. Deploy Hook（採用）** | knowledges マージ後に Hook → Vercel 再ビルド（checkout は lock `ref` = **main 先頭**） |
+| **C. 定期ビルド** | Vercel cron（main 追従。いつ時点の本文かはビルドログの `sha=` で確認） |
 
-推奨: **本番は A（再現性）**、プレビューは **B または main 追従**。
+推奨: 日常は **B**、同じコミットをもう一度焼きたいときだけ **A**。
 
 ---
 
