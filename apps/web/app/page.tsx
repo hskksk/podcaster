@@ -2,21 +2,27 @@ import Link from "next/link";
 import { Headphones } from "lucide-react";
 import { DayCards } from "../components/juken/DayCards";
 import { CHARACTERS } from "../lib/juken/characters";
-import { courseKicker, formatWeekLabel, loadJukenCourses } from "../lib/juken/catalog";
-import { loadKokugoChoiceSets } from "../lib/juken/kokugo-choice/catalog";
+import { courseKicker, formatWeekLabel } from "../lib/juken/catalog";
 import { drillIndexHref } from "../lib/juken/kokugo-choice/load";
+import {
+  getJukenCoursesForRender,
+  getKokugoChoiceSetsForRender,
+  getPublicDocsForRender,
+} from "../lib/knowledge/cached-content";
 import { loadSiteConfig } from "../lib/site/config";
-import { loadPublicDocs } from "../lib/site/docs";
 import { articleHref } from "../lib/site/sanitize-content";
 
 export const dynamic = "force-static";
 export const revalidate = false;
 
-export default function PortalPage() {
+export default async function PortalPage() {
   const cfg = loadSiteConfig();
-  const docs = loadPublicDocs().slice(0, 3);
-  const courses = loadJukenCourses();
-  const drillSets = loadKokugoChoiceSets();
+  const [allDocs, courses, drillSets] = await Promise.all([
+    getPublicDocsForRender(),
+    getJukenCoursesForRender(),
+    getKokugoChoiceSetsForRender(),
+  ]);
+  const docs = allDocs.slice(0, 3);
   const drillQuestionCount = drillSets.reduce((sum, set) => sum + set.questions.length, 0);
   const latest = courses
     .flatMap((course) => course.weeks.map((week) => ({ course, week })))

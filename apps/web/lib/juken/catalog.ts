@@ -264,8 +264,16 @@ function readCatalog(): JukenCourse[] {
   return courses;
 }
 
+let jukenCoursesCache: JukenCourse[] | undefined;
+
+export function resetJukenCoursesCache(): void {
+  jukenCoursesCache = undefined;
+}
+
 export function loadJukenCourses(): JukenCourse[] {
-  return readCatalog();
+  if (jukenCoursesCache) return jukenCoursesCache;
+  jukenCoursesCache = readCatalog();
+  return jukenCoursesCache;
 }
 
 export function findCourse(school: string, course: string): JukenCourse | null {

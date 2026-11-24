@@ -20,13 +20,20 @@ function docsDir(): string {
   return aiPodcastDir();
 }
 
+let publicDocsCache: PublicDoc[] | undefined;
+
+export function resetPublicDocsCache(): void {
+  publicDocsCache = undefined;
+}
+
 export function loadPublicDocs(): PublicDoc[] {
+  if (publicDocsCache) return publicDocsCache;
   const root = docsDir();
   if (!fs.existsSync(root)) {
     console.warn(`[site] ai-podcast missing at ${root} (cwd=${process.cwd()})`);
     return [];
   }
-  return fs
+  publicDocsCache = fs
     .readdirSync(root, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => {
@@ -37,6 +44,7 @@ export function loadPublicDocs(): PublicDoc[] {
     })
     .filter((a): a is PublicDoc => a !== null)
     .sort((a, b) => b.filename.localeCompare(a.filename, "en"));
+  return publicDocsCache;
 }
 
 export function loadPublicDoc(slug: string): PublicDoc | null {

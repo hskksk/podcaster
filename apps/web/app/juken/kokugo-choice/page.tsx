@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JukenCrumbs, JukenShell } from "../../../components/juken/JukenShell";
-import { loadKokugoChoiceSets } from "../../../lib/juken/kokugo-choice/catalog";
+import { getKokugoChoiceSetsForRender } from "../../../lib/knowledge/cached-content";
 import { LEVEL_LABELS } from "../../../lib/juken/kokugo-choice/schema";
 
 export const dynamic = "force-static";
@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   description: "短い文章を読んで、まちがいの選択肢を消していく練習問題。答え合わせでは、消す理由を本文の根拠つきで確かめられる。",
 };
 
-export default function KokugoChoiceIndexPage() {
-  const sets = loadKokugoChoiceSets();
+export default async function KokugoChoiceIndexPage() {
+  const sets = await getKokugoChoiceSetsForRender();
 
   return (
     <JukenShell variant="drill">

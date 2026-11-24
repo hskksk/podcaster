@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 import { ChoiceDrill } from "../../../../components/juken/kokugo-choice/ChoiceDrill";
 import { JukenCrumbs, JukenShell } from "../../../../components/juken/JukenShell";
 import { drillIndexHref } from "../../../../lib/juken/kokugo-choice/load";
-import { findKokugoChoiceSet, loadKokugoChoiceSets } from "../../../../lib/juken/kokugo-choice/catalog";
+import { loadKokugoChoiceSets } from "../../../../lib/juken/kokugo-choice/catalog";
+import { getKokugoChoiceSetsForRender } from "../../../../lib/knowledge/cached-content";
 
 export const dynamic = "force-static";
 export const revalidate = false;
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 type Params = { set: string };
 
@@ -17,14 +18,16 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { set: setId } = await params;
-  const set = findKokugoChoiceSet(setId);
+  const sets = await getKokugoChoiceSetsForRender();
+  const set = sets.find((item) => item.id === setId) ?? null;
   if (!set) return { title: "見当たりません" };
   return { title: `国語 選択肢問題 ${set.title}`, description: `${set.questions.length} 問の選択肢問題` };
 }
 
 export default async function KokugoChoiceSetPage({ params }: { params: Promise<Params> }) {
   const { set: setId } = await params;
-  const set = findKokugoChoiceSet(setId);
+  const sets = await getKokugoChoiceSetsForRender();
+  const set = sets.find((item) => item.id === setId) ?? null;
   if (!set) notFound();
 
   return (

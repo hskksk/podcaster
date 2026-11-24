@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PagefindSearch } from "../../../components/PagefindSearch";
 import { SiteShell } from "../../../components/SiteShell";
 import { feedUrl, loadSiteConfig } from "../../../lib/site/config";
-import { loadPublicDocs } from "../../../lib/site/docs";
+import { getPublicDocsForRender } from "../../../lib/knowledge/cached-content";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default async function SearchPage() {
   const cfg = loadSiteConfig();
-  const docs = loadPublicDocs();
+  const docs = await getPublicDocsForRender();
   const rss = feedUrl();
 
   return (

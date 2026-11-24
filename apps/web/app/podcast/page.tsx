@@ -6,7 +6,7 @@ import { SiteShell } from "../../components/SiteShell";
 import { audioForPublicDoc, fetchArticleAudioMap } from "../../lib/site/audio";
 import { fetchArticleImageMap, imageForPublicDoc } from "../../lib/site/episode-images";
 import { feedUrl, loadSiteConfig } from "../../lib/site/config";
-import { loadPublicDocs } from "../../lib/site/docs";
+import { getPublicDocsForRender } from "../../lib/knowledge/cached-content";
 import { articleHref } from "../../lib/site/sanitize-content";
 
 export const dynamic = "force-static";
@@ -14,7 +14,7 @@ export const revalidate = false;
 
 export default async function HomePage() {
   const cfg = loadSiteConfig();
-  const docs = loadPublicDocs();
+  const docs = await getPublicDocsForRender();
   const [audioMap, imageMap] = await Promise.all([
     fetchArticleAudioMap(),
     fetchArticleImageMap(),

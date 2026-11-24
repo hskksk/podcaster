@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { DayCards } from "../../../../../components/juken/DayCards";
 import { JukenCrumbs, JukenShell } from "../../../../../components/juken/JukenShell";
 import { findCourse, findWeek, formatWeekLabel, loadJukenCourses } from "../../../../../lib/juken/catalog";
+import { getJukenCoursesForRender } from "../../../../../lib/knowledge/cached-content";
 
 export const dynamic = "force-static";
 export const revalidate = false;
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 type Params = { school: string; course: string; week: string };
 
@@ -18,6 +19,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { school, course, week } = await params;
+  await getJukenCoursesForRender();
   const found = findWeek(school, course, week);
   if (!found) return { title: "見当たりません" };
   return {
@@ -28,6 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
 export default async function JukenWeekPage({ params }: { params: Promise<Params> }) {
   const { school, course: courseId, week } = await params;
+  await getJukenCoursesForRender();
   const course = findCourse(school, courseId);
   const found = findWeek(school, courseId, week);
   if (!course || !found) notFound();

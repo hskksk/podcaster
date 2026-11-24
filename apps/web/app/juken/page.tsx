@@ -2,16 +2,18 @@ import Link from "next/link";
 import { DayCards } from "../../components/juken/DayCards";
 import { JukenShell } from "../../components/juken/JukenShell";
 import { CHARACTERS } from "../../lib/juken/characters";
-import { courseKicker, formatWeekLabel, loadJukenCourses } from "../../lib/juken/catalog";
-import { loadKokugoChoiceSets } from "../../lib/juken/kokugo-choice/catalog";
+import { courseKicker, formatWeekLabel } from "../../lib/juken/catalog";
 import { drillIndexHref } from "../../lib/juken/kokugo-choice/load";
+import { getJukenCoursesForRender, getKokugoChoiceSetsForRender } from "../../lib/knowledge/cached-content";
 
 export const dynamic = "force-static";
 export const revalidate = false;
 
-export default function JukenHomePage() {
-  const courses = loadJukenCourses();
-  const drillSets = loadKokugoChoiceSets();
+export default async function JukenHomePage() {
+  const [courses, drillSets] = await Promise.all([
+    getJukenCoursesForRender(),
+    getKokugoChoiceSetsForRender(),
+  ]);
   const drillQuestionCount = drillSets.reduce((sum, set) => sum + set.questions.length, 0);
   const latest = courses
     .flatMap((course) => course.weeks.map((week) => ({ course, week })))

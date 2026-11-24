@@ -36,7 +36,19 @@ export function getMonorepoRoot(): string {
   return process.cwd();
 }
 
+let runtimeContentRoot: string | null = null;
+
+/** Set corpus root for this process (e.g. Vercel ISR after tarball extract). */
+export function setRuntimeContentRoot(root: string): void {
+  runtimeContentRoot = path.resolve(root);
+}
+
+export function clearRuntimeContentRoot(): void {
+  runtimeContentRoot = null;
+}
+
 export function getContentRoot(): string {
+  if (runtimeContentRoot) return runtimeContentRoot;
   if (process.env.CONTENT_ROOT) {
     return path.resolve(process.env.CONTENT_ROOT);
   }
