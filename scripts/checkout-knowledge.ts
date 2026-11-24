@@ -27,13 +27,23 @@ function readLock(): LockFile | null {
   }
 }
 
+/**
+ * Ref resolution (SHA is opt-in only):
+ * 1. KNOWLEDGE_GIT_REF — branch, tag, or commit
+ * 2. KNOWLEDGE_GIT_SHA — explicit commit pin (same fetch path as a SHA ref)
+ * 3. knowledge.lock.json `ref` (default repo branch, usually main)
+ * 4. `main`
+ *
+ * `knowledge.lock.json` `sha` is ignored (use env vars to pin).
+ */
 function envRef(lock: LockFile | null): string {
-  return (
-    process.env.KNOWLEDGE_GIT_REF?.trim() ||
-    lock?.sha?.trim() ||
-    lock?.ref?.trim() ||
-    "main"
-  );
+  const fromRef = process.env.KNOWLEDGE_GIT_REF?.trim();
+  if (fromRef) return fromRef;
+  const fromSha = process.env.KNOWLEDGE_GIT_SHA?.trim();
+  if (fromSha) return fromSha;
+  const fromLock = lock?.ref?.trim();
+  if (fromLock) return fromLock;
+  return "main";
 }
 
 function envRepo(lock: LockFile | null): string {
@@ -175,6 +185,12 @@ function main(): void {
     }
     console.warn("[knowledge] KNOWLEDGE_GITHUB_TOKEN unset — skipping checkout");
     return;
+  }
+
+  if (lock?.sha?.trim()) {
+    console.warn(
+      "[knowledge] knowledge.lock.json \"sha\" is ignored; use KNOWLEDGE_GIT_REF or KNOWLEDGE_GIT_SHA to pin a commit",
+    );
   }
 
   const ref = envRef(lock);

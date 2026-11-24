@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       knowledge_sha:
-        description: knowledges commit SHA (optional; default KNOWLEDGE_GIT_REF / lock)
+        description: knowledges commit SHA (optional; default KNOWLEDGE_GIT_REF / lock ref)
         required: false
         type: string
 
@@ -24,7 +24,7 @@ jobs:
             echo "Deploying site snapshot of knowledges @ $SHA"
           else
             echo "ref=" >> "$GITHUB_OUTPUT"
-            echo "Deploying site (Vercel KNOWLEDGE_GIT_REF / knowledge.lock.json)"
+            echo "Deploying site (Vercel KNOWLEDGE_GIT_REF or knowledge.lock.json ref → main)"
           fi
 
       - name: Vercel Deploy Hook
@@ -38,7 +38,7 @@ jobs:
           fi
           URL="$VERCEL_DEPLOY_HOOK_URL"
           if [ -n "$KNOWLEDGE_SHA" ]; then
-            echo "Tip: set Vercel Build env KNOWLEDGE_GIT_REF=$KNOWLEDGE_SHA or bump knowledge.lock.json for pinned builds."
+            echo "Tip: set Vercel Build env KNOWLEDGE_GIT_REF=$KNOWLEDGE_SHA (or KNOWLEDGE_GIT_SHA) for pinned builds."
             URL="${URL}?knowledge_sha=${KNOWLEDGE_SHA}"
           fi
           curl -fsS -X POST "$URL"
