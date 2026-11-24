@@ -40,6 +40,27 @@ export type HistoryMapGeo = {
   provinces: [string, string][];
 };
 
+export type HistoryFigure = {
+  name: string;
+  aliases?: string[];
+  imageUrl: string;
+  credit: string;
+  license: string;
+  sourceUrl: string;
+  pageUrl?: string;
+};
+
+export type HistoryMapBackground = {
+  imageUrl: string;
+  /** Full SVG viewBox (default) or geographic bounds [westLng, southLat, eastLng, northLat] */
+  fit: "viewBox" | "bounds";
+  bounds?: [number, number, number, number];
+  opacity?: number;
+  credit: string;
+  license: string;
+  sourceUrl: string;
+};
+
 export type MapBoundaries = {
   provinceEdges: string;
   regionEdges: string;
@@ -54,4 +75,6 @@ export type HistoryMapBundle = {
   taxonomy: HistoryMapTaxonomy;
   geo: HistoryMapGeo;
   boundaries: MapBoundaries;
+  figures: Record<string, HistoryFigure>;
+  mapBackground: HistoryMapBackground | null;
 };

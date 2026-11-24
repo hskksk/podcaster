@@ -36,5 +36,29 @@ for (let i = 1; i < events.length; i++) {
   }
 }
 
+const figuresPath = path.join(root, "figures.json");
+if (fs.existsSync(figuresPath)) {
+  const figures = JSON.parse(fs.readFileSync(figuresPath, "utf8")) as Record<
+    string,
+    { name?: string; imageUrl?: string; license?: string; credit?: string; sourceUrl?: string }
+  >;
+  for (const [key, fig] of Object.entries(figures)) {
+    if (!fig.imageUrl || !fig.license || !fig.credit || !fig.sourceUrl) {
+      console.error(`juken-history-map-check: incomplete figure: ${key}`);
+      errors++;
+    }
+  }
+  console.log(`juken-history-map-check: figures ${Object.keys(figures).length}`);
+}
+
+const bgPath = path.join(root, "map-background.json");
+if (fs.existsSync(bgPath)) {
+  const bg = JSON.parse(fs.readFileSync(bgPath, "utf8")) as { imageUrl?: string; license?: string };
+  if (!bg.imageUrl || !bg.license) {
+    console.error("juken-history-map-check: incomplete map-background.json");
+    errors++;
+  }
+}
+
 if (errors > 0) process.exit(1);
 console.log(`juken-history-map-check: ok (${events.length} events)`);

@@ -1,5 +1,7 @@
+import type { FigureIndex } from "../../../lib/juken/history-map/figures";
 import type { HistoryEvent } from "../../../lib/juken/history-map/types";
 import { fieldValue, maskText, type QuizField } from "../../../lib/juken/history-map/quiz";
+import { FigureRichText } from "./FigureRichText";
 
 type Props = {
   event: HistoryEvent;
@@ -9,6 +11,7 @@ type Props = {
   quizField: QuizField;
   quizRevealed: boolean;
   onOpenQuiz: (index: number, mode: "q" | "a") => void;
+  figureIndex?: FigureIndex;
 };
 
 export function QuizFieldValue({
@@ -19,9 +22,15 @@ export function QuizFieldValue({
   quizField,
   quizRevealed,
   onOpenQuiz,
+  figureIndex,
 }: Props) {
   const val = fieldValue(event, field);
-  if (!quizMode || quizRevealed) return <>{val}</>;
+  if (!quizMode || quizRevealed) {
+    if (field === "who" && figureIndex) {
+      return <FigureRichText text={val} index={figureIndex} />;
+    }
+    return <>{val}</>;
+  }
   if (quizField !== field) {
     return <>{maskText(event, val, true, false, quizField)}</>;
   }
