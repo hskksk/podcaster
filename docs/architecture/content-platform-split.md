@@ -222,10 +222,11 @@ pnpm web:dev
 | 方式 | 内容 |
 |------|------|
 | **A. 明示 SHA** | ビルド env に `KNOWLEDGE_GIT_REF` / `KNOWLEDGE_GIT_SHA`（再現ビルド・デバッグ用） |
-| **B. Deploy Hook（採用）** | knowledges マージ後に Hook → Vercel 再ビルド（checkout は lock `ref` = **main 先頭**） |
+| **B. Deploy Hook（既定）** | knowledges マージ後に Hook → Vercel フルビルド（checkout + `next build` + Pagefind） |
+| **B2. On-demand revalidate（任意）** | `KNOWLEDGE_DEPLOY_MODE=revalidate` → `POST /api/knowledge-revalidate`。インストール／`next build` なし。ISR 時に Runtime で tarball 取得。**Pagefind は更新されない** |
 | **C. 定期ビルド** | Vercel cron（main 追従。いつ時点の本文かはビルドログの `sha=` で確認） |
 
-推奨: 日常は **B**、同じコミットをもう一度焼きたいときだけ **A**。
+推奨: 本文だけの高頻度更新は **B2**、podcaster 変更・検索索引・同じ SHA の再現ビルドは **B** / **A**。
 
 ---
 

@@ -22,6 +22,10 @@ function docsDir(): string {
 
 let publicDocsCache: PublicDoc[] | undefined;
 
+export function resetPublicDocsCache(): void {
+  publicDocsCache = undefined;
+}
+
 export function loadPublicDocs(): PublicDoc[] {
   if (publicDocsCache) return publicDocsCache;
   const root = docsDir();

@@ -12,6 +12,7 @@ import { fetchArticleImageMap, imageForPublicDoc } from "../../../../lib/site/ep
 import { articleOpenGraph } from "../../../../lib/site/open-graph";
 import { EpisodePlayer } from "../../../../components/EpisodePlayer";
 import { ReadingProgress } from "../../../../components/ReadingProgress";
+import { getPublicDocsForRender } from "../../../../lib/knowledge/cached-content";
 import { loadPublicDoc, loadPublicDocs } from "../../../../lib/site/docs";
 import { loadTreemapSidecar } from "../../../../lib/site/treemap-labels";
 import { loadSectionVisualsSidecar } from "../../../../lib/site/section-visuals";
@@ -22,7 +23,7 @@ import { textify } from "../../../../../../scripts/lib/mdoc";
 
 export const dynamic = "force-static";
 export const revalidate = false;
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 type Params = { slug: string };
 
@@ -43,6 +44,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  await getPublicDocsForRender();
   const doc = loadPublicDoc(slug);
   if (!doc) return { title: "Not found" };
   const cfg = loadSiteConfig();
@@ -65,10 +67,10 @@ export async function generateMetadata({
 
 export default async function ArticlePage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
+  const docs = await getPublicDocsForRender();
   const doc = loadPublicDoc(slug);
   if (!doc) notFound();
   const cfg = loadSiteConfig();
-  const docs = loadPublicDocs();
   const [audioMap, imageMap] = await Promise.all([
     fetchArticleAudioMap(),
     fetchArticleImageMap(),

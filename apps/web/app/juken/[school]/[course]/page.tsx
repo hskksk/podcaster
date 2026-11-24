@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JukenCrumbs, JukenShell } from "../../../../components/juken/JukenShell";
 import { courseKicker, findCourse, formatWeekLabel, loadJukenCourses } from "../../../../lib/juken/catalog";
+import { getJukenCoursesForRender } from "../../../../lib/knowledge/cached-content";
 
 export const dynamic = "force-static";
 export const revalidate = false;
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 type Params = { school: string; course: string };
 
@@ -16,6 +17,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { school, course: courseId } = await params;
+  await getJukenCoursesForRender();
   const course = findCourse(school, courseId);
   if (!course) return { title: "見当たりません" };
   return { title: course.title, description: course.summary || undefined };
@@ -23,6 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
 export default async function JukenCoursePage({ params }: { params: Promise<Params> }) {
   const { school, course: courseId } = await params;
+  await getJukenCoursesForRender();
   const course = findCourse(school, courseId);
   if (!course) notFound();
   const kicker = courseKicker(course);

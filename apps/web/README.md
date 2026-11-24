@@ -54,6 +54,16 @@ Markdoc 本文は **`pnpm knowledge:checkout`** でビルドマシンに取り�
 
 詳細は [content-platform-split.md](../../docs/architecture/content-platform-split.md)。
 
+### knowledges 更新だけならフルビルドを避ける（任意）
+
+既定は knowledges マージ後に **Vercel Deploy Hook** で `pnpm install` + checkout + `next build` + Pagefind のフルビルド。
+
+**`KNOWLEDGE_DEPLOY_MODE=revalidate`**（repo variable）にすると、knowledges の dispatch は Deploy Hook の代わりに **`POST /api/knowledge-revalidate`** を呼ぶだけ。HTML は次のリクエストで ISR 再生成（ランタイムで GitHub tarball を一度取る）。podcaster 側のコード変更や **Pagefind 索引の更新** には、これまでどおり Git push または手動 Deploy Hook が必要。
+
+1. Vercel **Runtime** に `KNOWLEDGE_GITHUB_REPO`, `KNOWLEDGE_GITHUB_TOKEN`（read）, `KNOWLEDGE_REVALIDATE_SECRET`
+2. GitHub repo secrets: `KNOWLEDGE_REVALIDATE_URL`（例: `https://<site>/api/knowledge-revalidate`）, `KNOWLEDGE_REVALIDATE_SECRET`（Vercel と同じ値）
+3. GitHub repo variable: `KNOWLEDGE_DEPLOY_MODE=revalidate`
+
 音声プレイヤーと記事挿絵（エピソード画像）も **ビルド時** に解決する（SSG）。画像はそのデプロイの `next build` 時点の DB/RSS スナップショット。追従には再デプロイが必要。
 
 1. **推奨**: Vercel の `SUPABASE_PROJECT_REF`（または `NEXT_PUBLIC_SUPABASE_PROJECT_REF`）と `SUPABASE_SERVICE_ROLE_KEY` を **Build** 環境（Production **と Preview**）に含める。

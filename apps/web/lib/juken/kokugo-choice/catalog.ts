@@ -5,6 +5,10 @@ import { loadDrillSets, type DrillSet } from "./load";
 
 let kokugoChoiceSetsCache: DrillSet[] | undefined;
 
+export function resetKokugoChoiceSetsCache(): void {
+  kokugoChoiceSetsCache = undefined;
+}
+
 /** 形式に誤りのある問題が 1 つでもあれば、公開せずにビルドを止める。警告は表示だけ。 */
 export function loadKokugoChoiceSets(): DrillSet[] {
   if (kokugoChoiceSetsCache) return kokugoChoiceSetsCache;

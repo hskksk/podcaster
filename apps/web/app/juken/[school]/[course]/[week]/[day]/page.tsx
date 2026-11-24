@@ -14,10 +14,11 @@ import {
   formatWeekLabel,
   loadJukenCourses,
 } from "../../../../../../lib/juken/catalog";
+import { getJukenCoursesForRender } from "../../../../../../lib/knowledge/cached-content";
 
 export const dynamic = "force-static";
 export const revalidate = false;
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 type Params = { school: string; course: string; week: string; day: string };
 
@@ -36,6 +37,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { school, course, week, day } = await params;
+  await getJukenCoursesForRender();
   const lesson = findLesson(school, course, week, day);
   if (!lesson) return { title: "見当たりません" };
   const description = [lesson.textLabel, lesson.todayLabel].filter(Boolean).join(" ");
@@ -44,6 +46,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
 export default async function JukenLessonPage({ params }: { params: Promise<Params> }) {
   const { school, course: courseId, week, day } = await params;
+  await getJukenCoursesForRender();
   const course = findCourse(school, courseId);
   const foundWeek = findWeek(school, courseId, week);
   const lesson = findLesson(school, courseId, week, day);

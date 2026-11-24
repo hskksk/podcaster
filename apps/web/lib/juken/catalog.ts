@@ -266,6 +266,10 @@ function readCatalog(): JukenCourse[] {
 
 let jukenCoursesCache: JukenCourse[] | undefined;
 
+export function resetJukenCoursesCache(): void {
+  jukenCoursesCache = undefined;
+}
+
 export function loadJukenCourses(): JukenCourse[] {
   if (jukenCoursesCache) return jukenCoursesCache;
   jukenCoursesCache = readCatalog();

@@ -32,6 +32,10 @@ function isWebClipEntry(source: string, usingLegacyDir: boolean): boolean {
 
 let publicWebClipsCache: PublicWebClip[] | undefined;
 
+export function resetPublicWebClipsCache(): void {
+  publicWebClipsCache = undefined;
+}
+
 export function loadPublicWebClips(): PublicWebClip[] {
   if (publicWebClipsCache) return publicWebClipsCache;
   const root = webClipsDir();

@@ -14,12 +14,13 @@ import { mdocBodyForRender } from "../../../../lib/site/strip-duplicate-title";
 import { prepareMarkdoc } from "../../../../lib/markdoc";
 import { loadTreemapSidecar } from "../../../../lib/site/treemap-labels";
 import { loadSectionVisualsSidecar } from "../../../../lib/site/section-visuals";
+import { getPublicWebClipsForRender } from "../../../../lib/knowledge/cached-content";
 import { loadPublicWebClip, loadPublicWebClips } from "../../../../lib/site/web-clips";
 import { textify } from "../../../../../../scripts/lib/mdoc";
 
 export const dynamic = "force-static";
 export const revalidate = false;
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 type Params = { slug: string };
 
@@ -40,6 +41,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  await getPublicWebClipsForRender();
   const clip = loadPublicWebClip(slug);
   if (!clip) return { title: "Not found" };
   const cfg = loadSiteConfig();
@@ -62,10 +64,10 @@ export async function generateMetadata({
 
 export default async function WebClipPage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
+  const clips = await getPublicWebClipsForRender();
   const clip = loadPublicWebClip(slug);
   if (!clip) notFound();
   const cfg = loadSiteConfig();
-  const clips = loadPublicWebClips();
   const renderSource = mdocBodyForRender(clip.source, clip.title);
   const treemapSidecar = loadTreemapSidecar("web-clips", clip.dir, renderSource);
   const sectionVisuals = loadSectionVisualsSidecar("web-clips", clip.dir, renderSource);

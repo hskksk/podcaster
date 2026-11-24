@@ -27,11 +27,32 @@ jobs:
             echo "Deploying site (Vercel KNOWLEDGE_GIT_REF or knowledge.lock.json ref → main)"
           fi
 
-      - name: Vercel Deploy Hook
+      - name: Content deploy (revalidate or Vercel hook)
         env:
+          KNOWLEDGE_DEPLOY_MODE: ${{ vars.KNOWLEDGE_DEPLOY_MODE }}
           VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+          KNOWLEDGE_REVALIDATE_URL: ${{ secrets.KNOWLEDGE_REVALIDATE_URL }}
+          KNOWLEDGE_REVALIDATE_SECRET: ${{ secrets.KNOWLEDGE_REVALIDATE_SECRET }}
           KNOWLEDGE_SHA: ${{ steps.ref.outputs.ref }}
         run: |
+          MODE="${KNOWLEDGE_DEPLOY_MODE:-hook}"
+          if [ "$MODE" = "revalidate" ]; then
+            if [ -z "$KNOWLEDGE_REVALIDATE_URL" ] || [ -z "$KNOWLEDGE_REVALIDATE_SECRET" ]; then
+              echo "KNOWLEDGE_REVALIDATE_URL and KNOWLEDGE_REVALIDATE_SECRET are required for KNOWLEDGE_DEPLOY_MODE=revalidate" >&2
+              exit 1
+            fi
+            BODY='{"tag":"knowledge","layouts":true}'
+            if [ -n "$KNOWLEDGE_SHA" ]; then
+              echo "Tip: set Vercel Runtime KNOWLEDGE_GIT_REF=$KNOWLEDGE_SHA so ISR tarball matches this commit."
+            fi
+            curl -fsS -X POST "$KNOWLEDGE_REVALIDATE_URL" \
+              -H "Authorization: Bearer $KNOWLEDGE_REVALIDATE_SECRET" \
+              -H "Content-Type: application/json" \
+              -d "$BODY"
+            echo "On-demand revalidate requested (no Vercel full build)."
+            exit 0
+          fi
+
           if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
             echo "VERCEL_DEPLOY_HOOK_URL is not set" >&2
             exit 1
