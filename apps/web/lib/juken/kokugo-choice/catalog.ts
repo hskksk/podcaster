@@ -3,8 +3,11 @@ import "server-only";
 import { jukenDir } from "../../repo-root";
 import { loadDrillSets, type DrillSet } from "./load";
 
+let kokugoChoiceSetsCache: DrillSet[] | undefined;
+
 /** 形式に誤りのある問題が 1 つでもあれば、公開せずにビルドを止める。警告は表示だけ。 */
 export function loadKokugoChoiceSets(): DrillSet[] {
+  if (kokugoChoiceSetsCache) return kokugoChoiceSetsCache;
   const { sets, problems } = loadDrillSets(jukenDir());
   for (const problem of problems) {
     for (const warning of problem.warnings) console.warn(`[juken/kokugo-choice] ${problem.file}: ${warning}`);
@@ -17,6 +20,7 @@ export function loadKokugoChoiceSets(): DrillSet[] {
         .join("\n")}`,
     );
   }
+  kokugoChoiceSetsCache = sets;
   return sets;
 }
 

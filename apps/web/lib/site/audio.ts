@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { feedUrl, projectRef } from "./config";
 import type { PublicDoc } from "./docs";
 
@@ -137,7 +138,7 @@ async function fetchArticleAudioMapFromSupabase(): Promise<Map<string, string>> 
  * legacyFilename / content_path / title → public audio URL.
  * Server-only. Merges Supabase REST (needs service role) with public RSS fallback.
  */
-export async function fetchArticleAudioMap(): Promise<Map<string, string>> {
+async function fetchArticleAudioMapUncached(): Promise<Map<string, string>> {
   const merged = new Map<string, string>();
   const rss = feedUrl();
   if (rss) {
@@ -151,6 +152,9 @@ export async function fetchArticleAudioMap(): Promise<Map<string, string>> {
   }
   return merged;
 }
+
+/** Deduped per render / static page generation (metadata + page). */
+export const fetchArticleAudioMap = cache(fetchArticleAudioMapUncached);
 
 export function audioForDoc(
   map: Map<string, string>,
