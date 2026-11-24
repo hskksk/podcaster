@@ -5,6 +5,7 @@
   --hm-card: #fff;
   --hm-sea: #dfeaf0;
   --hm-land: #e9dfc8;
+  --hm-coast: #8a7d68;
   --hm-bd: #d8cfbd;
   max-width: 1080px;
   margin-inline: auto;
@@ -17,6 +18,7 @@
   --hm-card: #27251f;
   --hm-sea: #1f2b33;
   --hm-land: #3d3828;
+  --hm-coast: #6e6556;
   --hm-bd: #403c32;
 }
 
@@ -43,10 +45,6 @@
   fill: var(--hm-land);
   stroke: var(--hm-bd);
   stroke-width: 1;
-}
-
-.history-map-app svg.hm-map.has-bg polygon {
-  fill-opacity: 0.82;
 }
 
 .history-map-app svg.hm-map text {
@@ -175,6 +173,28 @@
 
 .history-map-app .hm-credits a {
   color: inherit;
+}
+
+.history-map-app .hm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 4px 0 8px;
+  font-size: 11px;
+}
+
+.history-map-app .hm-legend-i {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.history-map-app .hm-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--hm-bd);
+  flex: none;
 }
 
 .history-map-app .hm-h {

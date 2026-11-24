@@ -8,7 +8,6 @@ import { computeBoundaries } from "./boundaries";
 import type {
   HistoryEvent,
   HistoryFigure,
-  HistoryMapBackground,
   HistoryMapBundle,
   HistoryMapGeo,
   HistoryMapMeta,
@@ -42,7 +41,5 @@ export function loadHistoryMapBundle(): HistoryMapBundle | null {
   const boundaries = computeBoundaries(geo);
   const figuresPath = path.join(root, "figures.json");
   const figures = fs.existsSync(figuresPath) ? readJson<Record<string, HistoryFigure>>(figuresPath) : {};
-  const bgPath = path.join(root, "map-background.json");
-  const mapBackground = fs.existsSync(bgPath) ? readJson<HistoryMapBackground>(bgPath) : null;
-  return { meta, events, wars, taxonomy, geo, boundaries, figures, mapBackground };
+  return { meta, events, wars, taxonomy, geo, boundaries, figures };
 }

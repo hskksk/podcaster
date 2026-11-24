@@ -51,12 +51,19 @@ if (fs.existsSync(figuresPath)) {
   console.log(`juken-history-map-check: figures ${Object.keys(figures).length}`);
 }
 
-const bgPath = path.join(root, "map-background.json");
-if (fs.existsSync(bgPath)) {
-  const bg = JSON.parse(fs.readFileSync(bgPath, "utf8")) as { imageUrl?: string; license?: string };
-  if (!bg.imageUrl || !bg.license) {
-    console.error("juken-history-map-check: incomplete map-background.json");
-    errors++;
+const geoPath = path.join(root, "geo.json");
+if (fs.existsSync(geoPath)) {
+  const geo = JSON.parse(fs.readFileSync(geoPath, "utf8")) as {
+    regions?: { name?: string; color?: string; rings?: string[] }[];
+  };
+  if (geo.regions?.length) {
+    for (const region of geo.regions) {
+      if (!region.name || !region.color || !region.rings?.length) {
+        console.error(`juken-history-map-check: incomplete region: ${region.name ?? "?"}`);
+        errors++;
+      }
+    }
+    console.log(`juken-history-map-check: gokishichido regions ${geo.regions.length}`);
   }
 }
 

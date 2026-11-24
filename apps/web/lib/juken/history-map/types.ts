@@ -38,6 +38,8 @@ export type HistoryMapTaxonomy = {
 export type HistoryMapGeo = {
   land: string[];
   provinces: [string, string][];
+  regions?: HistoryMapRegion[];
+  sourceNote?: string;
 };
 
 export type HistoryFigure = {
@@ -50,15 +52,11 @@ export type HistoryFigure = {
   pageUrl?: string;
 };
 
-export type HistoryMapBackground = {
-  imageUrl: string;
-  /** Full SVG viewBox (default) or geographic bounds [westLng, southLat, eastLng, northLat] */
-  fit: "viewBox" | "bounds";
-  bounds?: [number, number, number, number];
-  opacity?: number;
-  credit: string;
-  license: string;
-  sourceUrl: string;
+export type HistoryMapRegion = {
+  name: string;
+  color: string;
+  /** Projected SVG-space rings (`x,y` pairs). */
+  rings: string[];
 };
 
 export type MapBoundaries = {
@@ -76,5 +74,4 @@ export type HistoryMapBundle = {
   geo: HistoryMapGeo;
   boundaries: MapBoundaries;
   figures: Record<string, HistoryFigure>;
-  mapBackground: HistoryMapBackground | null;
 };

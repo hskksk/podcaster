@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { buildFigureIndex, primaryFigureForWho } from "../../../lib/juken/history-map/figures";
-import { landPolygons, project } from "../../../lib/juken/history-map/geo";
-import { mapBackgroundSvg } from "../../../lib/juken/history-map/map-background";
+import { landPolygons, mapSpacePolygons, project } from "../../../lib/juken/history-map/geo";
 import { fieldValue, maskText, shuffleQuizFields, type QuizField } from "../../../lib/juken/history-map/quiz";
 import { currentEvent, eraLabel, laneName, visibleEvents } from "../../../lib/juken/history-map/selectors";
 import type { FigureIndex } from "../../../lib/juken/history-map/figures";
@@ -27,8 +26,13 @@ function axesForView(view: AxisView): Set<HistoryAxis> {
 type Props = { bundle: HistoryMapBundle };
 
 export function HistoryMapApp({ bundle }: Props) {
-  const { meta, events, wars, taxonomy, geo, boundaries, figures, mapBackground } = bundle;
-  const landRings = useMemo(() => landPolygons(geo.land), [geo.land]);
+  const { meta, events, wars, taxonomy, geo, boundaries, figures } = bundle;
+  const mapProjected = Boolean(geo.regions?.length);
+  const landRings = useMemo(
+    () => (mapProjected ? mapSpacePolygons(geo.land) : landPolygons(geo.land)),
+    [geo.land, mapProjected],
+  );
+  const regionFills = useMemo(() => geo.regions ?? [], [geo.regions]);
   const figureIndex = useMemo(() => buildFigureIndex(figures), [figures]);
 
   const [year, setYear] = useState(meta.defaultYear);
@@ -158,10 +162,24 @@ export function HistoryMapApp({ bundle }: Props) {
 
   const mapSvgInner = useMemo(() => {
     let s = `<clipPath id="hm-lc">${landRings.map((p) => `<polygon points="${p}"/>`).join("")}</clipPath>`;
-    if (mapBackground) {
-      s += mapBackgroundSvg(mapBackground, "hm-lc");
+    regionFills.forEach((region) => {
+      region.rings.forEach((ring) => {
+        const pts = (mapProjected ? mapSpacePolygons : landPolygons)([ring])[0];
+        if (pts) {
+          s += `<polygon points="${pts}" fill="${region.color}" fill-opacity="0.82" stroke="none"/>`;
+        }
+      });
+    });
+  if (!regionFills.length) {
+      s += landRings.map((p) => `<polygon vector-effect="non-scaling-stroke" points="${p}"/>`).join("");
+    } else {
+      s += landRings
+        .map(
+          (p) =>
+            `<polygon vector-effect="non-scaling-stroke" points="${p}" fill="none" stroke="var(--hm-coast)" stroke-width="1.25"/>`,
+        )
+        .join("");
     }
-    s += landRings.map((p) => `<polygon vector-effect="non-scaling-stroke" points="${p}"/>`).join("");
     const k = 390 / viewBox[2] >= 1.8;
     s += `<g clip-path="url(#hm-lc)">`;
     if (k)
@@ -210,7 +228,7 @@ export function HistoryMapApp({ bundle }: Props) {
       s += `<text x="${Math.min(Math.max(x, viewBox[0] + 50 * scale), viewBox[0] + viewBox[2] - 50 * scale)}" y="${y + (war ? 20 : -14) * scale}" style="font-size:${11 * scale}px;stroke-width:${3 * scale}px">${qText(current, current.place)}</text>`;
     }
     return s;
-  }, [axisColor, boundaries, current, eventIndex, landRings, mapBackground, qText, scale, viewBox, visible, wars, year]);
+  }, [axisColor, boundaries, current, eventIndex, landRings, mapProjected, qText, regionFills, scale, viewBox, visible, wars, year]);
 
   useEffect(() => {
     const svg = mapRef.current;
@@ -505,7 +523,7 @@ export function HistoryMapApp({ bundle }: Props) {
           <div className="hm-mapw" ref={mapWrapRef}>
             <svg
               ref={mapRef}
-              className={`hm-map${mapBackground ? " has-bg" : ""}`}
+              className={`hm-map${regionFills.length ? " hm-map--regions" : ""}`}
               viewBox={viewBox.join(" ")}
               dangerouslySetInnerHTML={{ __html: mapSvgInner }}
             />
@@ -635,6 +653,16 @@ export function HistoryMapApp({ bundle }: Props) {
               </span>
             ) : null}
           </div>
+          {regionFills.length ? (
+            <div className="hm-legend hm-mut" aria-label="五畿七道の色分け">
+              {regionFills.map((r) => (
+                <span key={r.name} className="hm-legend-i">
+                  <span className="hm-legend-swatch" style={{ background: r.color }} aria-hidden />
+                  {r.name}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <EventDetailCard
             current={current}
             axisColor={axisColor}
@@ -662,30 +690,16 @@ export function HistoryMapApp({ bundle }: Props) {
         onReveal={(i) => setQuizRevealed((prev) => new Set(prev).add(i))}
         qText={qText}
       />
-      <HistoryMapCredits mapBackground={mapBackground} figureCount={Object.keys(figures).length} />
+      <HistoryMapCredits geoNote={geo.sourceNote} figureCount={Object.keys(figures).length} />
     </div>
   );
 }
 
-function HistoryMapCredits({
-  mapBackground,
-  figureCount,
-}: {
-  mapBackground: HistoryMapBundle["mapBackground"];
-  figureCount: number;
-}) {
-  if (!mapBackground && figureCount === 0) return null;
+function HistoryMapCredits({ geoNote, figureCount }: { geoNote?: string; figureCount: number }) {
+  if (!geoNote && figureCount === 0) return null;
   return (
     <p className="hm-credits hm-mut">
-      {mapBackground ? (
-        <>
-          地図:{" "}
-          <a href={mapBackground.sourceUrl} target="_blank" rel="noopener noreferrer">
-            {mapBackground.credit}
-          </a>{" "}
-          ({mapBackground.license})　
-        </>
-      ) : null}
+      {geoNote ? <>{geoNote}　</> : null}
       {figureCount > 0 ? <>人物肖像: Wikimedia Commons（各ポップアップにライセンス表示）</> : null}
     </p>
   );
