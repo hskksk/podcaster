@@ -64,6 +64,13 @@ export function jukenDir(): string {
   return path.join(getContentRoot(), JUKEN_REL);
 }
 
+/** Map geometry for `/juken/history-map` (ship with podcaster, not knowledges). */
+export const HISTORY_MAP_GEO_REL = "apps/web/data/juken/history-map/geo.json";
+
+export function historyMapGeoPath(): string {
+  return path.join(getMonorepoRoot(), HISTORY_MAP_GEO_REL);
+}
+
 export function aiPodcastRelPrefix(): string {
   const root = getContentRoot();
   if (fs.existsSync(path.join(root, AI_PODCAST_REL))) return AI_PODCAST_REL;

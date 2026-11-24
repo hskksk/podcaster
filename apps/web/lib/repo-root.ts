@@ -6,6 +6,7 @@ export {
   aiPodcastDir,
   notesDir,
   jukenDir,
+  historyMapGeoPath,
   LEGACY_CLIPS_REL,
   AI_PODCAST_REL,
   LEGACY_DOCS_REL,
