@@ -59,11 +59,19 @@ export type HistoryMapRegion = {
   rings: string[];
 };
 
+export type RegionFillCell = {
+  name: string;
+  region: string;
+  color: string;
+  points: string;
+};
+
 export type MapBoundaries = {
   provinceEdges: string;
   regionEdges: string;
   provinceLabels: [string, number, number][];
   regionLabels: [string, number, number][];
+  regionFills: RegionFillCell[];
 };
 
 export type HistoryMapBundle = {

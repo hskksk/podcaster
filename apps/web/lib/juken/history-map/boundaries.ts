@@ -1,7 +1,20 @@
 import { project } from "./geo";
-import type { HistoryMapGeo } from "./types";
+import type { HistoryMapGeo, RegionFillCell } from "./types";
 
 type Seed = { n: string; d: number; dn: string; p: [number, number] };
+
+/** 道ごとの塗り（Gokishichido 由来パレットに近い淡色） */
+export const REGION_FILL_COLORS: Record<string, string> = {
+  畿内: "#e8c468",
+  東海道: "#f0a0a0",
+  東山道: "#f5c99a",
+  北陸道: "#c8c8d8",
+  山陰道: "#a8b4e8",
+  山陽道: "#e8d060",
+  南海道: "#b8c8a0",
+  西海道: "#d8dcd0",
+  蝦夷地: "#9ec8e0",
+};
 
 function buildSeeds(geo: HistoryMapGeo): Seed[] {
   const seeds: Seed[] = [];
@@ -41,10 +54,29 @@ function clipHalfPlane(
       out.push(q);
       if (fr > keepNear) out.push([ix, iy, clipNeighbor]);
     } else if (fr <= keepNear) {
-      out.push([ix, iy, clipNeighbor]);
+      out.push([ix, iy, q[2]]);
     }
   });
   return out;
+}
+
+function voronoiCellPoly(seeds: Seed[], i: number): [number, number, number][] {
+  let poly: [number, number, number][] = [
+    [-50, -50, -1],
+    [500, -50, -1],
+    [500, 500, -1],
+    [-50, 500, -1],
+  ];
+  const a = seeds[i]!;
+  seeds.forEach((b, j) => {
+    if (i === j) return;
+    const mx = (a.p[0] + b.p[0]) / 2;
+    const my = (a.p[1] + b.p[1]) / 2;
+    const nx = b.p[0] - a.p[0];
+    const ny = b.p[1] - a.p[1];
+    poly = clipHalfPlane(poly, mx, my, nx, ny, 0, j);
+  });
+  return poly;
 }
 
 function groupCentroids(seeds: Seed[], key: "n" | "dn"): [string, number, number][] {
@@ -60,31 +92,33 @@ function groupCentroids(seeds: Seed[], key: "n" | "dn"): [string, number, number
   return [...buckets.entries()].map(([name, o]) => [name, o.x / o.c, o.y / o.c]);
 }
 
+export function computeRegionFills(geo: HistoryMapGeo): RegionFillCell[] {
+  const seeds = buildSeeds(geo);
+  return seeds.map((a, i) => {
+    const poly = voronoiCellPoly(seeds, i);
+    const points = poly.map((q) => `${q[0].toFixed(2)},${q[1].toFixed(2)}`).join(" ");
+    return {
+      name: a.n,
+      region: a.dn,
+      color: REGION_FILL_COLORS[a.dn] ?? "#e9dfc8",
+      points,
+    };
+  });
+}
+
 export function computeBoundaries(geo: HistoryMapGeo): {
   provinceEdges: string;
   regionEdges: string;
   provinceLabels: [string, number, number][];
   regionLabels: [string, number, number][];
+  regionFills: RegionFillCell[];
 } {
   const seeds = buildSeeds(geo);
   let provinceEdges = "";
   let regionEdges = "";
 
   seeds.forEach((a, i) => {
-    let poly: [number, number, number][] = [
-      [-50, -50, -1],
-      [500, -50, -1],
-      [500, 500, -1],
-      [-50, 500, -1],
-    ];
-    seeds.forEach((b, j) => {
-      if (i === j) return;
-      const mx = (a.p[0] + b.p[0]) / 2;
-      const my = (a.p[1] + b.p[1]) / 2;
-      const nx = b.p[0] - a.p[0];
-      const ny = b.p[1] - a.p[1];
-      poly = clipHalfPlane(poly, mx, my, nx, ny, 0, j);
-    });
+    const poly = voronoiCellPoly(seeds, i);
     poly.forEach((q, k) => {
       const r = poly[(k + 1) % poly.length]!;
       const j = q[2];
@@ -104,5 +138,6 @@ export function computeBoundaries(geo: HistoryMapGeo): {
     regionEdges,
     provinceLabels: groupCentroids(seeds, "n"),
     regionLabels: groupCentroids(seeds, "dn"),
+    regionFills: computeRegionFills(geo),
   };
 }

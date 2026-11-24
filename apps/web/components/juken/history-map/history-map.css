@@ -39,8 +39,12 @@
   display: block;
 }
 
-.history-map-app svg.hm-map polygon {
-  fill: var(--hm-land);
+.history-map-app svg.hm-map polygon.hm-region {
+  stroke: none;
+}
+
+.history-map-app svg.hm-map polygon.hm-coast {
+  fill: none;
   stroke: var(--hm-bd);
   stroke-width: 1;
 }
@@ -171,6 +175,28 @@
 
 .history-map-app .hm-credits a {
   color: inherit;
+}
+
+.history-map-app .hm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 4px 0 8px;
+  font-size: 11px;
+}
+
+.history-map-app .hm-legend-i {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.history-map-app .hm-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--hm-bd);
+  flex: none;
 }
 
 .history-map-app .hm-h {

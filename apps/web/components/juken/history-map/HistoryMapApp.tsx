@@ -140,8 +140,14 @@ export function HistoryMapApp({ bundle }: Props) {
   );
 
   const focusKey = current ? `${current.year}-${current.title}` : "";
+  const lastFocusRef = useRef<string | null>(null);
   useEffect(() => {
-    if (manualMap || !current) return;
+    if (!current) return;
+    if (focusKey !== lastFocusRef.current) {
+      lastFocusRef.current = focusKey;
+      setManualMap(false);
+    }
+    if (manualMap) return;
     const target = viewTargetFor(current);
     const vb = viewBoxRef.current;
     const far =
@@ -156,13 +162,30 @@ export function HistoryMapApp({ bundle }: Props) {
     return undefined;
   }, [focusKey, manualMap, animateViewBox, viewTargetFor, current]);
 
+  const regionLegend = useMemo(() => {
+    const seen = new Set<string>();
+    const items: { name: string; color: string }[] = [];
+    boundaries.regionFills.forEach((cell) => {
+      if (seen.has(cell.region)) return;
+      seen.add(cell.region);
+      items.push({ name: cell.region, color: cell.color });
+    });
+    return items;
+  }, [boundaries.regionFills]);
+
   const mapSvgInner = useMemo(() => {
-    let s = landRings.map((p) => `<polygon vector-effect="non-scaling-stroke" points="${p}"/>`).join("");
     const k = 390 / viewBox[2] >= 1.8;
-    s += `<clipPath id="hm-lc">${landRings.map((p) => `<polygon points="${p}"/>`).join("")}</clipPath><g clip-path="url(#hm-lc)">`;
+    let s = `<clipPath id="hm-lc">${landRings.map((p) => `<polygon points="${p}"/>`).join("")}</clipPath>`;
+    s += `<g clip-path="url(#hm-lc)">`;
+  boundaries.regionFills.forEach((cell) => {
+      s += `<polygon class="hm-region" points="${cell.points}" style="fill:${cell.color};fill-opacity:0.92"/>`;
+    });
     if (k)
       s += `<path d="${boundaries.provinceEdges}" fill="none" stroke="var(--hm-mut)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6" vector-effect="non-scaling-stroke"/>`;
     s += `<path d="${boundaries.regionEdges}" fill="none" stroke="var(--hm-mut)" stroke-width="${k ? 2 : 1.5}" stroke-dasharray="7 3" opacity="0.8" vector-effect="non-scaling-stroke"/></g>`;
+    s += landRings
+      .map((p) => `<polygon class="hm-coast" vector-effect="non-scaling-stroke" points="${p}"/>`)
+      .join("");
     const labels = k ? boundaries.provinceLabels : boundaries.regionLabels;
     s += labels
       .map(
@@ -630,6 +653,14 @@ export function HistoryMapApp({ bundle }: Props) {
                 <span style={{ color: "#2f6fb5" }}>●</span>政治　<span style={{ color: "#c23b3b" }}>●</span>戦い
               </span>
             ) : null}
+          </div>
+          <div className="hm-legend hm-mut" aria-label="五畿七道の色分け">
+            {regionLegend.map((r) => (
+              <span key={r.name} className="hm-legend-i">
+                <span className="hm-legend-swatch" style={{ background: r.color }} aria-hidden />
+                {r.name}
+              </span>
+            ))}
           </div>
           <EventDetailCard
             current={current}
