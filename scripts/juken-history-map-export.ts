@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
+import { getMonorepoRoot, historyMapGeoPath } from "./lib/content-paths.ts";
 
 const htmlPath =
   process.argv[2] ??
@@ -82,7 +83,11 @@ fs.writeFileSync(
   path.join(outDir, "taxonomy.json"),
   `${JSON.stringify({ axes: AX, levelLabels: LV, laneByTitle: LN, laneOrder: LORD, anchors }, null, 2)}\n`,
 );
-fs.writeFileSync(path.join(outDir, "geo.json"), `${JSON.stringify({ land: LAND, provinces: KN }, null, 2)}\n`);
+const geoPayload = { land: LAND, provinces: KN };
+const geoOut = process.env.HISTORY_MAP_GEO_OUT ?? historyMapGeoPath();
+fs.mkdirSync(path.dirname(geoOut), { recursive: true });
+fs.writeFileSync(geoOut, `${JSON.stringify(geoPayload, null, 2)}\n`);
+console.log(`wrote geo → ${geoOut}`);
 
 const meta = {
   id: "medieval-edo",
@@ -95,4 +100,5 @@ const meta = {
 };
 fs.writeFileSync(path.join(outDir, "meta.yml"), yaml.dump(meta));
 
-console.log(`wrote history-map bundle to ${outDir} (${events.length} events)`);
+console.log(`wrote history-map knowledge bundle to ${outDir} (${events.length} events)`);
+console.log(`podcaster root: ${getMonorepoRoot()}`);

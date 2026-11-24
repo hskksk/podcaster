@@ -38,6 +38,32 @@ export type HistoryMapTaxonomy = {
 export type HistoryMapGeo = {
   land: string[];
   provinces: [string, string][];
+  regions?: HistoryMapRegion[];
+  sourceNote?: string;
+};
+
+export type HistoryFigure = {
+  name: string;
+  aliases?: string[];
+  imageUrl: string;
+  credit: string;
+  license: string;
+  sourceUrl: string;
+  pageUrl?: string;
+};
+
+export type HistoryMapRegion = {
+  name: string;
+  color: string;
+  /** Projected SVG-space rings (`x,y` pairs). */
+  rings: string[];
+};
+
+export type RegionFillCell = {
+  name: string;
+  region: string;
+  color: string;
+  points: string;
 };
 
 export type MapBoundaries = {
@@ -45,6 +71,7 @@ export type MapBoundaries = {
   regionEdges: string;
   provinceLabels: [string, number, number][];
   regionLabels: [string, number, number][];
+  regionFills: RegionFillCell[];
 };
 
 export type HistoryMapBundle = {
@@ -54,4 +81,5 @@ export type HistoryMapBundle = {
   taxonomy: HistoryMapTaxonomy;
   geo: HistoryMapGeo;
   boundaries: MapBoundaries;
+  figures: Record<string, HistoryFigure>;
 };

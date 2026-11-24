@@ -14,3 +14,14 @@ export function landPolygons(land: string[]): string[] {
       .join(" "),
   );
 }
+
+/** Rings already in SVG map space (from geo import), not lng/lat. */
+export function mapSpacePolygons(rings: string[]): string[] {
+  return rings.map((ring) =>
+    ring
+      .split(" ")
+      .map((pair) => pair.trim())
+      .filter(Boolean)
+      .join(" "),
+  );
+}

@@ -7,6 +7,7 @@ import { historyMapGeoPath, jukenDir } from "../../repo-root";
 import { computeBoundaries } from "./boundaries";
 import type {
   HistoryEvent,
+  HistoryFigure,
   HistoryMapBundle,
   HistoryMapGeo,
   HistoryMapMeta,
@@ -42,5 +43,7 @@ export function loadHistoryMapBundle(): HistoryMapBundle | null {
   const taxonomy = readJson<HistoryMapTaxonomy>(path.join(root, "taxonomy.json"));
   const geo = readJson<HistoryMapGeo>(historyMapGeoPath());
   const boundaries = computeBoundaries(geo);
-  return { meta, events, wars, taxonomy, geo, boundaries };
+  const figuresPath = path.join(root, "figures.json");
+  const figures = fs.existsSync(figuresPath) ? readJson<Record<string, HistoryFigure>>(figuresPath) : {};
+  return { meta, events, wars, taxonomy, geo, boundaries, figures };
 }

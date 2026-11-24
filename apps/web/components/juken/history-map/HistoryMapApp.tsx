@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { buildFigureIndex, primaryFigureForWho } from "../../../lib/juken/history-map/figures";
 import { landPolygons, project } from "../../../lib/juken/history-map/geo";
 import { fieldValue, maskText, shuffleQuizFields, type QuizField } from "../../../lib/juken/history-map/quiz";
+import { currentEvent, eraLabel, laneName, visibleEvents } from "../../../lib/juken/history-map/selectors";
+import type { FigureIndex } from "../../../lib/juken/history-map/figures";
+import type { HistoryAxis, HistoryEvent, HistoryMapBundle } from "../../../lib/juken/history-map/types";
+import { FigurePortrait, FigureRichText } from "./FigureRichText";
 import { QuizFieldValue } from "./QuizFieldValue";
 import { QuizModal } from "./QuizModal";
-import { currentEvent, eraLabel, laneName, visibleEvents } from "../../../lib/juken/history-map/selectors";
-import type { HistoryAxis, HistoryEvent, HistoryMapBundle } from "../../../lib/juken/history-map/types";
 import "./history-map.css";
 
 const MAP_FULL: [number, number, number, number] = [0, 0, 390, 405];
@@ -23,8 +26,9 @@ function axesForView(view: AxisView): Set<HistoryAxis> {
 type Props = { bundle: HistoryMapBundle };
 
 export function HistoryMapApp({ bundle }: Props) {
-  const { meta, events, wars, taxonomy, geo, boundaries } = bundle;
+  const { meta, events, wars, taxonomy, geo, boundaries, figures } = bundle;
   const landRings = useMemo(() => landPolygons(geo.land), [geo.land]);
+  const figureIndex = useMemo(() => buildFigureIndex(figures), [figures]);
 
   const [year, setYear] = useState(meta.defaultYear);
   const [level, setLevel] = useState(2);
@@ -63,6 +67,7 @@ export function HistoryMapApp({ bundle }: Props) {
     setSelected(event);
     setYear(event.year);
     setHiddenBubble(false);
+    setManualMap(false);
   }, []);
 
   const eventIndex = useCallback((e: HistoryEvent) => events.indexOf(e), [events]);
@@ -135,8 +140,14 @@ export function HistoryMapApp({ bundle }: Props) {
   );
 
   const focusKey = current ? `${current.year}-${current.title}` : "";
+  const lastFocusRef = useRef<string | null>(null);
   useEffect(() => {
-    if (manualMap || !current) return;
+    if (!current) return;
+    if (focusKey !== lastFocusRef.current) {
+      lastFocusRef.current = focusKey;
+      setManualMap(false);
+    }
+    if (manualMap) return;
     const target = viewTargetFor(current);
     const vb = viewBoxRef.current;
     const far =
@@ -151,13 +162,30 @@ export function HistoryMapApp({ bundle }: Props) {
     return undefined;
   }, [focusKey, manualMap, animateViewBox, viewTargetFor, current]);
 
+  const regionLegend = useMemo(() => {
+    const seen = new Set<string>();
+    const items: { name: string; color: string }[] = [];
+    boundaries.regionFills.forEach((cell) => {
+      if (seen.has(cell.region)) return;
+      seen.add(cell.region);
+      items.push({ name: cell.region, color: cell.color });
+    });
+    return items;
+  }, [boundaries.regionFills]);
+
   const mapSvgInner = useMemo(() => {
-    let s = landRings.map((p) => `<polygon vector-effect="non-scaling-stroke" points="${p}"/>`).join("");
     const k = 390 / viewBox[2] >= 1.8;
-    s += `<clipPath id="hm-lc">${landRings.map((p) => `<polygon points="${p}"/>`).join("")}</clipPath><g clip-path="url(#hm-lc)">`;
+    let s = `<clipPath id="hm-lc">${landRings.map((p) => `<polygon points="${p}"/>`).join("")}</clipPath>`;
+    s += `<g clip-path="url(#hm-lc)">`;
+  boundaries.regionFills.forEach((cell) => {
+      s += `<polygon class="hm-region" points="${cell.points}" style="fill:${cell.color};fill-opacity:0.92"/>`;
+    });
     if (k)
       s += `<path d="${boundaries.provinceEdges}" fill="none" stroke="var(--hm-mut)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6" vector-effect="non-scaling-stroke"/>`;
     s += `<path d="${boundaries.regionEdges}" fill="none" stroke="var(--hm-mut)" stroke-width="${k ? 2 : 1.5}" stroke-dasharray="7 3" opacity="0.8" vector-effect="non-scaling-stroke"/></g>`;
+    s += landRings
+      .map((p) => `<polygon class="hm-coast" vector-effect="non-scaling-stroke" points="${p}"/>`)
+      .join("");
     const labels = k ? boundaries.provinceLabels : boundaries.regionLabels;
     s += labels
       .map(
@@ -396,6 +424,7 @@ export function HistoryMapApp({ bundle }: Props) {
                   quizFields={quizFields}
                   quizRevealed={quizRevealed}
                   onOpenQuiz={openQuiz}
+                  figureIndex={figureIndex}
                 />
               ))}
             </div>
@@ -432,6 +461,7 @@ export function HistoryMapApp({ bundle }: Props) {
                   quizFields={quizFields}
                   quizRevealed={quizRevealed}
                   onOpenQuiz={openQuiz}
+                  figureIndex={figureIndex}
                   style={{ gridColumn: col, gridRow: row }}
                 />,
               ];
@@ -439,7 +469,7 @@ export function HistoryMapApp({ bundle }: Props) {
               if (e === current) {
                 items.push(
                   <div key={`${e.title}-detail`} className="hm-dt" style={{ gridColumn: col, gridRow: row }}>
-                    {qText(e, e.body)}
+                    <FigureRichText text={qText(e, e.body)} index={figureIndex} />
                     <div className="hm-sm">
                       📍{qText(e, e.place)}　👤
                       <QuizFieldValue
@@ -450,6 +480,7 @@ export function HistoryMapApp({ bundle }: Props) {
                         quizField={quizFields[eventIndex(e)] ?? "t"}
                         quizRevealed={quizRevealed.has(eventIndex(e))}
                         onOpenQuiz={openQuiz}
+                        figureIndex={figureIndex}
                       />
                     </div>
                   </div>,
@@ -462,7 +493,7 @@ export function HistoryMapApp({ bundle }: Props) {
         </div>
       );
     });
-  }, [axisColor, axisView, current, eventIndex, openQuiz, pick, qText, quizFields, quizMode, quizRevealed, taxonomy, visible, year]);
+  }, [axisColor, axisView, current, eventIndex, figureIndex, openQuiz, pick, qText, quizFields, quizMode, quizRevealed, taxonomy, visible, year]);
 
   return (
     <div className="history-map-app">
@@ -491,7 +522,12 @@ export function HistoryMapApp({ bundle }: Props) {
       <div className="hm-wrap">
         <div>
           <div className="hm-mapw" ref={mapWrapRef}>
-            <svg ref={mapRef} className="hm-map" viewBox={viewBox.join(" ")} dangerouslySetInnerHTML={{ __html: mapSvgInner }} />
+            <svg
+              ref={mapRef}
+              className="hm-map"
+              viewBox={viewBox.join(" ")}
+              dangerouslySetInnerHTML={{ __html: mapSvgInner }}
+            />
             <svg className="hm-ldr" viewBox={`0 0 ${mapWrapRef.current?.clientWidth ?? 400} ${mapWrapRef.current?.clientHeight ?? 300}`} dangerouslySetInnerHTML={{ __html: leaderHtml }} />
             <div className="hm-zb">
               <button type="button" className="hm-btn" onClick={() => zoomAt(1.6, mapRef.current!.getBoundingClientRect().left + mapRef.current!.clientWidth / 2, mapRef.current!.getBoundingClientRect().top + mapRef.current!.clientHeight / 2)}>
@@ -550,9 +586,12 @@ export function HistoryMapApp({ bundle }: Props) {
                       quizField={quizFields[eventIndex(current)] ?? "t"}
                       quizRevealed={quizRevealed.has(eventIndex(current))}
                       onOpenQuiz={openQuiz}
+                      figureIndex={figureIndex}
                     />
                   </div>
-                  <div>{qText(current, current.body)}</div>
+                  <div>
+                    <FigureRichText text={qText(current, current.body)} index={figureIndex} />
+                  </div>
                 </>
               ) : null}
             </div>
@@ -615,6 +654,14 @@ export function HistoryMapApp({ bundle }: Props) {
               </span>
             ) : null}
           </div>
+          <div className="hm-legend hm-mut" aria-label="五畿七道の色分け">
+            {regionLegend.map((r) => (
+              <span key={r.name} className="hm-legend-i">
+                <span className="hm-legend-swatch" style={{ background: r.color }} aria-hidden />
+                {r.name}
+              </span>
+            ))}
+          </div>
           <EventDetailCard
             current={current}
             axisColor={axisColor}
@@ -626,6 +673,7 @@ export function HistoryMapApp({ bundle }: Props) {
             quizRevealed={quizRevealed}
             eventIndex={eventIndex}
             onOpenQuiz={openQuiz}
+            figureIndex={figureIndex}
           />
         </div>
         <aside className="hm-tl" ref={tlRef}>
@@ -641,7 +689,15 @@ export function HistoryMapApp({ bundle }: Props) {
         onReveal={(i) => setQuizRevealed((prev) => new Set(prev).add(i))}
         qText={qText}
       />
+      <HistoryMapCredits figureCount={Object.keys(figures).length} />
     </div>
+  );
+}
+
+function HistoryMapCredits({ figureCount }: { figureCount: number }) {
+  if (figureCount === 0) return null;
+  return (
+    <p className="hm-credits hm-mut">人物肖像: Wikimedia Commons（各ポップアップにライセンス表示）</p>
   );
 }
 
@@ -658,10 +714,25 @@ function TimelineItem(props: {
   quizFields: QuizField[];
   quizRevealed: Set<number>;
   onOpenQuiz: (index: number, mode: "q" | "a") => void;
+  figureIndex: FigureIndex;
   style?: CSSProperties;
 }) {
-  const { event: e, eventIndex: idx, current, year, compact, axisColor, onPick, qt, quizMode, quizFields, quizRevealed, onOpenQuiz, style } =
-    props;
+  const {
+    event: e,
+    eventIndex: idx,
+    current,
+    year,
+    compact,
+    axisColor,
+    onPick,
+    qt,
+    quizMode,
+    quizFields,
+    quizRevealed,
+    onOpenQuiz,
+    figureIndex,
+    style,
+  } = props;
   const col = axisColor(e.axis);
   const axLabel = e.axis === "s" || e.axis === "w" ? (e.axis === "s" ? "政治" : "戦い") : undefined;
   const quizField = quizFields[idx] ?? "t";
@@ -700,7 +771,9 @@ function TimelineItem(props: {
         <div className="hm-sm">📍{qt(e, e.place)}</div>
       ) : (
         <>
-          <div>{qt(e, e.body)}</div>
+          <div>
+            <FigureRichText text={qt(e, e.body)} index={figureIndex} />
+          </div>
           <div className="hm-sm">
             📍{qt(e, e.place)}　👤
             <QuizFieldValue
@@ -711,6 +784,7 @@ function TimelineItem(props: {
               quizField={quizField}
               quizRevealed={revealed}
               onOpenQuiz={onOpenQuiz}
+              figureIndex={figureIndex}
             />
           </div>
         </>
@@ -735,8 +809,10 @@ function EventDetailCard(props: {
   quizRevealed: Set<number>;
   eventIndex: (e: HistoryEvent) => number;
   onOpenQuiz: (index: number, mode: "q" | "a") => void;
+  figureIndex: FigureIndex;
 }) {
-  const { current, axisColor, qText, wars, taxonomy, quizMode, quizFields, quizRevealed, eventIndex, onOpenQuiz } = props;
+  const { current, axisColor, qText, wars, taxonomy, quizMode, quizFields, quizRevealed, eventIndex, onOpenQuiz, figureIndex } =
+    props;
   if (!current) {
     return <div className="hm-card">この条件に合う出来事は、まだありません。スライダーを右へ動かそう。</div>;
   }
@@ -746,12 +822,18 @@ function EventDetailCard(props: {
   const revealed = quizRevealed.has(idx);
   const showWhoInitial =
     !quizMode || revealed || quizField !== "who" ? current.who[0] : "?";
+  const portrait =
+  (!quizMode || revealed || quizField !== "who") ? primaryFigureForWho(current.who, figureIndex) : null;
   return (
     <div className="hm-card">
       <div className="hm-h">
-        <div className="hm-av" style={{ background: col }}>
-          {showWhoInitial}
-        </div>
+        {portrait ? (
+          <FigurePortrait fig={portrait} accent={col} />
+        ) : (
+          <div className="hm-av" style={{ background: col }}>
+            {showWhoInitial}
+          </div>
+        )}
         <div>
           <b>
             <QuizFieldValue
@@ -783,11 +865,14 @@ function EventDetailCard(props: {
               quizField={quizField}
               quizRevealed={revealed}
               onOpenQuiz={onOpenQuiz}
+              figureIndex={figureIndex}
             />
           </div>
         </div>
       </div>
-      <p>{qText(current, current.body)}</p>
+      <p>
+        <FigureRichText text={qText(current, current.body)} index={figureIndex} />
+      </p>
       <span className="hm-tag" style={{ background: col }}>
         {taxonomy.axes[current.axis][0]}
       </span>
