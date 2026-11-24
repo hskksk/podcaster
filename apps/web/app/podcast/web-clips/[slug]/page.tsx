@@ -64,7 +64,7 @@ export async function generateMetadata({
 
 export default async function WebClipPage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
-  await getPublicWebClipsForRender();
+  const clips = await getPublicWebClipsForRender();
   const clip = loadPublicWebClip(slug);
   if (!clip) notFound();
   const cfg = loadSiteConfig();
