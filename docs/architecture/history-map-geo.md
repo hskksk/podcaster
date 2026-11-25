@@ -49,7 +49,7 @@ flowchart LR
   REN["render.json<br/>（描画キャッシュ）"]
   APP["HistoryMapApp<br/>loadHistoryMapBundle"]
 
-  GOKI["Gokishichido.svg 等"] --> BUILD
+  GOKI["reference/gokishichido-coarse-provinces.svg"] --> BUILD
   SRC --> BUILD
   BUILD --> SRC
   BUILD --> REN
@@ -277,5 +277,7 @@ type HistoryMapBundle = {
 
 - 座標変換: `apps/web/lib/juken/history-map/geo.ts`（`project`）
 - 現行ローダ: `apps/web/lib/juken/history-map/load.ts`
-- 過渡期 SVG 取り込み: `scripts/lib/juken_history_map_goki.py`, `scripts/juken-history-map-refine-coast.py`
+- 参照 SVG: `apps/web/data/juken/history-map/reference/gokishichido-coarse-provinces.svg`
+- ビルド: `pnpm juken:history-map-topology-build`
+- 過渡期: `scripts/lib/juken_history_map_goki.py`, `scripts/juken-history-map-refine-coast.py`
 - 知識コンテンツ分割: [AGENTS.md](../../AGENTS.md)（History map split）
