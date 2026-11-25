@@ -212,6 +212,9 @@ def build_topology(
 ) -> dict:
     provinces = parse_province_paths(svg_path)
     anchors = province_anchors(anchors_geo)
+    # 北海道は新 SVG のみ（geo.provinces に無いことが多い）
+    if any(pid == "北海道" for pid, _, _ in provinces) and "北海道" not in anchors:
+        anchors["北海道"] = (142.5, 43.2)
 
     svg_pts: list[tuple[float, float]] = []
     ll_pts: list[tuple[float, float]] = []
@@ -250,21 +253,22 @@ def build_topology(
         )
         region_area_ids[region_id].append(pid)
 
-    # 蝦夷（粗視化 SVG に無い）
-    ezo_ring = [
-        (float(lng), float(lat))
-        for lng, lat in (p.split(",") for p in EZO_LAND_LNG_LAT.split())
-    ]
-    ezo_loops = [{"edges": loop_to_directed_edges(ezo_ring, mesh, "蝦夷地")}]
-    areas.append(
-        {
-            "id": "蝦夷地",
-            "regionId": "ezo",
-            "label": "蝦夷地",
-            "loops": ezo_loops,
-        }
-    )
-    region_area_ids["ezo"].append("蝦夷地")
+    # 蝦夷（SVG に北海道等が無いときだけテンプレ輪郭を補う）
+    if not region_area_ids.get("ezo"):
+        ezo_ring = [
+            (float(lng), float(lat))
+            for lng, lat in (p.split(",") for p in EZO_LAND_LNG_LAT.split())
+        ]
+        ezo_loops = [{"edges": loop_to_directed_edges(ezo_ring, mesh, "蝦夷地")}]
+        areas.append(
+            {
+                "id": "蝦夷地",
+                "regionId": "ezo",
+                "label": "蝦夷地",
+                "loops": ezo_loops,
+            }
+        )
+        region_area_ids["ezo"].append("蝦夷地")
 
     regions = []
     for rid, rname in REGION_ID_NAMES.items():

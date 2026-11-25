@@ -2,6 +2,6 @@
 
 | ファイル | 用途 |
 |----------|------|
-| `gokishichido-coarse-provinces.svg` | 五畿七道・旧国の**粗視化ポリゴン**（国境・海岸の点密度基準）。`pnpm juken:history-map-topology-build` の入力。 |
+| `gokishichido-coarse-provinces.svg` | 五畿七道・旧国＋**北海道**の粗視化ポリゴン。`pnpm juken:history-map-topology-build` の入力。 |
 
-タイトル: 五畿七道(粗視化・国境保持)。海は `#1275ad`、国は `path#<国名>`、道境は `*-境界`（描画参考用・トポロジー生成では国ポリゴンのみ使用）。
+タイトル: 五畿七道+北海道(粗視化・国境保持)。`path#北海道` は道 **蝦夷地**（`#b5e3a8`）としてトポロジー化。海は `#1275ad`。道境 `*-境界` は参考線のみ（生成では国ポリゴンのみ）。

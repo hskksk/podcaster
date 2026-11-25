@@ -12,6 +12,7 @@ import numpy as np
 from svgpathtools import svg2paths2
 
 EXTRA_REGION = {
+    "北海道": "蝦夷地",
     "淡路": "南海道",
     "佐渡": "北陸道",
     "隠岐": "山陰道",
@@ -36,6 +37,7 @@ FILL_TO_REGION = {
     "#f5fd95": "山陽道",
     "#dce0c0": "南海道",
     "#eedede": "西海道",
+    "#b5e3a8": "蝦夷地",
 }
 
 REGION_COLORS = {
