@@ -47,6 +47,8 @@
         "markdoc:check-juken": "pnpm --filter @podcaster/web markdoc:check-juken",
         "juken:check-drills": "pnpm --filter @podcaster/web juken:check-drills",
         "juken:check-history-map": "pnpm --filter @podcaster/web juken:check-history-map",
+        "juken:history-map-coast": "python3 scripts/juken-history-map-refine-coast.py",
+        "juken:history-map-topology-build": "python3 scripts/juken-history-map-topology-build.py",
         "juken:drills-stats": "pnpm --filter @podcaster/web juken:drills-stats",
         "treemap:extract": "tsx scripts/article-treemap/extract_nodes.ts",
         "treemap:validate": "tsx scripts/article-treemap/validate_treemap.ts",

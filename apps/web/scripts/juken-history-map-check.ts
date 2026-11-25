@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
-import { historyMapGeoPath, jukenDir } from "../../../scripts/lib/content-paths";
+import { historyMapGeoPath, historyMapRenderPath, historyMapTopologyPath, jukenDir } from "../../../scripts/lib/content-paths";
 
 const root = path.join(jukenDir(), "history-map");
 const metaPath = path.join(root, "meta.yml");
@@ -14,6 +14,14 @@ if (!fs.existsSync(eventsPath) || !fs.existsSync(metaPath)) {
 }
 if (!fs.existsSync(historyMapGeoPath())) {
   console.error(`juken-history-map-check: missing geo at ${historyMapGeoPath()}`);
+  process.exit(1);
+}
+if (!fs.existsSync(historyMapRenderPath())) {
+  console.error(`juken-history-map-check: missing render at ${historyMapRenderPath()}`);
+  process.exit(1);
+}
+if (!fs.existsSync(historyMapTopologyPath())) {
+  console.error(`juken-history-map-check: missing topology at ${historyMapTopologyPath()}`);
   process.exit(1);
 }
 
@@ -71,13 +79,12 @@ function isLikelyNonPortraitFile(url: string): boolean {
   );
 }
 
-const geo = JSON.parse(fs.readFileSync(historyMapGeoPath(), "utf8")) as {
+const render = JSON.parse(fs.readFileSync(historyMapRenderPath(), "utf8")) as {
   land?: string[];
-  provinces?: unknown[];
-  regions?: { name?: string; color?: string; rings?: string[] }[];
+  regionFills?: unknown[];
 };
-if (!geo.land?.length || !geo.provinces?.length) {
-  console.error("juken-history-map-check: podcaster geo.json missing land or provinces");
+if (!render.land?.length || !render.regionFills?.length) {
+  console.error("juken-history-map-check: render.json missing land or regionFills");
   errors++;
 }
 

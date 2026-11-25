@@ -7,6 +7,8 @@ export {
   notesDir,
   jukenDir,
   historyMapGeoPath,
+  historyMapRenderPath,
+  historyMapTopologyPath,
   LEGACY_CLIPS_REL,
   AI_PODCAST_REL,
   LEGACY_DOCS_REL,

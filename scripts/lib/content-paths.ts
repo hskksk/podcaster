@@ -66,9 +66,19 @@ export function jukenDir(): string {
 
 /** Map geometry for `/juken/history-map` (ship with podcaster, not knowledges). */
 export const HISTORY_MAP_GEO_REL = "apps/web/data/juken/history-map/geo.json";
+const HISTORY_MAP_RENDER_REL = "apps/web/data/juken/history-map/render.json";
+const HISTORY_MAP_TOPOLOGY_REL = "apps/web/data/juken/history-map/topology.json";
 
 export function historyMapGeoPath(): string {
   return path.join(getMonorepoRoot(), HISTORY_MAP_GEO_REL);
+}
+
+export function historyMapRenderPath(): string {
+  return path.join(getMonorepoRoot(), HISTORY_MAP_RENDER_REL);
+}
+
+export function historyMapTopologyPath(): string {
+  return path.join(getMonorepoRoot(), HISTORY_MAP_TOPOLOGY_REL);
 }
 
 export function aiPodcastRelPrefix(): string {

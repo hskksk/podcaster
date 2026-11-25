@@ -37,9 +37,41 @@ export type HistoryMapTaxonomy = {
 
 export type HistoryMapGeo = {
   land: string[];
-  provinces: [string, string][];
+  provinces?: [string, string][];
   regions?: HistoryMapRegion[];
   sourceNote?: string;
+};
+
+export type HistoryMapRenderCache = {
+  meta: { topologyVersion: number };
+  land: string[];
+  regionFills: {
+    areaId: string;
+    regionId: string;
+    name: string;
+    region: string;
+    color: string;
+    points: string;
+  }[];
+  provinceEdges: string;
+  regionEdges: string;
+  coastEdges?: string;
+  provinceLabels: [string, number, number][];
+  regionLabels: [string, number, number][];
+};
+
+export type HistoryMapTopology = {
+  meta: { version: number; source?: string; snapEpsDeg?: number; sourceNote?: string };
+  points: [number, number][];
+  edges: [number, number][];
+  edgeAreas: Record<string, string[]>;
+  areas: {
+    id: string;
+    regionId: string;
+    label: string;
+    loops: { edges: { e: number; forward: boolean }[] }[];
+  }[];
+  regions: { id: string; name: string; areaIds: string[]; fill?: string }[];
 };
 
 export type HistoryFigure = {
@@ -80,6 +112,8 @@ export type HistoryMapBundle = {
   wars: Record<string, WarOverlay>;
   taxonomy: HistoryMapTaxonomy;
   geo: HistoryMapGeo;
+  render: HistoryMapRenderCache;
+  topology?: HistoryMapTopology;
   boundaries: MapBoundaries;
   figures: Record<string, HistoryFigure>;
 };
