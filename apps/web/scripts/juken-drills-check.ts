@@ -47,6 +47,22 @@ for (const set of sets) {
     }
   }
 
+  let genreRun = 1;
+  for (let index = 1; index < set.questions.length; index++) {
+    const prev = set.questions[index - 1]!;
+    const next = set.questions[index]!;
+    if (prev.genre === next.genre) {
+      genreRun++;
+      if (genreRun >= 3) {
+        console.warn(
+          `juken-drills-check: warn  ${set.id}: ${prev.id} から ${next.id} まで genre「${next.genre}」が ${genreRun} 問連続している`,
+        );
+      }
+    } else {
+      genreRun = 1;
+    }
+  }
+
   const setTallies = tallyQuestions(set.questions);
   if (set.questions.length >= 4) {
     const genreMax = Math.max(...Object.values(setTallies.genre));
