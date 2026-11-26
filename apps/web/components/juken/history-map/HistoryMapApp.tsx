@@ -743,7 +743,7 @@ export function HistoryMapApp({ bundle }: Props) {
           <div className="hm-desktop-controls">
             <YearScrubber
               year={year}
-              yearDisplay={yearDisplay}
+              yearAriaText={yearDisplay}
               yearStops={yearStops}
               onStep={stepYear}
               onChange={onYearChange}
@@ -761,9 +761,9 @@ export function HistoryMapApp({ bundle }: Props) {
           </div>
           <MobileStatusBar era={eraLabel(year)}>
             <YearScrubber
-              className="hm-row hm-srow"
+              className="hm-yr-scrub hm-srow"
               year={year}
-              yearDisplay={yearDisplay}
+              yearAriaText={yearDisplay}
               yearStops={yearStops}
               onStep={stepYear}
               onChange={onYearChange}
