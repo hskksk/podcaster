@@ -1,3 +1,4 @@
+import { formatYear } from "./formatYear";
 import type { HistoryEvent } from "./types";
 
 export type QuizField = "y" | "t" | "who";
@@ -8,13 +9,13 @@ export function shuffleQuizFields(count: number): QuizField[] {
 }
 
 export function fieldValue(event: HistoryEvent, field: QuizField): string {
-  if (field === "y") return `${event.year}年`;
+  if (field === "y") return formatYear(event.year);
   if (field === "t") return event.title;
   return event.who;
 }
 
 export function maskFragments(event: HistoryEvent, field: QuizField): string[] {
-  if (field === "y") return [`${event.year}年`];
+  if (field === "y") return [formatYear(event.year)];
   if (field === "t") {
     const out = [event.title, ...event.title.split(/[()（）]/g)];
     const place = event.place.replace(/\(.*\)/, "");

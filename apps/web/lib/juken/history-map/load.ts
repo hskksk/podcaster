@@ -5,6 +5,7 @@ import path from "node:path";
 import yaml from "js-yaml";
 import { historyMapGeoPath, historyMapRenderPath, historyMapTopologyPath, jukenDir } from "../../repo-root";
 import { boundariesFromRender } from "./boundaries";
+import { buildYearStops, snapYearToStop } from "./yearStops";
 import type {
   HistoryEvent,
   HistoryFigure,
@@ -40,8 +41,17 @@ export function historyMapAvailable(): boolean {
 export function loadHistoryMapBundle(): HistoryMapBundle | null {
   if (!historyMapAvailable()) return null;
   const root = bundleRoot();
-  const meta = yaml.load(fs.readFileSync(path.join(root, "meta.yml"), "utf8")) as HistoryMapMeta;
+  const metaRaw = yaml.load(fs.readFileSync(path.join(root, "meta.yml"), "utf8")) as HistoryMapMeta;
   const events = readJson<HistoryEvent[]>(path.join(root, "events.json"));
+  const yearStops = buildYearStops(
+    events.map((e) => e.year),
+    metaRaw.yearStops,
+  );
+  const meta: HistoryMapMeta = {
+    ...metaRaw,
+    yearStops,
+    defaultYear: snapYearToStop(metaRaw.defaultYear, yearStops),
+  };
   const wars = readJson<Record<string, WarOverlay>>(path.join(root, "wars.json"));
   const taxonomy = readJson<HistoryMapTaxonomy>(path.join(root, "taxonomy.json"));
   const geoRaw = readJson<HistoryMapGeo>(historyMapGeoPath());

@@ -25,7 +25,12 @@ if (!fs.existsSync(historyMapTopologyPath())) {
   process.exit(1);
 }
 
-const meta = yaml.load(fs.readFileSync(metaPath, "utf8")) as { yearMin: number; yearMax: number };
+const meta = yaml.load(fs.readFileSync(metaPath, "utf8")) as {
+  yearMin: number;
+  yearMax: number;
+  yearStops?: number[];
+  defaultYear?: number;
+};
 const events = JSON.parse(fs.readFileSync(eventsPath, "utf8")) as { year: number; axis: string; title: string }[];
 const wars = JSON.parse(fs.readFileSync(warsPath, "utf8")) as Record<string, unknown>;
 
@@ -87,6 +92,15 @@ if (!render.land?.length || !render.regionFills?.length) {
   console.error("juken-history-map-check: render.json missing land or regionFills");
   errors++;
 }
+
+const eventYears = [...new Set(events.map((e) => e.year))].sort((a, b) => a - b);
+const stops = meta.yearStops?.length
+  ? [...new Set([...meta.yearStops, ...eventYears])].sort((a, b) => a - b)
+  : eventYears;
+if (meta.defaultYear != null && !stops.includes(meta.defaultYear)) {
+  console.warn(`juken-history-map-check: warn defaultYear ${meta.defaultYear} not in yearStops; UI will snap`);
+}
+console.log(`juken-history-map-check: yearStops ${stops.length} (${stops[0]}..${stops[stops.length - 1]})`);
 
 if (errors > 0) process.exit(1);
 console.log(`juken-history-map-check: ok (${events.length} events)`);

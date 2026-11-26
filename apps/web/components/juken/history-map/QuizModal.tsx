@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatYear } from "../../../lib/juken/history-map/formatYear";
 import type { HistoryEvent } from "../../../lib/juken/history-map/types";
 import { fieldValue, maskText, type QuizField } from "../../../lib/juken/history-map/quiz";
 
@@ -38,7 +39,7 @@ export function QuizModal({ modal, events, quizFields, quizRevealed, onClose, on
           {mode === "q" ? "Q" : "A"}. この出来事の{lab}は?
         </div>
         <div className="hm-mut">
-          {[field !== "y" ? `${e.year}年` : "", field !== "t" ? mask(e.title) : "", field !== "who" ? mask(e.who) : ""]
+          {[field !== "y" ? formatYear(e.year) : "", field !== "t" ? mask(e.title) : "", field !== "who" ? mask(e.who) : ""]
             .filter(Boolean)
             .join("／")}
         </div>
