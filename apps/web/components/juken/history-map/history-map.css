@@ -292,19 +292,6 @@
   gap: 12px;
 }
 
-@media (min-width: 780px) {
-  .history-map-app .hm-wrap {
-    grid-template-columns: minmax(0, 1fr) 380px;
-    align-items: start;
-  }
-
-  .history-map-app .hm-tl {
-    position: sticky;
-    top: 8px;
-    max-height: calc(100vh - 16px);
-  }
-}
-
 .history-map-app .hm-tl {
   position: relative;
   overflow: auto;
@@ -313,6 +300,27 @@
   border-radius: 12px;
   padding: 8px;
   max-height: 70vh;
+}
+
+@media (min-width: 780px) {
+  .history-map-app .hm-wrap {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    align-items: stretch;
+  }
+
+  .history-map-app .hm-tl {
+    /* Height 0 keeps the timeline from stretching the row. min-height 100%
+       then fills the row, which the map column sizes, and the list scrolls. */
+    max-height: none;
+    height: 0;
+    min-height: 100%;
+  }
+
+  .history-map-app .hm-desktop-controls .hm-card {
+    box-sizing: border-box;
+    height: 11rem;
+    overflow: auto;
+  }
 }
 
 .history-map-app .hm-era-h {
@@ -526,7 +534,8 @@
     --hm-top: calc(env(safe-area-inset-top, 0px) + 44px);
     --hm-tab: calc(env(safe-area-inset-bottom, 0px) + 52px);
     --hm-sb: 76px;
-    --hm-sh: 88px;
+    --hm-sh-peek: 88px;
+    --hm-sh: var(--hm-sh-peek);
     position: fixed;
     inset: 0;
     z-index: 60;
@@ -594,9 +603,10 @@
     left: 0;
     right: 0;
     top: var(--hm-top);
-    bottom: calc(var(--hm-tab) + var(--hm-sb) + var(--hm-sh));
+    /* Stay the peek-sheet size so opening the detail sheet covers the map
+       instead of refitting it into a shorter box (which shrinks the scale). */
+    bottom: calc(var(--hm-tab) + var(--hm-sb) + var(--hm-sh-peek));
     z-index: 1;
-    transition: bottom 0.2s;
   }
 
   .history-map-app svg.hm-map {
