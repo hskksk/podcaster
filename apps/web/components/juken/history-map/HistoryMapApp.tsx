@@ -106,6 +106,7 @@ export function HistoryMapApp({ bundle }: Props) {
         from[2] + (target[2] - from[2]) * e,
         from[3] + (target[3] - from[3]) * e,
       ];
+      viewBoxRef.current = next;
       setViewBox(next);
       if (k < 1) animRef.current = requestAnimationFrame(tick);
     };
@@ -311,35 +312,71 @@ export function HistoryMapApp({ bundle }: Props) {
   const setViewClamped = (x: number, y: number, w: number) => {
     w = Math.max(8, Math.min(w, 390));
     const h = (w * 405) / 390;
-    setViewBox([Math.max(-w / 2, Math.min(390 - w, x)), Math.max(-h / 2, Math.min(405 - h, y)), w, h]);
+    const next: [number, number, number, number] = [
+      Math.max(-w / 2, Math.min(390 - w, x)),
+      Math.max(-h / 2, Math.min(405 - h, y)),
+      w,
+      h,
+    ];
+    viewBoxRef.current = next;
+    setViewBox(next);
   };
 
-  const mapGeo = useCallback(() => {
+  const mapGeo = () => {
+    const vb = viewBoxRef.current;
     const r = mapRef.current!.getBoundingClientRect();
-    const k = Math.min(r.width / viewBox[2], r.height / viewBox[3]);
-    return { r, k, ox: (r.width - viewBox[2] * k) / 2, oy: (r.height - viewBox[3] * k) / 2 };
-  }, [viewBox]);
+    const k = Math.min(r.width / vb[2], r.height / vb[3]);
+    return { r, k, ox: (r.width - vb[2] * k) / 2, oy: (r.height - vb[3] * k) / 2, vb };
+  };
 
   const zoomAt = (factor: number, sx: number, sy: number) => {
+    cancelAnimationFrame(animRef.current);
+    animRef.current = 0;
+    setManualMap(true);
     const g = mapGeo();
-    const ux = viewBox[0] + (sx - g.r.left - g.ox) / g.k;
-    const uy = viewBox[1] + (sy - g.r.top - g.oy) / g.k;
-    const nw = Math.max(8, Math.min(viewBox[2] / factor, 390));
-    const q = nw / viewBox[2];
-    setViewClamped(ux - (ux - viewBox[0]) * q, uy - (uy - viewBox[1]) * q, nw);
+    if (!Number.isFinite(g.k) || g.k <= 0) return;
+    const ux = g.vb[0] + (sx - g.r.left - g.ox) / g.k;
+    const uy = g.vb[1] + (sy - g.r.top - g.oy) / g.k;
+    const nw = Math.max(8, Math.min(g.vb[2] / factor, 390));
+    const q = nw / g.vb[2];
+    setViewClamped(ux - (ux - g.vb[0]) * q, uy - (uy - g.vb[1]) * q, nw);
   };
+  const zoomAtRef = useRef(zoomAt);
+  zoomAtRef.current = zoomAt;
 
   useEffect(() => {
     const m = mapRef.current;
     if (!m) return;
+    const endPointer = (id: number) => {
+      pointersRef.current.delete(id);
+      if (pointersRef.current.size < 2) pinchRef.current = 0;
+      if (!pointersRef.current.size) {
+        gesturingRef.current = false;
+        dragStartRef.current = null;
+      }
+    };
     const onDown = (e: PointerEvent) => {
-      pointersRef.current.set(e.pointerId, [e.clientX, e.clientY]);
-      if (pointersRef.current.size === 1) dragStartRef.current = [e.clientX, e.clientY];
-      else {
-        setManualMap(true);
-        gesturingRef.current = true;
+      // A primary contact starts a new gesture. Extra touches (a pinch) are not
+      // primary, so they keep the finger already down. Clearing here drops a
+      // contact whose pointerup was lost, which otherwise turns the next drag
+      // into a pinch.
+      if (e.isPrimary) {
+        pointersRef.current.clear();
         pinchRef.current = 0;
+        gesturingRef.current = false;
+      }
+      pointersRef.current.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pointersRef.current.size === 1) {
+        dragStartRef.current = [e.clientX, e.clientY];
+        return;
+      }
+      setManualMap(true);
+      gesturingRef.current = true;
+      pinchRef.current = 0;
+      try {
         m.setPointerCapture(e.pointerId);
+      } catch {
+        // The pointer is already gone; the matching up/cancel will clear it.
       }
     };
     const onMove = (e: PointerEvent) => {
@@ -349,7 +386,9 @@ export function HistoryMapApp({ bundle }: Props) {
       if (pointersRef.current.size > 1) {
         const vals = [...pointersRef.current.values()];
         const d = Math.hypot(vals[0]![0] - vals[1]![0], vals[0]![1] - vals[1]![1]);
-        if (pinchRef.current) zoomAt(d / pinchRef.current, (vals[0]![0] + vals[1]![0]) / 2, (vals[0]![1] + vals[1]![1]) / 2);
+        if (pinchRef.current) {
+          zoomAtRef.current(d / pinchRef.current, (vals[0]![0] + vals[1]![0]) / 2, (vals[0]![1] + vals[1]![1]) / 2);
+        }
         pinchRef.current = d;
         return;
       }
@@ -358,34 +397,45 @@ export function HistoryMapApp({ bundle }: Props) {
         if (!start || Math.hypot(e.clientX - start[0], e.clientY - start[1]) < 6) return;
         setManualMap(true);
         gesturingRef.current = true;
-        m.setPointerCapture(e.pointerId);
+        try {
+          m.setPointerCapture(e.pointerId);
+        } catch {
+          // Already released.
+        }
       }
+      cancelAnimationFrame(animRef.current);
+      animRef.current = 0;
       const g = mapGeo();
-      setViewClamped(viewBox[0] - (e.clientX - o[0]) / g.k, viewBox[1] - (e.clientY - o[1]) / g.k, viewBox[2]);
+      if (!Number.isFinite(g.k) || g.k <= 0) return;
+      setViewClamped(g.vb[0] - (e.clientX - o[0]) / g.k, g.vb[1] - (e.clientY - o[1]) / g.k, g.vb[2]);
     };
     const onUp = (e: PointerEvent) => {
-      pointersRef.current.delete(e.pointerId);
-      if (pointersRef.current.size < 2) pinchRef.current = 0;
-      if (!pointersRef.current.size) gesturingRef.current = false;
+      if (!pointersRef.current.has(e.pointerId)) return;
+      endPointer(e.pointerId);
+      if (m.hasPointerCapture(e.pointerId)) m.releasePointerCapture(e.pointerId);
     };
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       setManualMap(true);
-      zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
+      zoomAtRef.current(Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
     };
     m.addEventListener("pointerdown", onDown);
     m.addEventListener("pointermove", onMove);
     m.addEventListener("pointerup", onUp);
     m.addEventListener("pointercancel", onUp);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     m.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       m.removeEventListener("pointerdown", onDown);
       m.removeEventListener("pointermove", onMove);
       m.removeEventListener("pointerup", onUp);
       m.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
       m.removeEventListener("wheel", onWheel);
     };
-  }, [mapGeo, viewBox, zoomAt]);
+  }, []);
 
   const shuffleQuiz = useCallback(() => {
     setQuizFields(shuffleQuizFields(events.length));

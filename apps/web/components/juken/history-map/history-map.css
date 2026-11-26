@@ -526,7 +526,8 @@
     --hm-top: calc(env(safe-area-inset-top, 0px) + 44px);
     --hm-tab: calc(env(safe-area-inset-bottom, 0px) + 52px);
     --hm-sb: 76px;
-    --hm-sh: 88px;
+    --hm-sh-peek: 88px;
+    --hm-sh: var(--hm-sh-peek);
     position: fixed;
     inset: 0;
     z-index: 60;
@@ -594,9 +595,10 @@
     left: 0;
     right: 0;
     top: var(--hm-top);
-    bottom: calc(var(--hm-tab) + var(--hm-sb) + var(--hm-sh));
+    /* Stay the peek-sheet size so opening the detail sheet covers the map
+       instead of refitting it into a shorter box (which shrinks the scale). */
+    bottom: calc(var(--hm-tab) + var(--hm-sb) + var(--hm-sh-peek));
     z-index: 1;
-    transition: bottom 0.2s;
   }
 
   .history-map-app svg.hm-map {
