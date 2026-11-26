@@ -38,9 +38,14 @@ function FigurePop({
 
 const MOBILE_FIG_POP_MQ = "(max-width: 779px)";
 
+function isMobileFigPop(): boolean {
+  return typeof window !== "undefined" && window.matchMedia(MOBILE_FIG_POP_MQ).matches;
+}
+
 function FigureSpan({ label, fig }: { label: string; fig: HistoryFigure }) {
   const tipId = useId();
   const anchorRef = useRef<HTMLSpanElement>(null);
+  const openedAtRef = useRef(0);
   const [open, setOpen] = useState(false);
   const [fixedPop, setFixedPop] = useState<{ style: CSSProperties; fixed: boolean } | null>(null);
 
@@ -81,6 +86,7 @@ function FigureSpan({ label, fig }: { label: string; fig: HistoryFigure }) {
     const mq = window.matchMedia(MOBILE_FIG_POP_MQ);
     if (!mq.matches) return;
     const close = (e: MouseEvent | TouchEvent) => {
+      if (performance.now() - openedAtRef.current < 450) return;
       const t = e.target as Node;
       if (anchorRef.current?.contains(t)) return;
       setOpen(false);
@@ -95,9 +101,21 @@ function FigureSpan({ label, fig }: { label: string; fig: HistoryFigure }) {
     };
   }, [open, layoutPop]);
 
-  const show = () => setOpen(true);
-  const hide = () => setOpen(false);
-  const toggle = () => setOpen((v) => !v);
+  const show = () => {
+    if (isMobileFigPop()) return;
+    setOpen(true);
+  };
+  const hide = () => {
+    if (isMobileFigPop()) return;
+    setOpen(false);
+  };
+  const toggleOpen = () => {
+    setOpen((v) => {
+      const next = !v;
+      if (next) openedAtRef.current = performance.now();
+      return next;
+    });
+  };
 
   return (
     <span
@@ -106,11 +124,17 @@ function FigureSpan({ label, fig }: { label: string; fig: HistoryFigure }) {
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
-      onBlur={hide}
+      onBlur={(e) => {
+        if (isMobileFigPop()) return;
+        const next = e.relatedTarget as Node | null;
+        if (next && anchorRef.current?.contains(next)) return;
+        hide();
+      }}
       onClick={(e) => {
-        if (!window.matchMedia(MOBILE_FIG_POP_MQ).matches) return;
+        if (!isMobileFigPop()) return;
         e.stopPropagation();
-        toggle();
+        e.preventDefault();
+        toggleOpen();
       }}
       tabIndex={0}
       aria-describedby={open ? tipId : undefined}
