@@ -1,27 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { buildFigureIndex, primaryFigureForWho } from "../../../lib/juken/history-map/figures";
+import { buildFigureIndex } from "../../../lib/juken/history-map/figures";
 import { landPolygons, project } from "../../../lib/juken/history-map/geo";
-import { fieldValue, maskText, shuffleQuizFields, type QuizField } from "../../../lib/juken/history-map/quiz";
+import { maskText, shuffleQuizFields, type QuizField } from "../../../lib/juken/history-map/quiz";
 import { currentEvent, eraLabel, laneName, visibleEvents } from "../../../lib/juken/history-map/selectors";
 import type { FigureIndex } from "../../../lib/juken/history-map/figures";
 import type { HistoryAxis, HistoryEvent, HistoryMapBundle } from "../../../lib/juken/history-map/types";
-import { FigurePortrait, FigureRichText } from "./FigureRichText";
+import { EventDetailCard } from "./EventDetailCard";
+import { FigureRichText } from "./FigureRichText";
+import { axesForView, HistoryMapFilters, RegionLegend, type AxisView } from "./HistoryMapFilters";
 import { QuizFieldValue } from "./QuizFieldValue";
 import { QuizModal } from "./QuizModal";
+import { QuizToggleButtons } from "./QuizToggleButtons";
+import { YearScrubber } from "./YearScrubber";
+import { MobileFilterPanel } from "./mobile/MobileFilterPanel";
+import { MobileSheet } from "./mobile/MobileSheet";
+import { MobileStatusBar } from "./mobile/MobileStatusBar";
+import { MobileTabBar } from "./mobile/MobileTabBar";
+import { MobileTopBar } from "./mobile/MobileTopBar";
+import type { MobileTab, SheetSize } from "./mobile/types";
 import "./history-map.css";
 
 const MAP_FULL: [number, number, number, number] = [0, 0, 390, 405];
-const ALL_AXES: HistoryAxis[] = ["s", "w", "r", "c", "e"];
-
-type AxisView = "a" | "sw" | HistoryAxis;
-
-function axesForView(view: AxisView): Set<HistoryAxis> {
-  if (view === "a") return new Set(ALL_AXES);
-  if (view === "sw") return new Set(["s", "w"]);
-  return new Set([view]);
-}
 
 type Props = { bundle: HistoryMapBundle };
 
@@ -41,6 +42,8 @@ export function HistoryMapApp({ bundle }: Props) {
   const [quizFields, setQuizFields] = useState<QuizField[]>(() => shuffleQuizFields(events.length));
   const [quizRevealed, setQuizRevealed] = useState<Set<number>>(() => new Set());
   const [quizModal, setQuizModal] = useState<{ index: number; mode: "q" | "a" } | null>(null);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("map");
+  const [sheet, setSheet] = useState<SheetSize>("p");
   const [bubble, setBubble] = useState<{ left: number; top: number; width: number } | null>(null);
   const [leaderHtml, setLeaderHtml] = useState("");
 
@@ -68,6 +71,11 @@ export function HistoryMapApp({ bundle }: Props) {
     setYear(event.year);
     setHiddenBubble(false);
     setManualMap(false);
+    setMobileTab("map");
+  }, []);
+
+  const selectMobileTab = useCallback((next: MobileTab) => {
+    setMobileTab((cur) => (next === cur && next !== "map" ? "map" : next));
   }, []);
 
   const eventIndex = useCallback((e: HistoryEvent) => events.indexOf(e), [events]);
@@ -379,13 +387,15 @@ export function HistoryMapApp({ bundle }: Props) {
     };
   }, [mapGeo, viewBox, zoomAt]);
 
+  const shuffleQuiz = useCallback(() => {
+    setQuizFields(shuffleQuizFields(events.length));
+    setQuizRevealed(new Set());
+  }, [events.length]);
+
   const toggleQuiz = () => {
     const next = !quizMode;
     setQuizMode(next);
-    if (next) {
-      setQuizFields(shuffleQuizFields(events.length));
-      setQuizRevealed(new Set());
-    }
+    if (next) shuffleQuiz();
     setQuizModal(null);
   };
 
@@ -495,30 +505,58 @@ export function HistoryMapApp({ bundle }: Props) {
     });
   }, [axisColor, axisView, current, eventIndex, figureIndex, openQuiz, pick, qText, quizFields, quizMode, quizRevealed, taxonomy, visible, year]);
 
+  useEffect(() => {
+    if (mobileTab !== "t") return;
+    const root = tlRef.current;
+    if (!root) return;
+    const sel = root.querySelector<HTMLElement>(".hm-it.sel");
+    if (!sel) return;
+    const top = sel.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
+    root.scrollTop = Math.max(0, top - 70);
+  }, [mobileTab, current, timeline]);
+
+  const onYearChange = (next: number) => {
+    setYear(next);
+    setSelected(null);
+  };
+
+  const onLevel = (next: number) => {
+    setLevel(next);
+    setSelected(null);
+  };
+
+  const onAxis = (next: AxisView) => {
+    setAxisView(next);
+    setSelected(null);
+  };
+
+  const detailProps = {
+    current,
+    axisColor,
+    qText,
+    wars,
+    taxonomy,
+    quizMode,
+    quizFields,
+    quizRevealed,
+    eventIndex,
+    onOpenQuiz: openQuiz,
+    figureIndex,
+  };
+
   return (
-    <div className="history-map-app">
-      <div className="hm-row">
-        <h1 style={{ flex: 1 }}>
-          🗾 {meta.title}
-          {meta.subtitle ? `（${meta.subtitle}）` : ""}
-        </h1>
-        <button type="button" className="hm-btn" onClick={toggleQuiz}>
-          🎯 {quizMode ? "クイズ中(もどる)" : "クイズモード"}
-        </button>
-        {quizMode ? (
-          <button
-            type="button"
-            className="hm-btn"
-            onClick={() => {
-              setQuizFields(shuffleQuizFields(events.length));
-              setQuizRevealed(new Set());
-            }}
-          >
-            🔀
-          </button>
-        ) : null}
+    <div className="history-map-app" data-tab={mobileTab} data-sh={sheet}>
+      <MobileTopBar title={meta.title} quizMode={quizMode} onToggleQuiz={toggleQuiz} onShuffleQuiz={shuffleQuiz} />
+      <div className="hm-desktop-head">
+        <div className="hm-row">
+          <h1 style={{ flex: 1 }}>
+            🗾 {meta.title}
+            {meta.subtitle ? `（${meta.subtitle}）` : ""}
+          </h1>
+          <QuizToggleButtons quizMode={quizMode} onToggle={toggleQuiz} onShuffle={shuffleQuiz} />
+        </div>
+        <div className="hm-era">{eraLabel(year)}</div>
       </div>
-      <div className="hm-era">{eraLabel(year)}</div>
       <div className="hm-wrap">
         <div>
           <div className="hm-mapw" ref={mapWrapRef}>
@@ -596,90 +634,58 @@ export function HistoryMapApp({ bundle }: Props) {
               ) : null}
             </div>
           </div>
-          <div className="hm-row">
-            <button type="button" className="hm-btn" onClick={() => stepYear(-1)}>
-              ◀
-            </button>
-            <span className="hm-yr">{yearDisplay}</span>
-            <button type="button" className="hm-btn" onClick={() => stepYear(1)}>
-              ▶
-            </button>
-            <input
-              type="range"
+          <div className="hm-desktop-controls">
+            <YearScrubber
+              year={year}
+              yearDisplay={yearDisplay}
               min={meta.yearMin}
               max={meta.yearMax}
-              step={1}
-              value={year}
-              onChange={(e) => {
-                setYear(Number(e.target.value));
-                setSelected(null);
-              }}
+              onStep={stepYear}
+              onChange={onYearChange}
             />
+            <HistoryMapFilters
+              level={level}
+              levelLabels={taxonomy.levelLabels}
+              onLevel={onLevel}
+              axisButtons={axisButtons}
+              axisView={axisView}
+              onAxis={onAxis}
+            />
+            <RegionLegend items={regionLegend} />
+            <EventDetailCard {...detailProps} />
           </div>
-          <div className="hm-row">
-            <span className="hm-mut">階層</span>
-            {taxonomy.levelLabels.map((label, i) => (
-              <button
-                key={label}
-                type="button"
-                className={`hm-btn${level === i + 1 ? " on" : ""}`}
-                onClick={() => {
-                  setLevel(i + 1);
-                  setSelected(null);
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="hm-row">
-            <span className="hm-mut">軸</span>
-            {axisButtons.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                className={`hm-btn${axisView === b.id ? " on" : ""}`}
-                style={axisView === b.id ? { background: b.color, borderColor: b.color, color: "#fff" } : undefined}
-                onClick={() => {
-                  setAxisView(b.id);
-                  setSelected(null);
-                }}
-              >
-                {b.label}
-              </button>
-            ))}
-            {axisView === "a" || axisView === "sw" ? (
-              <span className="hm-mut">
-                <span style={{ color: "#2f6fb5" }}>●</span>政治　<span style={{ color: "#c23b3b" }}>●</span>戦い
-              </span>
-            ) : null}
-          </div>
-          <div className="hm-legend hm-mut" aria-label="五畿七道の色分け">
-            {regionLegend.map((r) => (
-              <span key={r.name} className="hm-legend-i">
-                <span className="hm-legend-swatch" style={{ background: r.color }} aria-hidden />
-                {r.name}
-              </span>
-            ))}
-          </div>
-          <EventDetailCard
-            current={current}
-            axisColor={axisColor}
-            qText={qText}
-            wars={wars}
-            taxonomy={taxonomy}
-            quizMode={quizMode}
-            quizFields={quizFields}
-            quizRevealed={quizRevealed}
-            eventIndex={eventIndex}
-            onOpenQuiz={openQuiz}
-            figureIndex={figureIndex}
-          />
+          <MobileStatusBar era={eraLabel(year)}>
+            <YearScrubber
+              className="hm-row hm-srow"
+              year={year}
+              yearDisplay={yearDisplay}
+              min={meta.yearMin}
+              max={meta.yearMax}
+              onStep={stepYear}
+              onChange={onYearChange}
+            />
+          </MobileStatusBar>
+          <MobileSheet sheet={sheet} onSheet={setSheet}>
+            <EventDetailCard {...detailProps} />
+            <HistoryMapCredits figureCount={Object.keys(figures).length} />
+          </MobileSheet>
+          <MobileFilterPanel>
+            <HistoryMapFilters
+              level={level}
+              levelLabels={taxonomy.levelLabels}
+              onLevel={onLevel}
+              axisButtons={axisButtons}
+              axisView={axisView}
+              onAxis={onAxis}
+            />
+            <RegionLegend items={regionLegend} />
+          </MobileFilterPanel>
         </div>
         <aside className="hm-tl" ref={tlRef}>
           {timeline.length ? timeline : <div className="hm-mut">この条件の出来事はありません。</div>}
         </aside>
       </div>
+      <MobileTabBar tab={mobileTab} onTab={selectMobileTab} />
       <QuizModal
         modal={quizModal}
         events={events}
@@ -689,7 +695,9 @@ export function HistoryMapApp({ bundle }: Props) {
         onReveal={(i) => setQuizRevealed((prev) => new Set(prev).add(i))}
         qText={qText}
       />
-      <HistoryMapCredits figureCount={Object.keys(figures).length} />
+      <div className="hm-desktop-credits">
+        <HistoryMapCredits figureCount={Object.keys(figures).length} />
+      </div>
     </div>
   );
 }
@@ -796,89 +804,4 @@ function TimelineItem(props: {
 function taxonomyLabelFallback(ax: HistoryAxis): string {
   const map: Record<HistoryAxis, string> = { s: "政治", w: "戦い", r: "宗教", c: "文化", e: "社会" };
   return map[ax];
-}
-
-function EventDetailCard(props: {
-  current: HistoryEvent | null;
-  axisColor: (ax: HistoryAxis) => string;
-  qText: (e: HistoryEvent, t: string) => string;
-  wars: HistoryMapBundle["wars"];
-  taxonomy: HistoryMapBundle["taxonomy"];
-  quizMode: boolean;
-  quizFields: QuizField[];
-  quizRevealed: Set<number>;
-  eventIndex: (e: HistoryEvent) => number;
-  onOpenQuiz: (index: number, mode: "q" | "a") => void;
-  figureIndex: FigureIndex;
-}) {
-  const { current, axisColor, qText, wars, taxonomy, quizMode, quizFields, quizRevealed, eventIndex, onOpenQuiz, figureIndex } =
-    props;
-  if (!current) {
-    return <div className="hm-card">この条件に合う出来事は、まだありません。スライダーを右へ動かそう。</div>;
-  }
-  const col = axisColor(current.axis);
-  const idx = eventIndex(current);
-  const quizField = quizFields[idx] ?? "t";
-  const revealed = quizRevealed.has(idx);
-  const showWhoInitial =
-    !quizMode || revealed || quizField !== "who" ? current.who[0] : "?";
-  const portrait =
-  (!quizMode || revealed || quizField !== "who") ? primaryFigureForWho(current.who, figureIndex) : null;
-  return (
-    <div className="hm-card">
-      <div className="hm-h">
-        {portrait ? (
-          <FigurePortrait fig={portrait} accent={col} />
-        ) : (
-          <div className="hm-av" style={{ background: col }}>
-            {showWhoInitial}
-          </div>
-        )}
-        <div>
-          <b>
-            <QuizFieldValue
-              event={current}
-              eventIndex={idx}
-              field="y"
-              quizMode={quizMode}
-              quizField={quizField}
-              quizRevealed={revealed}
-              onOpenQuiz={onOpenQuiz}
-            />{" "}
-            <QuizFieldValue
-              event={current}
-              eventIndex={idx}
-              field="t"
-              quizMode={quizMode}
-              quizField={quizField}
-              quizRevealed={revealed}
-              onOpenQuiz={onOpenQuiz}
-            />
-          </b>
-          <div className="hm-mut">
-            {qText(current, current.place)}　／　
-            <QuizFieldValue
-              event={current}
-              eventIndex={idx}
-              field="who"
-              quizMode={quizMode}
-              quizField={quizField}
-              quizRevealed={revealed}
-              onOpenQuiz={onOpenQuiz}
-              figureIndex={figureIndex}
-            />
-          </div>
-        </div>
-      </div>
-      <p>
-        <FigureRichText text={qText(current, current.body)} index={figureIndex} />
-      </p>
-      <span className="hm-tag" style={{ background: col }}>
-        {taxonomy.axes[current.axis][0]}
-      </span>
-      {current.axis === "w" && wars[current.title] ? (
-        <div className="hm-mut">◆＝戦った主な人物のいた場所(赤と青は敵どうし)／点線の丸＝戦いのあった範囲</div>
-      ) : null}
-    </div>
-  );
 }

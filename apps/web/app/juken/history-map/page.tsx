@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { HistoryMapApp } from "../../../components/juken/history-map/HistoryMapApp";
 import { JukenCrumbs, JukenShell } from "../../../components/juken/JukenShell";
@@ -6,6 +6,12 @@ import { loadHistoryMapBundle } from "../../../lib/juken/history-map/load";
 
 export const dynamic = "force-static";
 export const revalidate = false;
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export function generateMetadata(): Metadata {
   const bundle = loadHistoryMapBundle();
@@ -21,7 +27,7 @@ export default function JukenHistoryMapPage() {
   if (!bundle) notFound();
 
   return (
-    <JukenShell variant="map" width="wide">
+    <JukenShell variant="map" width="wide" immersive>
       <JukenCrumbs items={[{ href: "/juken", label: "ふしぎ旅" }, { label: bundle.meta.title }]} />
       <HistoryMapApp bundle={bundle} />
     </JukenShell>
