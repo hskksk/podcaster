@@ -30,11 +30,13 @@ export function JukenShell(props: {
   hero?: ReactNode;
   children: ReactNode;
   width?: "wide" | "story";
+  /** On small screens, hide site chrome so a full-viewport tool can own the page. */
+  immersive?: boolean;
 }) {
   const year = new Date().getFullYear();
   const width = props.width === "story" ? "max-w-3xl" : "max-w-6xl";
   return (
-    <div className="juken flex min-h-screen flex-col">
+    <div className={cn("juken flex min-h-screen flex-col", props.immersive && "juken-immersive")}>
       <header className="sticky top-0 z-50 border-b border-border/80 bg-surface/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Link href="/juken" className="flex min-w-0 items-center gap-2.5 no-underline">
@@ -114,7 +116,7 @@ export function JukenShell(props: {
           </nav>
         </div>
       </header>
-      <div className={cn("mx-auto w-full px-4 pt-6 sm:px-6", width)}>
+      <div className={cn("juken-preamble mx-auto w-full px-4 pt-6 sm:px-6", width)}>
         <JukenAiNotice />
       </div>
       {props.hero}

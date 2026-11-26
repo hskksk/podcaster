@@ -481,3 +481,330 @@
   background: #c78a1a;
   border-left: 1px solid rgb(255 255 255 / 0.7);
 }
+
+.hm-top,
+.hm-sbar,
+.hm-sheet,
+.hm-fpanel,
+.hm-tabs {
+  display: none;
+}
+
+.hm-back {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--hm-bd);
+  background: var(--hm-card);
+  color: var(--hm-fg);
+  text-decoration: none;
+  font-size: 16px;
+  line-height: 1;
+}
+
+@media (max-width: 779px) {
+  .juken-immersive > header,
+  .juken-immersive > footer,
+  .juken-immersive > .juken-preamble,
+  .juken-immersive main > nav {
+    display: none;
+  }
+
+  .juken-immersive main {
+    max-width: none;
+    padding: 0;
+  }
+
+  body:has(.juken-immersive) {
+    overflow: hidden;
+  }
+
+  .history-map-app {
+    --hm-top: calc(env(safe-area-inset-top, 0px) + 44px);
+    --hm-tab: calc(env(safe-area-inset-bottom, 0px) + 52px);
+    --hm-sb: 76px;
+    --hm-sh: 88px;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    max-width: none;
+    margin: 0;
+    background: var(--hm-bg);
+    color: var(--hm-fg);
+    overflow: hidden;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .history-map-app[data-sh="h"] {
+    --hm-sh: min(44vh, 380px);
+  }
+
+  .history-map-app .hm-desktop-head,
+  .history-map-app .hm-desktop-controls,
+  .history-map-app .hm-desktop-credits {
+    display: none;
+  }
+
+  .history-map-app .hm-wrap {
+    display: block;
+  }
+
+  .history-map-app .hm-top {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--hm-top);
+    box-sizing: border-box;
+    padding: env(safe-area-inset-top, 0px) 10px 0;
+    z-index: 30;
+    background: var(--hm-bg);
+    border-bottom: 1px solid var(--hm-bd);
+    display: flex;
+    align-items: center;
+  }
+
+  .history-map-app .hm-top .hm-row {
+    margin: 0;
+    flex: 1;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .history-map-app .hm-top h1 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-map-app .hm-top .hm-btn {
+    flex: none;
+  }
+
+  .history-map-app .hm-mapw {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--hm-top);
+    bottom: calc(var(--hm-tab) + var(--hm-sb) + var(--hm-sh));
+    z-index: 1;
+    transition: bottom 0.2s;
+  }
+
+  .history-map-app svg.hm-map {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .history-map-app .hm-bub,
+  .history-map-app .hm-bub.open,
+  .history-map-app .hm-ldr {
+    display: none;
+  }
+
+  .history-map-app .hm-zb .hm-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .history-map-app .hm-sbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--hm-tab);
+    height: var(--hm-sb);
+    z-index: 20;
+    box-sizing: border-box;
+    background: var(--hm-card);
+    border-top: 1px solid var(--hm-bd);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .history-map-app .hm-sbar .hm-era {
+    padding: 0 14px;
+    line-height: 1.3;
+  }
+
+  .history-map-app .hm-sbar .hm-srow {
+    margin: 2px 0 0;
+    padding: 0 10px;
+    flex-wrap: nowrap;
+  }
+
+  .history-map-app .hm-sbar .hm-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .history-map-app .hm-sbar .hm-yr {
+    font-size: 18px;
+    min-width: 78px;
+    text-align: center;
+  }
+
+  .history-map-app .hm-sbar input[type="range"] {
+    min-width: 0;
+  }
+
+  .history-map-app[data-tab="f"] .hm-sbar {
+    visibility: hidden;
+  }
+
+  .history-map-app .hm-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--hm-tab) + var(--hm-sb));
+    height: var(--hm-sh);
+    z-index: 15;
+    background: var(--hm-card);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -2px 12px rgb(0 0 0 / 0.25);
+    display: flex;
+    flex-direction: column;
+    transition: height 0.2s;
+    overflow: hidden;
+  }
+
+  .history-map-app[data-tab="f"] .hm-sheet {
+    visibility: hidden;
+  }
+
+  .history-map-app .hm-grab {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 8px 0 4px;
+    border: 0;
+    background: none;
+    touch-action: none;
+    flex: none;
+    cursor: grab;
+  }
+
+  .history-map-app .hm-grab i {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--hm-bd);
+  }
+
+  .history-map-app .hm-sheet-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .history-map-app[data-sh="p"] .hm-sheet-body {
+    overflow: hidden;
+  }
+
+  .history-map-app .hm-sheet .hm-card {
+    border: 0;
+    border-radius: 0;
+    padding: 6px 14px 10px;
+  }
+
+  .history-map-app .hm-sheet .hm-credits {
+    margin: 0 14px 12px;
+  }
+
+  .history-map-app .hm-fpanel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--hm-tab);
+    z-index: 25;
+    background: var(--hm-card);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -2px 12px rgb(0 0 0 / 0.3);
+    padding: 14px 12px 10px;
+    max-height: calc(100dvh - var(--hm-top) - var(--hm-tab));
+    overflow: auto;
+  }
+
+  .history-map-app[data-tab="f"] .hm-fpanel {
+    display: block;
+  }
+
+  .history-map-app .hm-fpanel .hm-btn {
+    padding: 7px 13px;
+  }
+
+  .history-map-app .hm-tl {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--hm-top);
+    bottom: calc(var(--hm-tab) + var(--hm-sb));
+    z-index: 18;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    padding: 10px 12px;
+  }
+
+  .history-map-app[data-tab="t"] .hm-tl {
+    display: block;
+  }
+
+  .history-map-app .hm-tabs {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--hm-tab);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+    background: var(--hm-card);
+    border-top: 1px solid var(--hm-bd);
+    z-index: 30;
+  }
+
+  .history-map-app .hm-tabs button {
+    flex: 1;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font: inherit;
+    font-size: 18px;
+    line-height: 1.2;
+    color: var(--hm-mut);
+    cursor: pointer;
+  }
+
+  .history-map-app .hm-tabs button span {
+    font-size: 11px;
+  }
+
+  .history-map-app .hm-tabs button.on {
+    background: none;
+    color: #2f6fb5;
+    font-weight: 700;
+  }
+}
