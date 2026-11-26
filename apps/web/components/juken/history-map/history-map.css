@@ -76,20 +76,19 @@
   position: relative;
   flex: 1;
   min-width: 120px;
-  height: 28px;
+  height: 36px;
   display: flex;
   align-items: center;
-  --hm-yr-inset: 7px;
+  --hm-yr-inset: 8px;
 }
 
 .history-map-app .hm-yr-track {
   position: absolute;
   left: var(--hm-yr-inset);
   right: var(--hm-yr-inset);
-  height: 10px;
-  border-radius: 5px;
+  height: 16px;
+  border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--hm-bd);
   pointer-events: none;
   box-sizing: border-box;
 }
@@ -102,11 +101,11 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  opacity: 0.88;
+  opacity: 0.92;
 }
 
 .history-map-app .hm-yr-seg-lbl {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
   color: #fff;
@@ -128,7 +127,7 @@
   background: transparent;
   -webkit-appearance: none;
   appearance: none;
-  height: 28px;
+  height: 36px;
 }
 
 .history-map-app input.hm-yr-range:focus-visible {
@@ -138,16 +137,16 @@
 }
 
 .history-map-app input.hm-yr-range::-webkit-slider-runnable-track {
-  height: 10px;
+  height: 16px;
   background: transparent;
   border: none;
 }
 
 .history-map-app input.hm-yr-range::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
-  margin-top: -4px;
+  width: 22px;
+  height: 22px;
+  margin-top: -3px;
   border-radius: 50%;
   border: 2px solid var(--hm-card);
   background: var(--hm-fg);
@@ -156,14 +155,14 @@
 }
 
 .history-map-app input.hm-yr-range::-moz-range-track {
-  height: 10px;
+  height: 16px;
   background: transparent;
   border: none;
 }
 
 .history-map-app input.hm-yr-range::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 2px solid var(--hm-card);
   background: var(--hm-fg);

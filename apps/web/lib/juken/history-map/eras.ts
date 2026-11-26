@@ -1,4 +1,3 @@
-import { yearStopIndex } from "./yearStops";
 
 export type EraDefinition = {
   label: string;
@@ -71,40 +70,42 @@ export type EraTrackSpan = {
   widthPct: number;
 };
 
-/** Map era definitions onto discrete year-stop positions for the scrubber track. */
+function eraForYear(year: number): EraDefinition {
+  for (const era of ERAS) {
+    if (year >= era.from && year <= era.to) return era;
+  }
+  return ERAS[ERAS.length - 1]!;
+}
+
+/** Map era definitions onto discrete year-stop positions for the scrubber track (contiguous, no gaps). */
 export function eraTrackSpans(yearStops: number[]): EraTrackSpan[] {
   if (yearStops.length < 2) return [];
   const maxIdx = yearStops.length - 1;
-  const ymin = yearStops[0]!;
-  const ymax = yearStops[maxIdx]!;
   const spans: EraTrackSpan[] = [];
 
-  for (const era of ERAS) {
-    const from = Math.max(era.from, ymin);
-    const to = Math.min(era.to, ymax);
-    if (from > to) continue;
+  let runStart = 0;
+  let runEra = eraForYear(yearStops[0]!);
 
-    const i0 = yearStopIndex(from, yearStops);
-    let i1 = i0;
-    for (let i = yearStops.length - 1; i >= 0; i--) {
-      const y = yearStops[i]!;
-      if (y >= from && y <= to) {
-        i1 = i;
-        break;
-      }
-    }
+  for (let i = 1; i <= yearStops.length; i++) {
+    const nextEra = i < yearStops.length ? eraForYear(yearStops[i]!) : null;
+  if (nextEra && nextEra.label === runEra.label) continue;
 
-    const leftPct = (i0 / maxIdx) * 100;
-    const rightPct = (i1 / maxIdx) * 100;
-    const widthPct = Math.max(rightPct - leftPct, 100 / maxIdx / 2);
+    const endIdx = i - 1;
+    const leftPct = (runStart / maxIdx) * 100;
+    const widthPct = endIdx >= maxIdx ? 100 - leftPct : ((endIdx + 1) / maxIdx) * 100 - leftPct;
 
     spans.push({
-      label: era.label,
-      fullLabel: FULL_LABELS[era.label] ?? era.label,
-      color: era.color,
+      label: runEra.label,
+      fullLabel: FULL_LABELS[runEra.label] ?? runEra.label,
+      color: runEra.color,
       leftPct,
       widthPct,
     });
+
+    if (i < yearStops.length) {
+      runStart = i;
+      runEra = nextEra!;
+    }
   }
   return spans;
 }
