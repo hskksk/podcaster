@@ -5,6 +5,7 @@ import { afterEach } from 'vitest'
 class MockIntersectionObserver implements IntersectionObserver {
   readonly root: Element | Document | null = null
   readonly rootMargin = ''
+  readonly scrollMargin = ''
   readonly thresholds: readonly number[] = []
 
   constructor(_callback: IntersectionObserverCallback) {}

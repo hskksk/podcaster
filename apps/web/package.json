@@ -46,6 +46,6 @@
     "@types/react-dom": "^19.3.0",
     "pagefind": "^1.6.0",
     "postcss": "^8.5.33",
-    "typescript": "^5.7.0"
+    "typescript": "^7.0.2"
   }
 }

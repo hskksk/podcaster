@@ -76,7 +76,7 @@
         "@types/react-dom": "^19.3.0",
         "js-yaml": "^4.3.2",
         "tsx": "^4.23.15",
-        "typescript": "^5.7.0"
+        "typescript": "^7.0.2"
     },
     "dependencies": {
         "@google/genai": "^2.31.0",

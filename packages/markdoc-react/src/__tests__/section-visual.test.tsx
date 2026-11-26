@@ -1,6 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { ArticleVisualView, SectionVisual, articleVisualEngine } from '../index'
+import {
+  ArticleVisualView,
+  SectionVisual,
+  articleVisualEngine,
+  type VisualEngineDefinition,
+} from '../index'
 
 describe('Article Visual engine', () => {
   it('renders a cards spec', () => {
@@ -47,7 +52,7 @@ describe('Article Visual engine', () => {
     render(
       <SectionVisual
         visual={{ engine: 'article-visual', engineVersion: '99', alt: 'fallback text', spec: {} }}
-        engines={[articleVisualEngine]}
+        engines={[articleVisualEngine as VisualEngineDefinition<unknown>]}
       />,
     )
     expect(screen.getByText('fallback text')).toBeInTheDocument()
