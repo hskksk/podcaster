@@ -37,7 +37,7 @@
     "tailwindcss": "^4.3.5"
   },
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
