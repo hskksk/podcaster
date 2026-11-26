@@ -65,6 +65,7 @@ export function HistoryMapApp({ bundle }: Props) {
   const landRings = useMemo(() => landPolygons(geo.land), [geo.land]);
   const figureIndex = useMemo(() => buildFigureIndex(figures), [figures]);
 
+  const yearStops = meta.yearStops ?? [];
   const [year, setYear] = useState(meta.defaultYear);
   const [level, setLevel] = useState(2);
   const [axisView, setAxisView] = useState<AxisView>("a");
@@ -743,8 +744,7 @@ export function HistoryMapApp({ bundle }: Props) {
             <YearScrubber
               year={year}
               yearDisplay={yearDisplay}
-              min={meta.yearMin}
-              max={meta.yearMax}
+              yearStops={yearStops}
               onStep={stepYear}
               onChange={onYearChange}
             />
@@ -764,8 +764,7 @@ export function HistoryMapApp({ bundle }: Props) {
               className="hm-row hm-srow"
               year={year}
               yearDisplay={yearDisplay}
-              min={meta.yearMin}
-              max={meta.yearMax}
+              yearStops={yearStops}
               onStep={stepYear}
               onChange={onYearChange}
             />

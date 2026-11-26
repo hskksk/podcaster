@@ -1,6 +1,8 @@
 import type { HistoryAxis, HistoryEvent } from "./types";
 
 export function eraLabel(year: number): string {
+  if (year <= -13000) return "旧石器時代";
+  if (year < -300) return "縄文時代";
   if (year < 0) return "弥生時代";
   if (year < 300) return "古墳時代";
   if (year < 710) return "飛鳥時代";
