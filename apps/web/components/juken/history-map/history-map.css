@@ -148,6 +148,12 @@
   pointer-events: none;
 }
 
+.history-map-app .hm-fig-pop--fixed {
+  position: fixed;
+  z-index: 80;
+  pointer-events: auto;
+}
+
 .history-map-app .hm-fig-pop img {
   display: block;
   width: 100%;
@@ -816,5 +822,22 @@
     background: none;
     color: #2f6fb5;
     font-weight: 700;
+  }
+
+  /* シートの overflow で切れないよう、狭い画面は JS で fixed 配置。フォールバックは下向き */
+  .history-map-app .hm-fig-pop:not(.hm-fig-pop--fixed) {
+    bottom: auto;
+    top: calc(100% + 8px);
+  }
+
+  .history-map-app .hm-qp.open {
+    align-items: flex-end;
+    padding: 12px 12px calc(var(--hm-tab) + 12px);
+  }
+
+  .history-map-app .hm-qb {
+    width: 100%;
+    max-width: none;
+    max-height: min(70dvh, calc(100dvh - var(--hm-top) - var(--hm-tab) - 24px));
   }
 }
