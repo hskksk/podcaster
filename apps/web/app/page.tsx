@@ -90,7 +90,7 @@ export default function PortalPage() {
               </Link>
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-fg sm:text-base">
-              社会（歴史ものがたり・歴史マップ）と国語（選択肢問題）へ進めます。
+              ぬいぐるみたちと一緒に、中学受験 社会、国語 の勉強ができます。
             </p>
             <div className="mt-6">
               <JukenSubjectGrid density="compact" />

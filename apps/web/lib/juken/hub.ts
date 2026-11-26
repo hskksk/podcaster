@@ -7,7 +7,6 @@ import { loadKokugoChoiceSets } from "./kokugo-choice/catalog";
 export type JukenHistoryMapTeaser = {
   href: "/juken/history-map";
   title: string;
-  subtitle: string;
 };
 
 export const JUKEN_STORIES_HREF = "/juken/stories";
@@ -31,6 +30,5 @@ export function loadHistoryMapTeaser(): JukenHistoryMapTeaser | null {
   return {
     href: "/juken/history-map",
     title: bundle.meta.title,
-    subtitle: bundle.meta.subtitle,
   };
 }

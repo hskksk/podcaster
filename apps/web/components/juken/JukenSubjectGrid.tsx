@@ -110,7 +110,7 @@ export function JukenSubjectGrid(props: { density?: "compact" | "full" }) {
             <NavCard
               href={historyMap.href}
               title="歴史マップ"
-              description={historyMap.subtitle}
+              description="地図と年表で、出来事を年代と場所からたどれます。"
               stamp="地"
               icon={<Map className="size-4" strokeWidth={2} />}
               density={density}
