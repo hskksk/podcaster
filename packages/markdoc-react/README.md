@@ -259,7 +259,7 @@ pnpm build
 ## Releases
 
 Pushes to `main` run [semantic-release](https://semantic-release.gitbook.io/),
-then **`npm stage publish --tag latest`** (via `@semantic-release/exec`).
+then **`pnpm exec npm stage publish --tag latest`** (via `@semantic-release/exec`).
 The version is **not installable from the registry until a maintainer approves**
 it on [npmjs.com](https://www.npmjs.com/) or with `npm stage approve` (2FA).
 GitHub Releases and `v*` git tags are still created when CI succeeds.
@@ -300,9 +300,11 @@ The next releasable `fix:` (or patch-level) commit on `main` will then stage
 ### npm authentication (CI)
 
 CI uses [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (OIDC) and
-**`npm stage publish`** from `.github/workflows/release-staging.yml` (Node **24+** for
-npm ≥ 11.5.1). Stage publish is allowed by default on Trusted Publishers; you do **not**
-need to enable direct **`npm publish`** for this workflow.
+**`pnpm exec npm stage publish`** from `.github/workflows/release-staging.yml`
+(Node **>= 26.13**, which semantic-release 26 requires). `pnpm exec` selects
+this package's npm 12. Stage publish is allowed by default on Trusted
+Publishers; you do **not** need to enable direct **`npm publish`** for this
+workflow.
 
 On [npm → Package → Settings → Trusted Publisher](https://www.npmjs.com/package/@hskksk/markdoc-react/access),
 add a publisher that matches this repository and workflow filename exactly (`hskksk/markdoc-react`,
@@ -310,7 +312,7 @@ add a publisher that matches this repository and workflow filename exactly (`hsk
 
 Do not set `registry-url` on `actions/setup-node` in this workflow (it can force token
 auth and break OIDC). `@semantic-release/npm` only bumps `package.json`; publishing is
-handled by `@semantic-release/exec` → `npm stage publish`.
+handled by `@semantic-release/exec` → `pnpm exec npm stage publish`.
 
 ## License
 
