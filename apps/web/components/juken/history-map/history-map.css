@@ -66,10 +66,24 @@
   flex-wrap: wrap;
 }
 
-.history-map-app .hm-yr {
-  font-size: 22px;
-  font-weight: 700;
-  min-width: 84px;
+.history-map-app .hm-yr-scrub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.history-map-app .hm-yr-step {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  line-height: 1;
 }
 
 .history-map-app .hm-yr-track-wrap {
@@ -434,9 +448,6 @@
     overflow: auto;
   }
 
-  .history-map-app .hm-desktop-controls > .hm-row:first-of-type {
-    margin-bottom: 4px;
-  }
 }
 
 .history-map-app .hm-era-h {
@@ -767,26 +778,12 @@
 
   .history-map-app .hm-sbar .hm-srow {
     margin: 2px 0 0;
-    padding: 0 10px;
-    flex-wrap: nowrap;
+    padding: 0 8px;
   }
 
-  .history-map-app .hm-sbar .hm-btn {
+  .history-map-app .hm-sbar .hm-yr-step {
     width: 36px;
     height: 36px;
-    padding: 0;
-    border-radius: 50%;
-    flex: none;
-  }
-
-  .history-map-app .hm-sbar .hm-yr {
-    font-size: 18px;
-    min-width: 78px;
-    text-align: center;
-  }
-
-  .history-map-app .hm-sbar .hm-yr-track-wrap {
-    min-width: 0;
   }
 
   .history-map-app[data-tab="f"] .hm-sbar {
