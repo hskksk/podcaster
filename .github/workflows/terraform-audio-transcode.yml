@@ -22,7 +22,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.17.1
           cli_config_credentials_token: ${{ env.TF_API_TOKEN }}
