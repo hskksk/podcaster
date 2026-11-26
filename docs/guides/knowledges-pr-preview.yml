@@ -1,0 +1,131 @@
+# Copy to hskksk/knowledges as `.github/workflows/knowledges-pr-preview.yml`
+#
+# On each PR: creates/updates `knowledges-preview/<head-branch>` on hskksk/podcaster (from main),
+# commits knowledges-preview.lock.json, pushes → Vercel Preview build on that podcaster branch.
+# Comments the stable branch preview URL on this PR.
+#
+# Secrets (knowledges repo):
+#   PODCASTER_WRITE_TOKEN — fine-grained PAT or classic token with contents:write on hskksk/podcaster
+# Vars (knowledges repo):
+#   VERCEL_PROJECT_NAME — Vercel project slug (Settings → General → Project Name)
+#   VERCEL_SCOPE_SLUG   — team slug or Hobby username (Account → Username)
+#
+# See docs/guides/knowledges-pr-preview.md in podcaster.
+
+name: Knowledges PR → podcaster preview branch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: knowledges-preview-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  PODCASTER_REPO: hskksk/podcaster
+  PREVIEW_PREFIX: knowledges-preview
+
+jobs:
+  preview:
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate config
+        env:
+          PODCASTER_WRITE_TOKEN: ${{ secrets.PODCASTER_WRITE_TOKEN }}
+          VERCEL_PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME }}
+          VERCEL_SCOPE_SLUG: ${{ vars.VERCEL_SCOPE_SLUG }}
+        run: |
+          test -n "$PODCASTER_WRITE_TOKEN" || { echo "PODCASTER_WRITE_TOKEN missing" >&2; exit 1; }
+          test -n "$VERCEL_PROJECT_NAME" || { echo "VERCEL_PROJECT_NAME var missing" >&2; exit 1; }
+          test -n "$VERCEL_SCOPE_SLUG" || { echo "VERCEL_SCOPE_SLUG var missing" >&2; exit 1; }
+
+      - name: Sync podcaster preview branch
+        env:
+          PODCASTER_WRITE_TOKEN: ${{ secrets.PODCASTER_WRITE_TOKEN }}
+          KNOWLEDGES_REF: ${{ github.head_ref }}
+          KNOWLEDGES_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          POD_BRANCH="${PREVIEW_PREFIX}/${KNOWLEDGES_REF}"
+          git clone --depth 1 "https://x-access-token:${PODCASTER_WRITE_TOKEN}@github.com/${PODCASTER_REPO}.git" podcaster
+          cd podcaster
+          git fetch origin main
+          git checkout -B "$POD_BRANCH" origin/main
+          printf '%s\n' "{" \
+            "\"repo\": \"hskksk/knowledges\"," \
+            "\"ref\": \"${KNOWLEDGES_REF}\"," \
+            "\"sha\": \"${KNOWLEDGES_SHA}\"" \
+            "}" > knowledges-preview.lock.json
+          git add knowledges-preview.lock.json
+          git -c user.name="knowledges-preview" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "preview(knowledges): ${KNOWLEDGES_REF} @ ${KNOWLEDGES_SHA:0:7}"
+          git push --force origin "HEAD:refs/heads/${POD_BRANCH}"
+
+      - name: Build preview URL
+        id: url
+        env:
+          VERCEL_PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME }}
+          VERCEL_SCOPE_SLUG: ${{ vars.VERCEL_SCOPE_SLUG }}
+          KNOWLEDGES_REF: ${{ github.head_ref }}
+        run: |
+          POD_BRANCH="${PREVIEW_PREFIX}/${KNOWLEDGES_REF}"
+          SLUG="$(printf '%s' "$POD_BRANCH" | tr '/' '-')"
+          echo "url=https://${VERCEL_PROJECT_NAME}-git-${SLUG}-${VERCEL_SCOPE_SLUG}.vercel.app" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = "<!-- knowledges-vercel-preview -->";
+            const url = "${{ steps.url.outputs.url }}";
+            const sha = "${{ github.event.pull_request.head.sha }}".slice(0, 7);
+            const branch = "${{ github.head_ref }}";
+            const body = `${marker}
+**Vercel Preview** (branch URL; updates after the build on \`knowledges-preview/${branch}\` finishes)
+
+${url}
+
+knowledges \`${branch}\` @ \`${sha}\`
+`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((c) => c.user?.type === "Bot" && c.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  cleanup:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete podcaster preview branch
+        env:
+          PODCASTER_WRITE_TOKEN: ${{ secrets.PODCASTER_WRITE_TOKEN }}
+          KNOWLEDGES_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          POD_BRANCH="${PREVIEW_PREFIX}/${KNOWLEDGES_REF}"
+          git clone --depth 1 "https://x-access-token:${PODCASTER_WRITE_TOKEN}@github.com/${PODCASTER_REPO}.git" podcaster
+          cd podcaster
+          git push origin --delete "$POD_BRANCH" || true
