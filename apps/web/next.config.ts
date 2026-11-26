@@ -19,6 +19,17 @@ const repoRoot = fs.existsSync(path.join(repoRootCandidate, "pnpm-workspace.yaml
 const nextConfig: NextConfig = {
   transpilePackages: ["@keystatic/core"],
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdoc"],
+  // Next 16 builds with Turbopack. @markdoc/next.js 0.7 attaches loader rules
+  // only when `turbopack` is already set. The Node build of D2 pulls in a wasm
+  // worker Turbopack cannot evaluate during client SSR; diagrams use the
+  // browser build, which embeds that wasm module.
+  turbopack: {
+    root: path.resolve(repoRoot),
+    resolveAlias: {
+      "@terrastruct/d2": "./node_modules/@terrastruct/d2/dist/browser/index.js",
+    },
+  },
+  // Applies only to `next dev --webpack` / `next build --webpack`.
   webpack: (config) => {
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
     return config;
@@ -66,8 +77,5 @@ const wrapped = withMarkdoc({
   mode: "static",
   schemaPath: "./markdoc",
 })(nextConfig);
-
-// @markdoc/next.js 0.5 injects `turbopack`, which Next 15.1 rejects.
-delete (wrapped as { turbopack?: unknown }).turbopack;
 
 export default wrapped;

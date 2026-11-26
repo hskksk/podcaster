@@ -98,10 +98,5 @@
         "unist-util-visit": "^5.2.0",
         "unitex-kokic": "github:hskksk/UniTeX"
     },
-    "packageManager": "pnpm@9.14.0",
-    "pnpm": {
-        "patchedDependencies": {
-            "next@15.5.29": "patches/next@15.5.29.patch"
-        }
-    }
+    "packageManager": "pnpm@9.14.0"
 }
