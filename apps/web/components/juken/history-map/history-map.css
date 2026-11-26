@@ -101,7 +101,7 @@
   left: var(--hm-yr-inset);
   right: var(--hm-yr-inset);
   height: 40px;
-  border-radius: 10px;
+  border-radius: 4px;
   overflow: hidden;
   pointer-events: none;
   box-sizing: border-box;

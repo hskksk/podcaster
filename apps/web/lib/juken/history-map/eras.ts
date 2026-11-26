@@ -88,7 +88,7 @@ export function eraTrackSpans(yearStops: number[]): EraTrackSpan[] {
 
   for (let i = 1; i <= yearStops.length; i++) {
     const nextEra = i < yearStops.length ? eraForYear(yearStops[i]!) : null;
-  if (nextEra && nextEra.label === runEra.label) continue;
+    if (nextEra && nextEra.label === runEra.label) continue;
 
     const endIdx = i - 1;
     const leftPct = (runStart / maxIdx) * 100;
