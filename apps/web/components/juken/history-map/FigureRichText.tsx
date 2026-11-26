@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { segmentFigureText, type FigureIndex } from "../../../lib/juken/history-map/figures";
 import type { HistoryFigure } from "../../../lib/juken/history-map/types";
 
@@ -10,10 +10,22 @@ type Props = {
   className?: string;
 };
 
-function FigurePop({ fig, open, id }: { fig: HistoryFigure; open: boolean; id: string }) {
+function FigurePop({
+  fig,
+  open,
+  id,
+  style,
+  fixed,
+}: {
+  fig: HistoryFigure;
+  open: boolean;
+  id: string;
+  style?: CSSProperties;
+  fixed?: boolean;
+}) {
   if (!open) return null;
   return (
-    <span className="hm-fig-pop" role="tooltip" id={id}>
+    <span className={`hm-fig-pop${fixed ? " hm-fig-pop--fixed" : ""}`} role="tooltip" id={id} style={style}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={fig.imageUrl} alt={`${fig.name}の肖像`} width={200} height={200} loading="lazy" />
       <span className="hm-fig-cap">
@@ -24,23 +36,87 @@ function FigurePop({ fig, open, id }: { fig: HistoryFigure; open: boolean; id: s
   );
 }
 
+const MOBILE_FIG_POP_MQ = "(max-width: 779px)";
+
 function FigureSpan({ label, fig }: { label: string; fig: HistoryFigure }) {
   const tipId = useId();
+  const anchorRef = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
+  const [fixedPop, setFixedPop] = useState<{ style: CSSProperties; fixed: boolean } | null>(null);
+
+  const layoutPop = useCallback(() => {
+    const el = anchorRef.current;
+    if (!el || typeof window === "undefined") return;
+    const useFixed = window.matchMedia(MOBILE_FIG_POP_MQ).matches;
+    if (!useFixed) {
+      setFixedPop(null);
+      return;
+    }
+    const w = Math.min(220, window.innerWidth * 0.7);
+    const r = el.getBoundingClientRect();
+    const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+    const gap = 8;
+    const estH = 260;
+    const below = r.bottom + gap;
+    const above = r.top - gap - estH;
+    const tabReserve = 72;
+    const preferBelow = below + estH < window.innerHeight - tabReserve;
+    const top = preferBelow ? below : Math.max(8, above);
+    setFixedPop({
+      fixed: true,
+      style: { left, top, width: w, bottom: "auto", transform: "none" },
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setFixedPop(null);
+      return;
+    }
+    layoutPop();
+  }, [open, layoutPop]);
+
+  useEffect(() => {
+    if (!open) return;
+    const mq = window.matchMedia(MOBILE_FIG_POP_MQ);
+    if (!mq.matches) return;
+    const close = (e: MouseEvent | TouchEvent) => {
+      const t = e.target as Node;
+      if (anchorRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    window.addEventListener("resize", layoutPop);
+    window.addEventListener("scroll", layoutPop, true);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      window.removeEventListener("resize", layoutPop);
+      window.removeEventListener("scroll", layoutPop, true);
+    };
+  }, [open, layoutPop]);
+
   const show = () => setOpen(true);
   const hide = () => setOpen(false);
+  const toggle = () => setOpen((v) => !v);
+
   return (
     <span
+      ref={anchorRef}
       className="hm-fig"
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
+      onClick={(e) => {
+        if (!window.matchMedia(MOBILE_FIG_POP_MQ).matches) return;
+        e.stopPropagation();
+        toggle();
+      }}
       tabIndex={0}
       aria-describedby={open ? tipId : undefined}
     >
       {label}
-      <FigurePop fig={fig} open={open} id={tipId} />
+      <FigurePop fig={fig} open={open} id={tipId} style={fixedPop?.style} fixed={fixedPop?.fixed} />
     </span>
   );
 }
