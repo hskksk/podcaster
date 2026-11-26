@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "../components/ThemeProvider";
 import "./globals.css";
 
-const portalDescription = "調べた記事と音声、中学受験のふしぎ旅（物語・歴史マップ・国語）。";
+const portalDescription = "調べた記事と音声、中学受験のふしぎ旅（社会・国語）。";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {

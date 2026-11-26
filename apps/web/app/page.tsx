@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Headphones } from "lucide-react";
-import { JukenContentLanes } from "../components/juken/JukenContentLanes";
+import { JukenSubjectGrid } from "../components/juken/JukenSubjectGrid";
 import { loadSiteConfig } from "../lib/site/config";
 import { loadPublicDocs } from "../lib/site/docs";
 import { articleHref } from "../lib/site/sanitize-content";
@@ -90,24 +90,10 @@ export default function PortalPage() {
               </Link>
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-fg sm:text-base">
-              物語、歴史マップ、国語の問題を並べて読めます。コンテンツごとに新着が並びます。
+              社会（歴史ものがたり・歴史マップ）と国語（選択肢問題）へ進めます。
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link
-                href="/juken"
-                className="inline-flex items-center rounded-full bg-accent px-5 py-2.5 text-sm font-black text-accent-fg no-underline transition hover:opacity-90"
-              >
-                ふしぎ旅のトップ
-              </Link>
-              <Link
-                href="/juken/characters"
-                className="inline-flex items-center rounded-full border border-border px-5 py-2.5 text-sm font-black text-fg no-underline transition hover:bg-muted"
-              >
-                ぬいぐるみ
-              </Link>
-            </div>
             <div className="mt-6">
-              <JukenContentLanes density="compact" storyLimit={1} kokugoLimit={2} />
+              <JukenSubjectGrid density="compact" />
             </div>
           </article>
         </div>

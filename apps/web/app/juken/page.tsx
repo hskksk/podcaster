@@ -1,19 +1,12 @@
 import Link from "next/link";
-import { JukenContentLanes } from "../../components/juken/JukenContentLanes";
+import { JukenSubjectGrid } from "../../components/juken/JukenSubjectGrid";
 import { JukenShell } from "../../components/juken/JukenShell";
 import { CHARACTERS } from "../../lib/juken/characters";
-import { courseKicker, formatWeekLabel, loadJukenCourses } from "../../lib/juken/catalog";
 
 export const dynamic = "force-static";
 export const revalidate = false;
 
 export default function JukenHomePage() {
-  const courses = loadJukenCourses();
-  const lessonCount = courses.reduce(
-    (sum, course) => sum + course.weeks.reduce((inner, week) => inner + week.lessons.length, 0),
-    0,
-  );
-
   return (
     <JukenShell
       variant="home"
@@ -23,7 +16,7 @@ export default function JukenHomePage() {
             <p className="text-xs font-black tracking-[0.16em] text-accent">中学受験</p>
             <h1 className="mt-2 font-serif text-4xl font-black tracking-tight sm:text-5xl">ふしぎ旅</h1>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-fg sm:text-lg">
-              物語、歴史マップ、国語の問題を並べた学習ハブです。それぞれ独立したコンテンツで、新着から読めます。
+              社会と国語の学習ハブです。科目ごとに箱を開いて、読みたいコンテンツへ進めます。
             </p>
             <ul className="mt-6 flex flex-wrap gap-2">
               {CHARACTERS.map((character) => (
@@ -50,53 +43,7 @@ export default function JukenHomePage() {
         </section>
       }
     >
-      <section className="mb-12">
-        <h2 className="mb-4 text-xs font-black tracking-[0.14em] text-muted-fg">コンテンツ</h2>
-        <JukenContentLanes density="full" />
-      </section>
-
-      <h2 className="mb-4 text-xs font-black tracking-[0.14em] text-muted-fg">
-        物語のコース · {lessonCount} 本
-      </h2>
-      {courses.length === 0 ? (
-        <p className="rounded-[var(--radius-card)] border border-dashed border-border bg-surface px-4 py-10 text-center text-sm font-bold text-muted-fg">
-          まだ物語がありません。
-        </p>
-      ) : (
-        <div className="space-y-8">
-          {courses.map((course) => (
-            <section
-              key={course.href}
-              className="rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[var(--shadow-card)] sm:p-6"
-            >
-              <p className="text-xs font-black text-accent">{courseKicker(course) || "コース"}</p>
-              <h3 className="mt-1 font-serif text-2xl font-black">
-                <Link href={course.href} className="text-fg no-underline hover:underline">
-                  {course.title}
-                </Link>
-              </h3>
-              {course.summary ? (
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-fg">{course.summary}</p>
-              ) : null}
-              <ul className="mt-5 space-y-2">
-                {course.weeks.map((week) => (
-                  <li key={week.href}>
-                    <Link
-                      href={week.href}
-                      className="flex flex-wrap items-baseline justify-between gap-2 rounded-2xl border border-border px-3 py-3 no-underline transition hover:bg-muted"
-                    >
-                      <span className="font-bold text-fg">{formatWeekLabel(week.week)}</span>
-                      <span className="text-sm text-muted-fg">
-                        {week.textLabel || `${week.lessons.length} 本`}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
+      <JukenSubjectGrid density="full" />
     </JukenShell>
   );
 }

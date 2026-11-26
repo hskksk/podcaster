@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 const description =
-  "中学受験向けの学習ハブ。週次物語、歴史マップ、国語の選択肢問題を並べて読める。";
+  "中学受験向けの学習ハブ。社会（歴史ものがたり・歴史マップ）と国語（選択肢問題）。";
 
 export const metadata: Metadata = {
   title: { default: "ふしぎ旅", template: "%s | ふしぎ旅" },
