@@ -25,6 +25,8 @@ export type HistoryMapMeta = {
   yearMax: number;
   defaultYear: number;
   mapViewBox: [number, number, number, number];
+  /** Slider snaps to these years only. Omitted: derived from unique event years. */
+  yearStops?: number[];
 };
 
 export type HistoryMapTaxonomy = {
