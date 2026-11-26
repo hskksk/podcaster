@@ -18,7 +18,9 @@ jobs:
       run:
         working-directory: infra/gcp/audio-transcode
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: hashicorp/setup-terraform@v3
         with:
