@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { buildFigureIndex } from "../../../lib/juken/history-map/figures";
 import { landPolygons, project } from "../../../lib/juken/history-map/geo";
 import { maskText, shuffleQuizFields, type QuizField } from "../../../lib/juken/history-map/quiz";
+import { formatYear } from "../../../lib/juken/history-map/formatYear";
 import { currentEvent, eraLabel, laneName, visibleEvents } from "../../../lib/juken/history-map/selectors";
 import type { FigureIndex } from "../../../lib/juken/history-map/figures";
 import type { HistoryAxis, HistoryEvent, HistoryMapBundle } from "../../../lib/juken/history-map/types";
@@ -512,7 +513,7 @@ export function HistoryMapApp({ bundle }: Props) {
   const yearDisplay =
     quizMode && current && quizFields[eventIndex(current)] === "y" && !quizRevealed.has(eventIndex(current))
       ? "????年"
-      : `${year}年`;
+      : formatYear(year);
 
   const timeline = useMemo(() => {
     const eras = [...new Set(visible.map((e) => eraLabel(e.year)))];
