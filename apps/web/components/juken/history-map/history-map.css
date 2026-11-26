@@ -76,18 +76,18 @@
   position: relative;
   flex: 1;
   min-width: 120px;
-  height: 36px;
+  height: 56px;
   display: flex;
   align-items: center;
-  --hm-yr-inset: 8px;
+  --hm-yr-inset: 9px;
 }
 
 .history-map-app .hm-yr-track {
   position: absolute;
   left: var(--hm-yr-inset);
   right: var(--hm-yr-inset);
-  height: 16px;
-  border-radius: 8px;
+  height: 40px;
+  border-radius: 10px;
   overflow: hidden;
   pointer-events: none;
   box-sizing: border-box;
@@ -105,15 +105,23 @@
 }
 
 .history-map-app .hm-yr-seg-lbl {
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  color: #fff;
-  text-shadow: 0 0 2px rgb(0 0 0 / 0.65);
-  padding: 0 2px;
-  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  max-height: 100%;
+  padding: 2px 1px;
   pointer-events: none;
   user-select: none;
+}
+
+.history-map-app .hm-yr-seg-ch {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: #fff;
+  text-shadow: 0 0 2px rgb(0 0 0 / 0.65);
 }
 
 .dark .history-map-app .hm-yr-seg {
@@ -127,7 +135,7 @@
   background: transparent;
   -webkit-appearance: none;
   appearance: none;
-  height: 36px;
+  height: 56px;
 }
 
 .history-map-app input.hm-yr-range:focus-visible {
@@ -137,16 +145,16 @@
 }
 
 .history-map-app input.hm-yr-range::-webkit-slider-runnable-track {
-  height: 16px;
+  height: 40px;
   background: transparent;
   border: none;
 }
 
 .history-map-app input.hm-yr-range::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
-  margin-top: -3px;
+  width: 26px;
+  height: 26px;
+  margin-top: calc((40px - 26px) / 2);
   border-radius: 50%;
   border: 2px solid var(--hm-card);
   background: var(--hm-fg);
@@ -155,14 +163,14 @@
 }
 
 .history-map-app input.hm-yr-range::-moz-range-track {
-  height: 16px;
+  height: 40px;
   background: transparent;
   border: none;
 }
 
 .history-map-app input.hm-yr-range::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 2px solid var(--hm-card);
   background: var(--hm-fg);
@@ -425,6 +433,10 @@
     height: 11rem;
     overflow: auto;
   }
+
+  .history-map-app .hm-desktop-controls > .hm-row:first-of-type {
+    margin-bottom: 4px;
+  }
 }
 
 .history-map-app .hm-era-h {
@@ -637,7 +649,7 @@
   .history-map-app {
     --hm-top: calc(env(safe-area-inset-top, 0px) + 44px);
     --hm-tab: calc(env(safe-area-inset-bottom, 0px) + 52px);
-    --hm-sb: 76px;
+    --hm-sb: 100px;
     --hm-sh-peek: 88px;
     --hm-sh: var(--hm-sh-peek);
     position: fixed;

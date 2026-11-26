@@ -1,6 +1,18 @@
 import { eraLabel, eraTrackSpans } from "../../../lib/juken/history-map/eras";
 import { yearStopIndex } from "../../../lib/juken/history-map/yearStops";
 
+function EraVerticalLabel(props: { text: string }) {
+  return (
+    <span className="hm-yr-seg-lbl">
+      {Array.from(props.text).map((ch, i) => (
+        <span key={i} className="hm-yr-seg-ch">
+          {ch}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function YearScrubber(props: {
   year: number;
   yearDisplay: string;
@@ -27,7 +39,7 @@ export function YearScrubber(props: {
         <div className="hm-yr-track" aria-hidden="true">
           {eraSpans.map((seg) => (
             <span
-              key={seg.label}
+              key={`${seg.label}-${seg.leftPct.toFixed(2)}`}
               className="hm-yr-seg"
               style={{
                 left: `${seg.leftPct}%`,
@@ -36,7 +48,7 @@ export function YearScrubber(props: {
               }}
               title={seg.fullLabel}
             >
-              {seg.widthPct >= 7 ? <span className="hm-yr-seg-lbl">{seg.label}</span> : null}
+              {seg.widthPct >= 2.8 ? <EraVerticalLabel text={seg.label} /> : null}
             </span>
           ))}
         </div>
