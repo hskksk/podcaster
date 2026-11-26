@@ -32,7 +32,7 @@
       "import": "./dist/server.js"
     },
     "./section-visual": {
-      "types": "./dist/section-visual-server.d.ts",
+      "types": "./dist/section-visual/section-visual-server.d.ts",
       "import": "./dist/section-visual-server.js"
     },
     "./styles.css": "./dist/markdoc.css",
@@ -42,7 +42,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup && node scripts/finalize-dist.mjs",
+    "build": "tsup && tsc -p tsconfig.dts.json && node scripts/finalize-dist.mjs",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -73,7 +73,7 @@
     "react-dom": "^19.3.1",
     "semantic-release": "^25.0.9",
     "tsup": "^8.5.0",
-    "typescript": "~5.9.3",
+    "typescript": "~7.0.2",
     "vitest": "^4.1.11"
   },
   "engines": {

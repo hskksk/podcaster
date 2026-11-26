@@ -1,0 +1,322 @@
+diff --git a/dist/build/load-jsconfig.js b/dist/build/load-jsconfig.js
+index dcd6a8a1c3e8771ff7c5234c09632c590f492304..012d3e640d8ef9dc040de3cc2a52b98ac6648926 100644
+--- a/dist/build/load-jsconfig.js
++++ b/dist/build/load-jsconfig.js
+@@ -115,11 +115,33 @@ async function loadJsConfig(dir, config) {
+         typeScriptPath = deps.resolved.get('typescript');
+     } catch  {}
+     const tsConfigPath = _path.default.join(dir, config.typescript.tsconfigPath);
+-    const useTypeScript = Boolean(typeScriptPath && _fs.default.existsSync(tsConfigPath));
++    let useTypeScript = Boolean(typeScriptPath && _fs.default.existsSync(tsConfigPath));
+     let implicitBaseurl;
+     let jsConfig;
++    // TypeScript 7 has no typescript/lib/typescript.js. Keep path aliases by
++    // reading tsconfig as JSON instead of ts.parseJsonConfigFileContent, which
++    // touches ts.sys.useCaseSensitiveFileNames.
++    if (!useTypeScript && _fs.default.existsSync(tsConfigPath)) {
++        try {
++            const tsPkg = require.resolve('typescript/package.json', {
++                paths: [
++                    dir
++                ]
++            });
++            const major = Number(String(require(tsPkg).version).split('.')[0]);
++            if (major >= 7) {
++                const commentJson = require('next/dist/compiled/comment-json');
++                const raw = commentJson.parse((0, _fs.readFileSync)(tsConfigPath, 'utf8'));
++                jsConfig = {
++                    compilerOptions: (raw == null ? void 0 : raw.compilerOptions) || {}
++                };
++                implicitBaseurl = _path.default.dirname(tsConfigPath);
++                useTypeScript = true;
++            }
++        } catch  {}
++    }
+     // jsconfig is a subset of tsconfig
+-    if (useTypeScript) {
++    if (useTypeScript && !jsConfig) {
+         if (config.typescript.tsconfigPath !== 'tsconfig.json' && TSCONFIG_WARNED === false) {
+             TSCONFIG_WARNED = true;
+             _log.info(`Using tsconfig file: ${config.typescript.tsconfigPath}`);
+diff --git a/dist/build/next-config-ts/transpile-config.js b/dist/build/next-config-ts/transpile-config.js
+index 21e044fbfdda18d52b7a9ca5ef0a411a56fd5314..d99735775a3a78cc543770cd48e1996e338b3624 100644
+--- a/dist/build/next-config-ts/transpile-config.js
++++ b/dist/build/next-config-ts/transpile-config.js
+@@ -60,23 +60,42 @@ async function verifyTypeScriptSetup(cwd, configFileName) {
+     }
+ }
+ async function getTsConfig(cwd) {
+-    const ts = require(require.resolve('typescript', {
+-        paths: [
+-            cwd
+-        ]
+-    }));
+-    // NOTE: This doesn't fully cover the edge case for setting
+-    // "typescript.tsconfigPath" in next config which is currently
+-    // a restriction.
+-    const tsConfigPath = ts.findConfigFile(cwd, ts.sys.fileExists, 'tsconfig.json');
+-    if (!tsConfigPath) {
+-        // It is ok to not return ts.getDefaultCompilerOptions() because
+-        // we are only lookfing for paths and baseUrl from tsConfig.
++    let ts;
++    try {
++        ts = require(require.resolve('typescript', {
++            paths: [
++                cwd
++            ]
++        }));
++    } catch  {
++        ts = null;
++    }
++    // TypeScript <= 6. The native compiler's require('typescript') has no `sys`,
++    // so ts.sys.useCaseSensitiveFileNames / fileExists throws while loading next.config.ts.
++    if (ts && ts.sys && typeof ts.findConfigFile === 'function') {
++        // NOTE: This doesn't fully cover the edge case for setting
++        // "typescript.tsconfigPath" in next config which is currently
++        // a restriction.
++        const tsConfigPath = ts.findConfigFile(cwd, ts.sys.fileExists, 'tsconfig.json');
++        if (!tsConfigPath) {
++            // It is ok to not return ts.getDefaultCompilerOptions() because
++            // we are only lookfing for paths and baseUrl from tsConfig.
++            return {};
++        }
++        const configFile = ts.readConfigFile(tsConfigPath, ts.sys.readFile);
++        const parsedCommandLine = ts.parseJsonConfigFileContent(configFile.config, ts.sys, cwd);
++        return parsedCommandLine.options;
++    }
++    const tsConfigPath = (0, _nodepath.join)(cwd, 'tsconfig.json');
++    try {
++        const { existsSync, readFileSync } = require('node:fs');
++        if (!existsSync(tsConfigPath)) return {};
++        const commentJson = require('next/dist/compiled/comment-json');
++        const raw = commentJson.parse(readFileSync(tsConfigPath, 'utf8'));
++        return (raw == null ? void 0 : raw.compilerOptions) || {};
++    } catch  {
+         return {};
+     }
+-    const configFile = ts.readConfigFile(tsConfigPath, ts.sys.readFile);
+-    const parsedCommandLine = ts.parseJsonConfigFileContent(configFile.config, ts.sys, cwd);
+-    return parsedCommandLine.options;
+ }
+ async function transpileConfig({ nextConfigPath, configFileName, cwd }) {
+     let hasRequire = false;
+diff --git a/dist/esm/build/load-jsconfig.js b/dist/esm/build/load-jsconfig.js
+index 98f60ed3cdfa54eb23b853d7351ebef950b74864..c8c390b1cce53ec81499af5a9c4259d1a3778f54 100644
+--- a/dist/esm/build/load-jsconfig.js
++++ b/dist/esm/build/load-jsconfig.js
+@@ -48,11 +48,33 @@ export default async function loadJsConfig(dir, config) {
+         typeScriptPath = deps.resolved.get('typescript');
+     } catch  {}
+     const tsConfigPath = path.join(dir, config.typescript.tsconfigPath);
+-    const useTypeScript = Boolean(typeScriptPath && fs.existsSync(tsConfigPath));
++    let useTypeScript = Boolean(typeScriptPath && fs.existsSync(tsConfigPath));
+     let implicitBaseurl;
+     let jsConfig;
++    // TypeScript 7 has no typescript/lib/typescript.js. Keep path aliases by
++    // reading tsconfig as JSON instead of ts.parseJsonConfigFileContent, which
++    // touches ts.sys.useCaseSensitiveFileNames.
++    if (!useTypeScript && fs.existsSync(tsConfigPath)) {
++        try {
++            const tsPkg = require.resolve('typescript/package.json', {
++                paths: [
++                    dir
++                ]
++            });
++            const major = Number(String(require(tsPkg).version).split('.')[0]);
++            if (major >= 7) {
++                const commentJson = require('next/dist/compiled/comment-json');
++                const raw = commentJson.parse(readFileSync(tsConfigPath, 'utf8'));
++                jsConfig = {
++                    compilerOptions: (raw == null ? void 0 : raw.compilerOptions) || {}
++                };
++                implicitBaseurl = path.dirname(tsConfigPath);
++                useTypeScript = true;
++            }
++        } catch  {}
++    }
+     // jsconfig is a subset of tsconfig
+-    if (useTypeScript) {
++    if (useTypeScript && !jsConfig) {
+         if (config.typescript.tsconfigPath !== 'tsconfig.json' && TSCONFIG_WARNED === false) {
+             TSCONFIG_WARNED = true;
+             Log.info(`Using tsconfig file: ${config.typescript.tsconfigPath}`);
+diff --git a/dist/esm/build/next-config-ts/transpile-config.js b/dist/esm/build/next-config-ts/transpile-config.js
+index bbef6bc9dbcdb7dab7577290883e38f291166e99..885d122feca31874ba7a6660daee965c99c2f5cb 100644
+--- a/dist/esm/build/next-config-ts/transpile-config.js
++++ b/dist/esm/build/next-config-ts/transpile-config.js
+@@ -50,23 +50,42 @@ async function verifyTypeScriptSetup(cwd, configFileName) {
+     }
+ }
+ async function getTsConfig(cwd) {
+-    const ts = require(require.resolve('typescript', {
+-        paths: [
+-            cwd
+-        ]
+-    }));
+-    // NOTE: This doesn't fully cover the edge case for setting
+-    // "typescript.tsconfigPath" in next config which is currently
+-    // a restriction.
+-    const tsConfigPath = ts.findConfigFile(cwd, ts.sys.fileExists, 'tsconfig.json');
+-    if (!tsConfigPath) {
+-        // It is ok to not return ts.getDefaultCompilerOptions() because
+-        // we are only lookfing for paths and baseUrl from tsConfig.
++    let ts;
++    try {
++        ts = require(require.resolve('typescript', {
++            paths: [
++                cwd
++            ]
++        }));
++    } catch  {
++        ts = null;
++    }
++    // TypeScript <= 6. The native compiler's require('typescript') has no `sys`,
++    // so ts.sys.useCaseSensitiveFileNames / fileExists throws while loading next.config.ts.
++    if (ts && ts.sys && typeof ts.findConfigFile === 'function') {
++        // NOTE: This doesn't fully cover the edge case for setting
++        // "typescript.tsconfigPath" in next config which is currently
++        // a restriction.
++        const tsConfigPath = ts.findConfigFile(cwd, ts.sys.fileExists, 'tsconfig.json');
++        if (!tsConfigPath) {
++            // It is ok to not return ts.getDefaultCompilerOptions() because
++            // we are only lookfing for paths and baseUrl from tsConfig.
++            return {};
++        }
++        const configFile = ts.readConfigFile(tsConfigPath, ts.sys.readFile);
++        const parsedCommandLine = ts.parseJsonConfigFileContent(configFile.config, ts.sys, cwd);
++        return parsedCommandLine.options;
++    }
++    const tsConfigPath = resolve(cwd, 'tsconfig.json');
++    try {
++        const { existsSync, readFileSync } = require('node:fs');
++        if (!existsSync(tsConfigPath)) return {};
++        const commentJson = require('next/dist/compiled/comment-json');
++        const raw = commentJson.parse(readFileSync(tsConfigPath, 'utf8'));
++        return (raw == null ? void 0 : raw.compilerOptions) || {};
++    } catch  {
+         return {};
+     }
+-    const configFile = ts.readConfigFile(tsConfigPath, ts.sys.readFile);
+-    const parsedCommandLine = ts.parseJsonConfigFileContent(configFile.config, ts.sys, cwd);
+-    return parsedCommandLine.options;
+ }
+ export async function transpileConfig({ nextConfigPath, configFileName, cwd }) {
+     let hasRequire = false;
+diff --git a/dist/esm/lib/verify-typescript-setup.js b/dist/esm/lib/verify-typescript-setup.js
+index 0b8d5c098fe1c5a565390eacd44b0380f85f0e92..294f004466fb1f5432cbc03d53211a48e531a6a3 100644
+--- a/dist/esm/lib/verify-typescript-setup.js
++++ b/dist/esm/lib/verify-typescript-setup.js
+@@ -53,11 +53,50 @@ export async function verifyTypeScriptSetup({ dir, distDir, cacheDir, intentDirs
+             semver.gte(installedTypescriptVersion, '7.0.0-0', {
+                 includePrerelease: true
+             })) {
+-                throw Object.defineProperty(new CompileError(`TypeScript ${installedTypescriptVersion} is not supported by this version of Next.js. ` + `The TypeScript 7 native compiler does not provide the JavaScript compiler API that Next.js requires. ` + `Install TypeScript 6 (e.g. ${bold('npm install --save-dev typescript@^6')}) or upgrade to a Next.js v16.2.11 or later to get support for TypeScript 7.`), "__NEXT_ERROR_CODE", {
+-                    value: "E798",
+-                    enumerable: false,
+-                    configurable: true
++                // TypeScript 7 ships a native `tsc` and no `typescript/lib/typescript.js`.
++                // Reading `ts.sys` (useCaseSensitiveFileNames / fileExists) crashes, so
++                // typecheck with the CLI. Next 16.2.11+ does this itself; drop this
++                // branch when upgrading past that.
++                const { spawnSync } = require('child_process');
++                await writeAppTypeDeclarations({
++                    baseDir: dir,
++                    distDir,
++                    imageImportsEnabled: !disableStaticImages,
++                    hasPagesDir,
++                    hasAppDir
+                 });
++                if (typeCheckPreflight) {
++                    const tscBin = path.join(path.dirname(installedTypescriptPackageJsonPath), 'bin', 'tsc');
++                    const result = spawnSync(process.execPath, [
++                        tscBin,
++                        '--noEmit',
++                        '--pretty',
++                        'false',
++                        '--project',
++                        resolvedTsConfigPath
++                    ], {
++                        cwd: dir,
++                        stdio: 'inherit',
++                        env: process.env
++                    });
++                    if (result.error) {
++                        throw Object.defineProperty(new CompileError(`Failed to run the TypeScript CLI at ${tscBin}: ${result.error.message}`), "__NEXT_ERROR_CODE", {
++                            value: "E798",
++                            enumerable: false,
++                            configurable: true
++                        });
++                    }
++                    if (result.status !== 0) {
++                        throw Object.defineProperty(new CompileError('TypeScript check failed.'), "__NEXT_ERROR_CODE", {
++                            value: "E798",
++                            enumerable: false,
++                            configurable: true
++                        });
++                    }
++                }
++                return {
++                    version: installedTypescriptVersion
++                };
+             }
+         }
+         if (((_deps_missing = deps.missing) == null ? void 0 : _deps_missing.length) > 0) {
+diff --git a/dist/lib/verify-typescript-setup.js b/dist/lib/verify-typescript-setup.js
+index 3e32a3c00311f2fccc39b06ba9b09ee96dc762d1..c6d4edf1517bc523da0a0d92264cfff5bfcfa5ac 100644
+--- a/dist/lib/verify-typescript-setup.js
++++ b/dist/lib/verify-typescript-setup.js
+@@ -109,11 +109,50 @@ async function verifyTypeScriptSetup({ dir, distDir, cacheDir, intentDirs, tscon
+             _semver.default.gte(installedTypescriptVersion, '7.0.0-0', {
+                 includePrerelease: true
+             })) {
+-                throw Object.defineProperty(new _compileerror.CompileError(`TypeScript ${installedTypescriptVersion} is not supported by this version of Next.js. ` + `The TypeScript 7 native compiler does not provide the JavaScript compiler API that Next.js requires. ` + `Install TypeScript 6 (e.g. ${(0, _picocolors.bold)('npm install --save-dev typescript@^6')}) or upgrade to a Next.js v16.2.11 or later to get support for TypeScript 7.`), "__NEXT_ERROR_CODE", {
+-                    value: "E798",
+-                    enumerable: false,
+-                    configurable: true
++                // TypeScript 7 ships a native `tsc` and no `typescript/lib/typescript.js`.
++                // Reading `ts.sys` (useCaseSensitiveFileNames / fileExists) crashes, so
++                // typecheck with the CLI. Next 16.2.11+ does this itself; drop this
++                // branch when upgrading past that.
++                const { spawnSync } = require('child_process');
++                await (0, _writeAppTypeDeclarations.writeAppTypeDeclarations)({
++                    baseDir: dir,
++                    distDir,
++                    imageImportsEnabled: !disableStaticImages,
++                    hasPagesDir,
++                    hasAppDir
+                 });
++                if (typeCheckPreflight) {
++                    const tscBin = _path.default.join(_path.default.dirname(installedTypescriptPackageJsonPath), 'bin', 'tsc');
++                    const result = spawnSync(process.execPath, [
++                        tscBin,
++                        '--noEmit',
++                        '--pretty',
++                        'false',
++                        '--project',
++                        resolvedTsConfigPath
++                    ], {
++                        cwd: dir,
++                        stdio: 'inherit',
++                        env: process.env
++                    });
++                    if (result.error) {
++                        throw Object.defineProperty(new _compileerror.CompileError(`Failed to run the TypeScript CLI at ${tscBin}: ${result.error.message}`), "__NEXT_ERROR_CODE", {
++                            value: "E798",
++                            enumerable: false,
++                            configurable: true
++                        });
++                    }
++                    if (result.status !== 0) {
++                        throw Object.defineProperty(new _compileerror.CompileError('TypeScript check failed.'), "__NEXT_ERROR_CODE", {
++                            value: "E798",
++                            enumerable: false,
++                            configurable: true
++                        });
++                    }
++                }
++                return {
++                    version: installedTypescriptVersion
++                };
+             }
+         }
+         if (((_deps_missing = deps.missing) == null ? void 0 : _deps_missing.length) > 0) {
