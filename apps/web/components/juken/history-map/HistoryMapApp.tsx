@@ -24,6 +24,39 @@ import "./history-map.css";
 
 const MAP_FULL: [number, number, number, number] = [0, 0, 390, 405];
 
+function sheetOverlap(svg: SVGSVGElement, size: SheetSize): number {
+  if (size !== "h") return 0;
+  const app = svg.closest(".history-map-app");
+  const sheet = app?.querySelector(".hm-sheet");
+  if (!app || !sheet) return 0;
+  const shown = getComputedStyle(sheet);
+  if (shown.display === "none" || shown.visibility === "hidden") return 0;
+  const peek = parseFloat(getComputedStyle(app).getPropertyValue("--hm-sh-peek")) || 88;
+  const half = Math.min(window.innerHeight * 0.44, 380);
+  const mapH = svg.getBoundingClientRect().height;
+  return Math.min(mapH, Math.max(0, half - peek));
+}
+
+/** Place (fx, fy) at the center of the map area that is not covered by the detail sheet. */
+function placePoint(
+  svg: SVGSVGElement | null,
+  fx: number,
+  fy: number,
+  vw: number,
+  vh: number,
+  size: SheetSize,
+): [number, number, number, number] {
+  if (!svg) return [fx - vw / 2, fy - vh / 2, vw, vh];
+  const r = svg.getBoundingClientRect();
+  const k = Math.min(r.width / vw, r.height / vh);
+  if (!Number.isFinite(k) || k <= 0 || r.width <= 0 || r.height <= 0) return [fx - vw / 2, fy - vh / 2, vw, vh];
+  const ox = (r.width - vw * k) / 2;
+  const oy = (r.height - vh * k) / 2;
+  const vcx = r.width / 2;
+  const vcy = (r.height - sheetOverlap(svg, size)) / 2;
+  return [fx - (vcx - ox) / k, fy - (vcy - oy) / k, vw, vh];
+}
+
 type Props = { bundle: HistoryMapBundle };
 
 export function HistoryMapApp({ bundle }: Props) {
@@ -131,45 +164,66 @@ export function HistoryMapApp({ bundle }: Props) {
         const y0 = Math.min(...ys);
         const y1 = Math.max(...ys);
         const wd = Math.max((x1 - x0) * 1.5, (y1 - y0) * 1.5 * (390 / 405), 10);
-        t = [
-          (x0 + x1) / 2 - wd / 2,
-          (y0 + y1) / 2 - (wd * 405) / 780,
-          wd,
-          (wd * 405) / 390,
-        ];
+        const ht = (wd * 405) / 390;
+        t = placePoint(mapRef.current, (x0 + x1) / 2, (y0 + y1) / 2, wd, ht, sheet);
       } else if (c) {
         const [x, y] = project(c.lng, c.lat);
         const wd = 160;
         const ht = (wd * 405) / 390;
-        t = [Math.max(0, Math.min(390 - wd, x - wd / 2)), Math.max(0, Math.min(405 - ht, y - ht / 2)), wd, ht];
+        t = placePoint(mapRef.current, x, y, wd, ht, sheet);
       }
       return t;
     },
-    [wars],
+    [sheet, wars],
   );
 
   const focusKey = current ? `${current.year}-${current.title}` : "";
   const lastFocusRef = useRef<string | null>(null);
+  const sheetWasRef = useRef(sheet);
   useEffect(() => {
+    const prevSheet = sheetWasRef.current;
+    const sheetChanged = prevSheet !== sheet;
+    sheetWasRef.current = sheet;
     if (!current) return;
-    if (focusKey !== lastFocusRef.current) {
+    const focusChanged = focusKey !== lastFocusRef.current;
+    if (focusChanged) {
       lastFocusRef.current = focusKey;
       setManualMap(false);
+    }
+    if (manualMap && !focusChanged) {
+      if (!sheetChanged) return;
+      const svg = mapRef.current;
+      const vb = viewBoxRef.current;
+      if (!svg) return;
+      const r = svg.getBoundingClientRect();
+      const k = Math.min(r.width / vb[2], r.height / vb[3]);
+      if (!Number.isFinite(k) || k <= 0) return;
+      const ox = (r.width - vb[2] * k) / 2;
+      const oy = (r.height - vb[3] * k) / 2;
+      const prevVcy = (r.height - sheetOverlap(svg, prevSheet)) / 2;
+      const fx = vb[0] + (r.width / 2 - ox) / k;
+      const fy = vb[1] + (prevVcy - oy) / k;
+      animateViewBox(placePoint(svg, fx, fy, vb[2], vb[3], sheet), 250);
+      return;
     }
     if (manualMap) return;
     const target = viewTargetFor(current);
     const vb = viewBoxRef.current;
+    if (sheetChanged) {
+      animateViewBox(target, 250);
+      return;
+    }
     const far =
       Math.hypot(vb[0] + vb[2] / 2 - target[0] - target[2] / 2, vb[1] + vb[3] / 2 - target[1] - target[3] / 2) >
       0.4 * Math.max(vb[2], target[2]);
-  if (vb[2] < 385 && target[2] < 385 && far) {
+    if (vb[2] < 385 && target[2] < 385 && far) {
       animateViewBox(MAP_FULL, 400);
       const t = window.setTimeout(() => animateViewBox(target, 800), 450);
       return () => window.clearTimeout(t);
     }
     animateViewBox(target, target[2] < vb[2] ? 900 : 450);
     return undefined;
-  }, [focusKey, manualMap, animateViewBox, viewTargetFor, current]);
+  }, [focusKey, manualMap, animateViewBox, viewTargetFor, current, sheet]);
 
   const regionLegend = useMemo(() => {
     const seen = new Set<string>();
@@ -313,8 +367,8 @@ export function HistoryMapApp({ bundle }: Props) {
     w = Math.max(8, Math.min(w, 390));
     const h = (w * 405) / 390;
     const next: [number, number, number, number] = [
-      Math.max(-w / 2, Math.min(390 - w, x)),
-      Math.max(-h / 2, Math.min(405 - h, y)),
+      Math.max(-w, Math.min(390, x)),
+      Math.max(-h, Math.min(405, y)),
       w,
       h,
     ];
