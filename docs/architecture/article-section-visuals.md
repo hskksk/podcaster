@@ -84,7 +84,7 @@ content/docs/<slug>/
   section-visuals.yml
 ```
 
-長文Wiki記事では記事作成フローの対象とする。`content/web-clips/`は任意とし、初期実装では自動生成対象にしない。
+`content/web-clips/` でも同じ名前を使える。長文 wiki（`podcast-research`）では **`treemap.yml` と同様に必須**。短いクリップでは省略可。
 
 `treemap.yml`と`section-visuals.yml`は別ファイルにする。更新条件・読込先・表示責務が異なるため、一つのsidecarへ統合しない。
 
@@ -447,7 +447,7 @@ H3は、親H2の図では表現できない独立した仕組み・比較・時�
 
 スキルはArticle Visual specと検証コマンドだけを知る。React component名・CSS・SVG構造・`apps/web`の配置は記載しない。これにより、rendererを作り直してもspec v1を維持する限りスキルは変わらない。
 
-親の`podcast-research2`には、スキル名・呼ぶ時点・入力成果物・検証成功を次へ進む条件としてだけ記載する。specの全フィールドを親スキルへコピーしない。
+親の`podcast-research`には、スキル名・呼ぶ時点・入力成果物・検証成功を次へ進む条件としてだけ記載する。specの全フィールドを親スキルへコピーしない。
 
 ## specの正本と互換性
 
@@ -640,7 +640,7 @@ sidecarは信頼済みコードではなく、検証対象のcontent dataとし�
 
 ### repository check
 
-全`section-visuals.yml`を走査するcheck commandをCIと`pnpm typecheck`に含める。既存記事にsidecarがないことはエラーにしない。
+全 `section-visuals.yml` を走査する check command を CI と `pnpm typecheck` に含める。`content/docs/` で **`treemap.yml` があるのに `section-visuals.yml` がない** ディレクトリはエラーとする（`podcast-research` の三本セット）。treemap も section-visuals も無い既存記事はグランドファザー扱いとし、sidecar が無いこと自体はエラーにしない。
 
 ### markdoc-react
 
@@ -705,7 +705,7 @@ sidecarは信頼済みコードではなく、検証対象のcontent dataとし�
 3. sidecar型・loader・validator・repository check
 4. desktop railとmobile slot
 5. `article-section-visuals` skill
-6. `podcast-research2`からの呼び出し
+6. `podcast-research`からの呼び出し
 7. 一記事のpilot sidecar
 
 ## 導入順
@@ -715,7 +715,7 @@ sidecarは信頼済みコードではなく、検証対象のcontent dataとし�
 3. podcasterのloaderとresponsive layoutを実装し、手書きsidecarで確認する。
 4. validatorとrepository checkを追加する。
 5. `article-section-visuals`を追加し、Article Visual specを生成する。
-6. `podcast-research2`の記事完成後工程へ接続する。
+6. `podcast-research`の記事完成後工程へ接続する。
 7. pilot記事で手書き版とスキル生成版を比較し、文字量と項目数の上限を固定する。
 
 ## 受け入れ条件

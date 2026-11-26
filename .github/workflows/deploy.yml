@@ -24,11 +24,16 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: hskksk/gh-actions/actions/setup-mise@v1
 
       - run: pnpm install
+
+      - name: Checkout knowledge corpus
+        env:
+          KNOWLEDGE_GITHUB_TOKEN: ${{ secrets.KNOWLEDGE_GITHUB_TOKEN }}
+        run: pnpm knowledge:checkout
 
       - run: pnpm typecheck
 

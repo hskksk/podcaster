@@ -2,7 +2,7 @@ import "server-only";
 
 import fs from "node:fs";
 import path from "node:path";
-import { getRepoRoot } from "../repo-root";
+import { aiPodcastDir } from "../repo-root";
 import { publicDocFromMdocSource } from "./mdoc-public";
 
 export type PublicDoc = {
@@ -17,16 +17,19 @@ export type PublicDoc = {
 };
 
 function docsDir(): string {
-  return path.join(getRepoRoot(), "content", "docs");
+  return aiPodcastDir();
 }
 
+let publicDocsCache: PublicDoc[] | undefined;
+
 export function loadPublicDocs(): PublicDoc[] {
+  if (publicDocsCache) return publicDocsCache;
   const root = docsDir();
   if (!fs.existsSync(root)) {
-    console.warn(`[site] content/docs missing at ${root} (cwd=${process.cwd()})`);
+    console.warn(`[site] ai-podcast missing at ${root} (cwd=${process.cwd()})`);
     return [];
   }
-  return fs
+  publicDocsCache = fs
     .readdirSync(root, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => {
@@ -37,6 +40,7 @@ export function loadPublicDocs(): PublicDoc[] {
     })
     .filter((a): a is PublicDoc => a !== null)
     .sort((a, b) => b.filename.localeCompare(a.filename, "en"));
+  return publicDocsCache;
 }
 
 export function loadPublicDoc(slug: string): PublicDoc | null {

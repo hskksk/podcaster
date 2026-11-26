@@ -1,0 +1,843 @@
+.history-map-app {
+  --hm-bg: #faf7f0;
+  --hm-fg: #2a2620;
+  --hm-mut: #7a7367;
+  --hm-card: #fff;
+  --hm-sea: #dfeaf0;
+  --hm-land: #e9dfc8;
+  --hm-bd: #d8cfbd;
+  max-width: 1080px;
+  margin-inline: auto;
+}
+
+.dark .history-map-app {
+  --hm-bg: #1b1a17;
+  --hm-fg: #ece6d8;
+  --hm-mut: #a39b8b;
+  --hm-card: #27251f;
+  --hm-sea: #1f2b33;
+  --hm-land: #3d3828;
+  --hm-bd: #403c32;
+}
+
+.history-map-app h1 {
+  font-size: 1.125rem;
+  margin: 4px 0;
+  font-weight: 800;
+}
+
+.history-map-app .hm-era {
+  color: var(--hm-mut);
+  font-size: 13px;
+}
+
+.history-map-app svg.hm-map {
+  width: 100%;
+  max-height: 52vh;
+  background: var(--hm-sea);
+  border-radius: 12px;
+  display: block;
+}
+
+.history-map-app svg.hm-map polygon.hm-region {
+  stroke: none;
+}
+
+.history-map-app svg.hm-map polygon.hm-coast {
+  fill: none;
+  stroke: var(--hm-bd);
+  stroke-width: 1;
+}
+
+.history-map-app svg.hm-map text {
+  fill: var(--hm-fg);
+  font-size: 11px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--hm-sea);
+  stroke-width: 3px;
+}
+
+.history-map-app .hm-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+.history-map-app .hm-yr {
+  font-size: 22px;
+  font-weight: 700;
+  min-width: 84px;
+}
+
+.history-map-app input[type="range"] {
+  flex: 1;
+  min-width: 120px;
+}
+
+.history-map-app .hm-btn {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--hm-bd);
+  background: var(--hm-card);
+  color: var(--hm-fg);
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.history-map-app .hm-btn.on {
+  background: var(--hm-fg);
+  color: var(--hm-bg);
+}
+
+.history-map-app .hm-card {
+  background: var(--hm-card);
+  border: 1px solid var(--hm-bd);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.history-map-app .hm-av {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  flex: none;
+}
+
+.history-map-app .hm-av-img {
+  overflow: hidden;
+  border: 2px solid var(--hm-bd);
+  background: var(--hm-card);
+  padding: 0;
+  color: inherit;
+}
+
+.history-map-app .hm-av-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.history-map-app .hm-fig {
+  position: relative;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.history-map-app .hm-fig-pop {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(220px, 70vw);
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--hm-bd);
+  background: var(--hm-card);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  pointer-events: none;
+}
+
+.history-map-app .hm-fig-pop--fixed {
+  position: fixed;
+  z-index: 80;
+  pointer-events: auto;
+}
+
+.history-map-app .hm-fig-pop img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: var(--hm-bg);
+}
+
+.history-map-app .hm-fig-cap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.history-map-app .hm-credits {
+  margin: 12px 0 4px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.history-map-app .hm-credits a {
+  color: inherit;
+}
+
+.history-map-app .hm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 4px 0 8px;
+  font-size: 11px;
+}
+
+.history-map-app .hm-legend-i {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.history-map-app .hm-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--hm-bd);
+  flex: none;
+}
+
+.history-map-app .hm-h {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.history-map-app .hm-mut {
+  color: var(--hm-mut);
+  font-size: 12px;
+}
+
+.history-map-app .hm-tag {
+  color: #fff;
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 12px;
+}
+
+.history-map-app .hm-mapw {
+  position: relative;
+}
+
+.history-map-app .hm-map {
+  touch-action: none;
+}
+
+.history-map-app .hm-zb {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 3;
+}
+
+.history-map-app .hm-zb .hm-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  font-size: 18px;
+  opacity: 0.85;
+}
+
+.history-map-app .hm-ldr {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  background: none;
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.history-map-app .hm-bub {
+  position: absolute;
+  display: none;
+  background: var(--hm-card);
+  border: 1px solid var(--hm-bd);
+  border-radius: 12px;
+  padding: 8px 26px 8px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.3);
+  z-index: 2;
+}
+
+.history-map-app .hm-bub.open {
+  display: block;
+}
+
+.history-map-app .hm-bub-x {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: 0;
+  background: none;
+  padding: 2px 9px;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--hm-fg);
+}
+
+.history-map-app .hm-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.history-map-app .hm-tl {
+  position: relative;
+  overflow: auto;
+  background: var(--hm-card);
+  border: 1px solid var(--hm-bd);
+  border-radius: 12px;
+  padding: 8px;
+  max-height: 70vh;
+}
+
+@media (min-width: 780px) {
+  .history-map-app .hm-wrap {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    align-items: stretch;
+  }
+
+  .history-map-app .hm-tl {
+    /* Height 0 keeps the timeline from stretching the row. min-height 100%
+       then fills the row, which the map column sizes, and the list scrolls. */
+    max-height: none;
+    height: 0;
+    min-height: 100%;
+  }
+
+  .history-map-app .hm-desktop-controls .hm-card {
+    box-sizing: border-box;
+    height: 11rem;
+    overflow: auto;
+  }
+}
+
+.history-map-app .hm-era-h {
+  font-weight: 700;
+  font-size: 13px;
+  padding: 2px 2px 3px;
+  border-bottom: 2px solid var(--hm-bd);
+  margin: 10px 0 6px;
+}
+
+.history-map-app .hm-era-h:first-child {
+  margin-top: 0;
+}
+
+.history-map-app .hm-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-map-app .hm-lane-grid {
+  display: grid;
+  gap: 4px 6px;
+}
+
+.history-map-app .hm-lane-h {
+  font-size: 11px;
+  color: var(--hm-mut);
+  border-bottom: 1px solid var(--hm-bd);
+  padding-bottom: 2px;
+}
+
+.history-map-app .hm-it {
+  border-left: 4px solid;
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: var(--hm-bg);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.45;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  width: 100%;
+  color: var(--hm-fg);
+}
+
+.history-map-app .hm-it.sel {
+  outline: 2px solid var(--hm-fg);
+}
+
+.history-map-app .hm-it.fut {
+  opacity: 0.4;
+}
+
+.history-map-app .hm-it b {
+  font-size: 13px;
+}
+
+.history-map-app .hm-tg {
+  font-size: 10px;
+  color: #fff;
+  border-radius: 4px;
+  padding: 0 5px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.history-map-app .hm-sm {
+  color: var(--hm-mut);
+  font-size: 11px;
+}
+
+.history-map-app .hm-dt {
+  font-size: 12px;
+  background: var(--hm-bg);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.history-map-app .hm-qp {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.history-map-app .hm-qp.open {
+  display: flex;
+}
+
+.history-map-app .hm-qb {
+  background: var(--hm-card);
+  color: var(--hm-fg);
+  border: 1px solid var(--hm-bd);
+  border-radius: 14px;
+  padding: 14px;
+  width: min(92vw, 420px);
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.history-map-app .hm-qh {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.history-map-app .hm-qa {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 10px 0;
+}
+
+.history-map-app .hm-op {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 6px 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.history-map-app .hm-op.ok {
+  background: #2e8b57;
+  border-color: #2e8b57;
+  color: #fff;
+}
+
+.history-map-app .hm-op.ng {
+  background: #c23b3b;
+  border-color: #c23b3b;
+  color: #fff;
+}
+
+.history-map-app .hm-qf {
+  display: inline-flex;
+  gap: 0;
+  vertical-align: middle;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--hm-bd);
+}
+
+.history-map-app .hm-qf button {
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+
+.history-map-app .hm-qf button:first-child {
+  background: #2f6fb5;
+}
+
+.history-map-app .hm-qf button:last-child {
+  background: #c78a1a;
+  border-left: 1px solid rgb(255 255 255 / 0.7);
+}
+
+.hm-top,
+.hm-sbar,
+.hm-sheet,
+.hm-fpanel,
+.hm-tabs {
+  display: none;
+}
+
+.hm-back {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--hm-bd);
+  background: var(--hm-card);
+  color: var(--hm-fg);
+  text-decoration: none;
+  font-size: 16px;
+  line-height: 1;
+}
+
+@media (max-width: 779px) {
+  .juken-immersive > header,
+  .juken-immersive > footer,
+  .juken-immersive > .juken-preamble,
+  .juken-immersive main > nav {
+    display: none;
+  }
+
+  .juken-immersive main {
+    max-width: none;
+    padding: 0;
+  }
+
+  body:has(.juken-immersive) {
+    overflow: hidden;
+  }
+
+  .history-map-app {
+    --hm-top: calc(env(safe-area-inset-top, 0px) + 44px);
+    --hm-tab: calc(env(safe-area-inset-bottom, 0px) + 52px);
+    --hm-sb: 76px;
+    --hm-sh-peek: 88px;
+    --hm-sh: var(--hm-sh-peek);
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    max-width: none;
+    margin: 0;
+    background: var(--hm-bg);
+    color: var(--hm-fg);
+    overflow: hidden;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .history-map-app[data-sh="h"] {
+    --hm-sh: min(44vh, 380px);
+  }
+
+  .history-map-app .hm-desktop-head,
+  .history-map-app .hm-desktop-controls,
+  .history-map-app .hm-desktop-credits {
+    display: none;
+  }
+
+  .history-map-app .hm-wrap {
+    display: block;
+  }
+
+  .history-map-app .hm-top {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--hm-top);
+    box-sizing: border-box;
+    padding: env(safe-area-inset-top, 0px) 10px 0;
+    z-index: 30;
+    background: var(--hm-bg);
+    border-bottom: 1px solid var(--hm-bd);
+    display: flex;
+    align-items: center;
+  }
+
+  .history-map-app .hm-top .hm-row {
+    margin: 0;
+    flex: 1;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .history-map-app .hm-top h1 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-map-app .hm-top .hm-btn {
+    flex: none;
+  }
+
+  .history-map-app .hm-mapw {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--hm-top);
+    /* Stay the peek-sheet size so opening the detail sheet covers the map
+       instead of refitting it into a shorter box (which shrinks the scale). */
+    bottom: calc(var(--hm-tab) + var(--hm-sb) + var(--hm-sh-peek));
+    z-index: 1;
+  }
+
+  .history-map-app svg.hm-map {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .history-map-app .hm-bub,
+  .history-map-app .hm-bub.open,
+  .history-map-app .hm-ldr {
+    display: none;
+  }
+
+  .history-map-app .hm-zb .hm-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .history-map-app .hm-sbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--hm-tab);
+    height: var(--hm-sb);
+    z-index: 20;
+    box-sizing: border-box;
+    background: var(--hm-card);
+    border-top: 1px solid var(--hm-bd);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .history-map-app .hm-sbar .hm-era {
+    padding: 0 14px;
+    line-height: 1.3;
+  }
+
+  .history-map-app .hm-sbar .hm-srow {
+    margin: 2px 0 0;
+    padding: 0 10px;
+    flex-wrap: nowrap;
+  }
+
+  .history-map-app .hm-sbar .hm-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .history-map-app .hm-sbar .hm-yr {
+    font-size: 18px;
+    min-width: 78px;
+    text-align: center;
+  }
+
+  .history-map-app .hm-sbar input[type="range"] {
+    min-width: 0;
+  }
+
+  .history-map-app[data-tab="f"] .hm-sbar {
+    visibility: hidden;
+  }
+
+  .history-map-app .hm-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--hm-tab) + var(--hm-sb));
+    height: var(--hm-sh);
+    z-index: 15;
+    background: var(--hm-card);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -2px 12px rgb(0 0 0 / 0.25);
+    display: flex;
+    flex-direction: column;
+    transition: height 0.2s;
+    overflow: hidden;
+  }
+
+  .history-map-app[data-tab="f"] .hm-sheet {
+    visibility: hidden;
+  }
+
+  .history-map-app .hm-grab {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 8px 0 4px;
+    border: 0;
+    background: none;
+    touch-action: none;
+    flex: none;
+    cursor: grab;
+  }
+
+  .history-map-app .hm-grab i {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--hm-bd);
+  }
+
+  .history-map-app .hm-sheet-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .history-map-app[data-sh="p"] .hm-sheet-body {
+    overflow: hidden;
+  }
+
+  .history-map-app .hm-sheet .hm-card {
+    border: 0;
+    border-radius: 0;
+    padding: 6px 14px 10px;
+  }
+
+  .history-map-app .hm-sheet .hm-credits {
+    margin: 0 14px 12px;
+  }
+
+  .history-map-app .hm-fpanel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--hm-tab);
+    z-index: 25;
+    background: var(--hm-card);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -2px 12px rgb(0 0 0 / 0.3);
+    padding: 14px 12px 10px;
+    max-height: calc(100dvh - var(--hm-top) - var(--hm-tab));
+    overflow: auto;
+  }
+
+  .history-map-app[data-tab="f"] .hm-fpanel {
+    display: block;
+  }
+
+  .history-map-app .hm-fpanel .hm-btn {
+    padding: 7px 13px;
+  }
+
+  .history-map-app .hm-tl {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--hm-top);
+    bottom: calc(var(--hm-tab) + var(--hm-sb));
+    z-index: 18;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    padding: 10px 12px;
+  }
+
+  .history-map-app[data-tab="t"] .hm-tl {
+    display: block;
+  }
+
+  .history-map-app .hm-tabs {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--hm-tab);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+    background: var(--hm-card);
+    border-top: 1px solid var(--hm-bd);
+    z-index: 30;
+  }
+
+  .history-map-app .hm-tabs button {
+    flex: 1;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font: inherit;
+    font-size: 18px;
+    line-height: 1.2;
+    color: var(--hm-mut);
+    cursor: pointer;
+  }
+
+  .history-map-app .hm-tabs button span {
+    font-size: 11px;
+  }
+
+  .history-map-app .hm-tabs button.on {
+    background: none;
+    color: #2f6fb5;
+    font-weight: 700;
+  }
+
+  /* シートの overflow で切れないよう、狭い画面は JS で fixed 配置。フォールバックは下向き */
+  .history-map-app .hm-fig-pop:not(.hm-fig-pop--fixed) {
+    bottom: auto;
+    top: calc(100% + 8px);
+  }
+
+  .history-map-app .hm-qp.open {
+    align-items: flex-end;
+    padding: 12px 12px calc(var(--hm-tab) + 12px);
+  }
+
+  .history-map-app .hm-qb {
+    width: 100%;
+    max-width: none;
+    max-height: min(70dvh, calc(100dvh - var(--hm-top) - var(--hm-tab) - 24px));
+  }
+}

@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
+import {
+  assertSafeKnowledgePath,
+  captureEntryPath,
+  collectionFromCapturePath,
+} from "../../../../scripts/lib/content-paths";
 import { slugFromTitle } from "../slug";
 import type { CaptureCollection } from "./frontmatter";
-
-const PATH_RE = /^content\/(docs|web-clips)\/[^/]+\/index\.mdoc$/;
 
 export function todayUtcDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -20,16 +23,13 @@ export function shortHash(input: string, len = 6): string {
 }
 
 export function entryPath(collection: CaptureCollection, slug: string): string {
-  return `content/${collection}/${slug}/index.mdoc`;
+  return captureEntryPath(collection, slug);
 }
 
-export function assertSafeContentPath(path: string): boolean {
-  if (path.includes("..") || path.includes("\\") || path.includes("\0")) return false;
-  return PATH_RE.test(path);
+export function assertSafeContentPath(relPath: string): boolean {
+  return assertSafeKnowledgePath(relPath);
 }
 
-export function collectionFromPath(path: string): CaptureCollection | null {
-  const m = path.match(/^content\/(docs|web-clips)\//);
-  if (m?.[1] === "docs" || m?.[1] === "web-clips") return m[1];
-  return null;
+export function collectionFromPath(relPath: string): CaptureCollection | null {
+  return collectionFromCapturePath(relPath);
 }

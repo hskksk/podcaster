@@ -10,9 +10,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseSlugFromFilename } from "./lib/article-slug.ts";
+import { aiPodcastDir } from "./lib/content-paths.ts";
 import { parseFrontmatter, parseTitleFromContent, textify } from "./lib/mdoc.ts";
 
-const DOCS_DIR = path.resolve("content/docs");
+const DOCS_DIR = aiPodcastDir();
 const OUT_DIR = path.resolve("dist/web");
 const ARTICLES_OUT_DIR = path.join(OUT_DIR, "articles");
 

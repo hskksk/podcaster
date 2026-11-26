@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Type checking (no test suite — this is the primary correctness check)
 pnpm typecheck
 pnpm typecheck:web            # Next.js / Keystatic app
-pnpm web:dev                  # Keystatic admin at http://127.0.0.1:3000/keystatic
+pnpm web:dev                  # Next.js site at http://127.0.0.1:3000/
 pnpm capture --title ... --file ...   # POST /api/capture (Git only, no TTS)
 pnpm ingest:queued                    # ingest podcast: queued files (Phase 3)
 pnpm mcp                              # FastMCP stdio (search_docs / write_clip / queue_podcast)
@@ -121,7 +121,7 @@ Never keep a second copy of a skill under `.claude/skills/`. Other agents (Curso
 
 A skill that calls another, and a skill that other skills call, follow `skill-orchestration`. Name the skill and when to read it. Do not name files inside it.
 
-**External skills** install into `.agents/skills/` via `npx skills add <owner/repo> --skill <name>` (see [skills.sh](https://skills.sh)): e.g. [hskksk/agent-skills](https://skills.sh/hskksk/agent-skills) (`japanese-writing`, `how-to-survey`, `survey-report`, `skill-orchestration`), [vercel-labs/agent-skills](https://skills.sh/vercel-labs/agent-skills) (`web-design-guidelines`). `podcast-research2` loads `how-to-survey`, `survey-report`, and (for Japanese prose) `japanese-writing` by skill name. It does not ship copies of their references.
+**External skills** install into `.agents/skills/` via `npx skills add <owner/repo> --skill <name>` (see [skills.sh](https://skills.sh)): e.g. [vercel-labs/agent-skills](https://skills.sh/vercel-labs/agent-skills) (`web-design-guidelines`), [supabase/agent-skills](https://github.com/supabase/agent-skills). **記事作成スキル**（`podcast-research`, `web-clip-summary`, `sapix-grade5-history-weekly` など）は **`hskksk/knowledges`** の `.agents/skills/` に置く。
 
 ## Database Migrations
 

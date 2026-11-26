@@ -43,6 +43,10 @@ scripts/*.txt
 .serena/
 
 
+# Private knowledge checkout (see pnpm knowledge:checkout)
+.knowledge-checkout/
+.knowledge-tarball-*.tar.gz
+
 # temporary
 podcast-delivery-system-tui/
 /markdoc-react/

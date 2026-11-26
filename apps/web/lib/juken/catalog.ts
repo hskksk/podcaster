@@ -3,7 +3,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
-import { getRepoRoot } from "../repo-root";
+import { jukenDir } from "../repo-root";
 import {
   lessonModeLabel,
   parseLessonFile,
@@ -14,6 +14,8 @@ import {
   type LessonMode,
   type WeekOutlineEntry,
 } from "./lesson-meta";
+import { HISTORY_MAP_DIR } from "./history-map/load";
+import { DRILL_DIR_NAME } from "./kokugo-choice/load";
 import { jukenPlainTextFromTree } from "./plain-text";
 import { prepareJukenMarkdoc } from "./prepare";
 
@@ -84,7 +86,7 @@ type CourseMeta = {
 };
 
 function jukenRoot(): string {
-  return path.join(getRepoRoot(), "chugaku-juken");
+  return jukenDir();
 }
 
 function clean(text: string): string {
@@ -194,6 +196,7 @@ function readCatalog(): JukenCourse[] {
   const courses: JukenCourse[] = [];
   for (const schoolDir of fs.readdirSync(root, { withFileTypes: true })) {
     if (!schoolDir.isDirectory() || !SEGMENT.test(schoolDir.name)) continue;
+    if (schoolDir.name === DRILL_DIR_NAME || schoolDir.name === HISTORY_MAP_DIR) continue;
     const schoolPath = path.join(root, schoolDir.name);
     for (const courseDir of fs.readdirSync(schoolPath, { withFileTypes: true })) {
       if (!courseDir.isDirectory() || !SEGMENT.test(courseDir.name)) continue;
@@ -261,8 +264,12 @@ function readCatalog(): JukenCourse[] {
   return courses;
 }
 
+let jukenCoursesCache: JukenCourse[] | undefined;
+
 export function loadJukenCourses(): JukenCourse[] {
-  return readCatalog();
+  if (jukenCoursesCache) return jukenCoursesCache;
+  jukenCoursesCache = readCatalog();
+  return jukenCoursesCache;
 }
 
 export function findCourse(school: string, course: string): JukenCourse | null {

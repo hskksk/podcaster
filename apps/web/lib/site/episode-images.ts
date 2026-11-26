@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { feedUrl, projectRef } from "./config";
 import type { PublicDoc } from "./docs";
 
@@ -140,7 +141,7 @@ async function fetchArticleImageMapFromSupabase(): Promise<Map<string, string>> 
  * legacyFilename / content_path / title → public episode artwork URL.
  * Merges Supabase REST (needs service role) with public RSS fallback.
  */
-export async function fetchArticleImageMap(): Promise<Map<string, string>> {
+async function fetchArticleImageMapUncached(): Promise<Map<string, string>> {
   const merged = new Map<string, string>();
   const rss = feedUrl();
   if (rss) {
@@ -154,6 +155,9 @@ export async function fetchArticleImageMap(): Promise<Map<string, string>> {
   }
   return merged;
 }
+
+/** Deduped per render / static page generation (metadata + page). */
+export const fetchArticleImageMap = cache(fetchArticleImageMapUncached);
 
 export function imageForDoc(
   map: Map<string, string>,
@@ -172,6 +176,7 @@ export function imageForPublicDoc(
     doc.filename.split("/").pop(),
     doc.slug,
     doc.dir,
+    `content/ai-podcast/${doc.dir}/index.mdoc`,
     `content/docs/${doc.dir}/index.mdoc`,
     `title:${normalizeTitle(doc.title)}`,
   ];

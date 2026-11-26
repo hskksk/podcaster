@@ -17,7 +17,7 @@ const repoRoot = fs.existsSync(path.join(repoRootCandidate, "pnpm-workspace.yaml
   : appDir;
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@keystatic/core", "@keystatic/next"],
+  transpilePackages: ["@keystatic/core"],
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdoc"],
   webpack: (config) => {
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
@@ -54,18 +54,12 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Standalone (Docker / Railway) needs the monorepo root in the file trace
-// for Keystatic local storage. Public pages are SSG and do not read disk
-// at request time. Do not set outputFileTracingRoot on Vercel.
-if (process.env.KEYSTATIC_STANDALONE === "1") {
+// Standalone (Docker / Railway) needs the monorepo root in the file trace.
+// Public pages are SSG and do not read disk at request time.
+// Do not set outputFileTracingRoot on Vercel.
+if (process.env.NEXT_STANDALONE === "1") {
   nextConfig.output = "standalone";
   nextConfig.outputFileTracingRoot = repoRoot;
-  nextConfig.outputFileTracingIncludes = {
-    "/api/keystatic/[...params]": [
-      "../../content/**/*",
-      "../../pnpm-workspace.yaml",
-    ],
-  };
 }
 
 const wrapped = withMarkdoc({

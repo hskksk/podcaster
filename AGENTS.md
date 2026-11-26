@@ -59,6 +59,10 @@ CI の **`lint-pr`** ワークフロー（commitlint + semantic-pull-request）�
 - **Edge / deploy**: **`pnpm deploy` and CI do not push operator secrets** (no `.env` bulk upload). Deploy upserts **Vault** `pgflow_auth_secret` / `supabase_project_id` for DB cron HTTP pings to workers; that is separate from Edge Secrets.
 - **TUI requires TTY**: `pnpm tui` (Ink-based) needs a real terminal with raw mode support. Use `pnpm tui -- --mock` for mock data. It will fail with "Raw mode is not supported" in non-interactive shells.
 - **`TARGET=local`**: Set this env var for CLI/TUI commands to connect to the local Supabase stack instead of remote.
+- **Vercel Hobby (12 Serverless Functions)**: Production `@podcaster/web` on Hobby allows **at most 12 Serverless Functions per deployment**. SSG pages do not count; each `app/**/route.ts` and non-static dynamic routes do. Before adding API routes, draft/preview handlers, or extra dynamic segments, read **Vercel → Hobby limit** in [apps/web/README.md](apps/web/README.md#hobby-plan-12-serverless-functions-max).
+- **Knowledge checkout**: Markdoc lives in **`hskksk/knowledges`** only (not in this repo). Run `pnpm knowledge:checkout` locally or set `CONTENT_ROOT` / `KEYSTATIC_LOCAL_BASE`. Vercel prebuild checks out knowledges. GitHub Actions need repo secret `KNOWLEDGE_GITHUB_TOKEN` (read on knowledges).
+- **History map split**: knowledges `content/juken/history-map/` holds `events.json` / `wars.json` / `taxonomy.json` / `figures.json`; map geometry is **`apps/web/data/juken/history-map/geo.json`** in podcaster. ToBe topology/render design: [docs/architecture/history-map-geo.md](docs/architecture/history-map-geo.md).
+- **Article agent skills**: in **`hskksk/knowledges`**. **ingest** = knowledges `ingest-queued.yml`; **Vercel** = knowledges `dispatch-podcaster-deploy.yml` → `knowledges-vercel-deploy.yml` (Deploy Hook). Independent jobs.
 - **Never edit existing migrations**: Schema changes require a new `supabase/migrations/` file named `YYYYMMDD{seq}_snake_case_description.sql` (never modify committed migrations). See CLAUDE.md → Database Migrations.
 - **Migration timestamps**: New files must sort **after** the latest migration already on `main` (check `ls supabase/migrations | tail`). Do not add a version earlier than one already merged or applied on remote — `supabase db push` will fail without `--include-all`.
 - **Seed config after fresh start**: Run `TARGET=local pnpm seed:config` after `supabase start` or `supabase db reset` to initialize `podcast_config` and upload `cover.png`.
@@ -81,8 +85,8 @@ See `CLAUDE.md` for the full list. Key commands:
 | Task | Command |
 |------|---------|
 | Type check | `pnpm typecheck` |
-| Type check (Keystatic app) | `pnpm typecheck:web` |
-| Keystatic admin | `pnpm web:dev` |
+| Type check (web) | `pnpm typecheck:web` |
+| Web dev | `pnpm web:dev` |
 | Start Supabase | `supabase start` |
 | Serve functions | `pnpm functions:serve` |
 | Reset DB | `pnpm db:reset` |

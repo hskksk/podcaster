@@ -600,6 +600,7 @@ html.dark .markdoc .article-visual {
   --j-tako: #c45c2a;
   --j-ramen: #c4312e;
   --j-study: #2f7d57;
+  --j-hit-bg: #ffe27a;
   background-color: var(--color-bg);
   background-image: radial-gradient(rgb(224 164 96 / 0.45) 1.1px, transparent 1.1px);
   background-size: 18px 18px;
@@ -631,6 +632,7 @@ html.dark .markdoc .article-visual {
   --j-tako: #ff9a62;
   --j-ramen: #ff8b84;
   --j-study: #8fd0a8;
+  --j-hit-bg: #b08a12;
   background-image: radial-gradient(rgb(90 70 140 / 0.7) 1.1px, transparent 1.1px);
 }
 
@@ -816,6 +818,45 @@ html.dark .markdoc .article-visual {
   content: "ことば · ";
   color: var(--j-study);
   font-weight: 900;
+}
+
+.j-passage {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 2;
+}
+
+.j-ul {
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
+}
+
+.j-hit {
+  border-radius: 0.2rem;
+  background: var(--j-hit-bg);
+  color: inherit;
+  padding: 0.05em 0;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+@keyframes j-hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-0.55rem);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .j-hop {
+    animation: j-hop 1.6s ease-in-out infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

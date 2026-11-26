@@ -2,7 +2,7 @@
 # Build context must be the repository root.
 # railway.json sets dockerfilePath to this file.
 
-FROM node:22-bookworm-slim AS base
+FROM node:26-bookworm-slim AS base
 WORKDIR /app
 ENV PNPM_HOME=/usr/local/share/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -18,12 +18,10 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV KEYSTATIC_STANDALONE=1
-ARG NEXT_PUBLIC_KEYSTATIC_STORAGE=local
-ENV NEXT_PUBLIC_KEYSTATIC_STORAGE=$NEXT_PUBLIC_KEYSTATIC_STORAGE
+ENV NEXT_STANDALONE=1
 RUN pnpm --filter @podcaster/web build
 
-FROM node:22-bookworm-slim AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

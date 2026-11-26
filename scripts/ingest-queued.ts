@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Ingest every content docs/web-clips index.mdoc with podcast: queued, then write
+ * Ingest ai-podcast / notes index.mdoc with podcast: queued under CONTENT_ROOT, then write
  * podcast: published + contentSha in the same process (GitHub Actions commits).
  *
  * Does not bulk-queue existing web-clips. Capture defaults: docs queued, web-clips none.
@@ -11,6 +11,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
+import { getContentRoot, queuedIngestWalkTargets } from "./lib/content-paths.ts";
 import { parseFrontmatter, parseTitleFromContent, setFrontmatterFields, textify } from "./lib/mdoc.ts";
 import { detectLocalStatus, detectProjectRef, detectServiceKey } from "./lib/supabase-detect.ts";
 
@@ -37,8 +38,9 @@ function walkQueued(root: string, prefix: string, out: QueuedFile[]): void {
 
 function collectQueued(): QueuedFile[] {
   const files: QueuedFile[] = [];
-  walkQueued(path.resolve("content/docs"), "content/docs", files);
-  walkQueued(path.resolve("content/web-clips"), "content/web-clips", files);
+  for (const { absDir, relPrefix } of queuedIngestWalkTargets()) {
+    walkQueued(absDir, relPrefix, files);
+  }
   return files;
 }
 
@@ -57,7 +59,7 @@ function ingestEndpoint(): { url: string; authKey: string } {
 
 function markPublished(rel: string, raw: string, contentSha: string): void {
   const next = setFrontmatterFields(raw, { podcast: "published", contentSha });
-  writeFileSync(path.resolve(rel), next, "utf8");
+  writeFileSync(path.join(getContentRoot(), rel), next, "utf8");
 }
 
 /** CI: checkout is the push commit; after concurrency wait, main may be ahead. */
@@ -150,7 +152,10 @@ for (const file of queued) {
 }
 
 if (written > 0 && process.env.INGEST_QUEUED_COMMIT === "1") {
-  execSync("git add content/docs content/web-clips", { stdio: "inherit" });
+  const adds = queuedIngestWalkTargets()
+    .map((t) => t.relPrefix)
+    .join(" ");
+  execSync(`git add ${adds}`, { stdio: "inherit" });
   const staged = execSync("git diff --cached --name-only", { encoding: "utf8" }).trim();
   if (staged) {
     execSync('git config user.name "github-actions[bot]"');

@@ -2,9 +2,9 @@
 
 > 日付: 2026-09-18（Phase 2–4 完了反映）  
 > 前提: Phase 1b（物理移動 + コンシューマ追随）完了。  
-> 設計の正: [pkm-migration.md](./pkm-migration.md)  
+> 設計の正: [pkm-migration.md](./pkm-migration.md)（リポ分離は [content-platform-split.md](./content-platform-split.md)）  
 > PKM スタック Phase 2–6。知識の正は Git + Markdoc。配信の正は Supabase。  
-> 次の実装: **Phase 5（MCP）**。
+> 次の実装: **Phase 5（MCP）**（並行: **S0–S5** コンテンツ private 化は split 設計に従う）。
 
 この文書は設計の再定義ではない。Phase 1 完了時点の事実と、残作業を **実装順・PR 境界・受け入れ条件** に落とした作業計画である。
 
@@ -199,7 +199,7 @@ Chrome 拡張・最小 Web UI は後追い可。curl / CLI / ショートカッ�
 - ingest は既存 `{ title, content }` を維持し、任意で `content_path` 等を受け取る。UNIQUE 衝突は **409**
 - Git 正本は `.mdoc`。パイプラインへ渡す前に frontmatter 除去 + 既知タグの textify
 - Actions: `podcast: queued` を検知 → ingest → **同じ job が `published` + `contentSha` を書き戻す**
-- `podcast-research` / `podcast-research2` は mdoc を書いて PR（既定 `podcast: queued`）
+- `podcast-research` は mdoc を書いて PR（既定 `podcast: queued`）
 - 移行済み web-clips 4 本は **queued にしない**（黙って TTS しない）
 
 mem 必須パス（`ingest-mem-note.yml`）は残してよい。本線ではない。

@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { Headphones } from "lucide-react";
-import { DayCards } from "../components/juken/DayCards";
-import { CHARACTERS } from "../lib/juken/characters";
-import { courseKicker, formatWeekLabel, loadJukenCourses } from "../lib/juken/catalog";
+import { JukenSubjectGrid } from "../components/juken/JukenSubjectGrid";
 import { loadSiteConfig } from "../lib/site/config";
 import { loadPublicDocs } from "../lib/site/docs";
 import { articleHref } from "../lib/site/sanitize-content";
@@ -13,10 +11,6 @@ export const revalidate = false;
 export default function PortalPage() {
   const cfg = loadSiteConfig();
   const docs = loadPublicDocs().slice(0, 3);
-  const courses = loadJukenCourses();
-  const latest = courses
-    .flatMap((course) => course.weeks.map((week) => ({ course, week })))
-    .sort((a, b) => b.week.week.localeCompare(a.week.week))[0];
 
   return (
     <div className="portal flex min-h-screen flex-col">
@@ -33,7 +27,7 @@ export default function PortalPage() {
             家で読む一週間。
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-fg sm:text-lg">
-            ポッドキャストと、中学受験の物語。入口はここです。
+            ポッドキャストと、中学受験のふしぎ旅。入口はここです。
           </p>
         </section>
 
@@ -69,23 +63,26 @@ export default function PortalPage() {
               </Link>
             </div>
             {docs.length > 0 ? (
-              <ul className="mt-6 space-y-2">
-                {docs.map((doc) => (
-                  <li key={doc.slug}>
-                    <Link
-                      href={articleHref(doc.slug)}
-                      className="flex items-baseline justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 no-underline transition hover:shadow-[var(--shadow-card)]"
-                    >
-                      <span className="font-medium leading-snug text-fg">{doc.title}</span>
-                      <time className="shrink-0 text-xs tabular-nums text-muted-fg">{doc.date}</time>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-fg">新着</p>
+                <ul className="mt-2 space-y-2">
+                  {docs.map((doc) => (
+                    <li key={doc.slug}>
+                      <Link
+                        href={articleHref(doc.slug)}
+                        className="flex items-baseline justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 no-underline transition hover:shadow-[var(--shadow-card)]"
+                      >
+                        <span className="font-medium leading-snug text-fg">{doc.title}</span>
+                        <time className="shrink-0 text-xs tabular-nums text-muted-fg">{doc.date}</time>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : null}
           </article>
 
-          <article className="juken flex flex-col overflow-hidden rounded-[1.75rem] border border-border p-6 shadow-[var(--shadow-card)] sm:p-8">
+          <article className="juken flex flex-col rounded-[1.75rem] border border-border p-6 shadow-[var(--shadow-card)] sm:p-8">
             <p className="text-xs font-black tracking-[0.16em] text-accent">中学受験</p>
             <h2 className="mt-2 font-serif text-3xl font-black tracking-tight">
               <Link href="/juken" className="text-fg no-underline hover:underline">
@@ -93,45 +90,11 @@ export default function PortalPage() {
               </Link>
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-fg sm:text-base">
-              ぬいぐるみたちが、週のテキストを会話で歩く。隔週で4匹ずつ登場します。
+              ぬいぐるみたちと一緒に、中学受験 社会、国語 の勉強ができます。
             </p>
-            <ul className="mt-4 flex flex-wrap gap-2">
-              {CHARACTERS.map((character) => (
-                <li
-                  key={character.name}
-                  data-tone={character.tone}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface py-1 pl-1 pr-3 text-sm font-bold"
-                >
-                  <span className="j-avatar size-7 text-base" aria-hidden>
-                    {character.emoji}
-                  </span>
-                  {character.name}
-                </li>
-              ))}
-            </ul>
-            <div className="pt-6">
-              <Link
-                href={latest?.week.href ?? "/juken"}
-                className="inline-flex items-center rounded-full bg-accent px-5 py-2.5 text-sm font-black text-accent-fg no-underline transition hover:opacity-90"
-              >
-                物語を開く
-              </Link>
+            <div className="mt-6">
+              <JukenSubjectGrid density="compact" />
             </div>
-            {latest ? (
-              <div className="mt-6">
-                <p className="text-xs font-black text-muted-fg">
-                  {courseKicker(latest.course) || latest.course.title} · {formatWeekLabel(latest.week.week)}
-                </p>
-                {latest.week.textLabel ? (
-                  <p className="mt-1 text-sm font-bold">{latest.week.textLabel}</p>
-                ) : null}
-                <div className="mt-3">
-                  <DayCards lessons={latest.week.lessons} layout="list" />
-                </div>
-              </div>
-            ) : (
-              <p className="mt-6 text-sm font-bold text-muted-fg">まだ物語がありません。</p>
-            )}
           </article>
         </div>
       </main>

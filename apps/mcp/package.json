@@ -8,15 +8,15 @@
     "typecheck": "tsc --noEmit"
   },
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "dependencies": {
-    "fastmcp": "^4.20.13",
-    "zod": "^4.6.6"
+    "fastmcp": "^4.27.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "tsx": "^4.19.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.0"
   }
 }
