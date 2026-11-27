@@ -222,7 +222,8 @@ pnpm web:dev
 | 方式 | 内容 |
 |------|------|
 | **A. 明示 SHA** | ビルド env に `KNOWLEDGE_GIT_REF` / `KNOWLEDGE_GIT_SHA`（再現ビルド・デバッグ用） |
-| **B. Deploy Hook（採用）** | knowledges マージ後に Hook → Vercel 再ビルド（checkout は lock `ref` = **main 先頭**） |
+| **B. Deploy Hook（採用）** | knowledges マージ後に Hook → Vercel 本番再ビルド（checkout は lock `ref` = **main 先頭**） |
+| **B2. Knowledges PR プレビュー** | knowledges workflow が podcaster に `knowledges-preview/<branch>` を push → Vercel Preview ビルド。[knowledges-pr-preview.md](../../docs/guides/knowledges-pr-preview.md) |
 | **C. 定期ビルド** | Vercel cron（main 追従。いつ時点の本文かはビルドログの `sha=` で確認） |
 
 推奨: 日常は **B**、同じコミットをもう一度焼きたいときだけ **A**。

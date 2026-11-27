@@ -10,43 +10,21 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
+import {
+  readKnowledgeLock,
+  resolveKnowledgeGitRef,
+  type KnowledgeLockFile,
+} from "./lib/knowledge-ref.ts";
 
 dotenv.config({ path: ".env" });
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
-type LockFile = { repo?: string; sha?: string; ref?: string };
-
-function readLock(): LockFile | null {
-  const lockPath = path.join(repoRoot, "knowledge.lock.json");
-  if (!existsSync(lockPath)) return null;
-  try {
-    return JSON.parse(readFileSync(lockPath, "utf8")) as LockFile;
-  } catch {
-    return null;
-  }
+function readLock(): KnowledgeLockFile | null {
+  return readKnowledgeLock(repoRoot);
 }
 
-/**
- * Ref resolution (SHA is opt-in only):
- * 1. KNOWLEDGE_GIT_REF — branch, tag, or commit
- * 2. KNOWLEDGE_GIT_SHA — explicit commit pin (same fetch path as a SHA ref)
- * 3. knowledge.lock.json `ref` (default repo branch, usually main)
- * 4. `main`
- *
- * `knowledge.lock.json` `sha` is ignored (use env vars to pin).
- */
-function envRef(lock: LockFile | null): string {
-  const fromRef = process.env.KNOWLEDGE_GIT_REF?.trim();
-  if (fromRef) return fromRef;
-  const fromSha = process.env.KNOWLEDGE_GIT_SHA?.trim();
-  if (fromSha) return fromSha;
-  const fromLock = lock?.ref?.trim();
-  if (fromLock) return fromLock;
-  return "main";
-}
-
-function envRepo(lock: LockFile | null): string {
+function envRepo(lock: KnowledgeLockFile | null): string {
   const fromEnv = process.env.KNOWLEDGE_GITHUB_REPO?.trim();
   if (fromEnv) return fromEnv;
   if (lock?.repo) return lock.repo;
@@ -187,20 +165,14 @@ function main(): void {
     return;
   }
 
-  if (lock?.sha?.trim()) {
-    console.warn(
-      "[knowledge] knowledge.lock.json \"sha\" is ignored; use KNOWLEDGE_GIT_REF or KNOWLEDGE_GIT_SHA to pin a commit",
-    );
-  }
-
-  const ref = envRef(lock);
+  const { ref, source } = resolveKnowledgeGitRef({ repoRoot, knowledgeLock: lock });
   const dest = checkoutDir();
   const depth = Math.max(1, Number(process.env.KNOWLEDGE_DEPTH ?? "1"));
   const method = (process.env.KNOWLEDGE_CHECKOUT_METHOD ?? "sparse-shallow").toLowerCase();
   const filterBlobs = process.env.KNOWLEDGE_FILTER_BLOBS !== "0";
 
   console.log(
-    `[knowledge] method=${method} ref=${ref} depth=${depth} filterBlobs=${filterBlobs} paths=${sparsePaths().join(",")}`,
+    `[knowledge] method=${method} ref=${ref} (${source}) depth=${depth} filterBlobs=${filterBlobs} paths=${sparsePaths().join(",")}`,
   );
 
   if (method === "archive") {
