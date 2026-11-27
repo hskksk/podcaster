@@ -5,6 +5,7 @@
  * `knowledges-preview.lock.json` on that branch (written by knowledges PR workflow).
  */
 
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -87,16 +88,50 @@ export function resolveKnowledgeGitRef(opts: {
   return { ref: "main", source: "default main" };
 }
 
-/** Branch slug as used in `https://<project>-git-<branch-slug>-<scope>.vercel.app`. */
+/** DNS labels are limited to 63 characters (RFC 1035), which is what Vercel enforces. */
+const VERCEL_MAX_DNS_LABEL_LENGTH = 63;
+
+/**
+ * Branch slug as used in `https://<project>-git-<branch-slug>-<scope>.vercel.app`.
+ *
+ * Vercel lowercases the branch, drops underscores and turns other characters
+ * into `-` (e.g. `npm_and_yarn/foo` → `npmandyarn-foo`).
+ */
 export function vercelBranchUrlSlug(gitBranch: string): string {
-  return gitBranch.replace(/\//g, "-");
+  return gitBranch
+    .toLowerCase()
+    .replaceAll("_", "")
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
+/**
+ * Preview branch URL for a podcaster branch, including the truncation Vercel
+ * applies when the label would exceed 63 characters: it keeps the project
+ * prefix and the scope suffix and folds a `sha256("git-" + branch + project)`
+ * hash (first 6 hex chars) into the label so truncated URLs stay unique.
+ *
+ * Vercel documents the layout and the limit but not the hash
+ * (https://vercel.com/docs/deployments/generated-urls); the rule below was
+ * verified against live deployments (see knowledge-ref.test.ts).
+ */
 export function vercelPreviewBranchUrl(opts: {
   projectName: string;
   scopeSlug: string;
   podcasterGitBranch: string;
 }): string {
-  const slug = vercelBranchUrlSlug(opts.podcasterGitBranch);
-  return `https://${opts.projectName}-git-${slug}-${opts.scopeSlug}.vercel.app`;
+  const label = `${opts.projectName}-git-${vercelBranchUrlSlug(opts.podcasterGitBranch)}-${opts.scopeSlug}`;
+  if (label.length <= VERCEL_MAX_DNS_LABEL_LENGTH) {
+    return `https://${label}.vercel.app`;
+  }
+
+  const hash = createHash("sha256")
+    .update(`git-${opts.podcasterGitBranch}${opts.projectName}`)
+    .digest("hex")
+    .slice(0, 6);
+  const suffix = `${hash}-${opts.scopeSlug}`;
+  const prefix = label.slice(0, VERCEL_MAX_DNS_LABEL_LENGTH - 1 - suffix.length);
+
+  return `https://${prefix}-${suffix}.vercel.app`;
 }
