@@ -13,6 +13,7 @@
         "test:post": "npm run test:post:local",
         "test:post:local": "npx tsx scripts/post-test-article.ts",
         "test:post:remote": "TARGET=remote npx tsx scripts/post-test-article.ts",
+        "test:scripts": "node --import tsx --test \"scripts/**/*.test.ts\"",
         "seed:config": "npx tsx scripts/seed-config.ts",
         "seed:config:local": "TARGET=local npx tsx scripts/seed-config.ts",
         "seed:config:remote": "npx tsx scripts/seed-config.ts",
